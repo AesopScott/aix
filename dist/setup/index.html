@@ -1,0 +1,2040 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mojo AI Summits - Master Event Execution Checklist</title>
+  <style>
+    :root {
+      --ink: #171717;
+      --muted: #62666f;
+      --line: #d9dde5;
+      --paper: #fbfaf7;
+      --panel: #ffffff;
+      --charcoal: #25272d;
+      --red: #b64242;
+      --teal: #167f83;
+      --gold: #b7832f;
+      --green: #4f7d45;
+      --blue: #496caa;
+      --owner-scott: #2563eb;
+      --owner-robert: #15803d;
+      --owner-jodi: #d97706;
+      --owner-ron: #dc2626;
+      --owner-charlie: #7c3aed;
+      --owner-angel: #0891b2;
+      --owner-tel: #be185d;
+      --owner-pakistani-marketing: #475569;
+      --owner-photo-sound-cinema: #0f766e;
+      --owner-unknown: #6b7280;
+      --shadow: 0 18px 48px rgba(30, 32, 38, 0.12);
+      --radius: 8px;
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 18px;
+      background: #f0eee7;
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+    }
+
+    main {
+      min-width: 0;
+      padding: 28px clamp(18px, 3vw, 44px) 64px;
+    }
+
+    .brand {
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand .eyebrow {
+      margin: 0 0 8px;
+      color: var(--red);
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 2.8vw, 3rem);
+      line-height: 1.02;
+      letter-spacing: 0;
+      max-width: 920px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 12px;
+      font-size: 1.02rem;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap: 12px;
+      margin: 22px 0 18px;
+    }
+
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: 0 8px 24px rgba(30, 32, 38, 0.06);
+      min-height: 86px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.35rem;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 14px;
+    }
+
+    .control-group {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .control-label {
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .search {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(22, 127, 131, 0.16);
+    }
+
+    .filter-select,
+    .filter-date {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--charcoal);
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    .filter-select:focus,
+    .filter-date:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(22, 127, 131, 0.16);
+    }
+
+    .date-filter-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px;
+    }
+
+    .date-clear-btn {
+      width: 38px;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--charcoal);
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .date-clear-btn:hover {
+      border-color: #aeb6c2;
+    }
+
+    .segmented {
+      display: grid;
+      gap: 6px;
+    }
+
+    .filter-btn,
+    .action-btn {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--charcoal);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    .filter-btn:hover,
+    .action-btn:hover {
+      border-color: #aeb6c2;
+    }
+
+    .filter-btn.active {
+      border-color: var(--charcoal);
+      background: var(--charcoal);
+      color: #fff;
+    }
+
+    .filter-count {
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.07);
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .filter-btn.active .filter-count {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .actions {
+      display: grid;
+      gap: 8px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .action-btn {
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .section {
+      margin-top: 22px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: visible;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      padding: 18px 20px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .section-body {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+    }
+
+    .subsection {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: visible;
+      background: #fff;
+    }
+
+    .subsection-title {
+      padding: 12px 14px;
+      background: #f7f6f2;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .items {
+      display: grid;
+    }
+
+    .item {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-rows: auto auto;
+      gap: 10px 14px;
+      align-items: start;
+      min-height: 50px;
+      padding: 12px 14px;
+      border-top: 1px solid #eef0f4;
+    }
+
+    .item:first-child {
+      border-top: 0;
+    }
+
+    .item.hidden {
+      display: none;
+    }
+
+    .item-text {
+      grid-column: 1;
+      grid-row: 1;
+      min-width: 0;
+    }
+
+    .owner-block {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+      max-width: 280px;
+    }
+
+    .assignment-controls {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) minmax(150px, 1.2fr);
+      gap: 8px;
+      min-width: min(380px, 100%);
+      align-items: start;
+    }
+
+    .assignment-field {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .assignment-label {
+      color: var(--muted);
+      font-size: 0.66rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .owner-select,
+    .status-select,
+    .priority-select,
+    .date-input,
+    .support-summary {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--charcoal);
+      padding: 6px 8px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      outline: none;
+    }
+
+    .owner-select {
+      border-left-width: 6px;
+      cursor: pointer;
+    }
+
+    .priority-select,
+    .status-select,
+    .date-input {
+      cursor: pointer;
+    }
+
+    .owner-select:focus,
+    .status-select:focus,
+    .priority-select:focus,
+    .date-input:focus,
+    .support-picker[open] .support-summary {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(22, 127, 131, 0.14);
+    }
+
+    .owner-select.owner-scott {
+      border-left-color: var(--owner-scott);
+    }
+
+    .owner-select.owner-robert {
+      border-left-color: var(--owner-robert);
+    }
+
+    .owner-select.owner-jodi {
+      border-left-color: var(--owner-jodi);
+    }
+
+    .owner-select.owner-ron {
+      border-left-color: var(--owner-ron);
+    }
+
+    .owner-select.owner-charlie {
+      border-left-color: var(--owner-charlie);
+    }
+
+    .owner-select.owner-angel {
+      border-left-color: var(--owner-angel);
+    }
+
+    .owner-select.owner-tel {
+      border-left-color: var(--owner-tel);
+    }
+
+    .owner-select.owner-pakistani-marketing {
+      border-left-color: var(--owner-pakistani-marketing);
+    }
+
+    .owner-select.owner-photo-sound-cinema {
+      border-left-color: var(--owner-photo-sound-cinema);
+    }
+
+    .owner-select.owner-unknown {
+      border-left-color: var(--owner-unknown);
+    }
+
+    .owner-select.owner-shared,
+    .owner-select.owner-all {
+      border-left-color: var(--green);
+    }
+
+    .status-field {
+      grid-column: 1;
+      grid-row: 2;
+      display: grid;
+      gap: 4px;
+      width: min(180px, 100%);
+    }
+
+    .status-select {
+      background: var(--charcoal);
+      color: #fff;
+      border-color: var(--charcoal);
+    }
+
+    .support-picker {
+      position: relative;
+    }
+
+    .support-picker[open] {
+      z-index: 200;
+    }
+
+    .support-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      list-style: none;
+      cursor: pointer;
+      color: #4f5561;
+      background: #f9fafb;
+    }
+
+    .support-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .support-summary::after {
+      content: "▾";
+      color: var(--muted);
+      font-size: 0.72rem;
+    }
+
+    .support-picker[open] .support-summary::after {
+      content: "▴";
+    }
+
+    .support-menu {
+      position: absolute;
+      right: 0;
+      z-index: 300;
+      display: grid;
+      gap: 4px;
+      width: min(220px, 72vw);
+      max-height: min(320px, 60vh);
+      overflow-y: auto;
+      margin-top: 6px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .support-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      border-radius: 6px;
+      color: var(--charcoal);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .support-option:hover {
+      background: #f4f5f7;
+    }
+
+    .support-option input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--teal);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 3px 9px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .pill.owner {
+      color: #fff;
+    }
+
+    .pill.support {
+      background: #f4f5f7;
+      color: #4f5561;
+      border-color: #e4e7ed;
+      font-weight: 700;
+    }
+
+    .owner-scott {
+      background: var(--owner-scott);
+    }
+
+    .owner-robert {
+      background: var(--owner-robert);
+    }
+
+    .owner-jodi {
+      background: var(--owner-jodi);
+    }
+
+    .owner-ron {
+      background: var(--owner-ron);
+    }
+
+    .owner-charlie {
+      background: var(--owner-charlie);
+    }
+
+    .owner-angel {
+      background: var(--owner-angel);
+    }
+
+    .owner-tel {
+      background: var(--owner-tel);
+    }
+
+    .owner-pakistani-marketing {
+      background: var(--owner-pakistani-marketing);
+    }
+
+    .owner-photo-sound-cinema {
+      background: var(--owner-photo-sound-cinema);
+    }
+
+    .owner-unknown {
+      background: var(--owner-unknown);
+    }
+
+    .owner-shared,
+    .owner-all {
+      background: var(--green);
+    }
+
+    .notes {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .note-list {
+      margin: 0;
+      padding-left: 20px;
+      color: #30343b;
+    }
+
+    .note-list li {
+      margin: 8px 0;
+    }
+
+    .owner-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .owner-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #fff;
+    }
+
+    .owner-card strong {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .empty-state {
+      display: none;
+      margin-top: 24px;
+      padding: 24px;
+      border: 1px dashed #b8bfcc;
+      border-radius: var(--radius);
+      color: var(--muted);
+      text-align: center;
+      background: rgba(255, 255, 255, 0.64);
+    }
+
+    .empty-state.visible {
+      display: block;
+    }
+
+    @media (max-width: 1000px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .segmented {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .owner-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      main {
+        padding-inline: 14px;
+      }
+
+      .summary,
+      .owner-grid,
+      .segmented {
+        grid-template-columns: 1fr;
+      }
+
+      .section-header {
+        display: grid;
+      }
+
+      .item {
+        grid-template-columns: 1fr;
+      }
+
+      .owner-block {
+        grid-column: 1;
+        justify-content: flex-start;
+        max-width: none;
+      }
+
+      .assignment-controls {
+        grid-column: 1;
+        grid-row: auto;
+        grid-template-columns: 1fr;
+        min-width: 0;
+      }
+
+      .status-field {
+        grid-column: 1;
+        grid-row: auto;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      aside,
+      .actions,
+      .search,
+      .empty-state {
+        display: none !important;
+      }
+
+      .app {
+        display: block;
+      }
+
+      main {
+        padding: 0;
+      }
+
+      .section,
+      .metric {
+        box-shadow: none;
+        break-inside: avoid;
+      }
+
+      .item.hidden {
+        display: grid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <p class="eyebrow">Mojo AI Summits</p>
+        <h2>Checklist Controls</h2>
+      </div>
+
+      <div class="toolbar">
+        <div class="control-group">
+          <label class="control-label" for="search">Search</label>
+          <input class="search" id="search" type="search" placeholder="Filter checklist items">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Phase</div>
+          <div class="segmented" id="phaseFilters"></div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Owner</div>
+          <div class="segmented" id="ownerFilters"></div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="priorityFilter">Priority</label>
+          <select class="filter-select" id="priorityFilter"></select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="dateFilter">Expected Delivery Date</label>
+          <div class="date-filter-row">
+            <input class="filter-date" id="dateFilter" type="date">
+            <button class="date-clear-btn" id="clearDateFilter" type="button" aria-label="Clear date filter">×</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="statusFilter">Status</label>
+          <select class="filter-select" id="statusFilter"></select>
+        </div>
+
+        <div class="actions">
+          <button class="action-btn" id="clearStatuses" type="button">Clear Statuses</button>
+          <button class="action-btn" id="resetAssignments" type="button">Reset Assignments</button>
+          <button class="action-btn" type="button" onclick="window.print()">Print</button>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <p class="eyebrow">Event Operations</p>
+      <h1>Master Event Execution Checklist</h1>
+      <div class="summary" id="summary"></div>
+      <div id="content"></div>
+      <div class="empty-state" id="emptyState">No checklist items match the current filters.</div>
+    </main>
+  </div>
+
+  <script type="text/plain" id="source-md"># Master Event Execution Checklist
+
+Date: 2026-07-25
+Version: 2.9
+Category: event operations
+
+## Purpose
+
+This checklist defines the work required to stand up Mojo AI Summits and execute events. It includes a one-time company foundation checklist plus repeatable pre-event, during-event, and post-event phases.
+
+Each item has one accountable owner. Other team members may support, but the owner is responsible for making sure the item is completed or deliberately deferred.
+
+Status: provisional. This draft assigns ownership across the expanded operating team. It should not be treated as final event strategy.
+
+Future event-specific copies should remove the one-time company foundation section and keep only the repeatable per-event checklist items.
+
+## Confirmed Event Model
+
+- First event: Mojo AI Summit Dallas.
+- First event timing: second week of January 2027, exact date TBD.
+- Target attendance: 150 curated leaders.
+- Target audience composition: executive-heavy audience across CEO, CFO, COO, CIO, CISO, CAIO/CTO, and director-and-above leaders.
+- Audience level: director and above.
+- Target company size: generally 5,000 or more employees.
+- Audience acquisition model: all attendees are curated through individual invitations.
+- VIP definition: any attendee with a speaking role or roundtable leadership role is a VIP.
+- Executive attendee definition: every other curated executive or director-and-above attendee is an executive attendee.
+- VIP handling model: VIP treatment is based on contribution role, not title alone.
+- Target vendor count: 36 vendors.
+- Core event length: six hours.
+- Event format: six tracks using boardroom-style programming.
+- Boardroom block format: 15-minute presentation followed by a 15-minute roundtable.
+- Boardroom cadence: boardroom blocks may repeat within each hour across the six tracks, depending on final run-of-show design.
+- Attendee experience extensions: optional early event value experiences may be offered before the six-hour core event, such as golf pro training or other special experiences.
+- After-hours experience extensions: optional post-event experiences may be offered after the six-hour core event, such as cowboy ranch leadership, performance driving, helicopter rides, or other premium experiences.
+- Sponsor presence: no booths, tables, or traditional expo footprint.
+- Sponsor attendee model: each sponsor is expected to have one executive sales or marketing team member on site and one additional presentation-engaged executive.
+- Sponsor upsells: sponsors may purchase speaking opportunities or workshop leadership opportunities.
+- Executive access area: not used; the event audience is already curated for executives and director-and-above leaders.
+- Expo model: no expo floor, no booths, and no tables.
+- Attendee tickets: no paid attendee tickets; all curated attendee access is comped/invited.
+- Funding model: sponsor-funded event.
+- Revenue model: first-event revenue target is $100,000 total gross revenue from sponsor revenue. This is a planning goal, not a minimum threshold.
+- Revenue uncertainty: first-event sponsor count, final standard sponsor price, and sponsor upsell conversion are not yet validated.
+- Sponsor revenue model: nearly all vendors are expected to pay a base sponsorship fee for curated senior-leader access and sponsor deliverables, not booth/tabletop presence.
+- Standard sponsor package: no bronze, silver, or gold tiers for the initial event; every base sponsor package is the same.
+- Working standard sponsor price range: expected to be $3,500 to $5,000 for the initial event, with final determination later.
+- Working base sponsor revenue: TBD for the 150-leader model.
+- Sponsor package definition: benefits and deliverables for the standard sponsor package still need to be defined.
+- Sponsor upsell model: additional sponsor revenue may come from selected upsells, such as speaking slots, workshop leadership, meal sponsorships, drink/bar sponsorships, and similar event activations.
+- Workshop model: undecided. Workshops may become sponsor-led, attendee-paid add-ons, included programming, or excluded from the first event.
+- Advisory/team board model: expected to include at least three groups and possibly four.
+- Advisory/team board 1: Sponsor Marketing/Sales Advisory Board.
+- Advisory/team board 2: Sponsor Executive Board.
+- Advisory/team board 3: Mojo AI Summits Cohort Advisory Board.
+- Advisory/team board 4: Mojo AI Summits Dallas Event VIPs, if used as a distinct group for attendees with speaking or roundtable leadership roles.
+- Advisory/team board dinner model: each advisory team or board is expected to have a separate dinner event.
+- Sponsor Marketing/Sales Advisory Board dinner: targeted for one month before the event.
+- Mojo AI Summits Cohort Advisory Board dinner: targeted for two months before the event.
+- VIP Dinner: targeted for the night before the event.
+- Sponsor Executive Board dinner: targeted for after the event, unless it occurs on the same day or the event has a nighttime schedule; in those cases, the board meal will not occur.
+- Board and VIP dinner funding: dinners should be sponsor-funded where possible.
+- VIP travel and hotel support: Mojo may cover travel and hotel stays for selected VIPs; travel support is not automatically granted to every VIP.
+- VIP travel/hotel eligibility: primarily based on speaking role, roundtable leadership role, keynote importance, strategic value, and approved budget. Mojo AI Summits team travel and hotel also need to be covered.
+- VIP travel/hotel ownership: Ron owns making sure VIP travel and hotel coordination happens. Robert owns funding, pricing research, approved spend, and direct bookings when Mojo is paying.
+- VIP travel/hotel process: when VIPs are paying their own way, Robert finds pricing and location options for Ron, and Ron passes those options to the VIPs. When Mojo is paying, Robert books directly and Ron passes confirmed information to the VIPs.
+
+## Open Decisions and Accountable Owners
+
+This section is reserved for decisions that do not yet have an assigned operating home. Current decision-definition work has been distributed into the relevant checklist sections below.
+
+## Owner Key
+
+| Owner | Area |
+|---|---|
+| Scott | Event concept, event value, strategic structure, attendee experience quality, soul standard |
+| Robert | CEO, finance, taxes, purchasing, contracts, budget, legal/administrative controls |
+| Jodi | Sponsors, marketing, website, public campaigns, sponsor fulfillment, invite-support materials |
+| Ron | Curated director-and-above invites, executive relationships, keynote/executive recruitment, public face of company |
+| Charlie | Event management, venue coordination, production logistics, staffing, registration operations, on-site command center |
+| Angel | VIP program direction, agenda execution, speaker/session operations, room logistics, run of show, presentation materials |
+| The Event Lounge (TEL) | External event lounge, experiential support, and event operations support |
+| Pakistani Marketing Team | Placeholder owner/support group name for a marketing team; official company name TBD |
+| Photography, Sound, and Cinematography Team | Placeholder owner/support group for photography, sound, video, and cinematography production; official vendor/team name TBD |
+| I don't know | Temporary owner placeholder when accountability has not been assigned yet |
+
+## One-Time Company Foundation Checklist
+
+These items are company setup work, not recurring per-event work. They should be completed once, maintained as needed, and excluded from future event-only checklists unless the item materially changes.
+
+### A. Company Formation and Governance
+
+- [ ] Complete company scaffolding: entity setup, ownership records, operating agreement, registered agent, and core corporate records. Owner: Robert. Support: Scott.
+- [ ] Define founder authority boundaries, decision rights, and escalation rules. Owner: Scott. Support: Robert.
+- [ ] Create company master folder structure and document retention rules. Owner: Robert. Support: Scott, Charlie.
+- [ ] Establish standard contract templates for sponsors, speakers, vendors, contractors, and venues. Owner: Robert. Support: Scott, Jodi.
+- [ ] Confirm business insurance baseline and renewal process. Owner: Robert.
+- [ ] Confirm tax registrations, local obligations, and recurring filing calendar. Owner: Robert.
+
+### B. Email, Website, and Technical Foundation
+
+- [ ] Establish company domain, DNS, and hosting baseline. Owner: Robert. Support: Scott, Jodi.
+- [ ] Establish company email accounts, aliases, forwarding rules, and shared inboxes. Owner: Robert. Support: Scott, Jodi.
+- [ ] Establish website platform, hosting workflow, launch process, and publishing ownership. Owner: Jodi. Support: Scott, Robert.
+- [ ] Establish website analytics, privacy notices, cookie/consent requirements if needed, and conversion tracking standards. Owner: Jodi. Support: Robert, Scott.
+- [ ] Establish shared file storage, permissions, naming conventions, and archive rules. Owner: Robert. Support: Charlie, Scott.
+- [ ] Establish password manager, two-factor authentication, account recovery, and access offboarding rules. Owner: Robert. Support: Scott.
+- [ ] Establish technical tool stack for CRM, registration, email marketing, forms, payments, documents, project tracking, and reporting. Owner: Robert. Support: Scott, Jodi, Charlie, Angel.
+- [ ] Define who can create or change technical systems, automations, integrations, and public-facing web assets. Owner: Scott. Support: Robert, Jodi.
+
+### C. Banking, Payments, and Credit Controls
+
+- [ ] Establish company bank account. Owner: Robert. Support: Scott.
+- [ ] Establish accounting or bookkeeping system. Owner: Robert.
+- [ ] Establish payment processing and sponsor invoicing workflow. Owner: Robert. Support: Jodi.
+- [ ] Establish company credit card program if used. Owner: Robert. Support: Scott.
+- [ ] Define who is allowed to use company credit cards. Owner: Robert. Support: Scott.
+- [ ] Define credit card limits by person, role, spend category, and approval threshold. Owner: Robert. Support: Scott.
+- [ ] Define allowable credit card expenses and prohibited expenses. Owner: Robert. Support: Scott.
+- [ ] Define receipt submission, expense coding, reconciliation, and exception handling process. Owner: Robert.
+- [ ] Define reimbursement rules for approved out-of-pocket spending. Owner: Robert. Support: Scott.
+- [ ] Define emergency purchasing rules for event-day needs. Owner: Robert. Support: Charlie, Scott.
+
+## Pre-Event Checklist
+
+### 1. Event Strategy and Approval
+
+- [ ] Confirm event city, date window, and strategic purpose. Owner: Scott. Support: Robert.
+- [ ] Define the event promise and core positioning for this city. Owner: Scott. Support: Jodi, Ron.
+- [ ] Define target audience segments by function, seniority, industry, and geography. Owner: Scott. Support: Ron, Jodi.
+- [ ] Confirm event size target, including total attendees, seniority mix, company-size threshold, vendor count, VIP role count, and executive attendee count. Owner: Scott. Support: Robert, Jodi, Ron.
+- [ ] Define revenue scenarios and conservative planning model. Owner: Jodi. Support: Robert, Scott.
+- [ ] Approve the event budget range before major spending begins. Owner: Robert. Support: Scott.
+- [ ] Confirm six-hour core event window and whether any optional early or after-hours experiences are included. Owner: Scott. Support: Robert, Ron.
+- [ ] Confirm which formats are included: six tracks, boardroom presentations, roundtables, workshops, board dinners, VIP meetings, advisory sessions, special attendee experiences, and post-event report. Owner: Scott. Support: Jodi, Ron.
+- [ ] Define event success metrics. Owner: Scott. Support: Robert, Jodi, Ron.
+- [ ] Create the event master folder and operating tracker. Owner: Charlie. Support: Robert, Scott.
+
+### 2. Budget, Legal, and Administrative Setup
+
+- [ ] Build the full event budget. Owner: Robert. Support: Scott, Jodi.
+- [ ] Create expense approval rules for the event. Owner: Robert.
+- [ ] Confirm accounting categories for revenue and expenses. Owner: Robert.
+- [ ] Set up sponsor invoicing process. Owner: Robert. Support: Jodi.
+- [ ] Set up sponsor-funded registration and comp/invite approval process. Owner: Robert. Support: Jodi, Charlie.
+- [ ] Confirm cancellation, substitution, no-show, and comp-transfer policies. Owner: Robert. Support: Scott.
+- [ ] Prepare standard sponsor agreement. Owner: Robert. Support: Jodi.
+- [ ] Prepare standard speaker agreement or speaker release. Owner: Robert. Support: Ron, Scott.
+- [ ] Prepare attendee terms, privacy language, and photography/video notice. Owner: Robert. Support: Jodi.
+- [ ] Confirm event insurance requirements. Owner: Robert.
+- [ ] Define legal, insurance, privacy, and attendee data handling requirements. Owner: Robert. Support: Scott, Jodi, Ron.
+- [ ] Confirm tax handling for sponsor payments and local event obligations. Owner: Robert.
+- [ ] Maintain purchase records, contracts, invoices, and receipts. Owner: Robert.
+
+### 3. Venue and Production Logistics
+
+- [ ] Build venue requirements list: capacity, six-track room count, stage, catering, AV, parking, accessibility, green room, sponsor access needs, VIP/speaker handling needs, and optional experience logistics. Owner: Charlie. Support: Robert, Scott, Angel.
+- [ ] Create venue shortlist. Owner: Charlie. Support: Robert.
+- [ ] Schedule venue walkthroughs. Owner: Charlie. Support: Robert, Scott, Angel.
+- [ ] Evaluate venue fit against event experience, program needs, and sponsor inventory. Owner: Scott. Support: Charlie, Angel, Robert, Jodi.
+- [ ] Negotiate and sign venue contract. Owner: Robert. Support: Charlie, Scott.
+- [ ] Confirm room block or hotel recommendations if needed. Owner: Charlie. Support: Robert.
+- [ ] Confirm catering plan and meal timing. Owner: Charlie. Support: Robert.
+- [ ] Confirm AV provider, production needs, and recording needs. Owner: Charlie. Support: Robert, Scott, Angel.
+- [ ] Confirm Wi-Fi, power, signage, load-in, and load-out requirements. Owner: Charlie. Support: Robert, Scott, Angel.
+- [ ] Build the floor plan for registration, sessions, sponsor access points if any, VIP/speaker handling points, and traffic flow. Owner: Charlie. Support: Scott, Angel, Ron, Jodi, Robert.
+- [ ] Confirm accessibility plan. Owner: Charlie. Support: Robert.
+- [ ] Confirm emergency, safety, and incident procedures with venue. Owner: Charlie. Support: Robert.
+
+### 4. Sponsor Strategy and Revenue
+
+- [ ] Define standard sponsor package benefits for the no-booth vendor model. Owner: Jodi. Support: Robert, Scott.
+- [ ] Define sponsor inventory and scarcity: presenting partner, track partner, dinner partner, workshop, roundtable, report, newsletter, meeting concierge, branding, and senior-leader access rights. Owner: Jodi. Support: Scott.
+- [ ] Define sponsor attendee entitlement and expectations: one executive sales or marketing team member and one additional presentation-engaged executive per sponsor. Owner: Jodi. Support: Robert, Scott.
+- [ ] Define sponsor upsell inventory and pricing. Owner: Jodi. Support: Robert, Scott.
+- [ ] Define private sponsor meetings or meeting concierge model. Owner: Jodi. Support: Scott.
+- [ ] Create sponsor prospect list. Owner: Jodi.
+- [ ] Segment sponsor prospects by category, fit, and likely upsell opportunities. Owner: Jodi.
+- [ ] Build sponsor deck for this city. Owner: Jodi. Support: Scott.
+- [ ] Ensure sponsor deck reflects the event soul and does not promise a generic vendor funnel. Owner: Scott. Support: Jodi.
+- [ ] Launch sponsor outreach cadence. Owner: Jodi.
+- [ ] Track sponsor conversations, next steps, and close probability. Owner: Jodi. Support: Robert.
+- [ ] Review sponsor fit against evidence and contribution standard. Owner: Scott. Support: Jodi.
+- [ ] Close sponsor commitments. Owner: Jodi. Support: Robert.
+- [ ] Send sponsor agreements and invoices. Owner: Robert. Support: Jodi.
+- [ ] Collect sponsor logos, descriptions, contacts, deliverables, and deadlines. Owner: Jodi.
+- [ ] Confirm sponsor deliverables are operationally possible. Owner: Scott. Support: Robert, Jodi.
+- [ ] Build sponsor fulfillment tracker. Owner: Jodi. Support: Robert.
+- [ ] Confirm sponsor session, dinner, meeting, branding, lead-retrieval, and access requirements. Owner: Jodi. Support: Robert.
+- [ ] Communicate sponsor boundaries and participation standards. Owner: Scott. Support: Jodi.
+
+### 5. Website, Marketing, and Invitation Support
+
+- [ ] Create or update event landing page. Owner: Jodi. Support: Scott.
+- [ ] Publish event name, city, date, venue when confirmed, event promise, audience, sponsor information, and registration path. Owner: Jodi.
+- [ ] Confirm website analytics and conversion tracking. Owner: Jodi.
+- [ ] Build marketing calendar. Owner: Jodi.
+- [ ] Build email announcement sequence. Owner: Jodi.
+- [ ] Build social media announcement sequence. Owner: Jodi.
+- [ ] Build paid promotion plan if used. Owner: Jodi. Support: Robert.
+- [ ] Build partner and sponsor promotion kit. Owner: Jodi.
+- [ ] Build curated invite support materials for founders, sponsors, speakers, and partners. Owner: Jodi. Support: Ron.
+- [ ] Monitor registration volume, source, and conversion. Owner: Jodi.
+- [ ] Adjust marketing and invite-support messaging based on registration performance. Owner: Jodi.
+- [ ] Keep public messaging aligned with event positioning and trust principles. Owner: Jodi. Support: Scott.
+
+### 6. Curated Attendance and Relationship Development
+
+- [ ] Define curated director-and-above invitation process and qualification rules. Owner: Ron. Support: Scott, Jodi.
+- [ ] Define ideal curated attendee profile, including seniority, function, influence, geography, and target company size. Owner: Ron. Support: Scott.
+- [ ] Define qualification criteria for CXOs and director-and-above leaders from companies with 5,000 or more employees. Owner: Ron. Support: Scott.
+- [ ] Build target curated director-and-above invite list. Owner: Ron.
+- [ ] Track invite pipeline against the 150-leader audience model and desired title/function mix. Owner: Ron. Support: Robert, Jodi.
+- [ ] Prioritize invite list by fit, influence, role, company, and likelihood to attend. Owner: Ron.
+- [ ] Create curated invitation language. Owner: Ron. Support: Scott, Jodi.
+- [ ] Launch individual invitation outreach. Owner: Ron.
+- [ ] Track responses, confirms, declines, speaking roles, roundtable leadership roles, executive attendee status, VIP needs, and relationship notes. Owner: Ron.
+- [ ] Coordinate curated invitations with broad marketing to avoid duplicate or confusing outreach. Owner: Ron. Support: Jodi.
+- [ ] Recruit executives for roundtables, panels, fireside chats, or private sessions. Owner: Ron. Support: Scott.
+- [ ] Confirm VIP role list and executive attendee list. Owner: Ron. Support: Angel, Robert.
+- [ ] Define VIP travel and hotel eligibility rules for speaker and roundtable-leader VIPs. Owner: Scott. Support: Robert, Jodi, Ron.
+- [ ] Set VIP travel and hotel budget limits. Owner: Robert. Support: Ron.
+- [ ] Research hotel and travel pricing options for qualifying VIPs. Owner: Robert. Support: Ron.
+- [ ] Share travel and hotel options with VIPs who are paying their own way. Owner: Ron. Support: Robert.
+- [ ] Book travel and hotel directly when Mojo is paying. Owner: Robert. Support: Ron.
+- [ ] Send confirmed travel and hotel details to supported VIPs. Owner: Ron. Support: Robert.
+- [ ] Track VIP travel and hotel status until each supported guest is complete. Owner: Ron. Support: Robert.
+- [ ] Build executive hosting plan for arrival, seating, introductions, dinners, and follow-up. Owner: Ron. Support: Scott.
+- [ ] Confirm public-facing role Ron will play at the event. Owner: Ron. Support: Scott.
+
+### 7. Advisory Boards, Team Boards, and VIP Groups
+
+- [ ] Define the full advisory/team board model for this event, including which groups exist, why they exist, and how they influence the event. Owner: Scott. Support: Ron, Jodi.
+- [ ] Define Sponsor Marketing/Sales Advisory Board purpose, membership, expectations, and use cases. Owner: Jodi. Support: Scott, Robert.
+- [ ] Build Sponsor Marketing/Sales Advisory Board prospect list. Owner: Jodi. Support: Robert.
+- [ ] Invite Sponsor Marketing/Sales Advisory Board members. Owner: Jodi.
+- [ ] Define Sponsor Executive Board purpose, membership, expectations, and executive-facing value. Owner: Ron. Support: Jodi, Scott.
+- [ ] Build Sponsor Executive Board prospect list. Owner: Ron. Support: Jodi.
+- [ ] Invite Sponsor Executive Board members. Owner: Ron. Support: Jodi.
+- [ ] Define Mojo AI Summits Cohort Advisory Board purpose, membership, expectations, and ongoing value. Owner: Scott. Support: Ron, Angel.
+- [ ] Build Mojo AI Summits Cohort Advisory Board prospect list. Owner: Ron. Support: Scott, Angel.
+- [ ] Invite Mojo AI Summits Cohort Advisory Board members. Owner: Ron. Support: Scott.
+- [ ] Decide whether Mojo AI Summits Dallas Event VIPs is a distinct group or simply a tag for attendees with speaking or roundtable leadership roles. Owner: Ron. Support: Scott, Charlie.
+- [ ] Build Mojo AI Summits Dallas Event VIP role list if used. Owner: Ron. Support: Scott, Angel.
+- [ ] Confirm expectations for each board or VIP group: nominations, invitations, sponsor introductions, credibility, moderation, speaking roles, roundtable leadership, feedback, and post-event continuity. Owner: Scott. Support: Ron, Jodi, Angel.
+- [ ] Schedule board briefings as needed. Owner: Ron. Support: Jodi, Charlie.
+- [ ] Schedule VIP briefings for speakers and roundtable leaders as needed. Owner: Angel. Support: Ron, Charlie.
+- [ ] Plan Sponsor Marketing/Sales Advisory Board dinner for one month before the event. Owner: Jodi. Support: Charlie, Robert, Scott.
+- [ ] Plan Mojo AI Summits Cohort Advisory Board dinner for two months before the event. Owner: Scott. Support: Ron, Charlie, Robert.
+- [ ] Plan VIP Dinner for the night before the event for attendees with speaking or roundtable leadership roles. Owner: Ron. Support: Charlie, Robert, Jodi.
+- [ ] Decide whether Sponsor Executive Board dinner occurs after the event or is skipped because of same-day timing or nighttime scheduling. Owner: Ron. Support: Scott, Jodi, Charlie.
+- [ ] Plan Sponsor Executive Board dinner when the post-event schedule allows it. Owner: Ron. Support: Charlie, Jodi, Robert.
+- [ ] Confirm funding model, venue, guest list, host role, and follow-up purpose for each board or VIP dinner. Owner: Robert. Support: Ron, Jodi, Scott, Charlie.
+- [ ] Capture board and VIP recommendations and convert them into event actions. Owner: Scott. Support: Ron, Jodi, Angel.
+- [ ] Recognize boards or VIP groups appropriately on website or materials if agreed. Owner: Jodi. Support: Ron, Scott.
+
+### 8. Programming, CFP, and Speaker Selection
+
+- [ ] Define event tracks and session architecture. Owner: Scott. Support: Angel, Ron.
+- [ ] Design six-track boardroom programming model. Owner: Scott. Support: Angel.
+- [ ] Define boardroom block timing: 15-minute presentation followed by 15-minute roundtable. Owner: Angel. Support: Scott.
+- [ ] Build hourly boardroom cadence and room rotation model for the six-hour event. Owner: Angel. Support: Charlie, Scott.
+- [ ] Define the call for papers or speaker nomination process. Owner: Angel. Support: Scott, Ron.
+- [ ] Decide whether workshops exist and whether they are sponsor-led, attendee-paid, included, or excluded. Owner: Scott. Support: Angel.
+- [ ] Publish CFP or speaker nomination page if used. Owner: Jodi. Support: Angel, Scott.
+- [ ] Build speaker prospect list. Owner: Ron. Support: Scott, Angel.
+- [ ] Recruit keynote and anchor speakers. Owner: Ron. Support: Scott, Angel.
+- [ ] Review speaker submissions and nominations. Owner: Angel. Support: Scott, Ron.
+- [ ] Evaluate speakers against engagement standard, not just title or prestige. Owner: Scott. Support: Angel, Ron.
+- [ ] Confirm speaker lineup. Owner: Angel. Support: Scott, Ron.
+- [ ] Confirm speaker agreements, releases, headshots, bios, and session descriptions. Owner: Robert. Support: Angel, Ron, Jodi.
+- [ ] Build session abstracts and public agenda copy. Owner: Angel. Support: Scott, Jodi.
+- [ ] Build moderator assignments. Owner: Angel. Support: Scott, Ron.
+- [ ] Confirm which sessions are sponsor-led, sponsor-supported, editorial, private, or Chatham House-style. Owner: Angel. Support: Scott, Jodi.
+- [ ] Define session recording and media capture policy. Owner: Jodi. Support: Angel, Scott.
+- [ ] Ensure sponsor participation does not become pure pay-to-play stage access. Owner: Scott. Support: Angel, Jodi.
+- [ ] Build run of show. Owner: Angel. Support: Scott, Jodi.
+- [ ] Build speaker prep process and schedule. Owner: Angel. Support: Scott, Ron.
+- [ ] Conduct speaker prep calls. Owner: Angel. Support: Scott, Ron.
+- [ ] Collect final slides or presentation materials. Owner: Angel. Support: Scott, Jodi.
+- [ ] Review content for quality, fit, timing, and sponsor boundaries. Owner: Scott. Support: Angel.
+
+### 9. Experience Design and Engagement
+
+- [ ] Define the desired attendee journey from invite to post-event follow-up. Owner: Scott. Support: Jodi, Ron, Charlie, Angel.
+- [ ] Design moments that create discussion, challenge, and peer engagement. Owner: Scott. Support: Angel.
+- [ ] Define where attendees should talk to each other, not just listen. Owner: Scott.
+- [ ] Define roundtable prompts, debate prompts, workshop outputs, or facilitated exercises. Owner: Scott. Support: Angel.
+- [ ] Define how the event captures insight without violating trust or confidentiality. Owner: Scott. Support: Angel.
+- [ ] Define networking formats and executive introduction moments. Owner: Ron. Support: Scott, Angel.
+- [ ] Define sponsor-attendee interaction formats that feel valuable rather than intrusive. Owner: Scott. Support: Jodi, Charlie.
+- [ ] Define the post-event report as a product or deliverable. Owner: Robert. Support: Scott, Jodi.
+- [ ] Define optional early event value experiences for attendees. Owner: Scott. Support: Jodi, Ron, Charlie.
+- [ ] Define optional after-hours attendee experiences. Owner: Scott. Support: Jodi, Ron, Charlie.
+- [ ] Confirm experience extensions do not dilute the six-hour core event or create unclear sponsor promises. Owner: Scott. Support: Robert, Jodi.
+- [ ] Build VIP and board-dinner experience plans. Owner: Ron. Support: Scott, Charlie, Robert, Jodi.
+- [ ] Confirm attendee badges, seating logic, signage language, and room naming. Owner: Charlie. Support: Angel, Jodi, Ron, Scott.
+- [ ] Confirm what would make the event feel boring, passive, or vendor-heavy, then remove or redesign those elements. Owner: Scott.
+
+### 10. Registration, Data, and Systems
+
+- [ ] Select registration, CRM, email, and ticketing systems. Owner: Robert. Support: Charlie, Scott, Jodi.
+- [ ] Configure registration types, invitation codes, sponsor passes, speaker passes, VIP passes for speaker/roundtable-leader attendees, executive attendee passes, and comp rules. Owner: Charlie. Support: Robert, Jodi, Ron, Angel.
+- [ ] Configure sponsor passes for the expected executive sales or marketing attendee and the additional presentation-engaged executive. Owner: Charlie. Support: Jodi, Robert.
+- [ ] Define required registration fields. Owner: Jodi. Support: Ron, Robert, Charlie.
+- [ ] Set up sponsor tracker. Owner: Jodi. Support: Robert.
+- [ ] Set up speaker tracker. Owner: Angel. Support: Ron, Jodi.
+- [ ] Set up attendee tracker for the executive attendee population. Owner: Angel. Support: Ron, Jodi.
+- [ ] Set up cohort advisory board member tracker. Owner: Ron. Support: Scott, Angel.
+- [ ] Set up VIP role tracker for speakers and roundtable leaders. Owner: Angel. Support: Ron, Charlie.
+- [ ] Set up sponsor board trackers for both sponsor boards. Owner: Jodi. Support: Robert, Ron.
+- [ ] Define data hygiene rules and source attribution. Owner: Robert. Support: Jodi, Charlie.
+- [ ] Confirm badge printing process. Owner: Charlie. Support: Jodi.
+- [ ] Confirm sponsor lead retrieval or sponsor meeting scheduling tools if used. Owner: Jodi. Support: Charlie, Robert.
+- [ ] Confirm VIP lead and meeting scheduling tools for speakers and roundtable leaders if used. Owner: Angel. Support: Charlie, Ron.
+- [ ] Confirm attendee list access rules for sponsors. Owner: Robert. Support: Jodi, Scott.
+- [ ] Confirm privacy handling for attendee data. Owner: Robert.
+
+### 11. Communications
+
+- [ ] Build attendee confirmation email. Owner: Jodi. Support: Scott, Charlie.
+- [ ] Build pre-event attendee reminder sequence. Owner: Jodi.
+- [ ] Build executive attendee and VIP reminder sequence. Owner: Ron. Support: Angel, Jodi.
+- [ ] Build sponsor logistics email sequence. Owner: Jodi. Support: Robert.
+- [ ] Build speaker logistics email sequence. Owner: Angel. Support: Ron, Jodi.
+- [ ] Build staff and contractor briefing document. Owner: Charlie. Support: Scott, Angel.
+- [ ] Define event staffing model: founders, staff, contractors, volunteers, hired event team, or mixed model. Owner: Charlie. Support: Jodi, Scott, Robert.
+- [ ] Build FAQ for attendees, sponsors, speakers, and staff. Owner: Jodi. Support: Charlie, Robert, Scott, Angel.
+- [ ] Confirm crisis communication owner and escalation path. Owner: Robert. Support: Charlie, Scott.
+- [ ] Confirm on-site communication channels for the team. Owner: Charlie.
+
+### 12. Materials, Assets, and On-Site Preparation
+
+- [ ] Finalize event branding assets. Owner: Jodi.
+- [ ] Finalize sponsor logo placement and deadlines. Owner: Jodi.
+- [ ] Prepare signage list. Owner: Charlie. Support: Jodi, Angel.
+- [ ] Order signs, badges, lanyards, sponsor materials, stage assets, and printed programs if used. Owner: Charlie. Support: Robert, Jodi, Angel.
+- [ ] Prepare registration desk supplies. Owner: Charlie.
+- [ ] Prepare speaker green room supplies. Owner: Angel. Support: Charlie, Ron.
+- [ ] Prepare sponsor check-in packet. Owner: Jodi. Support: Charlie.
+- [ ] Prepare VIP and executive attendee hosting materials. Owner: Ron. Support: Jodi, Charlie.
+- [ ] Prepare staff scripts and talking points. Owner: Charlie. Support: Scott, Ron, Angel.
+- [ ] Prepare survey forms or digital feedback tools. Owner: Jodi. Support: Scott.
+
+### 13. Final Readiness
+
+- [ ] Hold 30-day readiness review. Owner: Charlie. Support: full team.
+- [ ] Hold 14-day readiness review. Owner: Charlie. Support: full team.
+- [ ] Hold 7-day readiness review. Owner: Charlie. Support: full team.
+- [ ] Freeze public agenda unless an exception is approved. Owner: Angel. Support: Scott.
+- [ ] Freeze sponsor deliverables unless an exception is approved. Owner: Jodi. Support: Scott, Charlie, Robert, Angel.
+- [ ] Confirm final registration, executive attendance, speaker lineup, sponsor list, and budget status. Owner: Charlie. Support: Jodi, Ron, Angel, Robert, Scott.
+- [ ] Confirm on-site staffing assignments. Owner: Charlie. Support: Scott, Angel.
+- [ ] Confirm run-of-show timing with venue, AV, speakers, moderators, and team. Owner: Angel. Support: Charlie, Ron, Scott.
+- [ ] Confirm cash, card, purchasing, and emergency payment procedures. Owner: Robert.
+- [ ] Confirm founder and team arrival times and responsibilities. Owner: Charlie.
+
+## During-Event Checklist
+
+### 1. Command Center and Daily Control
+
+- [ ] Open event command center before attendee arrival. Owner: Charlie.
+- [ ] Run morning team briefing. Owner: Charlie. Support: Scott, Jodi, Ron, Robert, Angel.
+- [ ] Confirm schedule readiness. Owner: Angel.
+- [ ] Confirm room readiness. Owner: Angel.
+- [ ] Confirm sponsor readiness. Owner: Jodi.
+- [ ] Confirm registration status. Owner: The Event Lounge (TEL).
+- [ ] Confirm executive arrivals. Owner: Angel. Support: The Event Lounge (TEL).
+- [ ] Maintain live issue tracker. Owner: Charlie.
+- [ ] Make day-of budget or purchasing decisions. Owner: Robert.
+- [ ] Coordinate venue, catering, security, and contractors. Owner: Charlie.
+- [ ] Run end-of-day team debrief. Owner: Charlie. Support: full team.
+
+### 2. Registration and Arrival
+
+- [ ] Open registration desk and check-in flow. Owner: Charlie. Support: Jodi.
+- [ ] Manage badge issues, walk-ins, substitutions, and comp approvals. Owner: Charlie. Support: Jodi, Robert.
+- [ ] Monitor attendee arrival volume. Owner: Charlie. Support: Jodi.
+- [ ] Identify VIP arrivals and priority executive attendee arrivals. Owner: Ron.
+- [ ] Greet and host VIPs and priority executive attendees. Owner: Ron.
+- [ ] Resolve registration friction quickly. Owner: Charlie.
+
+### 3. Program and Stage Execution
+
+- [ ] Keep the agenda running on time. Owner: Angel. Support: Charlie.
+- [ ] Brief moderators and speakers before sessions. Owner: Angel. Support: Ron.
+- [ ] Ensure sessions create engagement rather than passive listening. Owner: Scott. Support: Angel.
+- [ ] Manage stage transitions. Owner: Angel. Support: Charlie.
+- [ ] Handle speaker no-shows or timing changes. Owner: Angel. Support: Ron, Charlie.
+- [ ] Protect editorial and trust boundaries during sponsored sessions. Owner: Scott. Support: Angel.
+- [ ] Adjust room energy, timing, or format if engagement drops. Owner: Scott. Support: Angel, Charlie.
+- [ ] Capture notable ideas, conflicts, and insights for post-event reporting. Owner: Scott. Support: Angel, Jodi.
+
+### 4. Executive Hosting and Relationship Management
+
+- [ ] Welcome executive guests personally when possible. Owner: Ron.
+- [ ] Make high-value introductions between executives, speakers, sponsors, and founders. Owner: Ron.
+- [ ] Manage VIP seating, dinners, private meetings, and executive attendee requests. Owner: Ron. Support: Charlie, Robert.
+- [ ] Keep executive-facing tone elevated and relationship-driven. Owner: Ron.
+- [ ] Identify executives who should be invited into future events, advisory boards, VIP groups, or speaking roles. Owner: Ron.
+- [ ] Protect executives from feeling oversold or over-harvested. Owner: Ron. Support: Scott.
+
+### 5. Sponsor Fulfillment
+
+- [ ] Check in sponsors and confirm their setup. Owner: Jodi. Support: Charlie.
+- [ ] Confirm sponsor signage, session rights, dinner rights, meeting rights, branding, access rights, attendee entitlements, and deliverables. Owner: Jodi. Support: Charlie, Angel.
+- [ ] Confirm each sponsor's on-site executive sales or marketing attendee and presentation-engaged executive. Owner: Jodi. Support: Charlie, Angel.
+- [ ] Manage sponsor questions and issues. Owner: Jodi.
+- [ ] Confirm sponsor sessions or activations begin on time. Owner: Angel. Support: Jodi, Charlie.
+- [ ] Watch for sponsor behavior that violates event trust or attendee experience. Owner: Jodi. Support: Scott, Angel.
+- [ ] Manage lead retrieval or meeting concierge process. Owner: Jodi.
+- [ ] Capture sponsor satisfaction and renewal signals. Owner: Jodi.
+
+### 6. Marketing, Media, and Public Presence
+
+- [ ] Capture photos, video, quotes, and social content. Owner: Jodi.
+- [ ] Post live event updates where appropriate. Owner: Jodi.
+- [ ] Keep public messaging focused on executive AI leadership, not generic event hype. Owner: Jodi. Support: Scott.
+- [ ] Manage press or media if present. Owner: Jodi. Support: Ron.
+- [ ] Capture testimonials from attendees, sponsors, and speakers. Owner: Jodi. Support: Ron.
+- [ ] Track content permissions and release limitations. Owner: Robert. Support: Jodi, Angel.
+
+### 7. Attendee Experience and Engagement
+
+- [ ] Walk the event and observe room energy. Owner: Scott. Support: Charlie, Angel.
+- [ ] Identify bottlenecks, confusion, boredom, or sponsor overload. Owner: Scott. Support: Charlie, Angel.
+- [ ] Adjust facilitation, prompts, room setup, or timing when needed. Owner: Scott. Support: Angel, Charlie.
+- [ ] Make sure attendees know where to go and what to do next. Owner: Charlie. Support: Jodi.
+- [ ] Capture attendee questions, objections, and recurring themes. Owner: Scott. Support: Angel, Jodi.
+- [ ] Monitor food, breaks, seating, signage, and comfort. Owner: Charlie. Support: Scott.
+
+### 8. Safety, Incidents, and Escalations
+
+- [ ] Handle medical, security, or safety incidents. Owner: Charlie. Support: Robert.
+- [ ] Handle attendee complaints or conduct issues. Owner: Charlie. Support: Scott, Robert.
+- [ ] Handle sponsor or vendor conflicts. Owner: Charlie. Support: Jodi, Robert.
+- [ ] Handle speaker concerns. Owner: Angel. Support: Ron, Scott.
+- [ ] Handle executive relationship concerns. Owner: Ron. Support: Scott.
+- [ ] Document incidents and decisions. Owner: Charlie. Support: Robert.
+
+### 9. Closing the Event
+
+- [ ] Deliver closing remarks or final executive sendoff. Owner: Ron. Support: Scott.
+- [ ] Reinforce the event's central insight and future direction. Owner: Scott. Support: Ron.
+- [ ] Announce next steps, next city, follow-up report, or community continuation if ready. Owner: Jodi. Support: Scott.
+- [ ] Confirm sponsor, VIP, and priority executive attendee departures. Owner: Charlie. Support: Jodi, Ron.
+- [ ] Oversee load-out. Owner: Charlie.
+- [ ] Secure event materials, data, receipts, and equipment. Owner: Charlie. Support: Robert.
+
+## Post-Event Checklist
+
+### 1. Immediate Follow-Up
+
+- [ ] Send attendee thank-you email. Owner: Jodi. Support: Scott.
+- [ ] Send VIP and executive attendee thank-you notes. Owner: Ron.
+- [ ] Send sponsor thank-you notes. Owner: Jodi.
+- [ ] Send speaker thank-you notes. Owner: Angel. Support: Ron, Scott.
+- [ ] Send advisory board and VIP group thank-you notes. Owner: Ron. Support: Scott, Jodi.
+- [ ] Share survey or feedback form. Owner: Jodi. Support: Scott.
+- [ ] Respond to urgent attendee, sponsor, speaker, or executive issues. Owner: Charlie. Support: relevant owner.
+
+### 2. Sponsor Fulfillment and Renewal
+
+- [ ] Deliver sponsor lead reports or agreed attendee data within approved rules. Owner: Jodi. Support: Robert.
+- [ ] Deliver sponsor proof-of-performance package. Owner: Jodi. Support: Charlie.
+- [ ] Confirm all sponsor deliverables were completed or document exceptions. Owner: Jodi. Support: Charlie, Robert.
+- [ ] Hold sponsor debrief calls. Owner: Jodi.
+- [ ] Capture sponsor satisfaction, renewal interest, objections, and upsell opportunities. Owner: Jodi.
+- [ ] Begin renewal or multi-city sponsor conversations. Owner: Jodi. Support: Robert.
+- [ ] Review sponsor fit for future events. Owner: Scott. Support: Jodi, Angel.
+
+### 3. Executive and Community Follow-Up
+
+- [ ] Follow up individually with priority VIPs and executive attendees. Owner: Ron.
+- [ ] Invite selected executives into future events, advisory boards, speaking roles, or private formats. Owner: Ron. Support: Scott, Angel.
+- [ ] Capture relationship notes and next steps. Owner: Ron.
+- [ ] Identify executive no-shows worth re-engaging. Owner: Ron.
+- [ ] Identify executives who should not be prioritized again. Owner: Ron. Support: Scott.
+- [ ] Maintain the feeling that the event was a relationship, not a transaction. Owner: Ron.
+
+### 4. Content, Research, and Thought Leadership
+
+- [ ] Collect session notes, recordings, transcripts, slides, photos, and workshop outputs. Owner: Angel. Support: Jodi, Charlie, Scott.
+- [ ] Identify the strongest insights, debates, and decisions from the event. Owner: Scott. Support: Angel.
+- [ ] Draft post-event executive summary or report. Owner: Scott. Support: Angel, Jodi.
+- [ ] Review confidentiality and attribution limits before publishing. Owner: Robert. Support: Scott, Angel.
+- [ ] Publish approved recap content. Owner: Jodi. Support: Scott.
+- [ ] Package video clips, quotes, and social assets. Owner: Jodi.
+- [ ] Archive source materials. Owner: Robert. Support: Jodi.
+
+### 5. Financial Closeout
+
+- [ ] Reconcile all event revenue. Owner: Robert.
+- [ ] Reconcile all expenses. Owner: Robert.
+- [ ] Collect unpaid sponsor invoices or balances. Owner: Robert. Support: Jodi.
+- [ ] Pay venue, contractors, vendors, speakers, or staff. Owner: Robert.
+- [ ] Process sponsor credits or approved adjustments. Owner: Robert.
+- [ ] Update event profit and loss. Owner: Robert.
+- [ ] Prepare tax and accounting records. Owner: Robert.
+- [ ] Compare actual results to budget. Owner: Robert. Support: Scott, Charlie.
+
+### 6. Measurement and Debrief
+
+- [ ] Compile registration, attendance, sponsor, executive, marketing, program, and revenue metrics. Owner: Charlie. Support: Robert, Jodi, Ron, Angel.
+- [ ] Compile attendee feedback. Owner: Jodi. Support: Scott.
+- [ ] Compile sponsor feedback. Owner: Jodi.
+- [ ] Compile executive feedback. Owner: Ron.
+- [ ] Compile speaker and moderator feedback. Owner: Angel. Support: Ron, Scott.
+- [ ] Evaluate whether the event met the soul standard: not boring, not passive, not a vendor funnel. Owner: Scott.
+- [ ] Hold full-team post-event debrief. Owner: Charlie. Support: full team.
+- [ ] Identify what to keep, change, stop, and test next time. Owner: Scott. Support: full team.
+- [ ] Convert lessons learned into the repeatable event model. Owner: Scott. Support: Charlie, Angel, Robert.
+
+### 7. Operational Archive and Template Improvement
+
+- [ ] Archive final agenda, run of show, contracts, sponsor materials, speaker materials, attendee lists, reports, and debrief notes. Owner: Charlie. Support: Robert, Angel, Jodi.
+- [ ] Update master checklist based on lessons learned. Owner: Charlie. Support: Scott, Angel.
+- [ ] Update sponsor package template if needed. Owner: Jodi. Support: Robert.
+- [ ] Update speaker and programming templates if needed. Owner: Angel. Support: Scott, Ron.
+- [ ] Update executive invitation templates if needed. Owner: Ron. Support: Scott.
+- [ ] Update website and marketing templates if needed. Owner: Jodi.
+- [ ] Document city-specific insights for future market selection. Owner: Scott. Support: Ron, Jodi, Charlie, Angel.
+
+### 8. Next Event Pipeline
+
+- [ ] Decide next city or confirm next scheduled event. Owner: Scott. Support: Robert, Charlie.
+- [ ] Roll forward sponsor prospects and renewal opportunities. Owner: Jodi.
+- [ ] Roll forward executive relationships and invite targets. Owner: Ron.
+- [ ] Roll forward speaker, advisory board, VIP group, and moderator prospects. Owner: Ron. Support: Angel, Scott.
+- [ ] Roll forward budget assumptions and actuals. Owner: Robert.
+- [ ] Use post-event proof points to improve sales, marketing, and programming. Owner: Scott. Support: Jodi, Ron, Angel.
+
+## Cross-Owner Decision Triggers
+
+The following decisions should not be made by one owner alone:
+
+- Changing the event date, city, or venue after public launch.
+- Accepting a sponsor whose participation may compromise trust or event quality.
+- Giving a sponsor stage access outside the approved sponsor model.
+- Removing a major speaker, track, dinner, or executive format.
+- Spending materially beyond the approved event budget.
+- Changing attendee data sharing rules.
+- Publishing post-event claims that depend on confidential or unattributed discussion.
+- Making promises that affect another owner's area.
+
+## Version History
+
+- 2.9 - Added one-time company foundation checklist for company scaffolding, email, website, technical systems, banking, payments, and credit controls.
+- 2.8 - Added Photography, Sound, and Cinematography Team as a placeholder owner and support option pending the official vendor or team name.
+- 2.7 - Split during-event readiness confirmation into separate schedule, room, sponsor, registration, and executive-arrival checklist items.
+- 2.6 - Defined VIPs as attendees with speaking or roundtable leadership roles; all other curated leaders are executive attendees.
+- 2.5 - Split lead retrieval and meeting scheduling tools between sponsor leads and VIP/speaker leads.
+- 2.4 - Split CRM/tracker ownership across sponsors, speakers, attendees, cohort advisory board members, VIP role groups, and sponsor boards.
+- 2.3 - Split board briefing and VIP briefing scheduling into separate checklist items with separate owners.
+- 2.2 - Updated Angel's role from program director to VIP program director.
+- 2.1 - Added I don't know as a temporary owner option for unassigned accountability.
+- 2.0 - Added Pakistani Marketing Team as a placeholder owner and support option pending the official company name.
+- 1.9 - Added The Event Lounge (TEL) as an owner and support option.
+- 1.8 - Added separate advisory/team board dinner model and timing rules for marketing/sales, cohort advisory, VIP, and sponsor executive board meals.
+- 1.7 - Replaced single advisory council concept with sponsor marketing/sales, sponsor executive, cohort advisory, and possible Dallas Event VIP groups.
+- 1.6 - Replaced bronze/silver/gold sponsor tiers with one standard sponsor package expected at $3,500 to $5,000, plus upsells.
+- 1.5 - Updated event model to no paid attendee tickets; event is fully sponsor funded.
+- 1.4 - Removed the executive access area concept because the audience is already executive and director-and-above.
+- 1.3 - Added sponsor attendee model: one executive sales or marketing team member plus one presentation-engaged executive per sponsor.
+- 1.2 - Updated core event model to six hours, six tracks, boardroom presentation/roundtable blocks, and optional early/after-hours attendee experiences.
+- 1.1 - Updated attendee model to director and above, with target company size of 5,000 or more employees.
+- 1.0 - Distributed open-decision ownership items into the relevant execution checklist sections.
+- 0.9 - Updated open-decision ownership assignments from Scott's recorded review.
+- 0.8 - Added Charlie as event manager and Angel as program director, then rebuilt checklist ownership around the expanded operating team.
+- 0.7 - Updated first-event vendor model to 36 vendors with no booths, tables, or expo floor.
+- 0.6 - Updated first-event target window to the second week of January 2027.
+- 0.5 - Added first-event CXO composition: 25 CEOs, 25 CFOs, 25 COOs, 25 CIOs, 25 CISOs, and 25 CAIOs/CTOs.
+- 0.4 - Updated first-event model to 150 curated CXOs.
+- 0.3 - Updated first-event model to January 2027, 500 curated leaders, manager and above, individual invites, and $100,000 revenue plan.
+- 0.2 - Reframed unresolved strategy points as decision ownership instead of questions to answer inside the checklist.
+- 0.1 - Initial comprehensive event checklist with best-guess founder ownership.
+</script>
+
+  <script>
+    const ownerColors = {
+      Scott: "owner-scott",
+      Robert: "owner-robert",
+      Jodi: "owner-jodi",
+      Ron: "owner-ron",
+      Charlie: "owner-charlie",
+      Angel: "owner-angel",
+      "The Event Lounge (TEL)": "owner-tel",
+      "Pakistani Marketing Team": "owner-pakistani-marketing",
+      "Photography, Sound, and Cinematography Team": "owner-photo-sound-cinema",
+      "I don't know": "owner-unknown",
+      Shared: "owner-shared",
+      all: "owner-all"
+    };
+
+    const supportOwners = ["Scott", "Robert", "Jodi", "Ron", "Charlie", "Angel", "The Event Lounge (TEL)", "Pakistani Marketing Team", "Photography, Sound, and Cinematography Team"];
+    const editableOwners = [...supportOwners, "I don't know"];
+    const ownerFilterOptions = ["All", ...editableOwners, "Shared"];
+    const priorityOptions = [
+      "Priority 1 - 3 months out",
+      "Priority 2 - 2 months out",
+      "Priority 3 - 3 months out",
+      "Priority 4 - 2 weeks out",
+      "Priority 5 - 1 week out",
+      "Priority 6 - 2 days out",
+      "Priority 7 - 1 day out",
+      "Priority 8 - Day of"
+    ];
+    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered"];
+    const assignmentStoragePrefix = "mojo-event-assignment:";
+
+    const state = {
+      phase: "All",
+      owner: "All",
+      priority: "All",
+      dueDate: "",
+      status: "All",
+      query: ""
+    };
+
+    const raw = document.getElementById("source-md").textContent.trim();
+    const lines = raw.split(/\r?\n/);
+    const sections = [];
+    const ownerKey = [];
+    let current = null;
+    let currentSub = null;
+    let ownerTableMode = false;
+
+    const clean = (value) => value.trim().replace(/\.$/, "");
+    const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const ownerClass = (owner) => ownerColors[owner] || "owner-shared";
+    const escapeHtml = (value) => String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+    function parseOwner(text) {
+      const ownerMatch = text.match(/\bOwner:\s*([^.;]+)(?:\.|$)/i);
+      const supportMatch = text.match(/\bSupport:\s*([^.;]+)(?:\.|$)/i);
+      const owner = ownerMatch ? clean(ownerMatch[1]) : "";
+      const support = supportMatch ? clean(supportMatch[1]) : "";
+      const label = text
+        .replace(/\s*Owner:\s*[^.;]+(?:\.|$)/i, "")
+        .replace(/\s*Support:\s*[^.;]+(?:\.|$)/i, "")
+        .trim();
+      return { label, owner, support };
+    }
+
+    function ownerNames(value) {
+      if (!value) return [];
+      if (/all founders|full team/i.test(value)) return supportOwners;
+      if (/relevant founder|relevant owner/i.test(value)) return ["Shared"];
+      return value.split(",").map((name) => name.trim()).filter(Boolean);
+    }
+
+    function ensureSection(title) {
+      current = { title, subsections: [], notes: [], type: "note" };
+      sections.push(current);
+      currentSub = null;
+      ownerTableMode = title === "Owner Key";
+      return current;
+    }
+
+    for (const line of lines) {
+      if (!line.trim() || line.startsWith("# ")) continue;
+
+      if (line.startsWith("## ")) {
+        ensureSection(line.replace(/^##\s+/, "").trim());
+        continue;
+      }
+
+      if (line.startsWith("### ")) {
+        if (!current) ensureSection("Notes");
+        current.type = "checklist";
+        currentSub = { title: line.replace(/^###\s+/, "").trim(), items: [] };
+        current.subsections.push(currentSub);
+        continue;
+      }
+
+      if (ownerTableMode && line.startsWith("|") && !line.includes("---") && !line.includes("Owner | Area")) {
+        const cells = line.split("|").map((part) => part.trim()).filter(Boolean);
+        if (cells.length >= 2) ownerKey.push({ owner: cells[0], area: cells[1] });
+        continue;
+      }
+
+      if (line.startsWith("- [ ] ")) {
+        if (!current) ensureSection("Checklist");
+        if (!currentSub) {
+          current.type = "checklist";
+          currentSub = { title: "Checklist", items: [] };
+          current.subsections.push(currentSub);
+        }
+        const parsed = parseOwner(line.replace("- [ ] ", ""));
+        currentSub.items.push({
+          text: parsed.label,
+          defaultOwner: parsed.owner || "Shared",
+          defaultSupport: "",
+          defaultPriority: "",
+          defaultDueDate: "",
+          defaultStatus: "Undefined",
+          owner: parsed.owner || "Shared",
+          support: "",
+          priority: "",
+          dueDate: "",
+          status: "Undefined",
+          phase: current.title,
+          subsection: currentSub.title
+        });
+        continue;
+      }
+
+      if (line.startsWith("- ")) {
+        if (!current) ensureSection("Notes");
+        const text = line.replace(/^- /, "").trim();
+        const parsed = parseOwner(text);
+        current.notes.push({
+          text: parsed.label || text,
+          owner: parsed.owner,
+          support: parsed.support
+        });
+      } else if (current && !line.startsWith("|")) {
+        current.notes.push({ text: line.trim(), owner: "", support: "" });
+      }
+    }
+
+    const checklistSections = sections.filter((section) => section.type === "checklist");
+    const allItems = checklistSections.flatMap((section) =>
+      section.subsections.flatMap((subsection) => subsection.items)
+    );
+    allItems.forEach((item, index) => {
+      item.id = `item-${index}-${slug(item.text).slice(0, 60)}`;
+    });
+    const itemById = new Map(allItems.map((item) => [item.id, item]));
+
+    function assignmentStorageKey(item) {
+      return `${assignmentStoragePrefix}${item.id}`;
+    }
+
+    function normalizeSupport(value) {
+      return ownerNames(value).filter((owner, index, owners) =>
+        supportOwners.includes(owner) && owners.indexOf(owner) === index
+      ).join(", ");
+    }
+
+    function itemSearchText(item) {
+      return `${item.text} ${item.owner} ${item.support} ${item.priority} ${item.dueDate} ${item.status} ${item.phase} ${item.subsection}`.toLowerCase();
+    }
+
+    function loadSavedAssignments() {
+      allItems.forEach((item) => {
+        const saved = localStorage.getItem(assignmentStorageKey(item));
+        if (!saved) return;
+
+        try {
+          const assignment = JSON.parse(saved);
+          const owner = ownerFilterOptions.includes(assignment.owner) && assignment.owner !== "All" ? assignment.owner : item.defaultOwner;
+          item.owner = owner;
+          item.support = normalizeSupport(assignment.support || "");
+          item.priority = priorityOptions.includes(assignment.priority) ? assignment.priority : item.defaultPriority;
+          item.dueDate = /^\d{4}-\d{2}-\d{2}$/.test(assignment.dueDate || "") ? assignment.dueDate : item.defaultDueDate;
+          item.status = statusOptions.includes(assignment.status) ? assignment.status : item.defaultStatus;
+        } catch {
+          localStorage.removeItem(assignmentStorageKey(item));
+        }
+      });
+    }
+
+    function saveAssignment(item) {
+      localStorage.setItem(assignmentStorageKey(item), JSON.stringify({
+        owner: item.owner,
+        support: item.support,
+        priority: item.priority,
+        dueDate: item.dueDate,
+        status: item.status
+      }));
+    }
+
+    loadSavedAssignments();
+
+    function countByOwner(owner) {
+      return allItems.filter((item) => ownerNames(item.owner).includes(owner)).length;
+    }
+
+    function countByPhase(phase) {
+      if (phase === "All") return allItems.length;
+      return allItems.filter((item) => item.phase === phase).length;
+    }
+
+    function countByPriority(priority) {
+      if (priority === "All") return allItems.length;
+      if (priority === "No priority") return allItems.filter((item) => !item.priority).length;
+      return allItems.filter((item) => item.priority === priority).length;
+    }
+
+    function countByStatus(status) {
+      if (status === "All") return allItems.length;
+      return allItems.filter((item) => item.status === status).length;
+    }
+
+    function renderSummary() {
+      const delivered = allItems.filter((item) => item.status === "Delivered").length;
+      const activeOwners = editableOwners.map((owner) => `${owner}: ${countByOwner(owner)}`).join(" / ");
+      document.getElementById("summary").innerHTML = `
+        <div class="metric"><strong>${allItems.length}</strong><span>Total checklist items</span></div>
+        <div class="metric"><strong>${delivered}</strong><span>Delivered items</span></div>
+        <div class="metric"><strong>${checklistSections.length}</strong><span>Execution phases</span></div>
+        <div class="metric"><strong>${activeOwners}</strong><span>Owner item counts</span></div>
+      `;
+    }
+
+    function pill(owner, type = "owner") {
+      if (!owner) return "";
+      return `<span class="pill ${type} ${type === "owner" ? ownerClass(owner) : ""}">${type === "owner" ? "Owner: " : "Support: "}${owner}</span>`;
+    }
+
+    function ownerSelect(item) {
+      return `
+        <select class="owner-select ${ownerClass(item.owner)}" data-assignment="owner" data-item-id="${item.id}" aria-label="Owner for ${escapeHtml(item.text)}">
+          ${[...editableOwners, "Shared"].map((owner) => `
+            <option value="${owner}" ${owner === item.owner ? "selected" : ""}>${owner}</option>
+          `).join("")}
+        </select>
+      `;
+    }
+
+    function prioritySelect(item) {
+      return `
+        <select class="priority-select" data-assignment="priority" data-item-id="${item.id}" aria-label="Priority for ${escapeHtml(item.text)}">
+          <option value="" ${!item.priority ? "selected" : ""}>Set priority</option>
+          ${priorityOptions.map((priority) => `
+            <option value="${priority}" ${priority === item.priority ? "selected" : ""}>${priority}</option>
+          `).join("")}
+        </select>
+      `;
+    }
+
+    function dueDateInput(item) {
+      return `
+        <input class="date-input" type="date" data-assignment="due-date" data-item-id="${item.id}" value="${escapeHtml(item.dueDate)}" aria-label="Expected delivery date for ${escapeHtml(item.text)}">
+      `;
+    }
+
+    function statusSelect(item) {
+      return `
+        <div class="status-field">
+          <span class="assignment-label">Status</span>
+          <select class="status-select" data-assignment="status" data-item-id="${item.id}" aria-label="Status for ${escapeHtml(item.text)}">
+            ${statusOptions.map((status) => `
+              <option value="${status}" ${status === item.status ? "selected" : ""}>${status}</option>
+            `).join("")}
+          </select>
+        </div>
+      `;
+    }
+
+    function supportSummary(item) {
+      const names = ownerNames(item.support).filter((owner) => supportOwners.includes(owner));
+      return names.length ? `Support: ${names.join(", ")}` : "Support: None";
+    }
+
+    function supportPicker(item) {
+      const selected = ownerNames(item.support);
+      return `
+        <details class="support-picker" data-support-picker data-item-id="${item.id}">
+          <summary class="support-summary">${escapeHtml(supportSummary(item))}</summary>
+          <div class="support-menu">
+            ${supportOwners.map((owner) => `
+              <label class="support-option">
+                <input type="checkbox" data-assignment="support" data-item-id="${item.id}" value="${owner}" ${selected.includes(owner) ? "checked" : ""}>
+                <span>${owner}</span>
+              </label>
+            `).join("")}
+          </div>
+        </details>
+      `;
+    }
+
+    function closeSupportPickers(exceptPicker = null) {
+      document.querySelectorAll("[data-support-picker][open]").forEach((picker) => {
+        if (picker !== exceptPicker) picker.open = false;
+      });
+    }
+
+    function assignmentControls(item) {
+      return `
+        <div class="assignment-controls">
+          <div class="assignment-field">
+            <span class="assignment-label">Owner</span>
+            ${ownerSelect(item)}
+          </div>
+          <div class="assignment-field">
+            <span class="assignment-label">Support</span>
+            ${supportPicker(item)}
+          </div>
+          <div class="assignment-field">
+            <span class="assignment-label">Priority</span>
+            ${prioritySelect(item)}
+          </div>
+          <div class="assignment-field">
+            <span class="assignment-label">Expected Delivery Date</span>
+            ${dueDateInput(item)}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderNotes(section) {
+      if (section.title === "Owner Key") {
+        return `
+          <section class="section" data-note-section="${section.title}">
+            <div class="section-header"><h2>${section.title}</h2></div>
+            <div class="section-body">
+              <div class="owner-grid">
+                ${ownerKey.map((row) => `
+                  <div class="owner-card">
+                    <strong><span class="dot ${ownerClass(row.owner)}"></span>${row.owner}</strong>
+                    <p>${row.area}</p>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          </section>
+        `;
+      }
+
+      return `
+        <section class="section" data-note-section="${section.title}">
+          <div class="section-header"><h2>${section.title}</h2></div>
+          <div class="notes">
+            <ul class="note-list">
+              ${section.notes.map((note) => `
+                <li>
+                  ${note.text}
+                  ${note.owner ? `<div class="owner-block">${pill(note.owner)}${note.support ? pill(note.support, "support") : ""}</div>` : ""}
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderContent() {
+      const introSections = sections.filter((section) => section.type !== "checklist" && section.title !== "Version History");
+      const checklistHtml = checklistSections.map((section) => {
+        const total = countByPhase(section.title);
+        return `
+          <section class="section checklist-section" data-phase="${section.title}">
+            <div class="section-header">
+              <div>
+                <h2>${section.title}</h2>
+                <div class="section-meta"><span>${total} items</span></div>
+              </div>
+            </div>
+            <div class="section-body">
+              ${section.subsections.map((subsection) => `
+                <div class="subsection">
+                  <div class="subsection-title"><h3>${subsection.title}</h3></div>
+                  <div class="items">
+                    ${subsection.items.map((item) => `
+                      <div class="item" data-item-id="${item.id}" data-phase="${escapeHtml(item.phase)}" data-owner="${escapeHtml(item.owner)}" data-support="${escapeHtml(item.support)}" data-priority="${escapeHtml(item.priority)}" data-due-date="${escapeHtml(item.dueDate)}" data-status="${escapeHtml(item.status)}" data-search="${escapeHtml(itemSearchText(item))}">
+                        <span class="item-text">${escapeHtml(item.text)}</span>
+                        ${assignmentControls(item)}
+                        ${statusSelect(item)}
+                      </div>
+                    `).join("")}
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </section>
+        `;
+      }).join("");
+
+      document.getElementById("content").innerHTML = introSections.map(renderNotes).join("") + checklistHtml;
+
+      document.querySelectorAll('select[data-assignment="owner"]').forEach((select) => {
+        select.addEventListener("change", () => {
+          const item = itemById.get(select.dataset.itemId);
+          if (!item) return;
+          item.owner = select.value;
+          saveAssignment(item);
+          updateAssignmentRow(item);
+        });
+      });
+
+      document.querySelectorAll('select[data-assignment="status"]').forEach((select) => {
+        select.addEventListener("change", () => {
+          const item = itemById.get(select.dataset.itemId);
+          if (!item) return;
+          item.status = select.value;
+          saveAssignment(item);
+          updateAssignmentRow(item);
+        });
+      });
+
+      document.querySelectorAll('select[data-assignment="priority"]').forEach((select) => {
+        select.addEventListener("change", () => {
+          const item = itemById.get(select.dataset.itemId);
+          if (!item) return;
+          item.priority = select.value;
+          saveAssignment(item);
+          updateAssignmentRow(item);
+        });
+      });
+
+      document.querySelectorAll('input[data-assignment="due-date"]').forEach((input) => {
+        input.addEventListener("change", () => {
+          const item = itemById.get(input.dataset.itemId);
+          if (!item) return;
+          item.dueDate = input.value;
+          saveAssignment(item);
+          updateAssignmentRow(item);
+        });
+      });
+
+      document.querySelectorAll('input[data-assignment="support"]').forEach((input) => {
+        input.addEventListener("change", () => {
+          const item = itemById.get(input.dataset.itemId);
+          const row = input.closest(".item");
+          if (!item || !row) return;
+          const selected = Array.from(row.querySelectorAll('input[data-assignment="support"]:checked')).map((checkbox) => checkbox.value);
+          item.support = selected.join(", ");
+          saveAssignment(item);
+          updateAssignmentRow(item);
+        });
+      });
+
+      document.querySelectorAll("[data-support-picker]").forEach((picker) => {
+        picker.addEventListener("toggle", () => {
+          if (picker.open) closeSupportPickers(picker);
+        });
+      });
+    }
+
+    function updateAssignmentRow(item) {
+      const row = document.querySelector(`.item[data-item-id="${item.id}"]`);
+      if (!row) return;
+
+      row.dataset.owner = item.owner;
+      row.dataset.support = item.support;
+      row.dataset.priority = item.priority;
+      row.dataset.dueDate = item.dueDate;
+      row.dataset.status = item.status;
+      row.dataset.search = itemSearchText(item);
+
+      const select = row.querySelector('select[data-assignment="owner"]');
+      if (select) {
+        select.className = `owner-select ${ownerClass(item.owner)}`;
+        select.value = item.owner;
+      }
+
+      const summary = row.querySelector(".support-summary");
+      if (summary) {
+        summary.textContent = supportSummary(item);
+      }
+
+      const prioritySelect = row.querySelector('select[data-assignment="priority"]');
+      if (prioritySelect) {
+        prioritySelect.value = item.priority;
+      }
+
+      const dueDateInput = row.querySelector('input[data-assignment="due-date"]');
+      if (dueDateInput) {
+        dueDateInput.value = item.dueDate;
+      }
+
+      const statusSelect = row.querySelector('select[data-assignment="status"]');
+      if (statusSelect) {
+        statusSelect.value = item.status;
+      }
+
+      renderSummary();
+      renderFilters();
+      applyFilters();
+    }
+
+    function renderFilters() {
+      const phaseOptions = ["All", ...checklistSections.map((section) => section.title)];
+      const priorityFilterOptions = ["All", "No priority", ...priorityOptions];
+      const statusFilterOptions = ["All", ...statusOptions];
+
+      document.getElementById("phaseFilters").innerHTML = phaseOptions.map((phase) => `
+        <button class="filter-btn ${phase === state.phase ? "active" : ""}" data-filter-type="phase" data-value="${phase}" type="button">
+          <span>${phase}</span><span class="filter-count">${countByPhase(phase)}</span>
+        </button>
+      `).join("");
+
+      document.getElementById("ownerFilters").innerHTML = ownerFilterOptions.map((owner) => `
+        <button class="filter-btn ${owner === state.owner ? "active" : ""}" data-filter-type="owner" data-value="${owner}" type="button">
+          <span>${owner}</span><span class="filter-count">${owner === "All" ? allItems.length : countByOwner(owner)}</span>
+        </button>
+      `).join("");
+
+      document.getElementById("priorityFilter").innerHTML = priorityFilterOptions.map((priority) => `
+        <option value="${escapeHtml(priority)}" ${priority === state.priority ? "selected" : ""}>${escapeHtml(priority)} (${countByPriority(priority)})</option>
+      `).join("");
+
+      document.getElementById("statusFilter").innerHTML = statusFilterOptions.map((status) => `
+        <option value="${escapeHtml(status)}" ${status === state.status ? "selected" : ""}>${escapeHtml(status)} (${countByStatus(status)})</option>
+      `).join("");
+
+      document.getElementById("dateFilter").value = state.dueDate;
+
+      document.querySelectorAll(".filter-btn").forEach((button) => {
+        button.addEventListener("click", () => {
+          state[button.dataset.filterType] = button.dataset.value;
+          renderFilters();
+          applyFilters();
+        });
+      });
+    }
+
+    function applyFilters() {
+      const query = state.query.trim().toLowerCase();
+      let visibleCount = 0;
+
+      document.querySelectorAll(".item").forEach((item) => {
+        const itemOwners = ownerNames(item.dataset.owner);
+        const phaseOk = state.phase === "All" || item.dataset.phase === state.phase;
+        const ownerOk = state.owner === "All" || itemOwners.includes(state.owner);
+        const priorityOk = state.priority === "All" ||
+          (state.priority === "No priority" ? !item.dataset.priority : item.dataset.priority === state.priority);
+        const dateOk = !state.dueDate || item.dataset.dueDate === state.dueDate;
+        const statusOk = state.status === "All" || item.dataset.status === state.status;
+        const searchOk = !query || item.dataset.search.includes(query);
+        const visible = phaseOk && ownerOk && priorityOk && dateOk && statusOk && searchOk;
+        item.classList.toggle("hidden", !visible);
+        if (visible) visibleCount += 1;
+      });
+
+      document.querySelectorAll(".checklist-section").forEach((section) => {
+        const hasVisibleItems = Array.from(section.querySelectorAll(".item")).some((item) => !item.classList.contains("hidden"));
+        const phaseOk = state.phase === "All" || section.dataset.phase === state.phase;
+        section.style.display = hasVisibleItems && phaseOk ? "" : "none";
+      });
+
+      document.getElementById("emptyState").classList.toggle("visible", visibleCount === 0);
+    }
+
+    document.getElementById("search").addEventListener("input", (event) => {
+      state.query = event.target.value;
+      applyFilters();
+    });
+
+    document.getElementById("priorityFilter").addEventListener("change", (event) => {
+      state.priority = event.target.value;
+      applyFilters();
+    });
+
+    document.getElementById("dateFilter").addEventListener("change", (event) => {
+      state.dueDate = event.target.value;
+      applyFilters();
+    });
+
+    document.getElementById("clearDateFilter").addEventListener("click", () => {
+      state.dueDate = "";
+      document.getElementById("dateFilter").value = "";
+      applyFilters();
+    });
+
+    document.getElementById("statusFilter").addEventListener("change", (event) => {
+      state.status = event.target.value;
+      applyFilters();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("[data-support-picker]")) {
+        closeSupportPickers();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeSupportPickers();
+      }
+    });
+
+    document.getElementById("clearStatuses").addEventListener("click", () => {
+      allItems.forEach((item) => {
+        item.status = item.defaultStatus;
+        localStorage.removeItem(item.id);
+        saveAssignment(item);
+      });
+      renderContent();
+      renderFilters();
+      renderSummary();
+      applyFilters();
+    });
+
+    document.getElementById("resetAssignments").addEventListener("click", () => {
+      allItems.forEach((item) => {
+        item.owner = item.defaultOwner;
+        item.support = item.defaultSupport;
+        item.priority = item.defaultPriority;
+        item.dueDate = item.defaultDueDate;
+        item.status = item.defaultStatus;
+        localStorage.removeItem(assignmentStorageKey(item));
+      });
+      renderContent();
+      renderFilters();
+      renderSummary();
+      applyFilters();
+    });
+
+    renderContent();
+    renderFilters();
+    renderSummary();
+    applyFilters();
+  </script>
+</body>
+</html>
