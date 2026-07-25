@@ -1467,6 +1467,10 @@ The following decisions should not be made by one owner alone:
     ];
     const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered"];
     const assignmentStoragePrefix = "mojo-event-assignment:";
+    const sharedStateEndpoint = "/api/setup-state";
+    const sharedSyncIntervalMs = 5000;
+    let lastSharedUpdatedAt = "";
+    let sharedSyncTimer = null;
 
     const state = {
       phase: "All",
@@ -1607,36 +1611,194 @@ The following decisions should not be made by one owner alone:
       return `${item.text} ${item.owner} ${item.support} ${item.priority} ${item.dueDate} ${item.status} ${item.phase} ${item.subsection}`.toLowerCase();
     }
 
-    function loadSavedAssignments() {
-      allItems.forEach((item) => {
-        const saved = localStorage.getItem(assignmentStorageKey(item));
-        if (!saved) return;
-
-        try {
-          const assignment = JSON.parse(saved);
-          const owner = ownerFilterOptions.includes(assignment.owner) && assignment.owner !== "All" ? assignment.owner : item.defaultOwner;
-          item.owner = owner;
-          item.support = normalizeSupport(assignment.support || "");
-          item.priority = priorityOptions.includes(assignment.priority) ? assignment.priority : item.defaultPriority;
-          item.dueDate = /^\d{4}-\d{2}-\d{2}$/.test(assignment.dueDate || "") ? assignment.dueDate : item.defaultDueDate;
-          item.status = statusOptions.includes(assignment.status) ? assignment.status : item.defaultStatus;
-        } catch {
-          localStorage.removeItem(assignmentStorageKey(item));
-        }
-      });
-    }
-
-    function saveAssignment(item) {
-      localStorage.setItem(assignmentStorageKey(item), JSON.stringify({
+    function currentAssignment(item) {
+      return {
         owner: item.owner,
         support: item.support,
         priority: item.priority,
         dueDate: item.dueDate,
         status: item.status
-      }));
+      };
     }
 
-    loadSavedAssignments();
+    function normalizeAssignment(item, assignment = {}) {
+      const owner = ownerFilterOptions.includes(assignment.owner) && assignment.owner !== "All"
+        ? assignment.owner
+        : item.defaultOwner;
+
+      return {
+        owner,
+        support: normalizeSupport(assignment.support || ""),
+        priority: priorityOptions.includes(assignment.priority) ? assignment.priority : item.defaultPriority,
+        dueDate: /^\d{4}-\d{2}-\d{2}$/.test(assignment.dueDate || "") ? assignment.dueDate : item.defaultDueDate,
+        status: statusOptions.includes(assignment.status) ? assignment.status : item.defaultStatus
+      };
+    }
+
+    function applyAssignment(item, assignment) {
+      const normalized = normalizeAssignment(item, assignment);
+      item.owner = normalized.owner;
+      item.support = normalized.support;
+      item.priority = normalized.priority;
+      item.dueDate = normalized.dueDate;
+      item.status = normalized.status;
+    }
+
+    function localAssignments() {
+      const assignments = {};
+      allItems.forEach((item) => {
+        const saved = localStorage.getItem(assignmentStorageKey(item));
+        if (!saved) return;
+
+        try {
+          assignments[item.id] = JSON.parse(saved);
+        } catch {
+          localStorage.removeItem(assignmentStorageKey(item));
+        }
+      });
+      return assignments;
+    }
+
+    function cacheAssignment(item) {
+      localStorage.setItem(assignmentStorageKey(item), JSON.stringify(currentAssignment(item)));
+    }
+
+    function cacheAllAssignments() {
+      allItems.forEach(cacheAssignment);
+    }
+
+    function loadCachedAssignments() {
+      const assignments = localAssignments();
+      allItems.forEach((item) => {
+        if (assignments[item.id]) applyAssignment(item, assignments[item.id]);
+      });
+      return assignments;
+    }
+
+    function assignmentSnapshot() {
+      const assignments = {};
+      allItems.forEach((item) => {
+        assignments[item.id] = currentAssignment(item);
+      });
+      return assignments;
+    }
+
+    function applySharedAssignments(assignments = {}) {
+      allItems.forEach((item) => {
+        if (assignments[item.id]) {
+          applyAssignment(item, assignments[item.id]);
+        } else {
+          item.owner = item.defaultOwner;
+          item.support = item.defaultSupport;
+          item.priority = item.defaultPriority;
+          item.dueDate = item.defaultDueDate;
+          item.status = item.defaultStatus;
+        }
+        cacheAssignment(item);
+      });
+    }
+
+    function saveAssignment(item) {
+      cacheAssignment(item);
+      saveSharedAssignment(item);
+    }
+
+    async function fetchSharedState() {
+      const response = await fetch(sharedStateEndpoint, {
+        headers: { accept: "application/json" },
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error(`Shared state load failed: ${response.status}`);
+      return response.json();
+    }
+
+    async function saveSharedAssignment(item) {
+      try {
+        const response = await fetch(sharedStateEndpoint, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: item.id, assignment: currentAssignment(item) })
+        });
+        if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
+        const state = await response.json();
+        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
+    async function saveAllSharedAssignments() {
+      try {
+        const response = await fetch(sharedStateEndpoint, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ assignments: assignmentSnapshot() })
+        });
+        if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
+        const state = await response.json();
+        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
+    async function clearSharedAssignments() {
+      try {
+        const response = await fetch(sharedStateEndpoint, { method: "DELETE" });
+        if (!response.ok) throw new Error(`Shared state reset failed: ${response.status}`);
+        const state = await response.json();
+        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
+    async function loadSharedAssignments({ render = false, migrateLocalIfEmpty = false } = {}) {
+      try {
+        const state = await fetchSharedState();
+        const assignments = state.assignments || {};
+        const hasSharedAssignments = Object.keys(assignments).length > 0;
+
+        if (state.updatedAt && state.updatedAt === lastSharedUpdatedAt) return;
+
+        if (hasSharedAssignments) {
+          applySharedAssignments(assignments);
+          lastSharedUpdatedAt = state.updatedAt || "";
+          if (render) refreshView();
+          return;
+        }
+
+        if (migrateLocalIfEmpty && Object.keys(localAssignments()).length > 0) {
+          await saveAllSharedAssignments();
+          return;
+        }
+
+        if (state.updatedAt) {
+          applySharedAssignments({});
+          if (render) refreshView();
+        }
+
+        lastSharedUpdatedAt = state.updatedAt || "";
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
+    function startSharedSync() {
+      if (sharedSyncTimer) window.clearInterval(sharedSyncTimer);
+      sharedSyncTimer = window.setInterval(() => {
+        loadSharedAssignments({ render: true });
+      }, sharedSyncIntervalMs);
+    }
+
+    function refreshView() {
+      renderContent();
+      renderFilters();
+      renderSummary();
+      applyFilters();
+    }
+
+    loadCachedAssignments();
 
     function countByOwner(owner) {
       return allItems.filter((item) => ownerNames(item.owner).includes(owner)).length;
@@ -2044,13 +2206,10 @@ The following decisions should not be made by one owner alone:
     document.getElementById("clearStatuses").addEventListener("click", () => {
       allItems.forEach((item) => {
         item.status = item.defaultStatus;
-        localStorage.removeItem(item.id);
-        saveAssignment(item);
       });
-      renderContent();
-      renderFilters();
-      renderSummary();
-      applyFilters();
+      cacheAllAssignments();
+      saveAllSharedAssignments();
+      refreshView();
     });
 
     document.getElementById("resetAssignments").addEventListener("click", () => {
@@ -2062,16 +2221,12 @@ The following decisions should not be made by one owner alone:
         item.status = item.defaultStatus;
         localStorage.removeItem(assignmentStorageKey(item));
       });
-      renderContent();
-      renderFilters();
-      renderSummary();
-      applyFilters();
+      clearSharedAssignments();
+      refreshView();
     });
 
-    renderContent();
-    renderFilters();
-    renderSummary();
-    applyFilters();
+    refreshView();
+    loadSharedAssignments({ render: true, migrateLocalIfEmpty: true }).then(startSharedSync);
   </script>
 </body>
 </html>

@@ -1,5 +1,11 @@
 {
   "name": "mojo-ai-summits",
   "pages_build_output_dir": "./dist",
-  "compatibility_date": "2026-07-25"
+  "compatibility_date": "2026-07-25",
+  "kv_namespaces": [
+    {
+      "binding": "MOJO_SUMMITS_SETUP_STATE",
+      "id": "90f60403fcf2469987cec51bdc3cde72"
+    }
+  ]
 }
