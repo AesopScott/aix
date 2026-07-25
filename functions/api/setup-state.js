@@ -5,6 +5,8 @@ const jsonHeaders = {
   "cache-control": "no-store"
 };
 
+const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status"];
+
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
     ...init,
@@ -25,14 +27,7 @@ async function readState(env) {
 function sanitizeAssignment(value) {
   if (!value || typeof value !== "object") return null;
 
-  return {
-    owner: String(value.owner || ""),
-    support: String(value.support || ""),
-    priority: String(value.priority || ""),
-    deliverable: String(value.deliverable || ""),
-    dueDate: String(value.dueDate || ""),
-    status: String(value.status || "")
-  };
+  return Object.fromEntries(assignmentFields.map((field) => [field, String(value[field] || "")]));
 }
 
 async function writeState(env, state) {
@@ -52,6 +47,9 @@ export async function onRequestPatch({ request, env }) {
   const payload = await request.json().catch(() => null);
   const id = typeof payload?.id === "string" ? payload.id : "";
   const assignment = sanitizeAssignment(payload?.assignment);
+  const fields = Array.isArray(payload?.fields)
+    ? payload.fields.filter((field) => assignmentFields.includes(field))
+    : assignmentFields;
 
   if (!id || !assignment) {
     return json({ error: "Expected an item id and assignment." }, { status: 400 });
@@ -59,7 +57,11 @@ export async function onRequestPatch({ request, env }) {
 
   const state = await readState(env);
   state.assignments = state.assignments || {};
-  state.assignments[id] = assignment;
+  const existing = sanitizeAssignment(state.assignments[id]) || {};
+  state.assignments[id] = { ...existing };
+  fields.forEach((field) => {
+    state.assignments[id][field] = assignment[field];
+  });
 
   return json(await writeState(env, state));
 }

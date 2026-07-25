@@ -1473,6 +1473,15 @@ The following decisions should not be made by one owner alone:
     const sharedSyncIntervalMs = 5000;
     let lastSharedUpdatedAt = "";
     let sharedSyncTimer = null;
+    const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status"];
+    const defaultFieldKeys = {
+      owner: "defaultOwner",
+      support: "defaultSupport",
+      priority: "defaultPriority",
+      deliverable: "defaultDeliverable",
+      dueDate: "defaultDueDate",
+      status: "defaultStatus"
+    };
 
     const state = {
       phase: "All",
@@ -1641,6 +1650,23 @@ The following decisions should not be made by one owner alone:
       };
     }
 
+    function mergeSharedAssignmentWithLocal(item, sharedAssignment = {}, localAssignment = {}) {
+      const shared = normalizeAssignment(item, sharedAssignment);
+      const local = normalizeAssignment(item, localAssignment);
+      const merged = { ...shared };
+      let usedLocalValue = false;
+
+      assignmentFields.forEach((field) => {
+        const defaultValue = item[defaultFieldKeys[field]];
+        if (local[field] !== defaultValue && shared[field] === defaultValue) {
+          merged[field] = local[field];
+          usedLocalValue = true;
+        }
+      });
+
+      return { assignment: merged, usedLocalValue };
+    }
+
     function applyAssignment(item, assignment) {
       const normalized = normalizeAssignment(item, assignment);
       item.owner = normalized.owner;
@@ -1706,9 +1732,9 @@ The following decisions should not be made by one owner alone:
       });
     }
 
-    function saveAssignment(item) {
+    function saveAssignment(item, fields = assignmentFields) {
       cacheAssignment(item);
-      saveSharedAssignment(item);
+      saveSharedAssignment(item, fields);
     }
 
     async function fetchSharedState() {
@@ -1720,12 +1746,12 @@ The following decisions should not be made by one owner alone:
       return response.json();
     }
 
-    async function saveSharedAssignment(item) {
+    async function saveSharedAssignment(item, fields = assignmentFields) {
       try {
         const response = await fetch(sharedStateEndpoint, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ id: item.id, assignment: currentAssignment(item) })
+          body: JSON.stringify({ id: item.id, fields, assignment: currentAssignment(item) })
         });
         if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
         const state = await response.json();
@@ -1770,9 +1796,24 @@ The following decisions should not be made by one owner alone:
         if (state.updatedAt && state.updatedAt === lastSharedUpdatedAt) return;
 
         if (hasSharedAssignments) {
-          applySharedAssignments(assignments);
+          const savedLocalAssignments = localAssignments();
+          const mergedAssignments = {};
+          const preservedLocalItems = [];
+
+          allItems.forEach((item) => {
+            const { assignment, usedLocalValue } = mergeSharedAssignmentWithLocal(
+              item,
+              assignments[item.id],
+              savedLocalAssignments[item.id]
+            );
+            mergedAssignments[item.id] = assignment;
+            if (usedLocalValue) preservedLocalItems.push(item);
+          });
+
+          applySharedAssignments(mergedAssignments);
           lastSharedUpdatedAt = state.updatedAt || "";
           if (render) refreshView();
+          preservedLocalItems.forEach((item) => saveSharedAssignment(item));
           return;
         }
 
@@ -2029,7 +2070,7 @@ The following decisions should not be made by one owner alone:
           const item = itemById.get(select.dataset.itemId);
           if (!item) return;
           item.owner = select.value;
-          saveAssignment(item);
+          saveAssignment(item, ["owner"]);
           updateAssignmentRow(item);
         });
       });
@@ -2039,7 +2080,7 @@ The following decisions should not be made by one owner alone:
           const item = itemById.get(select.dataset.itemId);
           if (!item) return;
           item.status = select.value;
-          saveAssignment(item);
+          saveAssignment(item, ["status"]);
           updateAssignmentRow(item);
         });
       });
@@ -2049,7 +2090,7 @@ The following decisions should not be made by one owner alone:
           const item = itemById.get(select.dataset.itemId);
           if (!item) return;
           item.priority = select.value;
-          saveAssignment(item);
+          saveAssignment(item, ["priority"]);
           updateAssignmentRow(item);
         });
       });
@@ -2059,19 +2100,21 @@ The following decisions should not be made by one owner alone:
           const item = itemById.get(select.dataset.itemId);
           if (!item) return;
           item.deliverable = select.value;
-          saveAssignment(item);
+          saveAssignment(item, ["deliverable"]);
           updateAssignmentRow(item);
         });
       });
 
       document.querySelectorAll('input[data-assignment="due-date"]').forEach((input) => {
-        input.addEventListener("change", () => {
+        const saveDate = () => {
           const item = itemById.get(input.dataset.itemId);
           if (!item) return;
           item.dueDate = input.value;
-          saveAssignment(item);
+          saveAssignment(item, ["dueDate"]);
           updateAssignmentRow(item);
-        });
+        };
+        input.addEventListener("input", saveDate);
+        input.addEventListener("change", saveDate);
       });
 
       document.querySelectorAll('input[data-assignment="support"]').forEach((input) => {
@@ -2081,7 +2124,7 @@ The following decisions should not be made by one owner alone:
           if (!item || !row) return;
           const selected = Array.from(row.querySelectorAll('input[data-assignment="support"]:checked')).map((checkbox) => checkbox.value);
           item.support = selected.join(", ");
-          saveAssignment(item);
+          saveAssignment(item, ["support"]);
           updateAssignmentRow(item);
         });
       });
