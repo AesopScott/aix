@@ -1627,7 +1627,11 @@ The following decisions should not be made by one owner alone:
 
     function renderSummary() {
       const delivered = allItems.filter((item) => item.status === "Delivered").length;
-      const activeOwners = editableOwners.map((owner) => `${owner}: ${countByOwner(owner)}`).join(" / ");
+      const activeOwners = editableOwners
+        .map((owner) => ({ owner, count: countByOwner(owner) }))
+        .filter(({ count }) => count > 0)
+        .map(({ owner, count }) => `${owner}: ${count}`)
+        .join(" / ");
       document.getElementById("summary").innerHTML = `
         <div class="metric"><strong>${allItems.length}</strong><span>Total checklist items</span></div>
         <div class="metric"><strong>${delivered}</strong><span>Delivered items</span></div>
