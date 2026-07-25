@@ -29,6 +29,7 @@ function sanitizeAssignment(value) {
     owner: String(value.owner || ""),
     support: String(value.support || ""),
     priority: String(value.priority || ""),
+    deliverable: String(value.deliverable || ""),
     dueDate: String(value.dueDate || ""),
     status: String(value.status || "")
   };

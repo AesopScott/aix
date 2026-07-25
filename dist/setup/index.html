@@ -414,6 +414,7 @@
     .owner-select,
     .status-select,
     .priority-select,
+    .deliverable-select,
     .date-input,
     .support-summary {
       width: 100%;
@@ -1465,6 +1466,7 @@ The following decisions should not be made by one owner alone:
       "Priority 7 - 1 day out",
       "Priority 8 - Day of"
     ];
+    const deliverableOptions = ["Conversation", "Document", "Contract"];
     const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered"];
     const assignmentStoragePrefix = "mojo-event-assignment:";
     const sharedStateEndpoint = "/api/setup-state";
@@ -1561,11 +1563,13 @@ The following decisions should not be made by one owner alone:
           defaultOwner: parsed.owner || "Shared",
           defaultSupport: "",
           defaultPriority: "",
+          defaultDeliverable: "",
           defaultDueDate: "",
           defaultStatus: "Undefined",
           owner: parsed.owner || "Shared",
           support: "",
           priority: "",
+          deliverable: "",
           dueDate: "",
           status: "Undefined",
           phase: current.title,
@@ -1608,7 +1612,7 @@ The following decisions should not be made by one owner alone:
     }
 
     function itemSearchText(item) {
-      return `${item.text} ${item.owner} ${item.support} ${item.priority} ${item.dueDate} ${item.status} ${item.phase} ${item.subsection}`.toLowerCase();
+      return `${item.text} ${item.owner} ${item.support} ${item.priority} ${item.deliverable} ${item.dueDate} ${item.status} ${item.phase} ${item.subsection}`.toLowerCase();
     }
 
     function currentAssignment(item) {
@@ -1616,6 +1620,7 @@ The following decisions should not be made by one owner alone:
         owner: item.owner,
         support: item.support,
         priority: item.priority,
+        deliverable: item.deliverable,
         dueDate: item.dueDate,
         status: item.status
       };
@@ -1630,6 +1635,7 @@ The following decisions should not be made by one owner alone:
         owner,
         support: normalizeSupport(assignment.support || ""),
         priority: priorityOptions.includes(assignment.priority) ? assignment.priority : item.defaultPriority,
+        deliverable: deliverableOptions.includes(assignment.deliverable) ? assignment.deliverable : item.defaultDeliverable,
         dueDate: /^\d{4}-\d{2}-\d{2}$/.test(assignment.dueDate || "") ? assignment.dueDate : item.defaultDueDate,
         status: statusOptions.includes(assignment.status) ? assignment.status : item.defaultStatus
       };
@@ -1640,6 +1646,7 @@ The following decisions should not be made by one owner alone:
       item.owner = normalized.owner;
       item.support = normalized.support;
       item.priority = normalized.priority;
+      item.deliverable = normalized.deliverable;
       item.dueDate = normalized.dueDate;
       item.status = normalized.status;
     }
@@ -1691,6 +1698,7 @@ The following decisions should not be made by one owner alone:
           item.owner = item.defaultOwner;
           item.support = item.defaultSupport;
           item.priority = item.defaultPriority;
+          item.deliverable = item.defaultDeliverable;
           item.dueDate = item.defaultDueDate;
           item.status = item.defaultStatus;
         }
@@ -1861,6 +1869,17 @@ The following decisions should not be made by one owner alone:
       `;
     }
 
+    function deliverableSelect(item) {
+      return `
+        <select class="deliverable-select" data-assignment="deliverable" data-item-id="${item.id}" aria-label="Deliverable for ${escapeHtml(item.text)}">
+          <option value="" ${!item.deliverable ? "selected" : ""}>Set deliverable</option>
+          ${deliverableOptions.map((deliverable) => `
+            <option value="${deliverable}" ${deliverable === item.deliverable ? "selected" : ""}>${deliverable}</option>
+          `).join("")}
+        </select>
+      `;
+    }
+
     function dueDateInput(item) {
       return `
         <input class="date-input" type="date" data-assignment="due-date" data-item-id="${item.id}" value="${escapeHtml(item.dueDate)}" aria-label="Expected delivery date for ${escapeHtml(item.text)}">
@@ -1924,6 +1943,10 @@ The following decisions should not be made by one owner alone:
             ${prioritySelect(item)}
           </div>
           <div class="assignment-field">
+            <span class="assignment-label">Deliverable</span>
+            ${deliverableSelect(item)}
+          </div>
+          <div class="assignment-field">
             <span class="assignment-label">Expected Delivery Date</span>
             ${dueDateInput(item)}
           </div>
@@ -1985,7 +2008,7 @@ The following decisions should not be made by one owner alone:
                   <div class="subsection-title"><h3>${subsection.title}</h3></div>
                   <div class="items">
                     ${subsection.items.map((item) => `
-                      <div class="item" data-item-id="${item.id}" data-phase="${escapeHtml(item.phase)}" data-owner="${escapeHtml(item.owner)}" data-support="${escapeHtml(item.support)}" data-priority="${escapeHtml(item.priority)}" data-due-date="${escapeHtml(item.dueDate)}" data-status="${escapeHtml(item.status)}" data-search="${escapeHtml(itemSearchText(item))}">
+                      <div class="item" data-item-id="${item.id}" data-phase="${escapeHtml(item.phase)}" data-owner="${escapeHtml(item.owner)}" data-support="${escapeHtml(item.support)}" data-priority="${escapeHtml(item.priority)}" data-deliverable="${escapeHtml(item.deliverable)}" data-due-date="${escapeHtml(item.dueDate)}" data-status="${escapeHtml(item.status)}" data-search="${escapeHtml(itemSearchText(item))}">
                         <span class="item-text">${escapeHtml(item.text)}</span>
                         ${assignmentControls(item)}
                         ${statusSelect(item)}
@@ -2031,6 +2054,16 @@ The following decisions should not be made by one owner alone:
         });
       });
 
+      document.querySelectorAll('select[data-assignment="deliverable"]').forEach((select) => {
+        select.addEventListener("change", () => {
+          const item = itemById.get(select.dataset.itemId);
+          if (!item) return;
+          item.deliverable = select.value;
+          saveAssignment(item);
+          updateAssignmentRow(item);
+        });
+      });
+
       document.querySelectorAll('input[data-assignment="due-date"]').forEach((input) => {
         input.addEventListener("change", () => {
           const item = itemById.get(input.dataset.itemId);
@@ -2067,6 +2100,7 @@ The following decisions should not be made by one owner alone:
       row.dataset.owner = item.owner;
       row.dataset.support = item.support;
       row.dataset.priority = item.priority;
+      row.dataset.deliverable = item.deliverable;
       row.dataset.dueDate = item.dueDate;
       row.dataset.status = item.status;
       row.dataset.search = itemSearchText(item);
@@ -2085,6 +2119,11 @@ The following decisions should not be made by one owner alone:
       const prioritySelect = row.querySelector('select[data-assignment="priority"]');
       if (prioritySelect) {
         prioritySelect.value = item.priority;
+      }
+
+      const deliverableSelect = row.querySelector('select[data-assignment="deliverable"]');
+      if (deliverableSelect) {
+        deliverableSelect.value = item.deliverable;
       }
 
       const dueDateInput = row.querySelector('input[data-assignment="due-date"]');
@@ -2217,6 +2256,7 @@ The following decisions should not be made by one owner alone:
         item.owner = item.defaultOwner;
         item.support = item.defaultSupport;
         item.priority = item.defaultPriority;
+        item.deliverable = item.defaultDeliverable;
         item.dueDate = item.defaultDueDate;
         item.status = item.defaultStatus;
         localStorage.removeItem(assignmentStorageKey(item));
