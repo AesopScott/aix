@@ -142,6 +142,39 @@
       font-size: 0.82rem;
     }
 
+    .metric.owner-count-metric strong {
+      font-size: 1rem;
+    }
+
+    .owner-count-list {
+      display: grid;
+      gap: 5px;
+      margin: 0 0 8px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .owner-count-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--charcoal);
+      font-size: 0.86rem;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .owner-count {
+      min-width: 28px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: #f4f5f7;
+      color: var(--muted);
+      text-align: center;
+      font-weight: 900;
+    }
+
     .toolbar {
       display: grid;
       gap: 14px;
@@ -1630,13 +1663,13 @@ The following decisions should not be made by one owner alone:
       const activeOwners = editableOwners
         .map((owner) => ({ owner, count: countByOwner(owner) }))
         .filter(({ count }) => count > 0)
-        .map(({ owner, count }) => `${owner}: ${count}`)
-        .join(" / ");
+        .map(({ owner, count }) => `<li><span>${escapeHtml(owner)}</span><span class="owner-count">${count}</span></li>`)
+        .join("");
       document.getElementById("summary").innerHTML = `
         <div class="metric"><strong>${allItems.length}</strong><span>Total checklist items</span></div>
         <div class="metric"><strong>${delivered}</strong><span>Delivered items</span></div>
         <div class="metric"><strong>${checklistSections.length}</strong><span>Execution phases</span></div>
-        <div class="metric"><strong>${activeOwners}</strong><span>Owner item counts</span></div>
+        <div class="metric owner-count-metric"><strong>Owners</strong><ul class="owner-count-list">${activeOwners}</ul><span>Owner item counts</span></div>
       `;
     }
 
