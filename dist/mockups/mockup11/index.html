@@ -256,6 +256,39 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+  .engagement-heading {
+    display: grid;
+    grid-template-columns: 112px minmax(0, max-content) 112px;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(18px, 2.2vw, 42px);
+    width: min(1720px, calc(100vw - 112px));
+    margin: 0 50%;
+    transform: translateX(-50%);
+  }
+  .engagement-title {
+    margin: 0 auto;
+    font-family: 'Bodoni Moda', serif;
+    font-weight: 400;
+    font-size: clamp(42px, 2.9vw, 52px);
+    line-height: 1.18;
+    color: #f7f2e8;
+    white-space: nowrap;
+  }
+  .engagement-emblem {
+    width: 104px;
+    height: 104px;
+    object-fit: contain;
+    opacity: .9;
+    filter: saturate(.94) brightness(.95) contrast(1.05) drop-shadow(0 2px 0 rgba(255,247,213,.14)) drop-shadow(0 18px 26px rgba(0,0,0,.72));
+    pointer-events: none;
+  }
+  .engagement-emblem-left {
+    justify-self: end;
+  }
+  .engagement-emblem-right {
+    justify-self: start;
+  }
   .brand-wordmark {
     position: relative;
     display: inline-flex;
@@ -263,6 +296,18 @@
     gap: 7px;
     padding-bottom: 7px;
     overflow: hidden;
+  }
+  .brand-logo {
+    height: 33px;
+    width: auto;
+    display: block;
+    transform: translateY(3px) scale(1);
+    transform-origin: center;
+    transition: transform 2.3s cubic-bezier(.2, .8, .2, 1);
+    will-change: transform;
+  }
+  .brand-logo:hover {
+    transform: translateY(3px) scale(1.5);
   }
   .brand-word {
     font-family: 'Bodoni Moda', serif;
@@ -307,8 +352,55 @@
     position: relative;
     display: inline-block;
     color: #d9cbb0;
+    overflow: visible;
     padding-bottom: .08em;
     margin-bottom: -.08em;
+  }
+  .ai-shimmer::before,
+  .ai-shimmer::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    color: #fff8d6;
+    opacity: 0;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 58%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 58%, transparent 100%);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 34% 100%;
+    mask-size: 34% 100%;
+    -webkit-mask-position: -44% 50%;
+    mask-position: -44% 50%;
+    animation: aiSoulSweep 14s ease-in-out infinite;
+  }
+  .ai-shimmer::before {
+    color: rgba(255,248,214,.64);
+    filter: blur(5px);
+    animation-duration: 14s;
+  }
+  .ai-shimmer::after {
+    text-shadow: 0 0 10px rgba(255,248,214,.45);
+  }
+  @keyframes aiSoulSweep {
+    0%, 10% {
+      -webkit-mask-position: -44% 50%;
+      mask-position: -44% 50%;
+      opacity: 0;
+    }
+    22% {
+      opacity: .95;
+    }
+    76% {
+      -webkit-mask-position: 126% 50%;
+      mask-position: 126% 50%;
+      opacity: .98;
+    }
+    90%, 100% {
+      -webkit-mask-position: 138% 50%;
+      mask-position: 138% 50%;
+      opacity: 0;
+    }
   }
   @media (max-width: 900px) {
     .hero-boardroom {
@@ -337,6 +429,22 @@
     }
     .conversation-head-right {
       right: -8vw;
+    }
+    .engagement-heading {
+      grid-template-columns: 54px minmax(0, 1fr) 54px;
+      gap: 12px;
+      width: 100%;
+      margin: 0;
+      transform: none;
+    }
+    .engagement-title {
+      font-size: clamp(28px, 6vw, 42px);
+      white-space: normal;
+      text-wrap: balance;
+    }
+    .engagement-emblem {
+      width: 54px;
+      height: 54px;
     }
   }
 </style>
@@ -388,7 +496,7 @@
 
   <header style="display:flex;align-items:center;justify-content:space-between;padding:34px 80px">
     <div style="display:flex;align-items:center;gap:14px">
-      <img src="../../assets/logo-champagne.png" alt="MOJO AI Summits" style="height:33px;width:auto;display:block;transform:translateY(3px)">
+      <img class="brand-logo" src="../../assets/logo-champagne.png" alt="MOJO AI Summits">
       <div class="brand-wordmark">
         <div class="brand-word brand-word-mojo">Mojo</div>
         <div class="brand-word brand-word-ai">AI</div>
@@ -460,7 +568,11 @@
         <div><div class="format-kicker" style="font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:#6f6a63;margin-bottom:18px">Stage 3<svg class="label-emblem" aria-hidden="true"><use href="#emblem-partners"></use></svg></div><div style="font-family:'Bodoni Moda',serif;font-size:24px;color:#f2e9d8;line-height:1.32;margin-bottom:12px">Executive Partner Presentation</div><p style="margin:0;font-size:14px;line-height:1.8;font-weight:300;color:#7d786f">Improving outcomes with<br />technology partners.</p></div>
       </div>
       <div style="text-align:center;margin:96px auto 26px">
-        <h3 style="margin:0 auto;max-width:1180px;font-family:'Bodoni Moda',serif;font-weight:400;font-size:52px;line-height:1.18;color:#f7f2e8;white-space:nowrap">Professional &amp; Interpersonal Engagement</h3>
+        <div class="engagement-heading">
+          <img class="engagement-emblem engagement-emblem-left" src="../../assets/engagement-fountain-pen.png" alt="">
+          <h3 class="engagement-title">Professional &amp; Interpersonal Engagement</h3>
+          <img class="engagement-emblem engagement-emblem-right" src="../../assets/engagement-champagne-flute.png" alt="">
+        </div>
         <svg class="title-flourish" viewBox="0 0 420 28" aria-hidden="true">
           <line x1="0" y1="14" x2="154" y2="14" />
           <path d="M154 14c18-13 30-13 48 0 10 7 22 7 32 0 18-13 30-13 48 0" />
