@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300&family=Public+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #0a1120; }
+  * { box-sizing: border-box; }
+  a { color: #9db4d0; text-decoration: none; }
+  a:hover { color: #dfe8f2; }
+  ::selection { background: #1c3050; color: #eaf0f7; }
+</style>
+</helmet>
+
+<div style="background:#0a1120;font-family:'Public Sans',sans-serif;color:#b9c6d6;min-height:100vh;overflow-x:hidden">
+
+  <header style="position:sticky;top:0;z-index:50;display:grid;grid-template-columns:200px 1fr;align-items:center;padding:20px 64px;background:rgba(10,17,32,.94);backdrop-filter:blur(12px);border-bottom:1px solid rgba(157,180,208,.16)">
+    <div style="font-family:'Source Serif 4',serif;font-size:17px;letter-spacing:.26em;text-transform:uppercase;color:#eaf0f7">Mojo</div>
+    <nav style="display:flex;align-items:center;justify-content:flex-end;gap:40px;font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:#7d90a8">
+      <a href="#topics" style="color:#7d90a8">Topics</a>
+      <a href="#format" style="color:#7d90a8">Experience</a>
+      <a href="#path" style="color:#7d90a8">Cities</a>
+      <a href="#signup" style="padding:11px 24px;border:1px solid rgba(157,180,208,.4);color:#dfe8f2">Request Invitation</a>
+    </nav>
+  </header>
+
+  <section style="display:grid;grid-template-columns:1.15fr .85fr;min-height:620px;border-bottom:1px solid rgba(157,180,208,.14)">
+    <div style="padding:110px 64px 92px;display:flex;flex-direction:column;justify-content:center">
+      <div style="font-size:10.5px;letter-spacing:.32em;text-transform:uppercase;color:#7d90a8;margin-bottom:30px">Invitation only — Dallas, January 2027</div>
+      <h1 style="margin:0;font-family:'Source Serif 4',serif;font-weight:300;font-size:66px;line-height:1.1;letter-spacing:-.018em;color:#f0f5fa;text-wrap:pretty">Where executive leaders shape the future of AI.</h1>
+      <p style="margin:32px 0 0;max-width:560px;font-size:16px;line-height:1.78;font-weight:300;color:#93a5bb;text-wrap:pretty">An invitation-only executive AI forum for leaders already responsible for adoption, integration, security, operations, and measurable business progress. Dallas begins the 2027 season, followed by Denver, Raleigh, and Chicago.</p>
+      <div style="display:flex;gap:14px;margin-top:42px">
+        <a href="#signup" style="padding:15px 32px;background:#dfe8f2;color:#0a1120;font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:500">Request Invitation</a>
+        <a href="#format" style="padding:15px 32px;border:1px solid rgba(157,180,208,.36);color:#b9c6d6;font-size:11.5px;letter-spacing:.18em;text-transform:uppercase">Explore the Experience</a>
+      </div>
+    </div>
+    <div style="border-left:1px solid rgba(157,180,208,.14);background:linear-gradient(200deg,#12203a,#0a1120);padding:64px 52px;display:flex;flex-direction:column;justify-content:center">
+      <div style="font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:#7d90a8;margin-bottom:30px">Dallas 2027 · The cohort</div>
+      <div style="display:grid;gap:0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:20px 0;border-bottom:1px solid rgba(157,180,208,.14)"><span style="font-size:13.5px;font-weight:300;color:#93a5bb">Executive seats</span><span style="font-family:'Source Serif 4',serif;font-size:30px;color:#f0f5fa">150</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:20px 0;border-bottom:1px solid rgba(157,180,208,.14)"><span style="font-size:13.5px;font-weight:300;color:#93a5bb">Seniority</span><span style="font-family:'Source Serif 4',serif;font-size:22px;color:#f0f5fa">Directors +</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:20px 0;border-bottom:1px solid rgba(157,180,208,.14)"><span style="font-size:13.5px;font-weight:300;color:#93a5bb">Organization size</span><span style="font-family:'Source Serif 4',serif;font-size:22px;color:#f0f5fa">5,000 +</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:20px 0"><span style="font-size:13.5px;font-weight:300;color:#93a5bb">Format</span><span style="font-family:'Source Serif 4',serif;font-size:22px;color:#f0f5fa">6 hrs · 6 tracks</span></div>
+      </div>
+    </div>
+  </section>
+
+  <sc-if value="{{ showStatBar }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid rgba(157,180,208,.14)">
+      <div style="padding:30px 64px;border-right:1px solid rgba(157,180,208,.12)"><div style="font-family:'Source Serif 4',serif;font-size:21px;color:#eaf0f7">Invitation only</div><div style="margin-top:6px;font-size:12.5px;font-weight:300;color:#7d90a8">Qualified executive access</div></div>
+      <div style="padding:30px 48px;border-right:1px solid rgba(157,180,208,.12)"><div style="font-family:'Source Serif 4',serif;font-size:21px;color:#eaf0f7">No expo floor</div><div style="margin-top:6px;font-size:12.5px;font-weight:300;color:#7d90a8">Boardroom dialogue instead</div></div>
+      <div style="padding:30px 48px"><div style="font-family:'Source Serif 4',serif;font-size:21px;color:#eaf0f7">Peer-led value</div><div style="margin-top:6px;font-size:12.5px;font-weight:300;color:#7d90a8">Operators, not demos</div></div>
+    </div>
+  </sc-if>
+
+  <section id="topics" style="padding:100px 64px;display:grid;grid-template-columns:200px 1fr;gap:56px">
+    <div style="font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:#5d7391">I.<br />Topics</div>
+    <div>
+      <h2 style="margin:0 0 18px;font-family:'Source Serif 4',serif;font-weight:300;font-size:42px;line-height:1.18;color:#f0f5fa;max-width:760px;text-wrap:pretty">The conversations are designed for decisions, not demos.</h2>
+      <p style="margin:0 0 56px;max-width:620px;font-size:15.5px;line-height:1.78;font-weight:300;color:#93a5bb">Leaders compare what they have already done, what they are building now, and which operating choices will determine whether AI creates measurable value.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 56px">
+        <div style="padding:28px 0;border-top:1px solid rgba(157,180,208,.16)"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><h3 style="margin:0;font-family:'Source Serif 4',serif;font-weight:400;font-size:24px;color:#f0f5fa">Business Enablement</h3><span style="font-size:11px;color:#5d7391">01</span></div><p style="margin:0 0 14px;font-size:14.5px;line-height:1.75;font-weight:300;color:#93a5bb">Where should AI change growth, service, decision speed, or cost structure?</p><div style="font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#6d819a">Use cases · Adoption · ROI</div></div>
+        <div style="padding:28px 0;border-top:1px solid rgba(157,180,208,.16)"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><h3 style="margin:0;font-family:'Source Serif 4',serif;font-weight:400;font-size:24px;color:#f0f5fa">Innovation</h3><span style="font-size:11px;color:#5d7391">02</span></div><p style="margin:0 0 14px;font-size:14.5px;line-height:1.75;font-weight:300;color:#93a5bb">Which experiments deserve executive oxygen, budget, and permission to scale?</p><div style="font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#6d819a">Products · Revenue · Speed</div></div>
+        <div style="padding:28px 0;border-top:1px solid rgba(157,180,208,.16)"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><h3 style="margin:0;font-family:'Source Serif 4',serif;font-weight:400;font-size:24px;color:#f0f5fa">Integration</h3><span style="font-size:11px;color:#5d7391">03</span></div><p style="margin:0 0 14px;font-size:14.5px;line-height:1.75;font-weight:300;color:#93a5bb">How does AI connect to ERP, CRM, data, workflows, and daily execution?</p><div style="font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#6d819a">Systems · Data · Workflow</div></div>
+        <div style="padding:28px 0;border-top:1px solid rgba(157,180,208,.16)"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><h3 style="margin:0;font-family:'Source Serif 4',serif;font-weight:400;font-size:24px;color:#f0f5fa">Security and Risk</h3><span style="font-size:11px;color:#5d7391">04</span></div><p style="margin:0 0 14px;font-size:14.5px;line-height:1.75;font-weight:300;color:#93a5bb">What must be protected before AI expands across teams and vendors?</p><div style="font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#6d819a">Data · Identity · Model risk</div></div>
+        <div style="padding:28px 0;border-top:1px solid rgba(157,180,208,.16);border-bottom:1px solid rgba(157,180,208,.16)"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><h3 style="margin:0;font-family:'Source Serif 4',serif;font-weight:400;font-size:24px;color:#f0f5fa">Operations and Finance</h3><span style="font-size:11px;color:#5d7391">05</span></div><p style="margin:0 0 14px;font-size:14.5px;line-height:1.75;font-weight:300;color:#93a5bb">Where does automation change accountability, process design, and financial control?</p><div style="font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#6d819a">Process · Cost · Controls</div></div>
+        <div style="padding:28px 0;border-top:1px solid rgba(157,180,208,.16);border-bottom:1px solid rgba(157,180,208,.16)"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><h3 style="margin:0;font-family:'Source Serif 4',serif;font-weight:400;font-size:24px;color:#f0f5fa">Technology Strategy</h3><span style="font-size:11px;color:#5d7391">06</span></div><p style="margin:0 0 14px;font-size:14.5px;line-height:1.75;font-weight:300;color:#93a5bb">Which platforms, architectures, and governance models support scale?</p><div style="font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#6d819a">Stack · Vendors · Governance</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="format" style="padding:100px 64px;display:grid;grid-template-columns:200px 1fr;gap:56px;background:#0c1526;border-top:1px solid rgba(157,180,208,.14);border-bottom:1px solid rgba(157,180,208,.14)">
+    <div style="font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:#5d7391">II.<br />Experience</div>
+    <div>
+      <h2 style="margin:0 0 18px;font-family:'Source Serif 4',serif;font-weight:300;font-size:42px;line-height:1.18;color:#f0f5fa">Six hours. Six tracks. Boardroom conversations.</h2>
+      <p style="margin:0 0 50px;max-width:620px;font-size:15.5px;line-height:1.78;font-weight:300;color:#93a5bb">A focused executive day built for exchange: short perspective-setting talks followed by facilitated peer dialogue with leaders facing similar decisions.</p>
+      <div style="display:grid;gap:0;max-width:920px">
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:34px;padding:24px 0;border-top:1px solid rgba(157,180,208,.16);align-items:baseline"><div style="font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#7d90a8">Stage 1</div><div><div style="font-family:'Source Serif 4',serif;font-size:23px;color:#f0f5fa">Executive VIP presentation</div><div style="margin-top:6px;font-size:14.5px;line-height:1.72;font-weight:300;color:#93a5bb">AI business enablement, integration, or security.</div></div></div>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:34px;padding:24px 0;border-top:1px solid rgba(157,180,208,.16);align-items:baseline"><div style="font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#7d90a8">Stage 2</div><div><div style="font-family:'Source Serif 4',serif;font-size:23px;color:#f0f5fa">Boardroom table discussion</div><div style="margin-top:6px;font-size:14.5px;line-height:1.72;font-weight:300;color:#93a5bb">Facilitated peer exchange around the presentation topic.</div></div></div>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:34px;padding:24px 0;border-top:1px solid rgba(157,180,208,.16);align-items:baseline"><div style="font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#7d90a8">Stage 3</div><div><div style="font-family:'Source Serif 4',serif;font-size:23px;color:#f0f5fa">Executive VIP presentation</div><div style="margin-top:6px;font-size:14.5px;line-height:1.72;font-weight:300;color:#93a5bb">AI business operations, finance, or technology.</div></div></div>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:34px;padding:24px 0;border-top:1px solid rgba(157,180,208,.16);border-bottom:1px solid rgba(157,180,208,.16);align-items:baseline"><div style="font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#7d90a8">Stage 4</div><div><div style="font-family:'Source Serif 4',serif;font-size:23px;color:#f0f5fa">Boardroom AI workshop</div><div style="margin-top:6px;font-size:14.5px;line-height:1.72;font-weight:300;color:#93a5bb">The room turns the ideas into practical executive next steps.</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="path" style="padding:100px 64px;display:grid;grid-template-columns:200px 1fr;gap:56px">
+    <div style="font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:#5d7391">III.<br />Cities</div>
+    <div>
+      <h2 style="margin:0 0 46px;font-family:'Source Serif 4',serif;font-weight:300;font-size:42px;color:#f0f5fa">Dallas. Denver. Raleigh. Chicago.</h2>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-left:1px solid rgba(157,180,208,.16)">
+        <div style="padding:0 26px;border-right:1px solid rgba(157,180,208,.16)"><div style="font-size:11px;color:#5d7391;margin-bottom:12px">01</div><div style="font-family:'Source Serif 4',serif;font-size:28px;color:#f0f5fa;margin-bottom:12px">Dallas</div><p style="margin:0 0 18px;font-size:14px;line-height:1.7;font-weight:300;color:#93a5bb">The first curated executive room for AI leaders.</p><div style="font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#dfe8f2">January 2027</div></div>
+        <div style="padding:0 26px;border-right:1px solid rgba(157,180,208,.16)"><div style="font-size:11px;color:#5d7391;margin-bottom:12px">02</div><div style="font-family:'Source Serif 4',serif;font-size:28px;color:#f0f5fa;margin-bottom:12px">Denver</div><p style="margin:0 0 18px;font-size:14px;line-height:1.7;font-weight:300;color:#93a5bb">Regional executive relationships, still built for depth over headcount.</p><div style="font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#7d90a8">April 2027</div></div>
+        <div style="padding:0 26px;border-right:1px solid rgba(157,180,208,.16)"><div style="font-size:11px;color:#5d7391;margin-bottom:12px">03</div><div style="font-family:'Source Serif 4',serif;font-size:28px;color:#f0f5fa;margin-bottom:12px">Raleigh</div><p style="margin:0 0 18px;font-size:14px;line-height:1.7;font-weight:300;color:#93a5bb">Another invitation-only room for AI strategy and operating decisions.</p><div style="font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#7d90a8">2027</div></div>
+        <div style="padding:0 26px;border-right:1px solid rgba(157,180,208,.16)"><div style="font-size:11px;color:#5d7391;margin-bottom:12px">04</div><div style="font-family:'Source Serif 4',serif;font-size:28px;color:#f0f5fa;margin-bottom:12px">Chicago</div><p style="margin:0 0 18px;font-size:14px;line-height:1.7;font-weight:300;color:#93a5bb">A focused executive gathering for practical AI adoption.</p><div style="font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#7d90a8">2027</div></div>
+      </div>
+    </div>
+  </section>
+
+  <sc-if value="{{ showRoomQuote }}" hint-placeholder-val="{{ true }}">
+    <section style="padding:110px 64px;background:linear-gradient(180deg,#0c1526,#12203a 50%,#0c1526);border-top:1px solid rgba(157,180,208,.14);border-bottom:1px solid rgba(157,180,208,.14)">
+      <div style="max-width:1240px;margin:0 auto;display:grid;grid-template-columns:200px 1fr;gap:56px">
+        <div style="font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:#5d7391">IV.<br />The room</div>
+        <div>
+          <div style="font-family:'Source Serif 4',serif;font-weight:300;font-style:italic;font-size:40px;line-height:1.32;color:#f0f5fa;max-width:760px;text-wrap:pretty">Private leadership discussions for the AI decisions that matter.</div>
+          <p style="margin:26px 0 0;max-width:520px;font-size:15px;line-height:1.78;font-weight:300;color:#93a5bb">No expo floor, no badge lines. Just high-value conversations with peers worth knowing.</p>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <section id="signup" style="padding:100px 64px;display:grid;grid-template-columns:200px 1fr;gap:56px">
+    <div style="font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:#5d7391">V.<br />Invitation</div>
+    <div style="display:grid;grid-template-columns:.85fr 1.15fr;gap:64px">
+      <div>
+        <h2 style="margin:0;font-family:'Source Serif 4',serif;font-weight:300;font-size:44px;line-height:1.14;color:#f0f5fa">Next stop: Dallas. January 2027.</h2>
+        <p style="margin:24px 0 0;font-size:15.5px;line-height:1.78;font-weight:300;color:#93a5bb">MOJO AI Summits Dallas is invitation-only and curated for qualified executive leaders. Tell us who you are and we will follow up as invitations go out.</p>
+        <div style="margin-top:34px;padding-top:24px;border-top:1px solid rgba(157,180,208,.16);font-size:13.5px;line-height:1.85;font-weight:300;color:#7d90a8">Participation is complimentary for qualified executives. Interested in <a href="#">partnering</a> or <a href="#">leading a conversation</a>?</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-content:start">
+        <label style="display:grid;gap:8px"><span style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#6d819a">Full name</span><input type="text" style="background:transparent;border:none;border-bottom:1px solid rgba(157,180,208,.3);padding:9px 0;color:#f0f5fa;font-family:'Public Sans',sans-serif;font-size:15px;outline:none" /></label>
+        <label style="display:grid;gap:8px"><span style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#6d819a">Email</span><input type="email" style="background:transparent;border:none;border-bottom:1px solid rgba(157,180,208,.3);padding:9px 0;color:#f0f5fa;font-family:'Public Sans',sans-serif;font-size:15px;outline:none" /></label>
+        <label style="display:grid;gap:8px"><span style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#6d819a">Company</span><input type="text" style="background:transparent;border:none;border-bottom:1px solid rgba(157,180,208,.3);padding:9px 0;color:#f0f5fa;font-family:'Public Sans',sans-serif;font-size:15px;outline:none" /></label>
+        <label style="display:grid;gap:8px"><span style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#6d819a">Title</span><input type="text" style="background:transparent;border:none;border-bottom:1px solid rgba(157,180,208,.3);padding:9px 0;color:#f0f5fa;font-family:'Public Sans',sans-serif;font-size:15px;outline:none" /></label>
+        <label style="display:grid;gap:8px;grid-column:span 2"><span style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#6d819a">Which conversation should include you?</span><select style="background:#0c1526;border:1px solid rgba(157,180,208,.24);padding:12px;color:#f0f5fa;font-family:'Public Sans',sans-serif;font-size:15px;outline:none"><option>Pick one</option><option>Business Enablement</option><option>Innovation</option><option>Integration</option><option>Security and Risk</option><option>Operations and Finance</option><option>Technology Strategy</option></select></label>
+        <label style="display:grid;gap:8px;grid-column:span 2"><span style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#6d819a">Where is your organization on the AI curve?</span><select style="background:#0c1526;border:1px solid rgba(157,180,208,.24);padding:12px;color:#f0f5fa;font-family:'Public Sans',sans-serif;font-size:15px;outline:none"><option>Pick one</option><option>Exploring use cases</option><option>Piloting in business units</option><option>Scaling across functions</option><option>Optimizing enterprise adoption</option></select></label>
+        <label style="display:grid;gap:8px;grid-column:span 2"><span style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#6d819a">What would make this worth clearing your calendar?</span><textarea rows="3" style="background:transparent;border:1px solid rgba(157,180,208,.24);padding:12px;color:#f0f5fa;font-family:'Public Sans',sans-serif;font-size:15px;outline:none;resize:vertical"></textarea></label>
+        <button style="grid-column:span 2;padding:16px;background:#dfe8f2;border:none;color:#0a1120;font-family:'Public Sans',sans-serif;font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;cursor:pointer">Request Executive Invitation</button>
+      </div>
+    </div>
+  </section>
+
+  <footer style="padding:40px 64px;border-top:1px solid rgba(157,180,208,.14);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#5d7391">
+    <div style="font-family:'Source Serif 4',serif;letter-spacing:.26em;color:#93a5bb">Mojo AI Summits</div>
+    <div style="display:flex;gap:28px"><a href="#" style="color:#5d7391">Propose a Conversation</a><a href="#" style="color:#5d7391">Partner Access</a></div>
+    <div style="text-transform:none;letter-spacing:.04em">© 2026 · Powered by MOJO AI Studio</div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showStatBar&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showRoomQuote&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showStatBar: this.props.showStatBar ?? true,
+      showRoomQuote: this.props.showRoomQuote ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>
