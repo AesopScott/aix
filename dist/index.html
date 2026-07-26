@@ -3,7 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MOJO Ai Summits — Where AI Leaders Meet, Learn, and Build.</title>
+<title>MOJO Ai Summits: Where AI Leaders Meet, Learn, and Build.</title>
+<meta name="description" content="Where AI leaders meet, learn, and build. Small, curated boardroom summits: the 2027 season kicks off in Dallas, then Raleigh.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mojoaisummits.com/">
+<meta property="og:title" content="MOJO Ai Summits: Where AI Leaders Meet, Learn, and Build.">
+<meta property="og:description" content="Where AI leaders meet, learn, and build. Small, curated boardroom summits: the 2027 season kicks off in Dallas, then Raleigh.">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MOJO Ai Summits: Where AI Leaders Meet, Learn, and Build.">
+<meta name="twitter:description" content="Where AI leaders meet, learn, and build. Small, curated boardroom summits: the 2027 season kicks off in Dallas, then Raleigh.">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
 
@@ -49,13 +61,6 @@
     letter-spacing:.12em;
     text-transform:uppercase;
     color: var(--cyan);
-  }
-  .eyebrow::before{
-    content:'';
-    width:26px; height:1px;
-    background: var(--cyan);
-    display:inline-block;
-    opacity:.7;
   }
   .eyebrow span{ display:inline-block; }
 
@@ -144,7 +149,7 @@
     font-size:16px;
     letter-spacing:.02em;
   }
-  .nav-brand img{ height:30px; width:auto; display:block; }
+  .nav-brand img{ height:40px; width:auto; display:block; }
   .nav-brand span span{ color: var(--cyan); }
   .nav-cta{
     position:relative;
@@ -227,6 +232,22 @@
     position:relative;
     filter: drop-shadow(0 30px 60px rgba(0,0,0,.55));
   }
+  .logo-tilt::before{
+    content:'';
+    position:absolute;
+    top:50%; left:50%;
+    width:71%;
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%,-50%);
+    border-radius:50%;
+    border: 2px solid transparent;
+    border-top-color: var(--cyan);
+    box-shadow: 0 0 6px 1px rgba(0,230,255,.6);
+    animation: logoSpin 3.5s linear infinite;
+    z-index:0;
+    pointer-events:none;
+  }
+  @keyframes logoSpin{ to{ transform: translate(-50%,-50%) rotate(360deg); } }
   .logo-tilt img{
     width:100%; display:block;
     position:relative; z-index:1;
@@ -357,7 +378,7 @@
     display:grid;
     grid-template-columns: 1.1fr .9fr;
     gap: 60px;
-    align-items:start;
+    align-items:center;
   }
   .manifesto p{
     font-size: 18px;
@@ -371,25 +392,43 @@
     background: var(--glass);
     border:1px solid var(--border);
     border-radius: 20px;
-    padding: 34px;
+    padding: 56px 46px;
     backdrop-filter: blur(10px);
   }
   .descriptor-card .kicker{
     font-family:'Space Grotesk', sans-serif;
     font-weight:700;
-    font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    font-size:12px; letter-spacing:.1em; text-transform:uppercase;
     color: var(--ink-dim);
-    margin-bottom:16px;
+    margin-bottom:20px;
     display:block;
   }
   .descriptor-card .line{
     font-family:'Fraunces', serif;
-    font-size: 26px;
-    line-height:1.35;
+    font-size: 34px;
+    line-height:1.3;
     font-weight:500;
     font-style: italic;
   }
   .descriptor-card .line .hl{ color: var(--cyan); font-style:normal; }
+
+  /* ---------- photo hero (in-room moment) ---------- */
+  .photo-hero{
+    position:relative;
+    min-height: 620px;
+    display:flex;
+    align-items:flex-end;
+    background: url('assets/event-photo.webp') center 30%/cover no-repeat;
+  }
+  .photo-hero::before{
+    content:'';
+    position:absolute; inset:0;
+    background: linear-gradient(180deg, rgba(10,15,30,.02) 0%, rgba(10,15,30,.2) 45%, rgba(10,15,30,.8) 100%);
+  }
+  .photo-hero .wrap{ position:relative; z-index:2; padding-top:100px; padding-bottom:64px; }
+  .photo-hero h2{ color: var(--white); max-width:640px; }
+  .photo-hero p{ margin-top:16px; color: var(--ink); max-width:520px; font-size:17px; line-height:1.65; }
+  @media (max-width:860px){ .photo-hero{ min-height:460px; background-position: center 20%; } }
 
   /* ---------- format section (block diagram + track chips) ---------- */
   .format-visual{
@@ -460,51 +499,26 @@
     margin-bottom: 22px;
     display:block;
   }
-  .track-strip{
+  .tracks-list{
     display:flex;
-    border-radius: 16px;
-    overflow:hidden;
-    border: 1px solid var(--border);
-  }
-  .track-door{
-    flex:1;
-    min-height: 90px;
-    display:flex;
-    flex-direction:column;
+    flex-wrap:wrap;
+    justify-content:center;
     align-items:center;
-    justify-content:flex-end;
-    padding-bottom: 14px;
-    position:relative;
-    background: linear-gradient(180deg, rgba(0,230,255,.05), rgba(255,255,255,.015));
+    row-gap: 12px;
+  }
+  .tracks-list span{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size: 16px;
+    color: var(--white);
+    padding: 0 24px;
     border-right: 1px solid var(--border);
-    transition: transform .35s var(--ease), background .35s;
-    cursor:default;
+    letter-spacing:.01em;
   }
-  .track-door:last-child{ border-right:none; }
-  .track-door::before{
-    content:'';
-    position:absolute;
-    top:16px; left:50%;
-    width:6px; height:6px;
-    border-radius:50%;
-    background: var(--ink-dim);
-    transform: translateX(-50%);
-    transition: background .35s, box-shadow .35s;
+  .tracks-list span:last-child{ border-right:none; }
+  @media (max-width:860px){
+    .tracks-list span{ border-right:none; padding: 0 14px; }
   }
-  .track-door span{
-    font-family:'Orbitron', sans-serif;
-    font-weight:700;
-    font-size:12px;
-    letter-spacing:.06em;
-    color: var(--ink-dim);
-    transition: color .35s;
-  }
-  .track-door:hover{
-    transform: translateY(-10px);
-    background: linear-gradient(180deg, rgba(0,230,255,.22), rgba(0,230,255,.03));
-  }
-  .track-door:hover::before{ background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
-  .track-door:hover span{ color: var(--cyan); }
 
   /* ---------- path / roadmap ---------- */
   .path-scene{
@@ -527,8 +541,8 @@
   .path-track{
     transform-style: preserve-3d;
     display:grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 26px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px;
     position:relative;
     z-index:1;
   }
@@ -551,10 +565,11 @@
     transition: opacity .4s;
   }
   .path-step:hover::before{ opacity:1; }
-  .path-step:nth-child(1){ transform: translateY(46px) translateZ(-40px) rotateX(4deg); transition-delay:0s; }
-  .path-step:nth-child(2){ transform: translateY(18px) translateZ(-10px) rotateX(2deg); transition-delay:.12s; }
-  .path-step:nth-child(3){ transform: translateY(-10px) translateZ(20px) rotateX(0deg); border-color: rgba(0,230,255,.35); transition-delay:.24s; }
-  .path-step:hover{ transform: translateY(-10px) translateZ(20px) rotateX(0deg) !important; border-color: rgba(0,230,255,.5); }
+  .path-step:nth-child(1){ transform: translateY(52px) translateZ(-50px) rotateX(4deg); transition-delay:0s; }
+  .path-step:nth-child(2){ transform: translateY(28px) translateZ(-24px) rotateX(3deg); transition-delay:.1s; }
+  .path-step:nth-child(3){ transform: translateY(6px) translateZ(-2px) rotateX(1deg); transition-delay:.2s; }
+  .path-step:nth-child(4){ transform: translateY(-18px) translateZ(24px) rotateX(0deg); border-color: rgba(0,230,255,.35); transition-delay:.3s; }
+  .path-step:hover{ transform: translateY(-18px) translateZ(24px) rotateX(0deg) !important; border-color: rgba(0,230,255,.5); }
 
   .path-num{
     display:inline-flex;
@@ -592,6 +607,8 @@
     padding-top:14px;
     width:100%;
   }
+  a.path-tag{ transition: color .3s; }
+  a.path-tag:hover{ color: var(--cyan); }
 
   /* ---------- pillars ---------- */
   .pillars{
@@ -640,15 +657,54 @@
   }
   .benefit p{ font-size:14px; color: var(--ink); line-height:1.6; }
 
+  /* ---------- alternating section bands ---------- */
+  .section-alt{
+    background: var(--navy-2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
   /* ---------- signup ---------- */
   .signup{
     background: linear-gradient(180deg, var(--navy-2), var(--navy-3));
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
+    position:relative;
+    overflow:hidden;
+  }
+  .signup-collage{
+    position:absolute;
+    inset:0;
+    z-index:0;
+    display:grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+  }
+  .signup-collage img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    opacity:.2;
+    filter: saturate(.7) brightness(.85);
+  }
+  .signup-collage img.featured{
+    opacity:.45;
+    filter: saturate(.85) brightness(.95);
+  }
+  @media (max-width:860px){
+    .signup-collage{ grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); }
+  }
+  .signup-collage::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    background: radial-gradient(120% 100% at 50% 45%, rgba(10,15,30,.22) 0%, rgba(10,15,30,.6) 60%, var(--navy-3) 100%);
   }
   .signup-inner{
+    position:relative;
+    z-index:2;
     text-align:center;
-    max-width: 620px;
+    max-width: 660px;
     margin: 0 auto;
   }
   .signup h2{
@@ -664,17 +720,31 @@
     line-height:1.6;
   }
   form.signup-form{
-    margin-top: 36px;
+    margin-top: 32px;
     display:flex;
-    gap:12px;
-    justify-content:center;
-    flex-wrap:wrap;
+    flex-direction:column;
+    gap:22px;
+    text-align:left;
   }
-  .signup-form input[type=email]{
-    flex:1 1 300px;
-    max-width:340px;
-    padding: 15px 20px;
-    border-radius: 999px;
+  .form-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 20px;
+  }
+  .field.full{ grid-column: 1 / -1; }
+  .field label{
+    display:block;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    color: var(--ink);
+    margin-bottom:7px;
+  }
+  .field label .opt{ font-weight:400; color: var(--ink-dim); }
+  .field input, .field select, .field textarea{
+    width:100%;
+    padding: 13px 16px;
+    border-radius: 10px;
     border: 1px solid var(--border);
     background: rgba(255,255,255,.04);
     color: var(--white);
@@ -683,8 +753,104 @@
     outline:none;
     transition: border-color .25s;
   }
-  .signup-form input[type=email]::placeholder{ color: var(--ink-dim); }
-  .signup-form input[type=email]:focus{ border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(0,230,255,.12); }
+  .field select{ cursor:pointer; }
+  .field select option{ background: var(--navy-2); color: var(--white); }
+  .field textarea{ resize:vertical; font-family:inherit; }
+  .field input::placeholder, .field textarea::placeholder{ color: var(--ink-dim); }
+  .field input:focus, .field select:focus, .field textarea:focus{ border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(0,230,255,.12); }
+  .signup-form > .btn-primary{ align-self:center; }
+  @media (max-width:640px){
+    .form-grid{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- modals (pitch / sponsor) ---------- */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    z-index:200;
+    background: rgba(5,7,13,.78);
+    backdrop-filter: blur(6px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 24px;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .3s var(--ease);
+  }
+  .modal-overlay.open{ opacity:1; pointer-events:auto; }
+  .modal-card{
+    position:relative;
+    width:100%;
+    max-width:560px;
+    max-height:88vh;
+    overflow-y:auto;
+    background: var(--glass);
+    border:1px solid rgba(0,230,255,.25);
+    border-radius:24px;
+    padding: 46px 42px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 40px 100px rgba(0,0,0,.6);
+    transform: translateY(24px) scale(.97);
+    transition: transform .35s var(--ease);
+    text-align:left;
+  }
+  .modal-overlay.open .modal-card{ transform:translateY(0) scale(1); }
+  .modal-close{
+    position:absolute;
+    top:18px; right:18px;
+    width:34px; height:34px;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,.04);
+    color:var(--ink);
+    font-size:16px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition: color .25s, border-color .25s;
+  }
+  .modal-close:hover{ color:var(--cyan); border-color: rgba(0,230,255,.4); }
+  .modal-card h3{
+    font-family:'Fraunces', serif;
+    font-size:clamp(24px,3vw,30px);
+    font-weight:600;
+    margin-top:14px;
+    padding-right:30px;
+  }
+  .modal-card p.modal-sub{
+    margin-top:12px;
+    color:var(--ink);
+    font-size:15px;
+    line-height:1.6;
+  }
+  .modal-card form{
+    margin-top:26px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+  }
+  .modal-card .btn-primary{ align-self:center; margin-top:4px; }
+  .modal-card .form-success{ margin-top:0; text-align:center; }
+  .checkbox-group{ display:flex; flex-direction:column; gap:11px; }
+  .checkbox-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:14px;
+    color: var(--ink);
+  }
+  .checkbox-row input[type=checkbox]{
+    width:18px; height:18px;
+    accent-color: var(--cyan);
+    cursor:pointer;
+  }
+  @media (max-width:640px){
+    .modal-card{ padding: 38px 24px; }
+  }
+
   .fine-print{
     margin-top: 18px;
     font-size:13px;
@@ -699,7 +865,54 @@
     display:none;
   }
   .form-success.show{ display:block; }
-  .signup-form.hide{ display:none; }
+  .signup-form.hide, form.hide{ display:none; }
+
+  .signup-card{
+    position:relative;
+    background: var(--glass);
+    border: 1px solid rgba(0,230,255,.25);
+    border-radius: 28px;
+    padding: 64px 48px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 40px 100px rgba(0,0,0,.5), 0 0 90px rgba(0,230,255,.10);
+    overflow:hidden;
+  }
+  .signup-card .radar-sweep{
+    position:absolute; inset:-60%;
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(0,230,255,.18) 26deg, transparent 78deg, transparent 360deg);
+    animation: radarSpin 9s linear infinite;
+    z-index:0;
+    pointer-events:none;
+  }
+  @keyframes radarSpin{ to{ transform: rotate(360deg); } }
+  .signup-card > *{ position:relative; z-index:1; }
+  .signup-card .corner{
+    position:absolute;
+    width:22px; height:22px;
+    border: 2px solid var(--cyan);
+    opacity:.55;
+    z-index:2;
+  }
+  .signup-card .corner.tl{ top:16px; left:16px; border-right:none; border-bottom:none; border-top-left-radius:6px; }
+  .signup-card .corner.tr{ top:16px; right:16px; border-left:none; border-bottom:none; border-top-right-radius:6px; }
+  .signup-card .corner.bl{ bottom:16px; left:16px; border-right:none; border-top:none; border-bottom-left-radius:6px; }
+  .signup-card .corner.br{ bottom:16px; right:16px; border-left:none; border-top:none; border-bottom-right-radius:6px; }
+  .live-dot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background: var(--cyan);
+    display:inline-block;
+    animation: livePulse 2s ease-out infinite;
+  }
+  @keyframes livePulse{
+    0%{ box-shadow: 0 0 0 0 rgba(0,230,255,.55); }
+    70%{ box-shadow: 0 0 0 9px rgba(0,230,255,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(0,230,255,0); }
+  }
+  .signup h2 .hl{ color: var(--cyan); font-style: italic; }
+  @media (max-width:860px){
+    .signup-card{ padding: 48px 26px; }
+  }
 
   /* ---------- footer ---------- */
   footer{
@@ -726,7 +939,7 @@
   @media (max-width: 860px){
     .manifesto{ grid-template-columns: 1fr; }
     .path-track{ grid-template-columns: 1fr; }
-    .path-step:nth-child(1), .path-step:nth-child(2), .path-step:nth-child(3){ transform:none; }
+    .path-step:nth-child(1), .path-step:nth-child(2), .path-step:nth-child(3), .path-step:nth-child(4){ transform:none; }
     .pillars{ grid-template-columns: 1fr; }
     .benefits{ grid-template-columns: 1fr; }
     .nav-links{ display:none; }
@@ -771,7 +984,7 @@
       </div>
     </div>
     <h1><span class="word" style="animation-delay:.05s">Where</span> <span class="word" style="animation-delay:.11s">AI</span> <span class="word" style="animation-delay:.17s">leaders</span> <span class="word" style="animation-delay:.23s">meet,</span><br><span class="word grad" style="animation-delay:.30s">learn,</span> <span class="word grad" style="animation-delay:.37s">and</span> <span class="word grad" style="animation-delay:.44s">build.</span></h1>
-    <p class="hero-sub">We skipped the trade show floor, the badge scanners, and the vendor keynotes. What's left is 150 leaders in a room, talking AI without the vendor pitch. Dallas is first. Fort Lauderdale is next.</p>
+    <p class="hero-sub">We removed the expo floor, badge scanning, and vendor keynote circuit. What remains is a curated AI leadership summit built around executive dialogue, peer exchange, and practical boardroom conversations, without the vendor pitch. See you in Dallas in January 2027 and Raleigh in April.</p>
     <div class="hero-cta-row">
       <a href="#signup" class="btn-primary">Request an Invite</a>
       <a href="#path" class="btn-ghost">See the Roadmap</a>
@@ -783,7 +996,7 @@
       <div>
         <span class="eyebrow"><span>The thinking</span></span>
         <h2 style="margin-top:18px; font-size:clamp(28px,3.6vw,40px); font-weight:600;">We don't do headcounts. We do the room that matters.</h2>
-        <p style="margin-top:26px;"><strong>MOJO starts small on purpose.</strong> Rooms sized for a real conversation. Curated tightly enough that everyone in it can help each other. And ambitious enough that the smallest room today leads to a US Summit, and eventually, the world.</p>
+        <p style="margin-top:26px;"><strong>MOJO stays small on purpose.</strong> Rooms sized for a real conversation. Curated tightly enough that everyone in it can help each other. And ambitious enough that the smallest room this season leads to a US Summit, and eventually, the world.</p>
         <p>Every session is built around real operators in a room built for real conversation, not real estate.</p>
       </div>
       <div class="descriptor-card">
@@ -793,7 +1006,7 @@
     </div>
   </section>
 
-  <section class="section-pad" id="format">
+  <section class="section-pad section-alt" id="format">
     <div class="wrap">
       <div class="section-head reveal" style="margin-left:auto; margin-right:auto; text-align:center;">
         <span class="eyebrow" style="justify-content:center;"><span>How it actually runs</span></span>
@@ -814,14 +1027,27 @@
         </div>
       </div>
 
+      <div class="tracks-row reveal">
+        <span class="tracks-label">Six core tracks</span>
+        <div class="tracks-list">
+          <span>Business Strategy</span>
+          <span>AI Enablement</span>
+          <span>Integration</span>
+          <span>Security</span>
+          <span>Governance</span>
+          <span>Operational Execution</span>
+        </div>
+        <p style="margin-top:28px; font-size:16px; line-height:1.7; color:var(--ink); max-width:640px; margin-left:auto; margin-right:auto; text-align:center;">Every track runs on real executive experience, not theory or vendor demos. How leaders find high-value use cases, ready their teams, connect AI to existing systems, protect data, and turn ambition into measurable progress.</p>
+      </div>
+
     </div>
   </section>
 
   <section class="section-pad" id="path">
     <div class="wrap">
       <div class="section-head reveal">
-        <span class="eyebrow"><span>The road to global</span></span>
-        <h2>Small first. Global on our terms.</h2>
+        <span class="eyebrow"><span>The road to national</span></span>
+        <h2>Small first. National on our terms.</h2>
       </div>
       <div class="path-scene reveal">
         <div class="path-line"></div>
@@ -829,14 +1055,14 @@
           <div class="path-step reveal">
             <span class="path-num">01</span>
             <h3>Dallas</h3>
-            <p>150 curated leaders, one room, one city. This is where MOJO starts: real conversation, not name badges.</p>
+            <p>150 curated leaders, one room, one city. The format MOJO is known for: real conversation, not name badges.</p>
             <span class="path-tag">January 2027</span>
           </div>
           <div class="path-step reveal">
             <span class="path-num">02</span>
-            <h3>Fort Lauderdale</h3>
-            <p>Dallas proves the format. Fort Lauderdale grows it into the full summit: more tracks, more industries, still built around access and depth over headcount.</p>
-            <span class="path-tag">May 2027</span>
+            <h3>Raleigh</h3>
+            <p>Dallas opens the 2027 season. Raleigh grows it into the full summit: more tracks, more industries, still built around access and depth over headcount.</p>
+            <span class="path-tag">April 2027</span>
           </div>
           <div class="path-step reveal">
             <span class="path-num">03</span>
@@ -844,20 +1070,34 @@
             <p>One flagship event as the center of gravity for AI leadership across the country. Global comes after that, not before it.</p>
             <span class="path-tag">The next stage</span>
           </div>
+          <div class="path-step reveal">
+            <span class="path-num">04</span>
+            <h3>Nominate Your City</h3>
+            <p>National isn't a headquarters decision. It's a map we're drawing with the people who show up. Make the case for your city and help pick where MOJO lands next.</p>
+            <a class="path-tag" href="mailto:cities@mojoaisummits.com?subject=City%20Nomination%20for%20MOJO%20Ai%20Summits">Nominate a city &rarr;</a>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section-pad" id="speakers">
+  <section class="photo-hero reveal" id="inside">
+    <div class="wrap">
+      <span class="eyebrow"><span>Where it's at</span></span>
+      <h2 style="margin-top:18px; font-size:clamp(28px,3.6vw,42px); font-weight:600;">This is where the cool kids talk AI.</h2>
+      <p>No vendor booths, no badge lines. Just the room everyone wants an invite to.</p>
+    </div>
+  </section>
+
+  <section class="section-pad section-alt" id="speakers">
     <div class="wrap manifesto reveal">
       <div>
         <span class="eyebrow"><span>Who's on stage</span></span>
         <h2 style="margin-top:18px; font-size:clamp(28px,3.6vw,40px); font-weight:600;">World-class speakers, not the conference circuit.</h2>
-        <p style="margin-top:26px;"><strong>Every speaker earns the room.</strong> We book the operators actually running AI inside real companies, not the professional-keynote circuit — and if you're speaking or leading a roundtable, you're a VIP, full stop, regardless of title.</p>
+        <p style="margin-top:26px;"><strong>Every speaker earns the room.</strong> We book the operators actually running AI inside real companies, not the professional-keynote circuit, and if you're speaking or leading a roundtable, you're a VIP, full stop, regardless of title.</p>
         <p>Every summit is built around experiences too, not just sessions: dinners, roundtables, and moments built for the room, not the agenda.</p>
         <div style="margin-top:30px;">
-          <a href="mailto:speakers@mojoaisummits.com?subject=Speaking%20at%20MOJO%20Ai%20Summits%20Dallas" class="btn-ghost">Pitch a Session</a>
+          <button type="button" class="btn-ghost" data-modal-open="pitchModal">Pitch a Session</button>
         </div>
       </div>
       <div class="descriptor-card">
@@ -875,7 +1115,7 @@
       </div>
       <div class="manifesto reveal" style="margin-top:-20px;">
         <div>
-          <p style="font-size:18px; line-height:1.75; color:var(--ink);">Dallas has room for 36 sponsors, and every one of them gets curated access to 150 CEOs, CFOs, COOs, CIOs, CISOs, and CAIO/CTOs — not a hallway full of badge scans.</p>
+          <p style="font-size:18px; line-height:1.75; color:var(--ink);">Dallas has room for 36 sponsors, and every one of them gets curated access to 150 CEOs, CFOs, COOs, CIOs, CISOs, and CAIO/CTOs, not a hallway full of badge scans.</p>
         </div>
         <div class="descriptor-card">
           <span class="kicker">For Dallas</span>
@@ -891,7 +1131,7 @@
         <div class="benefit reveal">
           <span class="path-num">02</span>
           <h3>One package, no tiers</h3>
-          <p>Every standard sponsorship is identical — the same access, the same deliverables. No bronze, silver, or gold ladder to climb.</p>
+          <p>Every standard sponsorship is identical: the same access, the same deliverables. No bronze, silver, or gold ladder to climb.</p>
         </div>
         <div class="benefit reveal">
           <span class="path-num">03</span>
@@ -900,12 +1140,12 @@
         </div>
       </div>
       <div style="margin-top:44px; text-align:center;">
-        <a href="mailto:sponsors@mojoaisummits.com?subject=Sponsorship%20Inquiry%20-%20MOJO%20Ai%20Summits%20Dallas" class="btn-primary">Become a Sponsor</a>
+        <button type="button" class="btn-primary" data-modal-open="sponsorModal">Become a Sponsor</button>
       </div>
     </div>
   </section>
 
-  <section class="section-pad">
+  <section class="section-pad section-alt">
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow"><span>What you're actually getting</span></span>
@@ -915,7 +1155,7 @@
         <div class="pillar reveal">
           <span class="mark">Meet</span>
           <h3>The room, not the crowd</h3>
-          <p>Face to face with the operators, founders, and leaders in the room — real conversation, not a panel.</p>
+          <p>Face to face with the operators, founders, and leaders in the room, real conversation, not a panel.</p>
         </div>
         <div class="pillar reveal">
           <span class="mark">Learn</span>
@@ -932,16 +1172,78 @@
   </section>
 
   <section class="signup section-pad" id="signup">
+    <div class="signup-collage" aria-hidden="true">
+      <img src="assets/collage/photo-1.webp">
+      <img src="assets/collage/photo-2.webp">
+      <img class="featured" src="assets/collage/photo-8.webp">
+      <img src="assets/collage/photo-5.webp">
+      <img src="assets/collage/photo-3.webp">
+      <img class="featured" src="assets/collage/photo-4.webp">
+      <img class="featured" src="assets/collage/photo-7.webp">
+      <img src="assets/collage/photo-6.webp">
+      <img class="featured" src="assets/collage/photo-9.webp">
+      <img src="assets/collage/photo-10.webp">
+    </div>
     <div class="wrap signup-inner reveal">
-      <span class="eyebrow" style="justify-content:center;"><span>Be early</span></span>
-      <h2>First stop: Dallas.<br>January 2027.</h2>
-      <p class="sub">MOJO Ai Summits Dallas is invite-only, 150 leaders, no exceptions. Tell us who you are and we'll follow up as invitations go out, and as speaking and sponsor slots open.</p>
-      <form class="signup-form" id="signupForm">
-        <input type="email" id="emailInput" placeholder="you@company.com" required>
-        <button type="submit" class="btn-primary">Request an Invite</button>
-      </form>
-      <p class="form-success" id="formSuccess">You're on our radar. We'll be in touch about your invitation.</p>
-      <p class="fine-print">No spam, just the moments that matter. Speaking or sponsoring instead? <a href="#sponsors">See sponsor details</a> or <a href="#speakers">pitch a session</a>.</p>
+      <div class="signup-card">
+        <span class="corner tl"></span>
+        <span class="corner tr"></span>
+        <span class="corner bl"></span>
+        <span class="corner br"></span>
+        <div class="radar-sweep"></div>
+        <span class="eyebrow" style="justify-content:center;"><span class="live-dot"></span><span>Be early</span></span>
+        <h2>Next stop: <span class="hl">Dallas</span>.<br>January 2027.</h2>
+        <p class="sub">MOJO Ai Summits Dallas is invite-only, 150 leaders, no exceptions. Tell us who you are and we'll follow up as invitations go out.</p>
+        <form class="signup-form" id="signupForm">
+          <div class="form-grid">
+            <div class="field">
+              <label for="inviteName">What do we call you?</label>
+              <input type="text" id="inviteName" name="name" placeholder="Full name" required>
+            </div>
+            <div class="field">
+              <label for="emailInput">Where do we reach you?</label>
+              <input type="email" id="emailInput" name="email" placeholder="you@company.com" required>
+            </div>
+            <div class="field">
+              <label for="inviteCompany">Who signs your badge?</label>
+              <input type="text" id="inviteCompany" name="company" placeholder="Company" required>
+            </div>
+            <div class="field">
+              <label for="inviteTitle">Your real title</label>
+              <input type="text" id="inviteTitle" name="title" placeholder="Not your LinkedIn one" required>
+            </div>
+            <div class="field">
+              <label for="inviteTrack">Which track's calling your name?</label>
+              <select id="inviteTrack" name="track" required>
+                <option value="" disabled selected>Pick one</option>
+                <option>Business Strategy</option>
+                <option>AI Enablement</option>
+                <option>Integration</option>
+                <option>Security</option>
+                <option>Governance</option>
+                <option>Operational Execution</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="inviteStage">Where's your org on the AI curve?</label>
+              <select id="inviteStage" name="stage" required>
+                <option value="" disabled selected>Pick one</option>
+                <option>Just kicking the tires</option>
+                <option>Piloting for real</option>
+                <option>Scaling it up</option>
+                <option>Already optimizing</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label for="inviteGoal">What would make this worth clearing your calendar? <span class="opt">(optional)</span></label>
+              <textarea id="inviteGoal" name="goal" rows="2" placeholder="One line. Be honest."></textarea>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">Request an Invite</button>
+        </form>
+        <p class="form-success" id="formSuccess">You're on our radar. We'll be in touch about your invitation.</p>
+        <p class="fine-print">No spam, just the moments that matter. Speaking or sponsoring instead? <a href="#sponsors">See sponsor details</a> or <a href="#speakers">pitch a session</a>.</p>
+      </div>
     </div>
   </section>
 
@@ -953,6 +1255,121 @@
     </div>
   </footer>
 </main>
+
+<div class="modal-overlay" id="pitchModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pitchModalTitle">
+    <button type="button" class="modal-close" data-modal-close aria-label="Close">&#10005;</button>
+    <span class="eyebrow"><span>Speaking</span></span>
+    <h3 id="pitchModalTitle">Pitch Your Session</h3>
+    <p class="modal-sub">Real deployments. Real failures. Real numbers. If you've got one worth the room's time, tell us about it, no theory, no vendor demos.</p>
+    <form id="pitchForm">
+      <div class="form-grid">
+        <div class="field">
+          <label for="pitchName">What do we call you?</label>
+          <input type="text" id="pitchName" name="name" placeholder="Full name" required>
+        </div>
+        <div class="field">
+          <label for="pitchEmail">Where do we reach you?</label>
+          <input type="email" id="pitchEmail" name="email" placeholder="you@company.com" required>
+        </div>
+        <div class="field">
+          <label for="pitchCompany">Who signs your badge?</label>
+          <input type="text" id="pitchCompany" name="company" placeholder="Company" required>
+        </div>
+        <div class="field">
+          <label for="pitchTitle">Your real title</label>
+          <input type="text" id="pitchTitle" name="title" placeholder="Not your LinkedIn one" required>
+        </div>
+        <div class="field full">
+          <label for="pitchSessionTitle">What are you calling this thing?</label>
+          <input type="text" id="pitchSessionTitle" name="sessionTitle" placeholder="Session title" required>
+        </div>
+        <div class="field">
+          <label for="pitchTrack">Which track's it for?</label>
+          <select id="pitchTrack" name="track" required>
+            <option value="" disabled selected>Pick one</option>
+            <option>Business Strategy</option>
+            <option>AI Enablement</option>
+            <option>Integration</option>
+            <option>Security</option>
+            <option>Governance</option>
+            <option>Operational Execution</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="pitchFormat">Present or argue?</label>
+          <select id="pitchFormat" name="format" required>
+            <option value="" disabled selected>Pick one</option>
+            <option>Present, 15 minutes on the stage</option>
+            <option>Argue, lead a roundtable</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label for="pitchStory">The real story</label>
+          <textarea id="pitchStory" name="story" rows="3" placeholder="The deployment, the failure, the number. What's the real thing you'd bring to the table?" required></textarea>
+        </div>
+        <div class="field full">
+          <label for="pitchLink">LinkedIn or site <span class="opt">(optional)</span></label>
+          <input type="text" id="pitchLink" name="link" placeholder="Link where we can vet you">
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">Pitch My Session</button>
+    </form>
+    <p class="form-success" id="pitchFormSuccess">Got it. We'll follow up if it's a fit for the room.</p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sponsorModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="sponsorModalTitle">
+    <button type="button" class="modal-close" data-modal-close aria-label="Close">&#10005;</button>
+    <span class="eyebrow"><span>For partners</span></span>
+    <h3 id="sponsorModalTitle">Become a Sponsor</h3>
+    <p class="modal-sub">One package, no tiers. Curated access to 150 CEOs, CFOs, COOs, CIOs, CISOs, and CAIO/CTOs, not a hallway full of badge scans.</p>
+    <form id="sponsorForm">
+      <div class="form-grid">
+        <div class="field">
+          <label for="sponsorCompany">Who's signing up?</label>
+          <input type="text" id="sponsorCompany" name="company" placeholder="Company name" required>
+        </div>
+        <div class="field">
+          <label for="sponsorName">Our point of contact</label>
+          <input type="text" id="sponsorName" name="name" placeholder="Full name" required>
+        </div>
+        <div class="field">
+          <label for="sponsorTitle">Their title</label>
+          <input type="text" id="sponsorTitle" name="title" placeholder="Title" required>
+        </div>
+        <div class="field">
+          <label for="sponsorEmail">Where do we reach you?</label>
+          <input type="email" id="sponsorEmail" name="email" placeholder="you@company.com" required>
+        </div>
+        <div class="field full">
+          <label for="sponsorSize">How many of you are showing up?</label>
+          <select id="sponsorSize" name="teamSize" required>
+            <option value="" disabled selected>Pick one</option>
+            <option>Just me</option>
+            <option>Me plus one</option>
+            <option>A full crew (3+)</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Want more than the standard seat? <span class="opt">(optional)</span></label>
+          <div class="checkbox-group">
+            <label class="checkbox-row"><input type="checkbox" name="addon" value="Speaking slot"> A speaking slot</label>
+            <label class="checkbox-row"><input type="checkbox" name="addon" value="Workshop leadership"> Workshop leadership</label>
+            <label class="checkbox-row"><input type="checkbox" name="addon" value="Meal or bar sponsorship"> Meal or bar sponsorship</label>
+          </div>
+        </div>
+        <div class="field full">
+          <label for="sponsorNotes">Anything else we should know? <span class="opt">(optional)</span></label>
+          <textarea id="sponsorNotes" name="notes" rows="2" placeholder="Goals, timing, who you're trying to reach"></textarea>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">Become a Sponsor</button>
+    </form>
+    <p class="form-success" id="sponsorFormSuccess">You're in the pipeline. We'll follow up with next steps.</p>
+  </div>
+</div>
 
 <script>
   // ---- 3D tilt on hero logo ----
@@ -1009,15 +1426,88 @@
   }, { threshold: 0.15 });
   reveals.forEach(el => io.observe(el));
 
-  // ---- signup form (client-side only) ----
-  const form = document.getElementById('signupForm');
-  const success = document.getElementById('formSuccess');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    form.classList.add('hide');
-    success.classList.add('show');
+  // ---- forms: package into a pre-filled email and show a success state ----
+  function openMailto(address, subject, bodyLines){
+    const body = bodyLines.filter(Boolean).join('\n');
+    window.location.href = `mailto:${address}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  function wireForm(formId, successId, buildMail){
+    const form = document.getElementById(formId);
+    const success = document.getElementById(successId);
+    if (!form) return;
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = new FormData(form);
+      buildMail(data, form);
+      form.classList.add('hide');
+      success.classList.add('show');
+    });
+  }
+
+  wireForm('signupForm', 'formSuccess', (data) => {
+    openMailto('invites@mojoaisummits.com', `Invite Request - ${data.get('name')} (${data.get('company')})`, [
+      `Name: ${data.get('name')}`,
+      `Email: ${data.get('email')}`,
+      `Company: ${data.get('company')}`,
+      `Title: ${data.get('title')}`,
+      `Track interest: ${data.get('track')}`,
+      `Where they are on the AI curve: ${data.get('stage')}`,
+      data.get('goal') ? `What would make it worth clearing the calendar: ${data.get('goal')}` : ''
+    ]);
   });
 
+  wireForm('pitchForm', 'pitchFormSuccess', (data) => {
+    openMailto('speakers@mojoaisummits.com', `Session Pitch - ${data.get('sessionTitle')}`, [
+      `Name: ${data.get('name')}`,
+      `Email: ${data.get('email')}`,
+      `Company: ${data.get('company')}`,
+      `Title: ${data.get('title')}`,
+      `Session title: ${data.get('sessionTitle')}`,
+      `Track: ${data.get('track')}`,
+      `Format: ${data.get('format')}`,
+      `The real story: ${data.get('story')}`,
+      data.get('link') ? `Link: ${data.get('link')}` : ''
+    ]);
+  });
+
+  wireForm('sponsorForm', 'sponsorFormSuccess', (data, form) => {
+    const addons = Array.from(form.querySelectorAll('input[name=addon]:checked')).map(cb => cb.value);
+    openMailto('sponsors@mojoaisummits.com', `Sponsorship Inquiry - ${data.get('company')}`, [
+      `Company: ${data.get('company')}`,
+      `Contact: ${data.get('name')}`,
+      `Title: ${data.get('title')}`,
+      `Email: ${data.get('email')}`,
+      `Team size: ${data.get('teamSize')}`,
+      addons.length ? `Add-ons: ${addons.join(', ')}` : '',
+      data.get('notes') ? `Notes: ${data.get('notes')}` : ''
+    ]);
+  });
+
+  // ---- modals ----
+  function openModal(id){
+    const overlay = document.getElementById(id);
+    if (!overlay) return;
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(overlay){
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('[data-modal-open]').forEach((btn) => {
+    btn.addEventListener('click', () => openModal(btn.getAttribute('data-modal-open')));
+  });
+  document.querySelectorAll('.modal-overlay').forEach((overlay) => {
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay); });
+    overlay.querySelectorAll('[data-modal-close]').forEach((btn) => btn.addEventListener('click', () => closeModal(overlay)));
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.open').forEach(closeModal);
+    }
+  });
 </script>
 
 </body>
