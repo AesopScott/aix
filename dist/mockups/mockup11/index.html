@@ -77,14 +77,6 @@
     transform: translateY(-10px);
     filter: sepia(.18) saturate(.74) brightness(.82) contrast(1.18) drop-shadow(0 34px 60px rgba(0,0,0,.78));
   }
-  .hero-boardroom-caption {
-    margin: -12px auto 0;
-    font-family: 'Bodoni Moda', serif;
-    font-size: 34px;
-    line-height: 1;
-    font-style: italic;
-    color: #d9cbb0;
-  }
   .summit-stat {
     display: grid;
     grid-template-rows: 54px 44px;
@@ -400,6 +392,18 @@
     color: #d9cbb0;
     letter-spacing: .24em;
   }
+  .nav-link {
+    display: inline-block;
+    color: #6f6a63;
+    transform: scale(1);
+    transform-origin: center;
+    transition: color .55s ease, transform .55s ease, text-shadow .55s ease;
+  }
+  .nav-link:hover {
+    color: #d9cbb0;
+    transform: scale(1.08);
+    text-shadow: 0 0 10px rgba(217,203,176,.34);
+  }
   .brand-wordmark::before {
     content: '';
     position: absolute;
@@ -487,9 +491,6 @@
     .hero-boardroom img {
       opacity: .48;
       transform: translateY(-6px);
-    }
-    .hero-boardroom-caption {
-      font-size: 28px;
     }
     .conversation-heading {
       min-height: 220px;
@@ -595,9 +596,9 @@
       </div>
     </div>
     <nav style="display:flex;align-items:center;gap:44px;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:#6f6a63">
-      <a href="#topics" style="color:#6f6a63">Topics</a>
-      <a href="#format" style="color:#6f6a63">Experience</a>
-      <a href="#path" style="color:#6f6a63">Cities</a>
+      <a class="nav-link" href="#topics">Topics</a>
+      <a class="nav-link" href="#format">Experience</a>
+      <a class="nav-link" href="#path">Cities</a>
     </nav>
   </header>
 
@@ -610,7 +611,6 @@
     <div class="hero-boardroom" aria-hidden="true">
       <img src="../../assets/boardroom-transparent.png" alt="">
     </div>
-    <div class="hero-boardroom-caption">Your Seat Awaits.</div>
   </section>
 
   <sc-if value="{{ showStatBar }}" hint-placeholder-val="{{ true }}">
