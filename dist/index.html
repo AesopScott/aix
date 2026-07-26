@@ -756,39 +756,22 @@
 
   /* ---------- signup ---------- */
   .signup{
-    background: linear-gradient(180deg, var(--navy-2), var(--navy-3));
+    background:
+      radial-gradient(circle at 50% 0%, rgba(0,230,255,.13), transparent 38%),
+      linear-gradient(180deg, var(--navy-2), var(--navy-3));
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
     position:relative;
     overflow:hidden;
   }
-  .signup-collage{
-    position:absolute;
-    inset:0;
-    z-index:0;
-    display:grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-  }
-  .signup-collage img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    opacity:.2;
-    filter: saturate(.7) brightness(.85);
-  }
-  .signup-collage img.featured{
-    opacity:.45;
-    filter: saturate(.85) brightness(.95);
-  }
-  @media (max-width:860px){
-    .signup-collage{ grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); }
-  }
-  .signup-collage::after{
+  .signup::before{
     content:'';
     position:absolute;
     inset:0;
-    background: radial-gradient(120% 100% at 50% 45%, rgba(10,15,30,.22) 0%, rgba(10,15,30,.6) 60%, var(--navy-3) 100%);
+    background:
+      linear-gradient(90deg, transparent, rgba(0,230,255,.08), transparent),
+      radial-gradient(circle at 80% 80%, rgba(22,102,255,.14), transparent 36%);
+    pointer-events:none;
   }
   .signup-inner{
     position:relative;
@@ -1220,18 +1203,6 @@
   </section>
 
   <section class="signup section-pad" id="signup">
-    <div class="signup-collage" aria-hidden="true">
-      <img src="assets/collage/photo-1.webp">
-      <img src="assets/collage/photo-2.webp">
-      <img class="featured" src="assets/collage/photo-8.webp">
-      <img src="assets/collage/photo-5.webp">
-      <img src="assets/collage/photo-3.webp">
-      <img class="featured" src="assets/collage/photo-4.webp">
-      <img class="featured" src="assets/collage/photo-7.webp">
-      <img src="assets/collage/photo-6.webp">
-      <img class="featured" src="assets/collage/photo-9.webp">
-      <img src="assets/collage/photo-10.webp">
-    </div>
     <div class="wrap signup-inner reveal">
       <div class="signup-card">
         <span class="corner tl"></span>
