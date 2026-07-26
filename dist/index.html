@@ -144,24 +144,6 @@
     justify-content:space-between;
     position:relative;
   }
-  .nav-brand{
-    display:flex;
-    align-items:center;
-    position:relative;
-    z-index:1;
-  }
-  .nav-brand img{
-    width:40px;
-    height:40px;
-    display:block;
-    object-fit:contain;
-    filter: drop-shadow(0 0 18px rgba(0,230,255,.32));
-    transition: transform .25s var(--ease), filter .25s var(--ease);
-  }
-  .nav-brand:hover img{
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 24px rgba(0,230,255,.5));
-  }
   .nav-cta{
     position:relative;
     overflow:hidden;
@@ -1040,7 +1022,6 @@
     .benefits{ grid-template-columns: 1fr; }
     .hero-proof{ grid-template-columns: 1fr; }
     .topic-map{ grid-template-columns: 1fr; }
-    .nav-brand img{ width:36px; height:36px; }
     .nav-links{ display:none; }
     .format-visual{ grid-template-columns: 1fr; }
     .format-visual::after{ display:none; }
@@ -1063,9 +1044,6 @@
 
 <header>
   <nav>
-    <a href="#top" class="nav-brand" aria-label="MOJO AI Summits home">
-      <img src="assets/logo-badge.png" alt="MOJO AI Summits">
-    </a>
     <div class="nav-links">
       <a href="#topics">Topics</a>
       <a href="#format">Experience</a>
