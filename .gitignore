@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 .wrangler/
+.obsidian-memory/
 node_modules/
 dist/.cache/
 *.log
