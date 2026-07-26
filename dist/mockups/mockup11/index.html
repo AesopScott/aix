@@ -283,11 +283,87 @@
     filter: saturate(.94) brightness(.95) contrast(1.05) drop-shadow(0 2px 0 rgba(255,247,213,.14)) drop-shadow(0 18px 26px rgba(0,0,0,.72));
     pointer-events: none;
   }
-  .engagement-emblem-left {
+  .engagement-emblem-wrap {
+    position: relative;
+    width: 112px;
+    height: 112px;
+    display: grid;
+    place-items: center;
+    perspective: 700px;
+    overflow: visible;
+  }
+  .engagement-emblem-wrap-left {
     justify-self: end;
   }
-  .engagement-emblem-right {
+  .engagement-emblem-wrap-right {
     justify-self: start;
+  }
+  .engagement-emblem-pen {
+    transform-origin: 16% 82%;
+    animation: penWritingMotion 10s ease-in-out infinite;
+  }
+  .engagement-emblem-wrap-left::after {
+    content: '';
+    position: absolute;
+    left: 9px;
+    bottom: 0;
+    width: 58px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255,241,191,.9), rgba(217,203,176,.58), transparent);
+    transform: rotate(-12deg) scaleX(0);
+    transform-origin: left center;
+    opacity: 0;
+    filter: drop-shadow(0 0 5px rgba(234,216,166,.4));
+    animation: penInkStroke 10s ease-in-out infinite;
+  }
+  .engagement-emblem-flute {
+    transform-origin: 50% 70%;
+    animation: fluteLuxuryTwirl 18s ease-in-out infinite;
+  }
+  .engagement-emblem-wrap-right::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 50%;
+    width: 30px;
+    height: 25px;
+    border-radius: 50% 50% 46% 46%;
+    background:
+      radial-gradient(circle at 48% 82%, #fffbea 0 3px, transparent 4.2px),
+      radial-gradient(circle at 35% 70%, #fff7d8 0 2.5px, transparent 3.7px),
+      radial-gradient(circle at 62% 62%, #fffbea 0 2.6px, transparent 3.8px),
+      radial-gradient(circle at 44% 48%, #fff7d8 0 2.4px, transparent 3.6px),
+      radial-gradient(circle at 57% 34%, #fffbea 0 2.5px, transparent 3.7px),
+      radial-gradient(circle at 47% 18%, #fff7d8 0 2.2px, transparent 3.4px);
+    opacity: 1;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 0 6px rgba(255,248,214,.98)) drop-shadow(0 0 13px rgba(234,216,166,.68));
+    pointer-events: none;
+    mix-blend-mode: screen;
+    animation: champagneBubbles 5.8s linear infinite;
+  }
+  @keyframes penWritingMotion {
+    0%, 12%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    30% { transform: translate3d(8px, 2px, 0) rotate(-1.6deg); }
+    52% { transform: translate3d(20px, 4px, 0) rotate(1.4deg); }
+    74% { transform: translate3d(32px, 1px, 0) rotate(-.8deg); }
+    88% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  }
+  @keyframes penInkStroke {
+    0%, 24% { transform: rotate(-12deg) scaleX(0); opacity: 0; }
+    34% { opacity: .62; }
+    76% { transform: rotate(-12deg) scaleX(1); opacity: .62; }
+    90%, 100% { transform: rotate(-12deg) scaleX(1); opacity: 0; }
+  }
+  @keyframes fluteLuxuryTwirl {
+    0%, 100% { transform: rotate(0deg) scale(1); filter: saturate(.94) brightness(.95) contrast(1.05) drop-shadow(0 2px 0 rgba(255,247,213,.14)) drop-shadow(0 18px 26px rgba(0,0,0,.72)); }
+    25% { transform: rotate(2.4deg) scale(1.015); filter: saturate(.98) brightness(1.03) contrast(1.08) drop-shadow(0 2px 0 rgba(255,247,213,.18)) drop-shadow(0 18px 26px rgba(0,0,0,.72)); }
+    50% { transform: rotate(0deg) scale(1); filter: saturate(.94) brightness(.95) contrast(1.05) drop-shadow(0 2px 0 rgba(255,247,213,.14)) drop-shadow(0 18px 26px rgba(0,0,0,.72)); }
+    75% { transform: rotate(-2.4deg) scale(1.015); filter: saturate(.98) brightness(1.03) contrast(1.08) drop-shadow(0 2px 0 rgba(255,247,213,.18)) drop-shadow(0 18px 26px rgba(0,0,0,.72)); }
+  }
+  @keyframes champagneBubbles {
+    from { background-position: 0 8px, 0 5px, 0 10px, 0 6px, 0 12px, 0 9px; }
+    to { background-position: 0 -18px, 0 -21px, 0 -16px, 0 -20px, 0 -14px, 0 -17px; }
   }
   .brand-wordmark {
     position: relative;
@@ -446,6 +522,21 @@
       width: 54px;
       height: 54px;
     }
+    .engagement-emblem-wrap {
+      width: 58px;
+      height: 58px;
+    }
+    .engagement-emblem-wrap-left::after {
+      left: 5px;
+      bottom: 1px;
+      width: 30px;
+      height: 1px;
+    }
+    .engagement-emblem-wrap-right::before {
+      top: 13px;
+      width: 16px;
+      height: 13px;
+    }
   }
 </style>
 </helmet>
@@ -569,9 +660,13 @@
       </div>
       <div style="text-align:center;margin:96px auto 26px">
         <div class="engagement-heading">
-          <img class="engagement-emblem engagement-emblem-left" src="../../assets/engagement-fountain-pen.png" alt="">
+          <span class="engagement-emblem-wrap engagement-emblem-wrap-left" aria-hidden="true">
+            <img class="engagement-emblem engagement-emblem-pen" src="../../assets/engagement-fountain-pen.png" alt="">
+          </span>
           <h3 class="engagement-title">Professional &amp; Interpersonal Engagement</h3>
-          <img class="engagement-emblem engagement-emblem-right" src="../../assets/engagement-champagne-flute.png" alt="">
+          <span class="engagement-emblem-wrap engagement-emblem-wrap-right" aria-hidden="true">
+            <img class="engagement-emblem engagement-emblem-flute" src="../../assets/engagement-champagne-flute.png" alt="">
+          </span>
         </div>
         <svg class="title-flourish" viewBox="0 0 420 28" aria-hidden="true">
           <line x1="0" y1="14" x2="154" y2="14" />
