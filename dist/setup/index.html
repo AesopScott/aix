@@ -24,7 +24,7 @@
       --owner-charlie: #7c3aed;
       --owner-angel: #0891b2;
       --owner-tel: #be185d;
-      --owner-pakistani-marketing: #475569;
+      --owner-orbit-flow: #475569;
       --owner-photo-sound-cinema: #0f766e;
       --owner-unknown: #6b7280;
       --shadow: 0 18px 48px rgba(30, 32, 38, 0.12);
@@ -477,8 +477,8 @@
       border-left-color: var(--owner-tel);
     }
 
-    .owner-select.owner-pakistani-marketing {
-      border-left-color: var(--owner-pakistani-marketing);
+    .owner-select.owner-orbit-flow {
+      border-left-color: var(--owner-orbit-flow);
     }
 
     .owner-select.owner-photo-sound-cinema {
@@ -630,8 +630,8 @@
       background: var(--owner-tel);
     }
 
-    .owner-pakistani-marketing {
-      background: var(--owner-pakistani-marketing);
+    .owner-orbit-flow {
+      background: var(--owner-orbit-flow);
     }
 
     .owner-photo-sound-cinema {
@@ -941,7 +941,7 @@ This section is reserved for decisions that do not yet have an assigned operatin
 | Charlie | Event management, venue coordination, production logistics, staffing, registration operations, on-site command center |
 | Angel | VIP program direction, agenda execution, speaker/session operations, room logistics, run of show, presentation materials |
 | The Event Lounge (TEL) | External event lounge, experiential support, and event operations support |
-| Pakistani Marketing Team | Placeholder owner/support group name for a marketing team; official company name TBD |
+| Orbit Flow | Owner/support group for outsourced marketing execution |
 | Photography, Sound, and Cinematography Team | Placeholder owner/support group for photography, sound, video, and cinematography production; official vendor/team name TBD |
 | I don't know | Temporary owner placeholder when accountability has not been assigned yet |
 
@@ -1415,7 +1415,7 @@ The following decisions should not be made by one owner alone:
 - 2.3 - Split board briefing and VIP briefing scheduling into separate checklist items with separate owners.
 - 2.2 - Updated Angel's role from program director to VIP program director.
 - 2.1 - Added I don't know as a temporary owner option for unassigned accountability.
-- 2.0 - Added Pakistani Marketing Team as a placeholder owner and support option pending the official company name.
+- 2.0 - Added Orbit Flow as an owner and support option for outsourced marketing execution.
 - 1.9 - Added The Event Lounge (TEL) as an owner and support option.
 - 1.8 - Added separate advisory/team board dinner model and timing rules for marketing/sales, cohort advisory, VIP, and sponsor executive board meals.
 - 1.7 - Replaced single advisory council concept with sponsor marketing/sales, sponsor executive, cohort advisory, and possible Dallas Event VIP groups.
@@ -1446,16 +1446,19 @@ The following decisions should not be made by one owner alone:
       Charlie: "owner-charlie",
       Angel: "owner-angel",
       "The Event Lounge (TEL)": "owner-tel",
-      "Pakistani Marketing Team": "owner-pakistani-marketing",
+      "Orbit Flow": "owner-orbit-flow",
       "Photography, Sound, and Cinematography Team": "owner-photo-sound-cinema",
       "I don't know": "owner-unknown",
       Shared: "owner-shared",
       all: "owner-all"
     };
 
-    const supportOwners = ["Scott", "Robert", "Jodi", "Ron", "Charlie", "Angel", "The Event Lounge (TEL)", "Pakistani Marketing Team", "Photography, Sound, and Cinematography Team"];
+    const supportOwners = ["Scott", "Robert", "Jodi", "Ron", "Charlie", "Angel", "The Event Lounge (TEL)", "Orbit Flow", "Photography, Sound, and Cinematography Team"];
     const editableOwners = [...supportOwners, "I don't know"];
     const ownerFilterOptions = ["All", ...editableOwners, "Shared"];
+    const ownerAliases = {
+      "Pakistani Marketing Team": "Orbit Flow"
+    };
     const priorityOptions = [
       "Priority 1 - 3 months out",
       "Priority 2 - 2 months out",
@@ -1502,6 +1505,7 @@ The following decisions should not be made by one owner alone:
 
     const clean = (value) => value.trim().replace(/\.$/, "");
     const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const normalizeOwnerName = (value) => ownerAliases[value] || value;
     const ownerClass = (owner) => ownerColors[owner] || "owner-shared";
     const escapeHtml = (value) => String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -1526,7 +1530,7 @@ The following decisions should not be made by one owner alone:
       if (!value) return [];
       if (/all founders|full team/i.test(value)) return supportOwners;
       if (/relevant founder|relevant owner/i.test(value)) return ["Shared"];
-      return value.split(",").map((name) => name.trim()).filter(Boolean);
+      return value.split(",").map((name) => normalizeOwnerName(name.trim())).filter(Boolean);
     }
 
     function ensureSection(title) {
@@ -1636,8 +1640,9 @@ The following decisions should not be made by one owner alone:
     }
 
     function normalizeAssignment(item, assignment = {}) {
-      const owner = ownerFilterOptions.includes(assignment.owner) && assignment.owner !== "All"
-        ? assignment.owner
+      const requestedOwner = normalizeOwnerName(assignment.owner || "");
+      const owner = ownerFilterOptions.includes(requestedOwner) && requestedOwner !== "All"
+        ? requestedOwner
         : item.defaultOwner;
 
       return {
