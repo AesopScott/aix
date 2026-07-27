@@ -90,7 +90,7 @@ export async function onRequestPost({ request }) {
   return json(
     {
       error:
-        "Cloudflare Access sync is disabled. Route access is enforced by the Mojo AI Summits app session middleware."
+        "External access sync is disabled. Route access is enforced by the Mojo AI Summits app session middleware."
     },
     { status: 410 }
   );

@@ -38,14 +38,25 @@ export async function onRequest(context) {
   const config = await readAccessConfig(context.env);
   const route = routeForPath(url.pathname, config);
 
-  if (!route || route.mode === "public") return context.next();
+  if (!route) return context.next();
+
+  if (route.mode === "public") {
+    context.data.auth = { email: "", mode: "public" };
+    return context.next();
+  }
 
   const openForLocalDev =
     isLocalRequest(url) ||
     context.env.MOJO_ACCESS_ALLOW_OPEN === "true" ||
     context.env.MOJO_STORAGE_ALLOW_OPEN === "true";
   if (openForLocalDev) {
-    context.data.auth = { email: "local-dev@mojoaisummits.com", mode: route.mode };
+    context.data.auth = {
+      email: "local-dev@mojoaisummits.com",
+      name: "Local Development",
+      role: "owner",
+      status: "active",
+      mode: route.mode
+    };
     return context.next();
   }
 
