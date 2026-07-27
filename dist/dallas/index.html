@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dallas 2027 Program Architecture | MOJO AI Summits</title>
+<meta name="description" content="Dallas 2027 MOJO AI Summits show structure: six executive AI tracks and the head presenter, roundtable lead, and closing speaker roles needed across the program.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mojoaisummits.com/dallas/">
+<meta property="og:title" content="Dallas 2027 Program Architecture | MOJO AI Summits">
+<meta property="og:description" content="A manageable operating view of the Dallas show tracks, session slate, and open presenter and roundtable lead seats.">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Dallas 2027 Program Architecture | MOJO AI Summits">
+<meta name="twitter:description" content="Six show tracks and a clear speaker sourcing structure for Dallas.">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png">
+<link rel="icon" type="image/png" href="/assets/logo-badge.png">
+<link rel="apple-touch-icon" href="/assets/logo-badge.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+  :root{
+    --navy:#0A0F1E;
+    --slate:#1B2333;
+    --blue:#1666FF;
+    --cyan:#00E6FF;
+    --white:#FFFFFF;
+    --muted:#9aa3b8;
+    --dim:#626a7f;
+    --line:rgba(255,255,255,.11);
+    --line-bright:rgba(0,230,255,.36);
+    --panel:rgba(27,35,51,.64);
+    --panel-strong:rgba(27,35,51,.88);
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      linear-gradient(90deg, rgba(22,102,255,.055) 1px, transparent 1px) 0 0 / 72px 72px,
+      linear-gradient(180deg, rgba(0,230,255,.045) 1px, transparent 1px) 0 0 / 72px 72px,
+      radial-gradient(circle at 50% -10%, rgba(22,102,255,.34), transparent 34rem),
+      linear-gradient(180deg, #070b16 0%, var(--navy) 42%, #070b16 100%);
+    color:var(--white);
+    font-family:Inter, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:
+      linear-gradient(90deg, transparent, rgba(0,230,255,.14), transparent) 50% 0 / 1px 100% no-repeat,
+      radial-gradient(ellipse at top, rgba(0,230,255,.10), transparent 52%);
+    opacity:.75;
+  }
+  a{ color:inherit; text-decoration:none; }
+  button, summary{ font:inherit; }
+  h1,h2,h3,p{ margin:0; }
+  .wrap{ width:min(1180px, calc(100% - 40px)); margin:0 auto; }
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    color:var(--cyan);
+    font-family:Orbitron, sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+  }
+  .eyebrow::before{
+    content:"";
+    width:34px;
+    height:1px;
+    background:var(--cyan);
+    box-shadow:0 0 14px rgba(0,230,255,.75);
+  }
+
+  header{
+    position:sticky;
+    top:0;
+    z-index:20;
+    background:rgba(10,15,30,.84);
+    border-bottom:1px solid var(--line);
+    backdrop-filter:blur(14px);
+  }
+  nav{
+    width:min(1180px, calc(100% - 40px));
+    margin:0 auto;
+    min-height:76px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+  }
+  .brand-lockup{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand-lockup img{ width:46px; height:auto; filter:drop-shadow(0 0 18px rgba(0,230,255,.22)); }
+  .brand-divider{
+    width:1px;
+    height:34px;
+    background:linear-gradient(180deg, transparent, var(--cyan), transparent);
+  }
+  .brand-name{ display:grid; gap:2px; text-transform:uppercase; line-height:1; }
+  .brand-primary{
+    font-weight:800;
+    font-size:23px;
+    letter-spacing:.08em;
+    background:linear-gradient(90deg, var(--blue), var(--cyan));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .brand-secondary{
+    color:rgba(255,255,255,.78);
+    font-weight:700;
+    font-size:11px;
+    letter-spacing:.36em;
+  }
+  .nav-links{
+    display:flex;
+    align-items:center;
+    gap:24px;
+    color:var(--muted);
+    font-family:Space Grotesk, sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  .nav-links a{ transition:color .25s var(--ease); }
+  .nav-links a:hover{ color:var(--white); }
+
+  .hero{
+    position:relative;
+    overflow:hidden;
+    padding:92px 0 64px;
+    border-bottom:1px solid var(--line);
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns:minmax(0, .98fr) minmax(340px, .72fr);
+    gap:54px;
+    align-items:center;
+  }
+  h1{
+    margin-top:18px;
+    max-width:760px;
+    font-family:Fraunces, serif;
+    font-size:clamp(46px, 7vw, 88px);
+    line-height:.98;
+    font-weight:600;
+  }
+  .hero-copy{
+    max-width:660px;
+    margin-top:24px;
+    color:var(--muted);
+    font-size:18px;
+    line-height:1.72;
+  }
+  .btn-primary,
+  .btn-ghost{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:48px;
+    padding:14px 22px;
+    border-radius:4px;
+    font-family:Space Grotesk, sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    transition:background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease);
+  }
+  .btn-primary{
+    border:1px solid var(--cyan);
+    color:#031018;
+    background:var(--cyan);
+    box-shadow:0 0 28px rgba(0,230,255,.18);
+  }
+  .btn-primary:hover{ background:var(--white); border-color:var(--white); }
+  .btn-ghost{
+    border:1px solid var(--line);
+    color:var(--white);
+    background:rgba(27,35,51,.36);
+  }
+  .btn-ghost:hover{ border-color:var(--cyan); color:var(--cyan); }
+
+  .texas-panel{
+    position:relative;
+    min-height:420px;
+    display:grid;
+    place-items:center;
+    padding:34px;
+    background:
+      linear-gradient(135deg, rgba(22,102,255,.16), rgba(0,230,255,.045)),
+      rgba(27,35,51,.42);
+    border:1px solid var(--line);
+    border-radius:8px;
+    box-shadow:0 24px 80px rgba(0,0,0,.36), inset 0 0 0 1px rgba(0,230,255,.04);
+  }
+  .texas-panel::before,
+  .texas-panel::after{
+    content:"";
+    position:absolute;
+    inset:20px;
+    border:1px solid rgba(0,230,255,.20);
+    pointer-events:none;
+  }
+  .texas-panel::after{ inset:34px; border-color:rgba(22,102,255,.18); }
+  .city-map{
+    position:relative;
+    z-index:1;
+    width:min(340px, 82vw);
+    height:auto;
+    overflow:visible;
+    filter:drop-shadow(0 2px 0 rgba(0,230,255,.18)) drop-shadow(0 24px 34px rgba(0,0,0,.62));
+  }
+  .state-shape{
+    fill:#050913;
+    stroke:var(--cyan);
+    stroke-width:2.2;
+    stroke-linejoin:round;
+  }
+  .city-star{
+    fill:var(--cyan);
+    stroke:#04141d;
+    stroke-width:.8;
+    filter:drop-shadow(0 0 10px rgba(0,230,255,.82));
+  }
+  .map-caption{
+    position:absolute;
+    left:28px;
+    right:28px;
+    bottom:26px;
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:end;
+    gap:20px;
+    color:var(--muted);
+    font-family:Space Grotesk, sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+  .map-caption strong{ color:var(--cyan); }
+  .map-caption span:nth-child(2){ justify-self:center; color:var(--cyan); }
+  .map-caption span:nth-child(3){ justify-self:end; }
+
+  .metric-band{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    background:rgba(27,35,51,.36);
+  }
+  .metric{
+    padding:28px 26px;
+    border-left:1px solid var(--line);
+  }
+  .metric:first-child{ border-left:0; }
+  .metric strong{
+    display:block;
+    font-family:Fraunces, serif;
+    font-size:42px;
+    font-weight:600;
+    line-height:1;
+  }
+  .metric span{
+    display:block;
+    margin-top:10px;
+    color:var(--muted);
+    font-family:Space Grotesk, sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.18em;
+    line-height:1.5;
+    text-transform:uppercase;
+  }
+
+  section{ position:relative; padding:82px 0; }
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    gap:36px;
+    align-items:end;
+    margin-bottom:34px;
+  }
+  .section-head h2{
+    max-width:650px;
+    margin-top:16px;
+    font-family:Fraunces, serif;
+    font-size:clamp(32px, 4.5vw, 54px);
+    font-weight:600;
+    line-height:1.08;
+  }
+  .section-head p{
+    max-width:460px;
+    color:var(--muted);
+    font-size:16px;
+    line-height:1.65;
+  }
+
+  .cohort-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:22px;
+  }
+  .cohort-card{
+    min-height:306px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:26px;
+    background:rgba(7,11,22,.62);
+    border:1px solid var(--line);
+    border-radius:8px;
+  }
+  .cohort-card:hover{ border-color:var(--line-bright); }
+  .track-label{
+    color:var(--cyan);
+    font-family:Orbitron, sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+  }
+  .cohort-card h3{
+    margin-top:24px;
+    font-family:Fraunces, serif;
+    font-size:30px;
+    line-height:1.08;
+    font-weight:600;
+  }
+  .track-bars{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    gap:6px;
+    margin:26px 0;
+  }
+  .track-bars span{
+    height:3px;
+    background:var(--dim);
+  }
+  .track-bars span.active{ background:var(--cyan); box-shadow:0 0 14px rgba(0,230,255,.38); }
+  .cohort-card p{
+    color:var(--muted);
+    font-size:17px;
+    line-height:1.58;
+  }
+  .tag-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-top:24px;
+    color:var(--dim);
+    font-family:Space Grotesk, sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+
+  .program-shell{
+    display:grid;
+    gap:18px;
+  }
+  .session-tabs{
+    display:grid;
+    grid-template-columns:repeat(6, minmax(0, 1fr));
+    gap:8px;
+    padding:8px;
+    background:rgba(7,11,22,.62);
+    border:1px solid var(--line);
+    border-radius:8px;
+  }
+  .session-tab{
+    display:grid;
+    gap:4px;
+    place-items:center;
+    min-height:48px;
+    border:1px solid transparent;
+    border-radius:4px;
+    background:rgba(27,35,51,.58);
+    color:var(--muted);
+    cursor:pointer;
+    font-family:Space Grotesk, sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    transition:background .24s var(--ease), border-color .24s var(--ease), color .24s var(--ease);
+  }
+  .session-tab span{
+    display:block;
+    line-height:1.2;
+  }
+  .session-time{
+    color:var(--dim);
+    font-size:9px;
+    letter-spacing:.10em;
+  }
+  .session-tab[aria-selected="true"] .session-time,
+  .session-tab:hover .session-time{ color:rgba(255,255,255,.78); }
+  .session-tab:hover,
+  .session-tab[aria-selected="true"]{
+    background:rgba(0,230,255,.10);
+    border-color:rgba(0,230,255,.48);
+    color:var(--cyan);
+  }
+  .session-tab[aria-selected="true"]{ box-shadow:0 0 22px rgba(0,230,255,.10); }
+  details.cohort-detail{
+    background:rgba(7,11,22,.64);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  details.cohort-detail[open]{ border-color:rgba(0,230,255,.30); }
+  summary{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:22px;
+    align-items:center;
+    padding:24px 26px;
+    cursor:pointer;
+    list-style:none;
+  }
+  summary::-webkit-details-marker{ display:none; }
+  .summary-num{
+    color:var(--cyan);
+    font-family:Orbitron, sans-serif;
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:.22em;
+  }
+  .summary-title h3{
+    font-family:Fraunces, serif;
+    font-size:30px;
+    line-height:1.1;
+    font-weight:600;
+  }
+  .summary-title p{
+    margin-top:8px;
+    color:var(--muted);
+    line-height:1.55;
+  }
+  .summary-counts{
+    display:grid;
+    grid-template-columns:repeat(3, auto);
+    gap:14px;
+    text-align:right;
+  }
+  .summary-counts span{
+    min-width:76px;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    color:var(--muted);
+    font-family:Space Grotesk, sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.12em;
+    line-height:1.3;
+    text-transform:uppercase;
+  }
+  .detail-body{
+    padding:0 26px 28px;
+    border-top:1px solid var(--line);
+  }
+  .event-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:18px;
+    margin-top:26px;
+  }
+  .event-card{
+    display:flex;
+    flex-direction:column;
+    min-height:100%;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+  }
+  .event-head{
+    padding:20px;
+    border-bottom:1px solid var(--line);
+  }
+  .event-kicker{
+    color:var(--cyan);
+    font-family:Orbitron, sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+  }
+  .event-card h4{
+    margin:10px 0 0;
+    font-family:Space Grotesk, sans-serif;
+    font-size:19px;
+    line-height:1.25;
+  }
+  .event-card p{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.55;
+  }
+  .role-list{
+    display:grid;
+    gap:1px;
+    margin:0;
+    padding:0;
+    list-style:none;
+    background:rgba(255,255,255,.07);
+  }
+  .role-list li{
+    display:grid;
+    grid-template-columns:minmax(130px, .62fr) 1fr;
+    gap:12px;
+    align-items:center;
+    padding:11px 16px;
+    background:rgba(7,11,22,.56);
+  }
+  .role-list li.role-featured{
+    grid-template-columns:minmax(130px, .62fr) 1fr;
+    align-items:start;
+  }
+  .role-label-stack{
+    display:grid;
+    gap:12px;
+    justify-items:start;
+  }
+  .role-type{
+    color:var(--white);
+    font-family:Space Grotesk, sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+  .role-need{
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.42;
+  }
+  .role-need strong{ color:var(--cyan); font-weight:700; }
+  .role-field{
+    display:block;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.45;
+  }
+  .role-field + .role-field{ margin-top:4px; }
+  .role-field strong{
+    color:var(--cyan);
+    font-weight:700;
+  }
+  .speaker-image{
+    width:72px;
+    aspect-ratio:1 / 1;
+    display:grid;
+    place-items:center;
+    border:1px solid rgba(0,230,255,.34);
+    border-radius:50%;
+    background:
+      radial-gradient(circle, rgba(0,230,255,.16), transparent 68%),
+      rgba(10,15,30,.86);
+    color:var(--cyan);
+    font-family:Orbitron, sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    box-shadow:0 0 18px rgba(0,230,255,.10);
+  }
+
+  footer{
+    padding:54px 0 42px;
+    border-top:1px solid var(--line);
+    text-align:center;
+    color:var(--dim);
+  }
+  footer img{ width:90px; height:auto; margin-bottom:16px; opacity:.94; }
+  footer p{
+    font-family:Space Grotesk, sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+  footer span{ color:var(--cyan); }
+
+  @media (max-width:960px){
+    .hero-grid,
+    .event-grid{ grid-template-columns:1fr; }
+    .cohort-grid{ grid-template-columns:repeat(2, 1fr); }
+    .metric-band,
+    .section-head{ display:block; }
+    .section-head p{ margin-top:18px; }
+  }
+  @media (max-width:680px){
+    nav{ align-items:flex-start; flex-direction:column; padding:18px 0; }
+    .nav-links{ width:100%; justify-content:space-between; gap:12px; font-size:10px; }
+    .hero{ padding-top:56px; }
+    .texas-panel{ min-height:320px; padding:22px; }
+    .map-caption{ position:static; margin-top:20px; grid-template-columns:1fr; text-align:center; }
+    .map-caption span:nth-child(2),
+    .map-caption span:nth-child(3){ justify-self:center; }
+    .metric-band,
+    .cohort-grid,
+    .metric{ border-left:0; border-top:1px solid var(--line); }
+    .metric:first-child{ border-top:0; }
+    .session-tabs{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    summary{ grid-template-columns:1fr; }
+    .summary-counts{ grid-template-columns:1fr 1fr 1fr; text-align:left; }
+    .role-list li{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <nav>
+    <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+      <img src="/assets/logo-mark.png" alt="">
+      <span class="brand-divider" aria-hidden="true"></span>
+      <span class="brand-name" aria-hidden="true">
+        <span class="brand-primary">MOJO AI</span>
+        <span class="brand-secondary">Summits</span>
+      </span>
+    </a>
+    <div class="nav-links" aria-label="Dallas page navigation">
+      <a href="#cohorts">Tracks</a>
+      <a href="#program">Program</a>
+      <a href="/">Home</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Dallas 2027</span>
+        <h1>36 cohort sessions.</h1>
+        <p class="hero-copy">Dallas is organized around the six executive AI tracks you gave us: Business Enablement, Innovation, Integration, Security and Risk, Operations and Finance, and Technology Strategy. The full six-track set repeats across six one-hour sessions, so each hour can carry its own head presenters, roundtable leaders, and closing speakers.</p>
+      </div>
+      <div class="texas-panel" aria-label="Texas with Dallas marked">
+        <svg class="city-map" viewBox="0 0 160 110" role="img" aria-label="Texas with Dallas marked">
+          <path class="state-shape" d="M68.0,12.0 80.6,12.0 80.6,27.7 81.1,27.6 82.7,29.2 83.5,28.9 85.7,29.0 86.2,30.5 87.6,30.5 89.1,31.2 90.5,31.1 91.1,31.7 91.9,31.0 93.3,31.3 93.8,32.2 94.8,32.4 95.4,33.5 96.6,32.4 98.2,33.0 98.8,33.7 99.6,33.4 100.2,34.4 101.9,32.6 102.4,33.5 103.9,33.5 105.4,34.1 105.9,34.8 107.3,33.6 108.8,33.2 109.4,33.6 111.1,32.8 111.4,33.3 113.2,33.3 113.7,32.6 115.5,33.4 116.2,34.3 118.8,35.2 119.5,36.0 120.9,35.6 121.9,35.9 121.9,40.2 121.9,48.5 123.4,50.3 123.4,52.1 125.3,55.4 125.5,57.1 124.7,59.2 124.1,60.0 124.3,61.1 123.8,62.0 124.3,63.5 122.7,66.4 123.3,67.2 122.2,67.2 118.5,68.4 117.3,67.7 117.0,66.4 116.1,67.3 115.5,67.1 115.1,68.3 115.9,68.8 116.0,70.3 114.7,71.9 112.6,73.9 108.4,76.0 108.0,75.6 106.7,76.2 106.7,75.7 105.0,76.0 104.2,75.0 103.7,75.2 105.5,77.3 104.2,78.0 102.9,77.6 102.8,79.1 101.2,80.6 99.6,83.4 98.6,86.3 97.8,86.1 97.6,87.1 98.4,86.9 98.0,89.0 97.5,89.1 97.5,90.3 98.1,90.9 98.3,93.4 99.1,94.2 99.3,95.8 99.9,97.2 97.7,98.0 96.9,96.9 95.2,96.5 93.1,96.6 91.2,95.3 89.8,95.2 88.7,94.1 87.3,93.7 86.3,92.7 85.7,90.3 84.4,88.8 84.6,87.6 84.0,86.2 84.2,85.1 83.3,83.8 82.6,83.7 81.4,82.5 81.0,81.0 80.0,79.7 78.5,78.6 77.8,76.2 77.1,75.5 76.2,73.5 75.9,72.0 75.0,70.8 73.6,69.8 73.2,69.1 71.9,68.4 70.8,66.7 67.8,66.3 65.9,66.4 64.4,65.7 64.0,66.6 62.4,66.8 61.1,68.5 60.4,71.2 59.9,71.3 59.0,72.9 57.9,72.9 56.1,71.7 51.9,69.7 51.0,68.6 49.3,67.6 48.2,65.3 48.1,63.2 46.9,61.5 46.7,60.1 45.9,59.1 43.2,57.8 41.8,55.9 40.6,55.2 39.3,53.6 37.6,52.8 36.4,50.7 35.3,50.2 34.5,49.3 34.7,48.5 59.3,48.5 59.3,40.4 59.5,32.1 59.5,12.0 59.8,12.0 68.0,12.0Z"></path>
+          <polygon class="city-star" points="102.8,36.2 104.4,40.0 108.5,40.3 105.4,43.0 106.3,47.0 102.8,44.9 99.3,47.0 100.2,43.0 97.1,40.3 101.2,40.0"></polygon>
+        </svg>
+        <div class="map-caption"><span><strong>Dallas</strong></span><span>2027</span><span><strong>Texas</strong></span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="metric-band" aria-label="Dallas program totals">
+    <div class="metric"><strong>6</strong><span>Show tracks</span></div>
+    <div class="metric"><strong>6</strong><span>Engagement opportunities</span></div>
+    <div class="metric"><strong>216/216</strong><span>Round table lead seats available</span></div>
+    <div class="metric"><strong>72/72</strong><span>Total speaker roles available</span></div>
+  </div>
+
+  <section id="cohorts">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Show Tracks</span>
+          <h2>The six tracks are the whole show.</h2>
+        </div>
+        <p>Every Dallas planning decision rolls up into these six tracks, from head presenter sourcing to roundtable lead coverage.</p>
+      </div>
+      <div class="cohort-grid" id="cohortCards"></div>
+    </div>
+  </section>
+
+  <section id="program">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Program Matrix</span>
+          <h2>Six sessions, same six-track structure.</h2>
+        </div>
+        <p>Select a session across the top. Each one-hour session uses the same six-track layout, with its own presenter and roundtable lead slots.</p>
+      </div>
+      <div class="program-shell" id="programMatrix"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img src="/assets/logo-badge.png" alt="MOJO AI Summits badge">
+  <p>Powered by <span>MOJO AI Studio</span></p>
+</footer>
+
+<script>
+  const cohorts = [
+    {
+      track:"Track 01",
+      name:"Business Enablement",
+      question:"Where should AI change growth, service, decision speed, or cost structure?",
+      tags:["Use Cases", "Adoption", "ROI"],
+      active:1,
+      events:[
+        ["Use-Case Portfolio Design", "Choose the business problems worth executive oxygen."],
+        ["AI for Growth and Revenue Motion", "Compare practical ways AI can change demand, conversion, and expansion."],
+        ["Service and Customer Experience", "Study where AI improves responsiveness without weakening trust."],
+        ["Decision Speed and Leadership Cadence", "Turn AI insight into faster operating decisions."],
+        ["Cost Structure and Productivity", "Locate measurable savings without empty automation theater."],
+        ["ROI Narrative for the Board", "Build the language executives need to defend investment."],
+      ]
+    },
+    {
+      track:"Track 02",
+      name:"Innovation",
+      question:"Which experiments deserve executive oxygen, budget, and permission to scale?",
+      tags:["Products", "Revenue", "Speed"],
+      active:2,
+      events:[
+        ["Experiment Portfolio Strategy", "Separate executive bets from low-signal experiments."],
+        ["AI Product Discovery", "Use AI to find product opportunities buyers can understand."],
+        ["Prototype to Pilot", "Move from demo energy to accountable pilots."],
+        ["New Revenue Models", "Pressure-test AI-enabled offers, pricing, and channels."],
+        ["Innovation Governance", "Protect speed without losing strategic control."],
+        ["Scale Readiness Review", "Know when an experiment has earned the next check."],
+      ]
+    },
+    {
+      track:"Track 03",
+      name:"Integration",
+      question:"How does AI connect to ERP, CRM, data, workflows, and daily execution?",
+      tags:["Systems", "Data", "Workflow"],
+      active:3,
+      events:[
+        ["Enterprise System Fit", "Clarify where AI belongs across ERP, CRM, and core platforms."],
+        ["Data Readiness and Ownership", "Decide what data quality, access, and stewardship must exist first."],
+        ["Workflow Redesign", "Rebuild handoffs around AI-assisted execution."],
+        ["Change Across Functions", "Coordinate technology, operations, legal, finance, and the field."],
+        ["Vendor and Platform Integration", "Compare build, buy, and partner decisions."],
+        ["Operational Runbook", "Convert integration choices into daily management rituals."],
+      ]
+    },
+    {
+      track:"Track 04",
+      name:"Security and Risk",
+      question:"What must be protected before AI expands across teams and vendors?",
+      tags:["Data", "Identity", "Model Risk"],
+      active:4,
+      events:[
+        ["AI Risk Posture", "Name the risk profile before adoption spreads."],
+        ["Data Protection and Access", "Protect sensitive information across tools, teams, and vendors."],
+        ["Identity, Permissions, and Control", "Design access models for people, agents, and systems."],
+        ["Model Risk and Evaluation", "Set expectations for hallucination, drift, bias, and reliability."],
+        ["Third-Party and Vendor Governance", "Assess the AI supply chain with executive clarity."],
+        ["Incident Readiness", "Prepare leaders for the first AI failure that matters."],
+      ]
+    },
+    {
+      track:"Track 05",
+      name:"Operations and Finance",
+      question:"Where does automation change accountability, process design, and financial control?",
+      tags:["Process", "Cost", "Controls"],
+      active:5,
+      events:[
+        ["Process Automation Map", "Find work AI can change without breaking accountability."],
+        ["Finance Controls and Auditability", "Preserve confidence in numbers, approvals, and evidence."],
+        ["Procurement and Spend Governance", "Manage AI cost, tool growth, and vendor commitments."],
+        ["Operating Model Design", "Define who owns AI-enabled work after launch."],
+        ["Productivity Measurement", "Separate measurable lift from convenience."],
+        ["Executive Control Tower", "Create the reporting view leaders need to manage the portfolio."],
+      ]
+    },
+    {
+      track:"Track 06",
+      name:"Technology Strategy",
+      question:"Which platforms, architectures, and governance models support scale?",
+      tags:["Stack", "Vendors", "Governance"],
+      active:6,
+      events:[
+        ["AI Stack Strategy", "Choose the platforms and patterns that can survive scale."],
+        ["Architecture and Agentic Systems", "Evaluate where agents, workflows, and orchestration fit."],
+        ["Build, Buy, Partner Decisions", "Compare strategic control, speed, risk, and cost."],
+        ["Governance Model Design", "Place decision rights where they can actually work."],
+        ["Talent and Operating Capability", "Define the technical leadership model needed next."],
+        ["Scale Architecture Review", "Stress-test the technical roadmap before broad rollout."],
+      ]
+    }
+  ];
+
+  const roleRows = [
+    { role:"Head presenter", fields:["Name", "Company", "Topic", "LinkedIn"], featured:true },
+    { role:"Roundtable lead 01", fields:["Name", "Company"] },
+    { role:"Roundtable lead 02", fields:["Name", "Company"] },
+    { role:"Roundtable lead 03", fields:["Name", "Company"] },
+    { role:"Roundtable lead 04", fields:["Name", "Company"] },
+    { role:"Roundtable lead 05", fields:["Name", "Company"] },
+    { role:"Roundtable lead 06", fields:["Name", "Company"] },
+    { role:"Closing speaker", fields:["Name", "Company", "Topic", "LinkedIn"], featured:true },
+  ];
+  const sessions = Array.from({ length: 6 }, (_, index) => ({
+    number: index + 1,
+    label: `Session ${String(index + 1).padStart(2, "0")}`,
+    time: [
+      "10:00 AM to 11:00 AM",
+      "11:00 AM to 12:00 PM",
+      "1:00 PM to 2:00 PM",
+      "2:00 PM to 3:00 PM",
+      "3:00 PM to 4:00 PM",
+      "4:00 PM to 5:00 PM"
+    ][index]
+  }));
+
+  function bars(active){
+    return Array.from({length:6}, (_, index) => `<span class="${index < active ? "active" : ""}"></span>`).join("");
+  }
+
+  function roleList(){
+    return roleRows.map((row) => `
+      <li class="${row.featured ? "role-featured" : ""}">
+        <span class="${row.featured ? "role-label-stack" : ""}">
+          <span class="role-type">${row.role}</span>
+          ${row.featured ? `<span class="speaker-image" aria-label="${row.role} image placeholder">Image</span>` : ""}
+        </span>
+        <span class="role-need">
+          ${row.fields.map((field) => `<span class="role-field"><strong>${field}:</strong> Open</span>`).join("")}
+        </span>
+      </li>
+    `).join("");
+  }
+
+  document.getElementById("cohortCards").innerHTML = cohorts.map((cohort) => `
+    <article class="cohort-card">
+      <div>
+        <span class="track-label">${cohort.track}</span>
+        <h3>${cohort.name}</h3>
+        <div class="track-bars" aria-hidden="true">${bars(cohort.active)}</div>
+        <p>${cohort.question}</p>
+      </div>
+      <div class="tag-row">${cohort.tags.map(tag => `<span>${tag}</span>`).join("")}</div>
+    </article>
+  `).join("");
+
+  const programMatrix = document.getElementById("programMatrix");
+
+  function sessionGrid(session){
+    return `
+      <div class="event-grid">
+        ${cohorts.map((cohort) => `
+          <article class="event-card">
+            <div class="event-head">
+              <span class="event-kicker">${cohort.track}</span>
+              <h4>${cohort.name}</h4>
+              <p>${cohort.question}</p>
+            </div>
+            <ul class="role-list">${roleList()}</ul>
+          </article>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderProgram(activeIndex = 0){
+    const activeSession = sessions[activeIndex];
+    programMatrix.innerHTML = `
+      <div class="session-tabs" role="tablist" aria-label="Dallas one-hour sessions">
+        ${sessions.map((session, index) => `
+          <button class="session-tab" type="button" role="tab" aria-selected="${index === activeIndex ? "true" : "false"}" aria-controls="sessionPanel" data-session-index="${index}">
+            <span>${session.label}</span>
+            <span class="session-time">${session.time}</span>
+          </button>
+        `).join("")}
+      </div>
+      <div id="sessionPanel" role="tabpanel" aria-live="polite">
+        ${sessionGrid(activeSession)}
+      </div>
+    `;
+    programMatrix.querySelectorAll("[data-session-index]").forEach((button) => {
+      button.addEventListener("click", () => renderProgram(Number(button.dataset.sessionIndex)));
+    });
+  }
+
+  renderProgram();
+</script>
+</body>
+</html>

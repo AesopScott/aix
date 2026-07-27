@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VIP Registration | MOJO AI Summits</title>
 <meta name="description" content="VIP registration for invitation-only MOJO AI Summits executive events.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mojoaisummits.com/vip-registration/">
+<meta property="og:title" content="VIP Registration | MOJO AI Summits">
+<meta property="og:description" content="Register for invitation-only MOJO AI Summits executive events.">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-vip-registration.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MOJO AI Summits VIP Registration">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="VIP Registration | MOJO AI Summits">
+<meta name="twitter:description" content="Register for invitation-only MOJO AI Summits executive events.">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-vip-registration.png">
+<meta name="twitter:image:alt" content="MOJO AI Summits VIP Registration">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="/assets/logo-badge.png">
 <link rel="apple-touch-icon" href="/assets/logo-badge.png">
@@ -219,6 +232,17 @@
     gap:14px;
     align-items:end;
   }
+  .sms-disclosure{
+    margin:8px 0 0;
+    color:var(--ink-dim);
+    font-size:11px;
+    line-height:1.6;
+  }
+  .sms-disclosure a{
+    color:var(--cyan);
+    text-decoration:underline;
+    text-underline-offset:3px;
+  }
   .btn-primary,
   .btn-ghost{
     border-radius:2px;
@@ -373,6 +397,7 @@
                 <input type="tel" id="phone" name="phone" placeholder="+1 555 123 4567" autocomplete="tel" required>
                 <button type="button" class="btn-ghost" id="sendCodeButton">Verify Phone</button>
               </div>
+              <p class="sms-disclosure">By selecting Verify Phone, you agree that MOJO AI Summits may text this mobile number a one-time verification code for VIP registration. Message frequency is one verification text per request. Message and data rates may apply. Reply STOP to opt out or HELP for help. See our <a href="/sms-terms/" target="_blank" rel="noopener">SMS terms</a> and <a href="/privacy/" target="_blank" rel="noopener">privacy policy</a>. No marketing texts will be sent from this form.</p>
             </div>
             <div class="field full verify-code" id="verifyCodeRow">
               <div>
