@@ -740,7 +740,7 @@
             <div class="stat"><strong id="totalRoutes">0</strong><span>routes tracked</span></div>
             <div class="stat"><strong id="protectedRoutes">0</strong><span>protected routes</span></div>
             <div class="stat"><strong id="allowlistCount">0</strong><span>allowed emails</span></div>
-            <div class="stat"><strong id="syncState">-</strong><span>Cloudflare sync</span></div>
+            <div class="stat"><strong id="authState">-</strong><span>auth provider</span></div>
           </div>
         </section>
 
@@ -751,7 +751,6 @@
           </label>
           <div class="actions">
             <button id="saveButton" type="button">Save</button>
-            <button id="syncButton" class="secondary" type="button">Sync</button>
             <button id="resetButton" class="danger wide" type="button">Reset Defaults</button>
           </div>
         </section>
@@ -808,7 +807,7 @@
             <span>Route</span>
             <span>Access</span>
             <span>Classification</span>
-            <span>Cloudflare domains</span>
+            <span>Site coverage</span>
           </div>
           <div id="routeRows"></div>
         </div>
@@ -821,7 +820,6 @@
     const state = {
       config: null,
       modes: [],
-      syncAvailable: false,
       session: null,
       users: [],
       search: "",
@@ -834,6 +832,7 @@
       appLayout: document.querySelector("#appLayout"),
       authGate: document.querySelector("#authGate"),
       authMessage: document.querySelector("#authMessage"),
+      authState: document.querySelector("#authState"),
       allowedEmails: document.querySelector("#allowedEmails"),
       bootstrapForm: document.querySelector("#bootstrapForm"),
       bootstrapToken: document.querySelector("#bootstrapToken"),
@@ -852,8 +851,6 @@
       routeRows: document.querySelector("#routeRows"),
       saveButton: document.querySelector("#saveButton"),
       searchInput: document.querySelector("#searchInput"),
-      syncButton: document.querySelector("#syncButton"),
-      syncState: document.querySelector("#syncState"),
       resetButton: document.querySelector("#resetButton"),
       sessionBar: document.querySelector("#sessionBar"),
       sessionUser: document.querySelector("#sessionUser"),
@@ -906,7 +903,6 @@
     function setBusy(value) {
       state.busy = value;
       elements.saveButton.disabled = value;
-      elements.syncButton.disabled = value || !state.syncAvailable;
       elements.resetButton.disabled = value;
       document.querySelectorAll(".mode-select").forEach((select) => {
         select.disabled = value;
@@ -972,7 +968,7 @@
       elements.totalRoutes.textContent = routes.length;
       elements.protectedRoutes.textContent = protectedCount;
       elements.allowlistCount.textContent = effectiveEmails.length;
-      elements.syncState.textContent = state.syncAvailable ? "Ready" : "Manual";
+      elements.authState.textContent = state.config.authProvider || "Mojo";
       elements.updatedText.textContent = state.config.updatedAt
         ? `Updated ${new Date(state.config.updatedAt).toLocaleString()} by ${state.config.updatedBy || "unknown"}.`
         : "Default route policy is active.";
@@ -1054,7 +1050,7 @@
             </div>
             <div class="cell">
               <div class="domains">
-                ${(route.cloudflareDomains || []).map((domain) => `<span class="domain">${escapeHtml(domain)}</span>`).join("")}
+                ${(route.domains || []).map((domain) => `<span class="domain">${escapeHtml(domain)}</span>`).join("")}
               </div>
             </div>
           </div>
@@ -1081,14 +1077,15 @@
         if (!response.ok) throw new Error(payload.error || "Access configuration could not be loaded.");
         state.config = payload.config;
         state.modes = payload.modes;
-        state.syncAvailable = payload.syncAvailable;
+        state.config.authProvider = payload.authProvider || "mojo-auth";
+        state.config.storage = payload.storage || "";
         elements.allowedEmails.value = [
           ...(state.config.allowedEmails || []),
           ...(state.config.envAllowedEmails || [])
         ].join("\n");
         renderFilters();
         renderRoutes();
-        if (!state.syncAvailable) showNotice("Route access is enforced by Mojo app-session middleware.", "");
+        showNotice("Route access is enforced by Mojo app-session middleware.", "");
       } catch (error) {
         showNotice(error.message, "error");
       } finally {
@@ -1244,21 +1241,6 @@
       }
     }
 
-    async function syncConfig() {
-      clearNotice();
-      setBusy(true);
-      try {
-        const response = await fetch("/api/access-config?action=sync", { method: "POST" });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Cloudflare Access sync failed.");
-        showNotice(`Cloudflare Access synced: ${payload.ensured.length} applications updated, ${payload.removed.length} removed.`, "ok");
-      } catch (error) {
-        showNotice(error.message, "error");
-      } finally {
-        setBusy(false);
-      }
-    }
-
     async function resetConfig() {
       clearNotice();
       setBusy(true);
@@ -1297,7 +1279,6 @@
     });
 
     elements.saveButton.addEventListener("click", saveConfig);
-    elements.syncButton.addEventListener("click", syncConfig);
     elements.resetButton.addEventListener("click", resetConfig);
     elements.loginForm.addEventListener("submit", login);
     elements.bootstrapForm.addEventListener("submit", bootstrap);

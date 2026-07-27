@@ -719,12 +719,60 @@
         tags: ["budget", "receipts", "reimbursement"]
       },
       {
+        group: "Access and Security",
+        title: "Access Console",
+        path: "/access/",
+        summary: "Internal console for reviewing and managing Mojo AI Summits access configuration.",
+        status: "Access Protected",
+        tags: ["access", "security"]
+      },
+      {
         group: "Guest Share",
         title: "VIP Registration",
         path: "/vip-registration/",
         summary: "Invite-code registration page for guest previews and direct invite links.",
         status: "Controlled Share",
         tags: ["vip", "registration", "guest"]
+      },
+      {
+        group: "Public Site",
+        title: "Home",
+        path: "/",
+        summary: "Public homepage for Mojo AI Summits, including positioning, event cities, and invite request entry points.",
+        status: "Public",
+        tags: ["home", "public"]
+      },
+      {
+        group: "Public Site",
+        title: "Dallas Event Page",
+        path: "/dallas/",
+        summary: "Public Dallas event page for the first in-person Mojo AI Summit.",
+        status: "Public",
+        tags: ["dallas", "event"]
+      },
+      {
+        group: "Public Site",
+        title: "Virtual Event Series",
+        path: "/virtual/",
+        summary: "Public page for the Fall 2026 virtual AI event series.",
+        status: "Public",
+        tags: ["virtual", "events"]
+      },
+      {
+        group: "Policies",
+        title: "Privacy Policy",
+        path: "/privacy/",
+        summary: "Public privacy policy and data-use disclosure for site visitors and registrants.",
+        status: "Public",
+        tags: ["privacy", "policy"]
+      },
+      {
+        group: "Policies",
+        title: "SMS Terms",
+        path: "/sms-terms/",
+        summary: "Public SMS messaging terms for phone verification and event communication consent.",
+        status: "Public",
+        tags: ["sms", "terms"]
       }
     ];
 
@@ -878,7 +926,7 @@
       `).join("");
     }
 
-    async function redirectCandidates() {
+    async function redirectCandidates(existingPaths) {
       try {
         const response = await fetch("/_redirects", { cache: "no-store" });
         if (!response.ok) return [];
@@ -888,7 +936,15 @@
           .map((line) => line.trim())
           .filter((line) => line && !line.startsWith("#"))
           .filter((line) => !line.split(/\s+/)[0].includes("*"))
-          .map((line) => normalizePath(line.split(/\s+/)[0]))
+          .map((line) => {
+            const [source, target] = line.split(/\s+/);
+            return {
+              source: normalizePath(source),
+              target: normalizePath(target || "")
+            };
+          })
+          .filter((route) => route.source && !existingPaths.has(route.target))
+          .map((route) => route.source)
           .filter(Boolean);
       } catch {
         return [];
@@ -914,7 +970,7 @@
       const existingPaths = new Set(allRoutes().map((route) => normalizePath(route.path)));
       const candidates = [
         ...candidateRoutes,
-        ...(await redirectCandidates())
+        ...(await redirectCandidates(existingPaths))
       ]
         .map(normalizePath)
         .filter((path) => path && path !== "/admin/" && !path.startsWith("/mockups/"))

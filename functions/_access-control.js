@@ -290,10 +290,6 @@ export function parseAllowedEmails(value) {
   ];
 }
 
-function routeDefinition(id) {
-  return DEFAULT_ACCESS_RULES.find((route) => route.id === id);
-}
-
 export function envAllowedEmails(env) {
   return [
     ...new Set([
@@ -385,51 +381,6 @@ export function routeForPath(pathname, config) {
       return bLength - aLength;
     })
     .find((rule) => pathMatchesRule(pathname, rule));
-}
-
-function parseCookies(value) {
-  return Object.fromEntries(
-    String(value || "")
-      .split(";")
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        const separator = part.indexOf("=");
-        if (separator === -1) return [part, ""];
-        return [part.slice(0, separator), decodeURIComponent(part.slice(separator + 1))];
-      })
-  );
-}
-
-function decodeBase64Url(value) {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(
-    Math.ceil(value.length / 4) * 4,
-    "="
-  );
-  return atob(padded);
-}
-
-function emailFromAccessJwt(token) {
-  const [, payload] = String(token || "").split(".");
-  if (!payload) return "";
-
-  try {
-    const claims = JSON.parse(decodeBase64Url(payload));
-    return String(claims.email || claims.common_name || "").toLowerCase();
-  } catch {
-    return "";
-  }
-}
-
-export function accessSessionEmail(request) {
-  const headerEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
-  if (headerEmail) return headerEmail.toLowerCase();
-
-  const assertionEmail = emailFromAccessJwt(request.headers.get("Cf-Access-Jwt-Assertion"));
-  if (assertionEmail) return assertionEmail;
-
-  const cookies = parseCookies(request.headers.get("cookie"));
-  return emailFromAccessJwt(cookies.CF_Authorization);
 }
 
 export function isLocalRequest(url) {

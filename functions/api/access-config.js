@@ -44,7 +44,7 @@ function publicConfig(config, env) {
       summary: route.summary,
       mode: savedRouteModes.get(route.id) || route.mode,
       defaultMode: DEFAULT_ACCESS_RULES.find((definition) => definition.id === route.id)?.mode || route.mode,
-      cloudflareDomains: route.cloudflareDomains
+      domains: route.cloudflareDomains
     }))
   };
 }
@@ -81,19 +81,8 @@ export async function onRequestPut({ request, env, data }) {
   }
 }
 
-export async function onRequestPost({ request }) {
-  const url = new URL(request.url);
-  if (url.searchParams.get("action") !== "sync") {
-    return json({ error: "Unknown access configuration action." }, { status: 400 });
-  }
-
-  return json(
-    {
-      error:
-        "External access sync is disabled. Route access is enforced by the Mojo AI Summits app session middleware."
-    },
-    { status: 410 }
-  );
+export async function onRequestPost() {
+  return json({ error: "External access sync is not part of Mojo Auth." }, { status: 405 });
 }
 
 export async function onRequestDelete({ request, env, data }) {
