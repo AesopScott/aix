@@ -44,7 +44,7 @@ function publicConfig(config, env) {
       summary: route.summary,
       mode: savedRouteModes.get(route.id) || route.mode,
       defaultMode: DEFAULT_ACCESS_RULES.find((definition) => definition.id === route.id)?.mode || route.mode,
-      domains: route.cloudflareDomains
+      domains: route.domains
     }))
   };
 }
@@ -59,7 +59,6 @@ export async function onRequestGet({ request, env, data }) {
     modes: ACCESS_MODES.map((mode) => ({ value: mode, label: accessModeLabel(mode) })),
     authProvider: "mojo-auth",
     storage: authStorageKind(env),
-    syncAvailable: false,
     config: publicConfig(config, env)
   });
 }

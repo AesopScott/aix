@@ -882,7 +882,7 @@
         route.group,
         route.kind,
         route.mode,
-        ...(route.cloudflareDomains || [])
+        ...(route.domains || [])
       ].join(" ").toLowerCase();
     }
 

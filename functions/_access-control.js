@@ -11,7 +11,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Internal route directory and operating links.",
     mode: "allowlist",
     matches: [{ exact: "/admin" }, { prefix: "/admin/" }],
-    cloudflareDomains: ["mojoaisummits.com/admin", "mojoaisummits.com/admin/*"]
+    domains: ["mojoaisummits.com/admin", "mojoaisummits.com/admin/*"]
   },
   {
     id: "access",
@@ -21,7 +21,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Authentication and route access controls.",
     mode: "public",
     matches: [{ exact: "/access" }, { prefix: "/access/" }],
-    cloudflareDomains: ["mojoaisummits.com/access", "mojoaisummits.com/access/*"]
+    domains: ["mojoaisummits.com/access", "mojoaisummits.com/access/*"]
   },
   {
     id: "setup",
@@ -31,7 +31,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Master checklist, owners, due dates, and status.",
     mode: "allowlist",
     matches: [{ exact: "/setup" }, { prefix: "/setup/" }],
-    cloudflareDomains: ["mojoaisummits.com/setup", "mojoaisummits.com/setup/*"]
+    domains: ["mojoaisummits.com/setup", "mojoaisummits.com/setup/*"]
   },
   {
     id: "events",
@@ -41,7 +41,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Internal event playbook builder and event pages.",
     mode: "allowlist",
     matches: [{ exact: "/events" }, { prefix: "/events/" }],
-    cloudflareDomains: ["mojoaisummits.com/events", "mojoaisummits.com/events/*"]
+    domains: ["mojoaisummits.com/events", "mojoaisummits.com/events/*"]
   },
   {
     id: "crm",
@@ -51,7 +51,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "VIP registrants, notes, statuses, and exports.",
     mode: "allowlist",
     matches: [{ exact: "/crm" }, { prefix: "/crm/" }],
-    cloudflareDomains: ["mojoaisummits.com/crm", "mojoaisummits.com/crm/*"]
+    domains: ["mojoaisummits.com/crm", "mojoaisummits.com/crm/*"]
   },
   {
     id: "storage",
@@ -61,7 +61,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Private files, event assets, media, and receipts.",
     mode: "allowlist",
     matches: [{ exact: "/storage" }, { prefix: "/storage/" }],
-    cloudflareDomains: ["mojoaisummits.com/storage", "mojoaisummits.com/storage/*"]
+    domains: ["mojoaisummits.com/storage", "mojoaisummits.com/storage/*"]
   },
   {
     id: "budget",
@@ -71,7 +71,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Receipts, reimbursement state, and expense reporting.",
     mode: "allowlist",
     matches: [{ exact: "/budget" }, { prefix: "/budget/" }],
-    cloudflareDomains: ["mojoaisummits.com/budget", "mojoaisummits.com/budget/*"]
+    domains: ["mojoaisummits.com/budget", "mojoaisummits.com/budget/*"]
   },
   {
     id: "mockups",
@@ -81,7 +81,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Internal mockups and website experiments.",
     mode: "allowlist",
     matches: [{ exact: "/mockups" }, { prefix: "/mockups/" }],
-    cloudflareDomains: ["mojoaisummits.com/mockups", "mojoaisummits.com/mockups/*"]
+    domains: ["mojoaisummits.com/mockups", "mojoaisummits.com/mockups/*"]
   },
   {
     id: "home",
@@ -91,7 +91,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Primary public website entry point.",
     mode: "public",
     matches: [{ exact: "/" }],
-    cloudflareDomains: ["mojoaisummits.com"]
+    domains: ["mojoaisummits.com"]
   },
   {
     id: "dallas",
@@ -101,7 +101,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Public Dallas summit page.",
     mode: "public",
     matches: [{ exact: "/dallas" }, { prefix: "/dallas/" }],
-    cloudflareDomains: ["mojoaisummits.com/dallas", "mojoaisummits.com/dallas/*"]
+    domains: ["mojoaisummits.com/dallas", "mojoaisummits.com/dallas/*"]
   },
   {
     id: "virtual",
@@ -111,7 +111,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Public Fall 2026 virtual event series page.",
     mode: "public",
     matches: [{ exact: "/virtual" }, { prefix: "/virtual/" }],
-    cloudflareDomains: ["mojoaisummits.com/virtual", "mojoaisummits.com/virtual/*"]
+    domains: ["mojoaisummits.com/virtual", "mojoaisummits.com/virtual/*"]
   },
   {
     id: "vip-registration",
@@ -121,7 +121,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Direct invite registration surface.",
     mode: "public",
     matches: [{ exact: "/vip-registration" }, { prefix: "/vip-registration/" }],
-    cloudflareDomains: ["mojoaisummits.com/vip-registration", "mojoaisummits.com/vip-registration/*"]
+    domains: ["mojoaisummits.com/vip-registration", "mojoaisummits.com/vip-registration/*"]
   },
   {
     id: "privacy",
@@ -131,7 +131,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Public privacy policy.",
     mode: "public",
     matches: [{ exact: "/privacy" }, { prefix: "/privacy/" }],
-    cloudflareDomains: ["mojoaisummits.com/privacy", "mojoaisummits.com/privacy/*"]
+    domains: ["mojoaisummits.com/privacy", "mojoaisummits.com/privacy/*"]
   },
   {
     id: "sms-terms",
@@ -141,7 +141,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Public SMS consent and terms page.",
     mode: "public",
     matches: [{ exact: "/sms-terms" }, { prefix: "/sms-terms/" }],
-    cloudflareDomains: ["mojoaisummits.com/sms-terms", "mojoaisummits.com/sms-terms/*"]
+    domains: ["mojoaisummits.com/sms-terms", "mojoaisummits.com/sms-terms/*"]
   },
   {
     id: "api-access-config",
@@ -151,7 +151,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Access console configuration endpoint.",
     mode: "allowlist",
     matches: [{ exact: "/api/access-config" }, { prefix: "/api/access-config/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/access-config", "mojoaisummits.com/api/access-config/*"]
+    domains: ["mojoaisummits.com/api/access-config", "mojoaisummits.com/api/access-config/*"]
   },
   {
     id: "api-access-users",
@@ -161,7 +161,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "App-owned user database management endpoint.",
     mode: "allowlist",
     matches: [{ exact: "/api/access-users" }, { prefix: "/api/access-users/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/access-users", "mojoaisummits.com/api/access-users/*"]
+    domains: ["mojoaisummits.com/api/access-users", "mojoaisummits.com/api/access-users/*"]
   },
   {
     id: "api-auth",
@@ -171,7 +171,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Login, logout, session, and bootstrap endpoints.",
     mode: "public",
     matches: [{ exact: "/api/auth" }, { prefix: "/api/auth/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/auth", "mojoaisummits.com/api/auth/*"]
+    domains: ["mojoaisummits.com/api/auth", "mojoaisummits.com/api/auth/*"]
   },
   {
     id: "api-setup-state",
@@ -181,7 +181,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Shared checklist assignment state.",
     mode: "allowlist",
     matches: [{ exact: "/api/setup-state" }, { prefix: "/api/setup-state/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/setup-state", "mojoaisummits.com/api/setup-state/*"]
+    domains: ["mojoaisummits.com/api/setup-state", "mojoaisummits.com/api/setup-state/*"]
   },
   {
     id: "api-events",
@@ -191,7 +191,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Event playbook creation and retrieval.",
     mode: "allowlist",
     matches: [{ exact: "/api/events" }, { prefix: "/api/events/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/events", "mojoaisummits.com/api/events/*"]
+    domains: ["mojoaisummits.com/api/events", "mojoaisummits.com/api/events/*"]
   },
   {
     id: "api-crm",
@@ -201,7 +201,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "VIP registrant records and exports.",
     mode: "allowlist",
     matches: [{ exact: "/api/crm" }, { prefix: "/api/crm/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/crm", "mojoaisummits.com/api/crm/*"]
+    domains: ["mojoaisummits.com/api/crm", "mojoaisummits.com/api/crm/*"]
   },
   {
     id: "api-storage",
@@ -211,7 +211,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Private file upload, listing, and download.",
     mode: "allowlist",
     matches: [{ exact: "/api/storage" }, { prefix: "/api/storage/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/storage", "mojoaisummits.com/api/storage/*"]
+    domains: ["mojoaisummits.com/api/storage", "mojoaisummits.com/api/storage/*"]
   },
   {
     id: "api-budget",
@@ -221,7 +221,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Budget ledger, receipt review, and exports.",
     mode: "allowlist",
     matches: [{ exact: "/api/budget" }, { prefix: "/api/budget/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/budget", "mojoaisummits.com/api/budget/*"]
+    domains: ["mojoaisummits.com/api/budget", "mojoaisummits.com/api/budget/*"]
   },
   {
     id: "api-invite-request",
@@ -231,7 +231,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Public invite request form endpoint.",
     mode: "public",
     matches: [{ exact: "/api/invite-request" }, { prefix: "/api/invite-request/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/invite-request", "mojoaisummits.com/api/invite-request/*"]
+    domains: ["mojoaisummits.com/api/invite-request", "mojoaisummits.com/api/invite-request/*"]
   },
   {
     id: "api-phone-verification",
@@ -241,7 +241,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Public guest phone verification endpoint.",
     mode: "public",
     matches: [{ exact: "/api/phone-verification" }, { prefix: "/api/phone-verification/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/phone-verification", "mojoaisummits.com/api/phone-verification/*"]
+    domains: ["mojoaisummits.com/api/phone-verification", "mojoaisummits.com/api/phone-verification/*"]
   },
   {
     id: "api-vip-registration",
@@ -251,7 +251,7 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Public VIP registration submission endpoint.",
     mode: "public",
     matches: [{ exact: "/api/vip-registration" }, { prefix: "/api/vip-registration/" }],
-    cloudflareDomains: ["mojoaisummits.com/api/vip-registration", "mojoaisummits.com/api/vip-registration/*"]
+    domains: ["mojoaisummits.com/api/vip-registration", "mojoaisummits.com/api/vip-registration/*"]
   }
 ];
 
