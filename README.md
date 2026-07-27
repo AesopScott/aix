@@ -3,7 +3,7 @@
 Static Cloudflare Pages site for Mojo AI Summits.
 
 - Production: https://mojoaisummits.com/
-- Internal admin links: https://mojoaisummits.com/admin/
+- Company hub: https://mojoaisummits.com/admin/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
 - VIP registration: https://mojoaisummits.com/vip-registration/
 - Internal CRM: https://mojoaisummits.com/crm/
@@ -13,9 +13,9 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Internal budget and P&L: https://mojoaisummits.com/budget/
 - Cloudflare Pages project: `mojo-ai-summits`
 
-## Internal Admin Links
+## Company Hub
 
-The internal admin hub lives at `/admin/` and lists company-only routes that should not appear in the public site navigation.
+The company hub lives at `/admin/` and lists company-only routes that should not appear in the public site navigation.
 
 Authentication is enforced in two layers:
 
@@ -30,7 +30,6 @@ Protected internal routes:
 - `/events/` and `/api/events`
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
-- `/mockups/`
 
 Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
 

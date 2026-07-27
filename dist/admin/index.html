@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/assets/logo-badge.png">
   <link rel="apple-touch-icon" href="/assets/logo-badge.png">
-  <title>Mojo AI Summits Admin Links</title>
+  <title>Mojo AI Summits Company Hub</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
     :root {
       --deep-navy: #0A0F1E;
       --electric-blue: #1666FF;
@@ -57,32 +59,94 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 1.2rem clamp(1rem, 4vw, 3rem);
       border-bottom: 1px solid var(--line);
       background: rgba(10, 15, 30, 0.88);
       backdrop-filter: blur(16px);
       box-shadow: 0 1px 28px rgba(0, 230, 255, 0.08);
     }
 
-    .brand {
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      width: min(1240px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1rem 0;
+    }
+
+    .brand-stack {
       display: grid;
-      gap: 0.25rem;
+      gap: 0.45rem;
       min-width: 0;
     }
 
-    .brand strong {
-      font-size: clamp(1rem, 2vw, 1.4rem);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--white);
-      text-shadow: 0 0 24px rgba(22, 102, 255, 0.42);
+    .brand-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      width: fit-content;
+      text-decoration: none;
+      cursor: pointer;
     }
 
-    .brand span,
+    .brand-mark {
+      height: 39px;
+      width: auto;
+      display: block;
+      transform-origin: center;
+      transition: transform 3.6s cubic-bezier(.22, 1, .36, 1), filter 3.6s cubic-bezier(.22, 1, .36, 1);
+      will-change: transform;
+    }
+
+    .brand-lockup:hover .brand-mark,
+    .brand-mark:hover {
+      transform: scale(1.5);
+      filter: drop-shadow(0 0 22px rgba(0, 230, 255, 0.28));
+    }
+
+    .brand-divider {
+      width: 1px;
+      height: 35px;
+      background: linear-gradient(to bottom, transparent, rgba(0, 230, 255, 0.9), transparent);
+      box-shadow: 0 0 14px rgba(0, 230, 255, 0.24);
+    }
+
+    .brand-name {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .brand-primary {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      background: linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 18px rgba(0, 230, 255, .16);
+    }
+
+    .brand-secondary {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: .38em;
+      color: rgba(222, 235, 255, .78);
+      padding-left: .38em;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .hub-label,
     .eyebrow,
     label,
     .tag {
@@ -252,6 +316,14 @@
       white-space: nowrap;
     }
 
+    .hub-label {
+      display: block;
+      padding-left: 51px;
+      color: rgba(222, 235, 255, 0.78);
+      font-size: 0.7rem;
+      letter-spacing: 0.32em;
+    }
+
     .tag.warning {
       border-color: rgba(255, 211, 106, 0.38);
       background: rgba(255, 211, 106, 0.08);
@@ -409,7 +481,6 @@
     }
 
     @media (max-width: 900px) {
-      header,
       .hero {
         grid-template-columns: 1fr;
       }
@@ -433,29 +504,58 @@
       .group-header {
         display: grid;
       }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .brand-mark { height: 34px; }
+      .brand-divider { height: 30px; }
+      .brand-primary {
+        font-size: 20px;
+        letter-spacing: .03em;
+      }
+      .brand-secondary {
+        font-size: 9.5px;
+        letter-spacing: .32em;
+        padding-left: .32em;
+      }
+      .hub-label {
+        padding-left: 46px;
+      }
     }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">
-      <strong>Mojo AI Summits</strong>
-      <span>Admin Links</span>
+    <div class="topbar">
+      <div class="brand-stack">
+        <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+          <img class="brand-mark" src="/assets/logo-mark.png" alt="">
+          <span class="brand-divider" aria-hidden="true"></span>
+          <span class="brand-name" aria-hidden="true">
+            <span class="brand-primary">MOJO AI</span>
+            <span class="brand-secondary">Summits</span>
+          </span>
+        </a>
+        <span class="hub-label">Company Hub</span>
+      </div>
+      <nav aria-label="Company hub shortcuts">
+        <a href="/crm/">CRM</a>
+        <a href="/setup/">Setup</a>
+        <a href="/storage/">Storage</a>
+        <a href="/budget/">Budget</a>
+      </nav>
     </div>
-    <nav aria-label="Admin shortcuts">
-      <a href="/crm/">CRM</a>
-      <a href="/setup/">Setup</a>
-      <a href="/storage/">Storage</a>
-      <a href="/budget/">Budget</a>
-    </nav>
   </header>
 
   <main>
     <section class="hero" aria-labelledby="page-title">
       <div class="hero-copy">
         <p class="eyebrow">Company hub</p>
-        <h1 id="page-title">Private page links.</h1>
-        <p>Internal operating pages, protected data tools, design review links, and guest-share surfaces for Mojo AI Summits.</p>
+        <h1 id="page-title">Operating links.</h1>
+        <p>Internal operating pages, protected data tools, and guest-share surfaces for Mojo AI Summits.</p>
         <div class="status-strip" aria-label="Route status">
           <span class="tag ok">Cloudflare Access intended</span>
           <span class="tag warning">Do not publish in public nav</span>
@@ -463,15 +563,15 @@
         </div>
       </div>
 
-      <aside class="control-panel" aria-label="Admin link controls">
+      <aside class="control-panel" aria-label="Company hub controls">
         <div class="metric-row">
-          <div class="metric"><strong id="routeCount">0</strong><span>listed private and controlled routes</span></div>
+          <div class="metric"><strong id="routeCount">0</strong><span>listed internal and controlled routes</span></div>
           <div class="metric"><strong id="groupCount">0</strong><span>route groups</span></div>
         </div>
         <div class="filters">
           <label class="field" for="searchInput">
             Search
-            <input id="searchInput" type="search" placeholder="Find CRM, receipts, mockups">
+            <input id="searchInput" type="search" placeholder="Find CRM, receipts, setup">
           </label>
           <label class="field" for="groupFilter">
             Group
@@ -482,11 +582,11 @@
     </section>
 
     <div class="groups" id="groups"></div>
-    <div class="empty" id="emptyState">No admin links match the current filters.</div>
+    <div class="empty" id="emptyState">No company hub links match the current filters.</div>
 
     <section class="system-note" aria-labelledby="access-title">
       <h2 id="access-title">Access Boundary</h2>
-      <p><strong>Internal routes:</strong> protect `/admin/*`, `/crm/*`, `/setup/*`, `/events/*`, `/storage/*`, `/budget/*`, and `/mockups/*` with Cloudflare Access before sharing broadly.</p>
+      <p><strong>Internal routes:</strong> protect `/admin/*`, `/crm/*`, `/setup/*`, `/events/*`, `/storage/*`, and `/budget/*` with Cloudflare Access before sharing broadly.</p>
       <p><strong>Guest-share route:</strong> `/vip-registration/` is intentionally available for invited guests and previews, but it should stay out of public navigation.</p>
     </section>
   </main>
@@ -532,110 +632,6 @@
         summary: "Receipt costs, tax categories, reimbursement status, event filters, and budget CSV export.",
         status: "Access Protected",
         tags: ["budget", "receipts", "reimbursement"]
-      },
-      {
-        group: "Design Review",
-        title: "Website Mockups",
-        path: "/mockups/",
-        summary: "Twelve rebuild directions for internal review and design selection.",
-        status: "Internal",
-        tags: ["mockups", "website", "design"]
-      },
-      {
-        group: "Design Review",
-        title: "Cherry and Brass",
-        path: "/mockups/mockup1/",
-        summary: "Warm editorial direction with cherry wood, brass rules, and ivory typography.",
-        status: "Internal",
-        tags: ["mockup", "direction 01"]
-      },
-      {
-        group: "Design Review",
-        title: "Obsidian Glass",
-        path: "/mockups/mockup2/",
-        summary: "Cool glass direction with chrome lines and centered symmetry.",
-        status: "Internal",
-        tags: ["mockup", "direction 02"]
-      },
-      {
-        group: "Design Review",
-        title: "Ivory Letterpress",
-        path: "/mockups/mockup3/",
-        summary: "Invitation-inspired direction with cream stock and gold foil rules.",
-        status: "Internal",
-        tags: ["mockup", "direction 03"]
-      },
-      {
-        group: "Design Review",
-        title: "Cigar Room",
-        path: "/mockups/mockup4/",
-        summary: "Private late-evening direction with oxblood leather and warm lamp glow.",
-        status: "Internal",
-        tags: ["mockup", "direction 04"]
-      },
-      {
-        group: "Design Review",
-        title: "Machined Chrome",
-        path: "/mockups/mockup5/",
-        summary: "Brushed steel direction with hard grid and spec-sheet precision.",
-        status: "Internal",
-        tags: ["mockup", "direction 05"]
-      },
-      {
-        group: "Design Review",
-        title: "Emerald Club",
-        path: "/mockups/mockup6/",
-        summary: "Green baize and brass-plaque direction with city board structure.",
-        status: "Internal",
-        tags: ["mockup", "direction 06"]
-      },
-      {
-        group: "Design Review",
-        title: "Midnight Private Bank",
-        path: "/mockups/mockup7/",
-        summary: "Restrained navy and silver direction with numbered sections.",
-        status: "Internal",
-        tags: ["mockup", "direction 07"]
-      },
-      {
-        group: "Design Review",
-        title: "Onyx and Champagne",
-        path: "/mockups/mockup8/",
-        summary: "Minimal high-contrast direction with Didone scale and negative space.",
-        status: "Internal",
-        tags: ["mockup", "direction 08"]
-      },
-      {
-        group: "Design Review",
-        title: "Bourbon and Smoked Glass",
-        path: "/mockups/mockup9/",
-        summary: "Amber smoked-glass direction with warm modern polish.",
-        status: "Internal",
-        tags: ["mockup", "direction 09"]
-      },
-      {
-        group: "Design Review",
-        title: "Broadsheet",
-        path: "/mockups/mockup10/",
-        summary: "Printed-record direction with masthead typography and column rules.",
-        status: "Internal",
-        tags: ["mockup", "direction 10"]
-      },
-      {
-        group: "Design Review",
-        title: "Onyx and Champagne - Scott",
-        path: "/mockups/mockup11/",
-        summary: "Working copy of direction 08 for the next design pass.",
-        status: "Internal",
-        tags: ["mockup", "direction 11", "scott"]
-      },
-      {
-        group: "Design Review",
-        title: "Ivory Letterpress - Jodi",
-        path: "/mockups/mockup12/",
-        summary: "Working copy of direction 03 for the next design pass.",
-        status: "Internal",
-        tags: ["mockup", "direction 12", "jodi"]
       },
       {
         group: "Guest Share",

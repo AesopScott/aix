@@ -41,6 +41,23 @@
       display: grid;
       grid-template-columns: 282px minmax(0, 1fr);
     }
+    .shell.generator-mode {
+      display: block;
+    }
+    .shell.generator-mode .sidebar {
+      display: none;
+    }
+    .shell.generator-mode .main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding-top: clamp(30px, 6vw, 72px);
+    }
+    .shell.generator-mode .topbar {
+      align-items: flex-end;
+    }
+    .shell.generator-mode .panel {
+      margin-bottom: 24px;
+    }
     .sidebar {
       position: sticky;
       top: 0;
@@ -427,7 +444,7 @@
   </style>
 </head>
 <body>
-  <div class="shell">
+  <div class="shell" id="appShell">
     <aside class="sidebar">
       <a class="brand" href="/events/">
         <img src="/assets/logo-badge.png" alt="MoJo AI Summits">
@@ -1016,6 +1033,14 @@
 
     function renderNav() {
       const nav = document.getElementById("sideNav");
+      if (!app.current) {
+        nav.innerHTML = "";
+        document.getElementById("milestonePct").textContent = "0%";
+        document.getElementById("milestoneBar").style.setProperty("--progress", "0%");
+        document.getElementById("blockedCount").textContent = "0 blocked";
+        document.getElementById("openCount").textContent = "0 open";
+        return;
+      }
       nav.innerHTML = sections.map((section) => {
         const count = countSection(section);
         return `<a href="#${section.id}"><span class="nav-dot" style="background:${count ? "var(--cyan)" : "var(--line-2)"}"></span><span>${escapeHtml(section.title)}</span><span class="nav-count">${count || "-"}</span></a>`;
@@ -1075,6 +1100,7 @@
 
     function renderPlaybook() {
       const profile = app.current?.playbook?.profile || {};
+      document.getElementById("appShell").classList.toggle("generator-mode", !app.current);
       document.title = app.current ? `${profile.name || app.current.title} - Event Playbook` : "MoJo Event Playbook Generator";
       document.getElementById("pageKicker").textContent = app.current ? `${profile.format || "Hybrid"} playbook` : "MoJo Event Factory";
       document.getElementById("pageTitle").textContent = app.current ? (profile.name || app.current.title || "Untitled event") : "Generate an Event Playbook";
