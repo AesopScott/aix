@@ -10,7 +10,7 @@
 - Included policy routes: `/privacy/` and `/sms-terms/`.
 - Included controlled-share route: `/vip-registration/`, for invite-code previews and direct guest invite links.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.
-- Access guidance: protect `/admin/`, `/crm/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, and internal APIs `/api/crm`, `/api/setup-state`, `/api/events`, `/api/storage`, and `/api/budget` with Mojo Auth. `/access/` is the public login/configuration shell; `/api/access-config` and `/api/access-users` require an owner/admin Mojo Auth session. Keep `/crm/api/public/...` public for invite-code lookup and guest registration callbacks.
+- Access guidance: access control is disabled by default while accounts and page policies are being defined. When enabled in `/access/`, protect `/admin/`, `/crm/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, and internal APIs `/api/crm`, `/api/setup-state`, `/api/events`, `/api/storage`, and `/api/budget` with Mojo Auth route modes. `/access/` is the public login/configuration shell; `/api/access-config` and `/api/access-users` require an owner/admin Mojo Auth session for mutations and user management. Keep `/crm/api/public/...` public for invite-code lookup and guest registration callbacks.
 
 ## Internal Event Playbook
 
