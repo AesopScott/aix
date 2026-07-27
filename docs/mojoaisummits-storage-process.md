@@ -80,6 +80,8 @@ This repo includes a manual GitHub Actions workflow for creating the Access appl
 
 Run the workflow with a comma-separated list of allowed emails. The initial safe default is `ravenshroud@gmail.com`.
 
+As of July 26, 2026, the existing `CLOUDFLARE_API_TOKEN` can deploy Pages and manage R2, but it does not have permission to manage Cloudflare Access applications. The workflow fails with Cloudflare API error `10000: Authentication error` until the token is replaced or expanded with Zero Trust / Access application write permission.
+
 ## Local Development
 
 By default, the API requires Cloudflare Access headers. For local testing only, create a local `.dev.vars` file that is not committed:
