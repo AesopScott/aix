@@ -1232,11 +1232,25 @@
 
     async function createFirstOwnerInvite() {
       clearNotice();
+      elements.firstOwnerInviteResult.textContent = "";
+      if (location.protocol === "file:") {
+        elements.firstOwnerInviteResult.textContent = "Open the deployed /access/ page or run Cloudflare Pages locally. This file view cannot call /api/auth/invite.";
+        return;
+      }
+
+      const bootstrapToken = elements.firstOwnerInviteToken.value.trim();
+      if (!bootstrapToken) {
+        elements.firstOwnerInviteResult.textContent = "Enter the temporary bootstrap token first.";
+        return;
+      }
+
+      elements.firstOwnerInviteButton.disabled = true;
+      elements.firstOwnerInviteResult.textContent = "Creating Scott owner invite...";
       try {
         const response = await fetch("/api/auth/invite", {
           method: "POST",
           headers: {
-            authorization: `Bearer ${elements.firstOwnerInviteToken.value}`,
+            authorization: `Bearer ${bootstrapToken}`,
             "content-type": "application/json"
           },
           body: JSON.stringify({ action: "first-owner" })
@@ -1246,7 +1260,10 @@
         elements.firstOwnerInviteResult.innerHTML = `<a href="${escapeHtml(payload.acceptUrl)}">Open Scott owner invite</a>`;
         showNotice("Scott owner invite created. Open the invite link to set your password.", "ok");
       } catch (error) {
+        elements.firstOwnerInviteResult.textContent = error.message;
         showNotice(error.message, "error");
+      } finally {
+        elements.firstOwnerInviteButton.disabled = false;
       }
     }
 
