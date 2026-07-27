@@ -10,7 +10,16 @@ const jsonHeaders = {
 
 const receiptOwners = new Set(["scott", "jodi", "robert", "ron", "angel", "charlie", "unassigned"]);
 const receiptEvents = new Set(["Global", "Dallas", "Denver", "Raleigh", "Chicago"]);
-const allowedStatuses = new Set(["needs-review", "reviewed", "reimbursed", "excluded"]);
+const allowedStatuses = new Set([
+  "needs-review",
+  "needs-info",
+  "approved",
+  "ready-for-reimbursement",
+  "reimbursed",
+  "reconciled",
+  "excluded",
+  "reviewed"
+]);
 const taxCategories = new Set([
   "Unassigned",
   "Advertising and marketing",
@@ -420,7 +429,9 @@ function mergeReceipt(ledger, object) {
   const inferredAmount = inferAmountFromName(name);
   const extracted = existing.extraction?.status === "extracted" ? existing.extraction : {};
   const uploadedDate = object.uploaded ? object.uploaded.toISOString().slice(0, 10) : "";
-  const allowAutomaticUpdate = !existing.reviewedAt && existing.status !== "reviewed" && existing.status !== "reimbursed";
+  const allowAutomaticUpdate =
+    !existing.reviewedAt &&
+    !["reviewed", "approved", "ready-for-reimbursement", "reimbursed", "reconciled"].includes(existing.status);
   const existingReceiptDate =
     allowAutomaticUpdate && existing.receiptDate === uploadedDate ? "" : existing.receiptDate || "";
   const amount =
@@ -567,6 +578,8 @@ function summarize(ledger) {
     unpricedCount,
     needsReview,
     reviewedCount: activeRows.filter((row) => row.status === "reviewed").length,
+    approvedCount: activeRows.filter((row) => row.status === "approved").length,
+    readyForReimbursementCount: activeRows.filter((row) => row.status === "ready-for-reimbursement").length,
     needsReimbursementCount: activeRows.filter((row) => row.needsReimbursement).length,
     reimbursedCount: activeRows.filter((row) => row.reimbursed || row.status === "reimbursed").length,
     byOwner,
@@ -625,7 +638,7 @@ async function updateReceipt(request, env, access) {
     status: nextStatus,
     excluded: nextStatus === "excluded",
     reviewedAt:
-      nextStatus === "reviewed" || nextStatus === "reimbursed" || nextStatus === "excluded"
+      ["reviewed", "approved", "ready-for-reimbursement", "reimbursed", "reconciled", "excluded"].includes(nextStatus)
         ? new Date().toISOString()
         : existing.reviewedAt || "",
     reviewedBy: access.email

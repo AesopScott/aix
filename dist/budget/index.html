@@ -327,8 +327,11 @@
         <select id="statusFilter">
           <option value="all">All statuses</option>
           <option value="needs-review">Needs review</option>
-          <option value="reviewed">Reviewed</option>
+          <option value="needs-info">Needs info</option>
+          <option value="approved">Approved</option>
+          <option value="ready-for-reimbursement">Ready for reimbursement</option>
           <option value="reimbursed">Reimbursed</option>
+          <option value="reconciled">Reconciled</option>
           <option value="excluded">Excluded</option>
         </select>
       </label>
@@ -393,6 +396,16 @@
       "Taxes and licenses",
       "Other"
     ];
+    const budgetStatuses = [
+      ["needs-review", "Needs review"],
+      ["needs-info", "Needs info"],
+      ["approved", "Approved"],
+      ["ready-for-reimbursement", "Ready for reimbursement"],
+      ["reimbursed", "Reimbursed"],
+      ["reconciled", "Reconciled"],
+      ["excluded", "Excluded"],
+      ["reviewed", "Reviewed"]
+    ];
     const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
     const ownerFilter = document.querySelector("#ownerFilter");
     const statusFilter = document.querySelector("#statusFilter");
@@ -425,12 +438,14 @@
       notice.className = `notice ${type}`.trim();
     }
 
-    function statusPill(row) {
-      const warn = row.status === "needs-review" || !(Number(row.amount) > 0);
-      const label = row.status === "needs-review" && !(Number(row.amount) > 0)
-        ? "Needs amount"
-        : row.status.replace(/-/g, " ");
-      return `<span class="pill ${warn ? "warn" : ""}">${escapeHtml(label)}</span>`;
+    function statusLabel(status) {
+      return budgetStatuses.find(([value]) => value === status)?.[1] || String(status || "needs-review").replace(/-/g, " ");
+    }
+
+    function statusOptions(selected = "needs-review") {
+      return budgetStatuses
+        .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`)
+        .join("");
     }
 
     function taxCategoryOptions(selected = "Unassigned") {
@@ -521,7 +536,11 @@
               </label>
             </div>
           </td>
-          <td>${statusPill(row)}</td>
+          <td>
+            <select class="inline-select" data-inline-status="${encodeURIComponent(row.key)}">
+              ${statusOptions(row.status || "needs-review")}
+            </select>
+          </td>
         </tr>
       `).join("");
     }
@@ -583,9 +602,10 @@
 
     rowsElement.addEventListener("change", (event) => {
       const taxKey = event.target.dataset.inlineTax;
+      const statusKey = event.target.dataset.inlineStatus;
       const needsKey = event.target.dataset.inlineNeeds;
       const reimbursedKey = event.target.dataset.inlineReimbursed;
-      const key = decodeURIComponent(taxKey || needsKey || reimbursedKey || "");
+      const key = decodeURIComponent(taxKey || statusKey || needsKey || reimbursedKey || "");
       if (!key) return;
 
       const row = state.rows.find((item) => item.key === key);
@@ -593,13 +613,28 @@
 
       const next = normalizeRow(row);
       if (taxKey) next.taxCategory = event.target.value;
+      if (statusKey) {
+        next.status = event.target.value;
+        if (next.status === "ready-for-reimbursement") {
+          next.needsReimbursement = true;
+          next.reimbursed = false;
+        } else if (next.status === "reimbursed") {
+          next.needsReimbursement = false;
+          next.reimbursed = true;
+        } else if (next.status === "excluded") {
+          next.needsReimbursement = false;
+          next.reimbursed = false;
+        } else if (next.status !== "reconciled") {
+          next.reimbursed = false;
+        }
+      }
       if (needsKey) next.needsReimbursement = event.target.checked;
       if (reimbursedKey) next.reimbursed = event.target.checked;
       if (next.reimbursed) {
         next.needsReimbursement = false;
         next.status = "reimbursed";
       } else if (reimbursedKey && row.status === "reimbursed") {
-        next.status = "reviewed";
+        next.status = "approved";
       }
 
       saveReceipt(next, "Receipt updated.");
