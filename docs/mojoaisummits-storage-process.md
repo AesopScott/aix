@@ -82,7 +82,11 @@ This repo includes a manual GitHub Actions workflow for creating the Access appl
   - `Access: Apps and Policies Write`
   - `Access: Organizations, Identity Providers, and Groups Write`
 
-Run the workflow with a comma-separated list of allowed emails. The initial safe default is `ravenshroud@gmail.com`.
+Run the workflow with a comma-separated list of allowed emails. Until Mojo AI Summits full-time addresses are created, use:
+
+- `scott@mojoaistudio.com`
+- `jodi@sofractional.com`
+- `robert@cyber1grc.com`
 
 The workflow also ensures the `One-time PIN login` identity provider exists so approved users can receive a Cloudflare Access login code by email.
 

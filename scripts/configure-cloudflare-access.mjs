@@ -20,6 +20,17 @@ const apps = [
   }
 ];
 
+function appPayload(app) {
+  return {
+    name: app.name,
+    domain: app.domain,
+    type: "self_hosted",
+    session_duration: "24h",
+    auto_redirect_to_identity: false,
+    policies: [allowPolicyFor(app.name)]
+  };
+}
+
 if (!accountId || !token) {
   throw new Error("CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are required.");
 }
@@ -93,20 +104,18 @@ async function ensureOneTimePinIdentityProvider(existingProviders) {
 async function ensureApplication(app, existingApps) {
   const existing = existingApps.find((item) => item.domain === app.domain || item.name === app.name);
   if (existing) {
-    console.log(`Exists: ${app.name} (${app.domain})`);
-    return existing;
+    const updated = await cloudflare(`/apps/${existing.id}`, {
+      method: "PUT",
+      body: JSON.stringify(appPayload(app))
+    });
+
+    console.log(`Updated: ${app.name} (${app.domain})`);
+    return updated;
   }
 
   const created = await cloudflare("/apps", {
     method: "POST",
-    body: JSON.stringify({
-      name: app.name,
-      domain: app.domain,
-      type: "self_hosted",
-      session_duration: "24h",
-      auto_redirect_to_identity: false,
-      policies: [allowPolicyFor(app.name)]
-    })
+    body: JSON.stringify(appPayload(app))
   });
 
   console.log(`Created: ${app.name} (${app.domain})`);

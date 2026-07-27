@@ -6,7 +6,7 @@ on:
       allowed_emails:
         description: "Comma-separated emails allowed into the storage portal"
         required: true
-        default: "ravenshroud@gmail.com"
+        default: "scott@mojoaistudio.com,jodi@sofractional.com,robert@cyber1grc.com"
 
 permissions:
   contents: read
