@@ -7,8 +7,8 @@ import {
 } from "../_auth.js";
 import { json } from "../_access-control.js";
 
-async function requireManager(request, env) {
-  const user = await getSessionUser(request, env);
+async function requireManager(request, env, data) {
+  const user = data?.auth?.email ? data.auth : await getSessionUser(request, env);
   if (!canManageAccess(user)) {
     return {
       response: json({ error: "Only access administrators can manage users." }, { status: 403 })
@@ -17,8 +17,8 @@ async function requireManager(request, env) {
   return { user };
 }
 
-export async function onRequestGet({ request, env }) {
-  const access = await requireManager(request, env);
+export async function onRequestGet({ request, env, data }) {
+  const access = await requireManager(request, env, data);
   if (access.response) return access.response;
 
   return json({
@@ -27,8 +27,8 @@ export async function onRequestGet({ request, env }) {
   });
 }
 
-export async function onRequestPost({ request, env }) {
-  const access = await requireManager(request, env);
+export async function onRequestPost({ request, env, data }) {
+  const access = await requireManager(request, env, data);
   if (access.response) return access.response;
 
   const payload = await request.json().catch(() => null);
@@ -40,8 +40,8 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
-export async function onRequestPut({ request, env }) {
-  const access = await requireManager(request, env);
+export async function onRequestPut({ request, env, data }) {
+  const access = await requireManager(request, env, data);
   if (access.response) return access.response;
 
   const payload = await request.json().catch(() => null);
@@ -53,8 +53,8 @@ export async function onRequestPut({ request, env }) {
   }
 }
 
-export async function onRequestDelete({ request, env }) {
-  const access = await requireManager(request, env);
+export async function onRequestDelete({ request, env, data }) {
+  const access = await requireManager(request, env, data);
   if (access.response) return access.response;
 
   const url = new URL(request.url);

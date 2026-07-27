@@ -104,6 +104,12 @@ function authKv(env) {
   return env.MOJO_SUMMITS_SETUP_STATE;
 }
 
+function requireAuthKv(env) {
+  const kv = authKv(env);
+  if (!kv) throw new Error("Mojo Auth storage is not configured.");
+  return kv;
+}
+
 function publicUser(user) {
   if (!user) return null;
   return {
@@ -141,7 +147,7 @@ async function userIndex(env) {
 
 async function writeUserIndex(env, emails) {
   const uniqueEmails = [...new Set(emails.map(normalizeEmail).filter(Boolean))].sort();
-  await authKv(env)?.put(USER_INDEX_KEY, JSON.stringify(uniqueEmails));
+  await requireAuthKv(env).put(USER_INDEX_KEY, JSON.stringify(uniqueEmails));
 }
 
 export async function countUsers(env) {
@@ -231,7 +237,7 @@ export async function createUser(env, input = {}, actor = "") {
   }
 
   const emails = await userIndex(env);
-  await authKv(env)?.put(`${USER_PREFIX}${email}`, JSON.stringify(user));
+  await requireAuthKv(env).put(`${USER_PREFIX}${email}`, JSON.stringify(user));
   await writeUserIndex(env, [...emails, email]);
   return publicUser(user);
 }
@@ -248,7 +254,8 @@ export async function updateUser(env, email, input = {}, actor = "") {
     role: ["owner", "admin", "member"].includes(input.role) ? input.role : existing.role,
     status: ["active", "disabled"].includes(input.status) ? input.status : existing.status,
     updatedAt: now,
-    updatedBy: normalizeEmail(actor)
+    updatedBy: normalizeEmail(actor),
+    lastLoginAt: input.lastLoginAt === undefined ? existing.lastLoginAt : cleanText(input.lastLoginAt, 80)
   };
 
   if (input.password) {
@@ -261,16 +268,25 @@ export async function updateUser(env, email, input = {}, actor = "") {
     await db
       .prepare(
         `UPDATE auth_users
-         SET name = ?, role = ?, status = ?, password_hash = ?, updated_at = ?, updated_by = ?
+         SET name = ?, role = ?, status = ?, password_hash = ?, updated_at = ?, updated_by = ?, last_login_at = ?
          WHERE email = ?`
       )
-      .bind(next.name, next.role, next.status, next.passwordHash, now, next.updatedBy, normalizedEmail)
+      .bind(
+        next.name,
+        next.role,
+        next.status,
+        next.passwordHash,
+        now,
+        next.updatedBy,
+        next.lastLoginAt,
+        normalizedEmail
+      )
       .run();
     if (next.status === "disabled") await revokeUserSessions(env, normalizedEmail);
     return publicUser(next);
   }
 
-  await authKv(env)?.put(`${USER_PREFIX}${normalizedEmail}`, JSON.stringify(next));
+  await requireAuthKv(env).put(`${USER_PREFIX}${normalizedEmail}`, JSON.stringify(next));
   if (next.status === "disabled") await revokeUserSessions(env, normalizedEmail);
   return publicUser(next);
 }
@@ -311,7 +327,7 @@ export async function createSession(env, user, userAgent = "") {
       .bind(session.createdAt, user.email)
       .run();
   } else {
-    await authKv(env)?.put(`${SESSION_PREFIX}${tokenHash}`, JSON.stringify(session), {
+    await requireAuthKv(env).put(`${SESSION_PREFIX}${tokenHash}`, JSON.stringify(session), {
       expirationTtl: SESSION_TTL_SECONDS
     });
     await updateUser(env, user.email, { lastLoginAt: session.createdAt }, user.email).catch(() => null);
