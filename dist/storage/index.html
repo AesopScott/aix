@@ -430,6 +430,19 @@
       element.className = `notice ${type}`.trim();
     }
 
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function displayName(file) {
+      return file.name || String(file.key || "").split("/").pop() || "Untitled file";
+    }
+
     async function readJson(response) {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Storage request failed.");
@@ -461,7 +474,7 @@
         fileRows.innerHTML = data.objects
           .map((file) => `
             <tr>
-              <td class="file-key">${file.key}</td>
+              <td class="file-key" title="${escapeHtml(file.key)}">${escapeHtml(displayName(file))}</td>
               <td>${formatBytes(file.size)}</td>
               <td>${file.uploaded ? new Date(file.uploaded).toLocaleString() : ""}</td>
               <td>

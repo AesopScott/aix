@@ -143,8 +143,11 @@ function safeKey(value) {
 }
 
 function objectToRecord(object) {
+  const originalName = object.customMetadata?.originalName || safeDownloadName(object.key);
+
   return {
     key: object.key,
+    name: originalName,
     size: object.size,
     uploaded: object.uploaded ? object.uploaded.toISOString() : "",
     etag: object.etag || "",
