@@ -1,5 +1,6 @@
 import {
   accessModeLabel,
+  emailsForGroups,
   expandAccessConfig,
   isLocalRequest,
   json,
@@ -79,8 +80,11 @@ export async function onRequest(context) {
 
   const expanded = expandAccessConfig(config, context.env);
   const assignedRouteEmails = Array.isArray(route.allowedEmails) ? route.allowedEmails : [];
+  const assignedGroupEmails = emailsForGroups(expanded.groups, route.allowedGroupIds);
   const effectiveAllowedEmails = assignedRouteEmails.length
-    ? assignedRouteEmails
+    ? [...new Set([...assignedGroupEmails, ...assignedRouteEmails])].sort()
+    : assignedGroupEmails.length
+      ? assignedGroupEmails
     : route.mode === "allowlist"
       ? expanded.allowedEmails
       : [];

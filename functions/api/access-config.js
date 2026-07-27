@@ -3,6 +3,7 @@ import {
   DEFAULT_ACCESS_CONFIG,
   DEFAULT_ACCESS_RULES,
   accessModeLabel,
+  emailsForGroups,
   envAllowedEmails,
   expandAccessConfig,
   json,
@@ -37,6 +38,7 @@ function publicConfig(config, env) {
     allowedEmails: config.allowedEmails || [],
     envAllowedEmails: envAllowedEmails(env),
     effectiveAllowedEmails: expanded.allowedEmails,
+    groups: expanded.groups,
     routes: expanded.routes.map((route) => ({
       id: route.id,
       kind: route.kind,
@@ -44,9 +46,10 @@ function publicConfig(config, env) {
       label: route.label,
       summary: route.summary,
       mode: savedRoutes.get(route.id)?.mode || route.mode,
+      allowedGroupIds: route.allowedGroupIds || [],
       allowedEmails: route.allowedEmails || [],
-      effectiveAllowedEmails: (route.allowedEmails || []).length
-        ? route.allowedEmails
+      effectiveAllowedEmails: (route.allowedEmails || []).length || (route.allowedGroupIds || []).length
+        ? [...new Set([...emailsForGroups(expanded.groups, route.allowedGroupIds), ...(route.allowedEmails || [])])].sort()
         : route.mode === "allowlist"
           ? expanded.allowedEmails
           : [],

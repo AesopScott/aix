@@ -1,0 +1,19 @@
+# Website Access Control
+
+Updated: 2026-07-27
+
+The AIX site uses Mojo app-session authentication for access administration at `/access/`.
+
+Current state:
+- Global access control remains disabled, so public pages and APIs stay freely accessible until access control is explicitly enabled.
+- The first owner invite flow creates the initial owner account for `scott@mojoaisummits.com`.
+- The temporary bootstrap secret was used only to create the first owner invite and then removed from Cloudflare Pages.
+- The Create Account flow now shows inline validation and submission feedback instead of relying on native browser validation.
+- Access policy now uses three starter groups: `Public`, `Admin`, and `Mojo team`.
+- Routes/pages/APIs are assigned to groups, and group email membership determines which non-admin users can access protected routes.
+- `Admin` and `owner` roles can manage the access console and bypass protected-route group lists; `member` accounts depend on group membership.
+
+Operational note:
+- Owner/admin users should create additional accounts from `/access/` after the first owner signs in.
+- Add users to `Admin` or `Mojo team` by editing the group email lists in `/access/`, then assign each route to the intended group.
+- Do not store bootstrap tokens, passwords, invite tokens, or recovery material in the repo or Obsidian.

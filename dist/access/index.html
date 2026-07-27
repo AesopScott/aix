@@ -484,6 +484,29 @@
       text-transform: none;
     }
 
+    .access-groups {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .access-group-card {
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.75rem;
+      border: 1px solid rgba(0, 230, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.46);
+    }
+
+    .access-group-card h3 {
+      font-size: 0.98rem;
+    }
+
+    .access-group-card textarea {
+      min-height: 84px;
+      font-size: 0.82rem;
+    }
+
     .user-form .inline-result {
       grid-column: 1 / -1;
     }
@@ -495,7 +518,7 @@
 
     .user-row {
       display: grid;
-      grid-template-columns: minmax(160px, 1.2fr) minmax(90px, 0.45fr) minmax(90px, 0.45fr) auto;
+      grid-template-columns: minmax(160px, 1.2fr) minmax(90px, 0.45fr) minmax(90px, 0.45fr) minmax(120px, 0.6fr) auto;
       gap: 0.55rem;
       align-items: center;
       padding: 0.65rem;
@@ -645,7 +668,7 @@
       background: rgba(255, 211, 106, 0.08);
     }
 
-    .mode-select {
+    .route-group-select {
       min-height: 40px;
       font-weight: 850;
     }
@@ -662,45 +685,6 @@
       font-weight: 900;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-    }
-
-    .route-allowlist {
-      min-height: 86px;
-      resize: vertical;
-      font-size: 0.82rem;
-      line-height: 1.35;
-    }
-
-    .route-people-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 0.45rem;
-    }
-
-    .route-person-choice {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      min-width: 0;
-      padding: 0.48rem 0.55rem;
-      border: 1px solid rgba(0, 230, 255, 0.16);
-      border-radius: 6px;
-      background: rgba(10, 15, 30, 0.46);
-      color: var(--white);
-      font-size: 0.8rem;
-      font-weight: 750;
-    }
-
-    .route-person-choice input {
-      width: 16px;
-      min-height: 16px;
-      height: 16px;
-      accent-color: var(--cyan);
-    }
-
-    .route-person-choice span {
-      min-width: 0;
-      overflow-wrap: anywhere;
     }
 
     .route-allowlist-help {
@@ -881,16 +865,14 @@
           </div>
         </section>
 
-        <section class="panel" aria-label="Allowed emails">
+        <section class="panel" aria-label="Access groups">
           <label class="check-field" for="accessEnabled">
             <input id="accessEnabled" type="checkbox">
             <span>Enable access control</span>
           </label>
           <p>Leave this off while accounts and page policies are still being defined. All pages and APIs stay freely accessible until it is enabled.</p>
-          <label class="field" for="allowedEmails">
-            Global fallback emails
-            <textarea id="allowedEmails" spellcheck="false" placeholder="scott@example.com&#10;jodi@example.com"></textarea>
-          </label>
+          <h2>Access Groups</h2>
+          <div class="access-groups" id="accessGroups"></div>
           <div class="actions">
             <button id="saveButton" type="button">Save</button>
             <button id="resetButton" class="danger wide" type="button">Reset Defaults</button>
@@ -986,7 +968,7 @@
       authMessage: document.querySelector("#authMessage"),
       authState: document.querySelector("#authState"),
       accessEnabled: document.querySelector("#accessEnabled"),
-      allowedEmails: document.querySelector("#allowedEmails"),
+      accessGroups: document.querySelector("#accessGroups"),
       firstOwnerInvitePanel: document.querySelector("#firstOwnerInvitePanel"),
       firstOwnerInviteButton: document.querySelector("#firstOwnerInviteButton"),
       firstOwnerInviteResult: document.querySelector("#firstOwnerInviteResult"),
@@ -1038,12 +1020,15 @@
     }
 
     function routeSearchText(route) {
+      const routeGroups = (route.allowedGroupIds || [])
+        .map((id) => (state.config?.groups || []).find((group) => group.id === id)?.label || id);
       return [
         route.label,
         route.summary,
         route.group,
         route.kind,
         route.mode,
+        ...routeGroups,
         ...(route.domains || []),
         ...(route.allowedEmails || [])
       ].join(" ").toLowerCase();
@@ -1067,14 +1052,11 @@
       state.busy = value;
       elements.saveButton.disabled = value;
       elements.resetButton.disabled = value;
-      document.querySelectorAll(".mode-select").forEach((select) => {
+      document.querySelectorAll(".route-group-select").forEach((select) => {
         select.disabled = value;
       });
-      document.querySelectorAll(".route-allowlist").forEach((textarea) => {
+      document.querySelectorAll(".group-email-list").forEach((textarea) => {
         textarea.disabled = value;
-      });
-      document.querySelectorAll(".route-person").forEach((checkbox) => {
-        checkbox.disabled = value;
       });
     }
 
@@ -1090,8 +1072,16 @@
         .filter(Boolean);
     }
 
-    function parseEmailBox() {
-      return parseEmails(elements.allowedEmails.value);
+    function groupPayload() {
+      return (state.config.groups || []).map((group) => {
+        const textarea = document.querySelector(`[data-group-emails="${CSS.escape(group.id)}"]`);
+        return {
+          id: group.id,
+          label: group.label,
+          summary: group.summary,
+          emails: group.id === "public" ? [] : parseEmails(textarea?.value || "")
+        };
+      });
     }
 
     function routeModeMap() {
@@ -1100,21 +1090,18 @@
 
     function syncRouteControls() {
       const modes = routeModeMap();
-      const allowedByRoute = new Map(state.config.routes.map((route) => [route.id, new Set()]));
-      document.querySelectorAll(".mode-select").forEach((select) => {
-        modes.set(select.dataset.routeId, select.value);
-      });
-      document.querySelectorAll(".route-allowlist").forEach((textarea) => {
-        const emails = allowedByRoute.get(textarea.dataset.routeId);
-        parseEmails(textarea.value).forEach((email) => emails?.add(email));
-      });
-      document.querySelectorAll(".route-person").forEach((checkbox) => {
-        const emails = allowedByRoute.get(checkbox.dataset.routeId);
-        if (checkbox.checked) emails?.add(checkbox.value);
+      const groupsByRoute = new Map(state.config.routes.map((route) => [route.id, new Set(route.allowedGroupIds || [])]));
+      document.querySelectorAll(".route-group-select").forEach((select) => {
+        const route = state.config.routes.find((entry) => entry.id === select.dataset.routeId);
+        groupsByRoute.set(select.dataset.routeId, new Set([select.value]));
+        modes.set(
+          select.dataset.routeId,
+          select.value === "public" ? "public" : route?.mode === "public" ? "allowlist" : route?.mode || "allowlist"
+        );
       });
       state.config.routes.forEach((route) => {
         route.mode = modes.get(route.id) || route.mode;
-        route.allowedEmails = [...(allowedByRoute.get(route.id) || [])].sort();
+        route.allowedGroupIds = [...(groupsByRoute.get(route.id) || [])].sort();
       });
     }
 
@@ -1123,10 +1110,12 @@
 
       return {
         enabled: elements.accessEnabled.checked,
-        allowedEmails: parseEmailBox(),
+        allowedEmails: [],
+        groups: groupPayload(),
         routes: state.config.routes.map((route) => ({
           id: route.id,
           mode: route.mode,
+          allowedGroupIds: route.allowedGroupIds || [],
           allowedEmails: route.allowedEmails || []
         }))
       };
@@ -1156,7 +1145,7 @@
     function renderSummary(visibleRoutes) {
       const routes = state.config.routes;
       const protectedCount = routes.filter((route) => route.mode === "authenticated" || route.mode === "allowlist").length;
-      const effectiveEmails = state.config.effectiveAllowedEmails || [];
+      const effectiveEmails = (state.config.groups || []).flatMap((group) => group.emails || []);
       elements.totalRoutes.textContent = routes.length;
       elements.protectedRoutes.textContent = protectedCount;
       elements.allowlistCount.textContent = effectiveEmails.length;
@@ -1165,6 +1154,25 @@
         : "Access control is off by default.";
       elements.authState.textContent = state.config.enabled ? "Enabled" : "Off";
       elements.emptyState.classList.toggle("visible", visibleRoutes.length === 0);
+    }
+
+    function renderAccessGroups() {
+      const groups = state.config?.groups || [];
+      elements.accessGroups.innerHTML = groups.map((group) => {
+        const isPublic = group.id === "public";
+        return `
+          <section class="access-group-card">
+            <h3>${escapeHtml(group.label)}</h3>
+            <p>${escapeHtml(group.summary)}</p>
+            ${isPublic
+              ? '<p class="role-help">No email list. Routes assigned to Public do not require sign-in.</p>'
+              : `<label class="field" for="group-${escapeHtml(group.id)}">
+                  Emails in this group
+                  <textarea id="group-${escapeHtml(group.id)}" class="group-email-list" data-group-emails="${escapeHtml(group.id)}" spellcheck="false" placeholder="person@example.com">${escapeHtml((group.emails || []).join("\n"))}</textarea>
+                </label>`}
+          </section>
+        `;
+      }).join("");
     }
 
     function renderSession() {
@@ -1202,6 +1210,14 @@
     function renderUsers() {
       if (!canManageAccess()) return;
       const pendingInvites = state.invites.filter((invite) => invite.status === "pending");
+      const membershipsByEmail = new Map();
+      (state.config?.groups || []).forEach((group) => {
+        (group.emails || []).forEach((email) => {
+          const memberships = membershipsByEmail.get(email) || [];
+          memberships.push(group.label);
+          membershipsByEmail.set(email, memberships);
+        });
+      });
       elements.inviteList.innerHTML = `
         <h3>Pending Invites</h3>
         ${pendingInvites.length ? pendingInvites.map((invite) => `
@@ -1222,6 +1238,7 @@
             <strong>${escapeHtml(user.email)}</strong>
             <span class="tag ${user.status === "active" ? "public" : "closed"}">${escapeHtml(user.status)}</span>
             <span class="tag">${escapeHtml(user.role)}</span>
+            <span class="tag">${escapeHtml((membershipsByEmail.get(user.email) || ["No group"]).join(", "))}</span>
             <button class="danger compact-button" data-disable-user="${escapeHtml(user.email)}" type="button" ${user.status === "disabled" ? "disabled" : ""}>Disable</button>
           </div>
         `).join("") : '<p>No accounts have been created yet.</p>'}
@@ -1243,30 +1260,13 @@
       renderSummary(visibleRoutes);
       elements.routeRows.innerHTML = visibleRoutes.map((route) => {
         const locked = ["api-access-config", "api-access-users", "api-access-invites"].includes(route.id);
-        const routeAllowedEmails = route.allowedEmails || [];
-        const userEmailSet = new Set((state.users || []).map((user) => user.email));
-        const extraEmails = routeAllowedEmails.filter((email) => !userEmailSet.has(email));
-        const protectedMode = ["authenticated", "allowlist"].includes(route.mode);
-        const peopleEditor = protectedMode
-          ? `
-              <div class="route-allowlist-field">
-                <span>Allowed accounts</span>
-                <div class="route-people-list">
-                  ${state.users.length ? state.users.map((user) => `
-                    <label class="route-person-choice">
-                      <input class="route-person" data-route-id="${escapeHtml(route.id)}" type="checkbox" value="${escapeHtml(user.email)}" ${routeAllowedEmails.includes(user.email) ? "checked" : ""} ${user.status !== "active" ? "disabled" : ""}>
-                      <span>${escapeHtml(user.email)} (${escapeHtml(user.role)})</span>
-                    </label>
-                  `).join("") : '<small class="route-allowlist-help">Create accounts above, then select which accounts can access this route.</small>'}
-                </div>
-                <label class="route-allowlist-field" for="routeAllowlist-${escapeHtml(route.id)}">
-                  <span>Additional allowed emails</span>
-                  <textarea id="routeAllowlist-${escapeHtml(route.id)}" class="route-allowlist" data-route-id="${escapeHtml(route.id)}" spellcheck="false" placeholder="extra.person@example.com">${escapeHtml(extraEmails.join("\n"))}</textarea>
-                </label>
-                <small class="route-allowlist-help">${routeAllowedEmails.length ? "Only these checked accounts and additional emails can access this route." : route.mode === "authenticated" ? "No accounts selected means any signed-in account can access this route." : "No accounts selected means this route uses the global fallback emails list."}</small>
-              </div>
-            `
-          : "";
+        const selectedGroupId = (route.allowedGroupIds || [])[0] || (route.mode === "public" ? "public" : "mojo-team");
+        const selectedGroup = (state.config.groups || []).find((group) => group.id === selectedGroupId);
+        const protectedMode = route.mode !== "public";
+        const groupOptions = (state.config.groups || []).map((group) => {
+          const disabled = locked && group.id === "public" ? "disabled" : "";
+          return `<option value="${escapeHtml(group.id)}" ${group.id === selectedGroupId ? "selected" : ""} ${disabled}>${escapeHtml(group.label)}</option>`;
+        }).join("");
         return `
           <div class="route-row" data-route-id="${escapeHtml(route.id)}">
             <div class="cell">
@@ -1276,20 +1276,21 @@
               </div>
             </div>
             <div class="cell">
-              <select class="mode-select" data-route-id="${escapeHtml(route.id)}" aria-label="Access mode for ${escapeHtml(route.label)}">
-                ${state.modes.map((mode) => {
-                  const disabled = locked && mode.value === "public" ? "disabled" : "";
-                  return `<option value="${escapeHtml(mode.value)}" ${mode.value === route.mode ? "selected" : ""} ${disabled}>${escapeHtml(mode.label)}</option>`;
-                }).join("")}
+              <label class="route-allowlist-field" for="routeGroup-${escapeHtml(route.id)}">
+                <span>Access group</span>
+              </label>
+              <select id="routeGroup-${escapeHtml(route.id)}" class="route-group-select" data-route-id="${escapeHtml(route.id)}" aria-label="Access group for ${escapeHtml(route.label)}">
+                ${groupOptions}
               </select>
-              ${peopleEditor}
+              <small class="route-allowlist-help">${selectedGroup?.summary ? escapeHtml(selectedGroup.summary) : "Choose the group that can access this route."}</small>
             </div>
             <div class="cell">
               <div class="tags">
                 <span class="tag ${escapeHtml(route.mode)}">${escapeHtml(modeLabel(route.mode))}</span>
                 <span class="tag">${escapeHtml(route.kind)}</span>
                 <span class="tag">${escapeHtml(route.group)}</span>
-                ${protectedMode ? `<span class="tag">${routeAllowedEmails.length ? `${routeAllowedEmails.length} assigned` : route.mode === "authenticated" ? "any signed-in" : "global list"}</span>` : ""}
+                <span class="tag">${escapeHtml(selectedGroup?.label || selectedGroupId)}</span>
+                ${protectedMode ? `<span class="tag">${escapeHtml((route.effectiveAllowedEmails || []).length ? `${route.effectiveAllowedEmails.length} emails` : "no group emails")}</span>` : ""}
                 ${route.mode !== route.defaultMode ? '<span class="tag default">changed</span>' : ""}
               </div>
             </div>
@@ -1302,20 +1303,11 @@
         `;
       }).join("");
 
-      document.querySelectorAll(".mode-select").forEach((select) => {
+      document.querySelectorAll(".route-group-select").forEach((select) => {
         select.addEventListener("change", () => {
           syncRouteControls();
-          const route = state.config.routes.find((entry) => entry.id === select.dataset.routeId);
-          if (!route) return;
-          route.mode = select.value;
           renderRoutes();
         });
-      });
-      document.querySelectorAll(".route-allowlist").forEach((textarea) => {
-        textarea.addEventListener("input", syncRouteControls);
-      });
-      document.querySelectorAll(".route-person").forEach((checkbox) => {
-        checkbox.addEventListener("change", syncRouteControls);
       });
       setBusy(state.busy);
     }
@@ -1332,10 +1324,7 @@
         state.config.authProvider = payload.authProvider || "mojo-auth";
         state.config.storage = payload.storage || "";
         elements.accessEnabled.checked = state.config.enabled === true;
-        elements.allowedEmails.value = [
-          ...(state.config.allowedEmails || []),
-          ...(state.config.envAllowedEmails || [])
-        ].join("\n");
+        renderAccessGroups();
         renderFilters();
         renderRoutes();
         showNotice(
@@ -1662,10 +1651,7 @@
         if (!response.ok) throw new Error(payload.error || "Access configuration could not be saved.");
         state.config = payload.config;
         elements.accessEnabled.checked = state.config.enabled === true;
-        elements.allowedEmails.value = [
-          ...(state.config.allowedEmails || []),
-          ...(state.config.envAllowedEmails || [])
-        ].join("\n");
+        renderAccessGroups();
         renderRoutes();
         showNotice(
           state.config.enabled
@@ -1689,10 +1675,7 @@
         if (!response.ok) throw new Error(payload.error || "Access defaults could not be restored.");
         state.config = payload.config;
         elements.accessEnabled.checked = state.config.enabled === true;
-        elements.allowedEmails.value = [
-          ...(state.config.allowedEmails || []),
-          ...(state.config.envAllowedEmails || [])
-        ].join("\n");
+        renderAccessGroups();
         renderFilters();
         renderRoutes();
         showNotice("Default access policy restored.", "ok");

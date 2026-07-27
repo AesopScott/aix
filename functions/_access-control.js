@@ -2,6 +2,27 @@ export const ACCESS_CONFIG_KEY = "access-control:config:v1";
 
 export const ACCESS_MODES = ["public", "authenticated", "allowlist", "closed"];
 
+export const DEFAULT_ACCESS_GROUPS = [
+  {
+    id: "public",
+    label: "Public",
+    summary: "No login required.",
+    emails: []
+  },
+  {
+    id: "admin",
+    label: "Admin",
+    summary: "Access administrators and protected admin surfaces.",
+    emails: ["scott@mojoaisummits.com"]
+  },
+  {
+    id: "mojo-team",
+    label: "Mojo team",
+    summary: "People who work with Mojo AI Summits.",
+    emails: []
+  }
+];
+
 export const DEFAULT_ACCESS_RULES = [
   {
     id: "admin",
@@ -271,7 +292,13 @@ export const DEFAULT_ACCESS_CONFIG = {
   updatedAt: null,
   updatedBy: "",
   allowedEmails: [],
-  routes: DEFAULT_ACCESS_RULES.map((rule) => ({ id: rule.id, mode: rule.mode, allowedEmails: [] }))
+  groups: DEFAULT_ACCESS_GROUPS,
+  routes: DEFAULT_ACCESS_RULES.map((rule) => ({
+    id: rule.id,
+    mode: rule.mode,
+    allowedGroupIds: defaultGroupsForRoute(rule),
+    allowedEmails: []
+  }))
 };
 
 export const jsonHeaders = {
@@ -301,11 +328,57 @@ export function parseAllowedEmails(value) {
   ];
 }
 
+function normalizeGroupId(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.map(String).filter(Boolean))];
+}
+
+function defaultGroupsForRoute(rule) {
+  if (rule.mode === "public") return ["public"];
+  if (["admin", "api-access-config", "api-access-users", "api-access-invites"].includes(rule.id)) {
+    return ["admin"];
+  }
+  return ["mojo-team"];
+}
+
+function sanitizeAccessGroups(inputGroups = []) {
+  const incoming = new Map(
+    (Array.isArray(inputGroups) ? inputGroups : [])
+      .filter((group) => group && typeof group === "object")
+      .map((group) => [normalizeGroupId(group.id || group.label), group])
+      .filter(([id]) => id)
+  );
+
+  return DEFAULT_ACCESS_GROUPS.map((definition) => {
+    const group = incoming.get(definition.id) || {};
+    return {
+      ...definition,
+      emails: definition.id === "public" ? [] : parseAllowedEmails(group.emails)
+    };
+  });
+}
+
+function sanitizeGroupIds(value, validGroupIds) {
+  const source = Array.isArray(value) ? value : [value];
+  const ids = uniqueValues(source.map(normalizeGroupId));
+  return ids.filter((id) => validGroupIds.has(id));
+}
+
 export function envAllowedEmails() {
   return [];
 }
 
 export function sanitizeAccessConfig(input = {}, actor = "") {
+  const groups = sanitizeAccessGroups(input.groups);
+  const validGroupIds = new Set(groups.map((group) => group.id));
   const incomingRoutes = new Map(
     (Array.isArray(input.routes) ? input.routes : [])
       .filter((route) => route && typeof route === "object")
@@ -314,12 +387,20 @@ export function sanitizeAccessConfig(input = {}, actor = "") {
 
   const routes = DEFAULT_ACCESS_RULES.map((definition) => {
     const incoming = incomingRoutes.get(definition.id) || {};
-    const mode = ACCESS_MODES.includes(incoming.mode) ? incoming.mode : definition.mode;
+    const incomingGroupIds = sanitizeGroupIds(incoming.allowedGroupIds, validGroupIds);
+    const defaultGroupIds = defaultGroupsForRoute(definition);
+    const locked = ["api-access-config", "api-access-users", "api-access-invites"].includes(definition.id);
+    const allowedGroupIds = locked
+      ? (incomingGroupIds.filter((id) => id !== "public").length ? incomingGroupIds.filter((id) => id !== "public") : ["admin"])
+      : (incomingGroupIds.length ? incomingGroupIds : defaultGroupIds);
+    const requestedMode = ACCESS_MODES.includes(incoming.mode) ? incoming.mode : definition.mode;
+    const mode = allowedGroupIds.includes("public") ? "public" : requestedMode === "public" ? "allowlist" : requestedMode;
     return {
       id: definition.id,
-      mode: ["api-access-config", "api-access-users", "api-access-invites"].includes(definition.id)
+      mode: locked
         ? mode === "public" ? "allowlist" : mode
         : mode,
+      allowedGroupIds,
       allowedEmails: parseAllowedEmails(incoming.allowedEmails)
     };
   });
@@ -330,6 +411,7 @@ export function sanitizeAccessConfig(input = {}, actor = "") {
     updatedAt: new Date().toISOString(),
     updatedBy: actor || String(input.updatedBy || ""),
     allowedEmails: parseAllowedEmails(input.allowedEmails),
+    groups,
     routes
   };
 }
@@ -357,6 +439,7 @@ export async function writeAccessConfig(env, input, actor = "") {
 
 export function expandAccessConfig(config, env = {}) {
   const routeSettings = new Map((config.routes || []).map((route) => [route.id, route]));
+  const groups = sanitizeAccessGroups(config.groups);
   const allowedEmails = [
     ...new Set([...parseAllowedEmails(config.allowedEmails), ...envAllowedEmails(env)])
   ];
@@ -366,12 +449,26 @@ export function expandAccessConfig(config, env = {}) {
     enabled: config.enabled === true,
     allowedEmails,
     envAllowedEmails: envAllowedEmails(env),
+    groups,
     routes: DEFAULT_ACCESS_RULES.map((definition) => ({
       ...definition,
       mode: routeSettings.get(definition.id)?.mode || definition.mode,
+      allowedGroupIds: sanitizeGroupIds(
+        routeSettings.get(definition.id)?.allowedGroupIds || defaultGroupsForRoute(definition),
+        new Set(groups.map((group) => group.id))
+      ),
       allowedEmails: parseAllowedEmails(routeSettings.get(definition.id)?.allowedEmails)
     }))
   };
+}
+
+export function emailsForGroups(groups = [], groupIds = []) {
+  const requested = new Set((groupIds || []).map(normalizeGroupId));
+  return uniqueValues(
+    groups
+      .filter((group) => requested.has(group.id))
+      .flatMap((group) => parseAllowedEmails(group.emails))
+  ).sort();
 }
 
 function pathMatchesRule(pathname, rule) {
