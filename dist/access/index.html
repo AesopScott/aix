@@ -188,11 +188,14 @@
       top: 88px;
       display: grid;
       gap: 1rem;
+      min-width: 0;
+      max-width: 330px;
     }
 
     .panel,
     .route-table,
     .notice {
+      min-width: 0;
       border: 1px solid var(--line);
       border-radius: 8px;
       background:
@@ -216,6 +219,15 @@
       background:
         linear-gradient(115deg, rgba(22, 102, 255, 0.28), transparent 56%),
         linear-gradient(180deg, rgba(27, 35, 51, 0.94), rgba(10, 15, 30, 0.78));
+    }
+
+    aside .headline {
+      min-height: 190px;
+    }
+
+    aside .headline h1 {
+      font-size: clamp(2.4rem, 4vw, 4rem);
+      overflow-wrap: anywhere;
     }
 
     h1,
@@ -474,6 +486,7 @@
     .workspace {
       display: grid;
       gap: 1rem;
+      min-width: 0;
     }
 
     .toolbar {
