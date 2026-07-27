@@ -379,6 +379,16 @@
     .notice.ok { border-color: rgba(106, 240, 182, 0.42); }
     .notice.error { border-color: rgba(255, 122, 144, 0.5); }
 
+    .inline-result {
+      min-height: 1.3rem;
+      margin: 0;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .inline-result.error { color: #ffb4c0; }
+    .inline-result.ok { color: #6af0b6; }
+
     .hidden { display: none !important; }
 
     .auth-gate {
@@ -729,7 +739,7 @@
         <button id="firstOwnerInviteButton" type="button">Create Scott Invite</button>
         <p id="firstOwnerInviteResult"></p>
       </div>
-      <form class="auth-card hidden" id="acceptInviteForm">
+      <form class="auth-card hidden" id="acceptInviteForm" novalidate>
         <h2>Accept Invite</h2>
         <p id="inviteMessage">Checking invite.</p>
         <label class="field" for="invitePassword">
@@ -740,7 +750,8 @@
           Confirm password
           <input id="invitePasswordConfirm" type="password" autocomplete="new-password" required minlength="12">
         </label>
-        <button type="submit">Create Account</button>
+        <button id="acceptInviteButton" type="submit">Create Account</button>
+        <p class="inline-result" id="acceptInviteResult" aria-live="polite"></p>
       </form>
     </section>
 
@@ -867,6 +878,8 @@
       firstOwnerInviteResult: document.querySelector("#firstOwnerInviteResult"),
       firstOwnerInviteToken: document.querySelector("#firstOwnerInviteToken"),
       acceptInviteForm: document.querySelector("#acceptInviteForm"),
+      acceptInviteButton: document.querySelector("#acceptInviteButton"),
+      acceptInviteResult: document.querySelector("#acceptInviteResult"),
       emptyState: document.querySelector("#emptyState"),
       inviteList: document.querySelector("#inviteList"),
       inviteMessage: document.querySelector("#inviteMessage"),
@@ -1205,6 +1218,10 @@
           await loadInvite();
         }
       } catch (error) {
+        renderSession();
+        if (state.inviteToken) {
+          await loadInvite();
+        }
         showNotice(error.message, "error");
       }
     }
@@ -1326,33 +1343,60 @@
       }
     }
 
+    function setAcceptInviteResult(message = "", type = "") {
+      elements.acceptInviteResult.textContent = message;
+      elements.acceptInviteResult.className = `inline-result ${type}`.trim();
+    }
+
     async function acceptInvite(event) {
       event.preventDefault();
       clearNotice();
-      if (elements.invitePassword.value !== elements.invitePasswordConfirm.value) {
-        showNotice("Passwords do not match.", "error");
+      setAcceptInviteResult("");
+
+      const password = elements.invitePassword.value;
+      const confirmation = elements.invitePasswordConfirm.value;
+      if (!state.inviteToken) {
+        setAcceptInviteResult("Open the invite link again before creating the account.", "error");
+        return;
+      }
+      if (!password || !confirmation) {
+        setAcceptInviteResult("Enter and confirm a password to create the account.", "error");
+        return;
+      }
+      if (password.length < 12) {
+        setAcceptInviteResult("Password must be at least 12 characters.", "error");
+        return;
+      }
+      if (password !== confirmation) {
+        setAcceptInviteResult("Passwords do not match.", "error");
         return;
       }
 
+      elements.acceptInviteButton.disabled = true;
+      setAcceptInviteResult("Creating account...", "");
       try {
         const response = await fetch("/api/auth/invite", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             token: state.inviteToken,
-            password: elements.invitePassword.value
+            password
           })
         });
-        const payload = await response.json();
+        const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload.error || "Invite could not be accepted.");
         history.replaceState({}, "", "/access/");
         state.inviteToken = "";
         state.invite = null;
         elements.acceptInviteForm.reset();
+        setAcceptInviteResult("Account created. Signing you in...", "ok");
         await loadSession();
         showNotice("Account created. You are signed in.", "ok");
       } catch (error) {
+        setAcceptInviteResult(error.message, "error");
         showNotice(error.message, "error");
+      } finally {
+        elements.acceptInviteButton.disabled = false;
       }
     }
 
