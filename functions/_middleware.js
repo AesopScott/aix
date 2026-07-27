@@ -40,8 +40,13 @@ export async function onRequest(context) {
 
   if (!route) return context.next();
 
+  if (config.enabled !== true) {
+    context.data.auth = { email: "", mode: "public", accessControlEnabled: false };
+    return context.next();
+  }
+
   if (route.mode === "public") {
-    context.data.auth = { email: "", mode: "public" };
+    context.data.auth = { email: "", mode: "public", accessControlEnabled: true };
     return context.next();
   }
 
@@ -55,7 +60,8 @@ export async function onRequest(context) {
       name: "Local Development",
       role: "owner",
       status: "active",
-      mode: route.mode
+      mode: route.mode,
+      accessControlEnabled: true
     };
     return context.next();
   }
@@ -80,6 +86,6 @@ export async function onRequest(context) {
     return forbidden(route, "This account is not approved for this Mojo AI Summits route.");
   }
 
-  context.data.auth = { ...user, mode: route.mode };
+  context.data.auth = { ...user, mode: route.mode, accessControlEnabled: true };
   return context.next();
 }

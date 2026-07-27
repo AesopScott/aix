@@ -280,6 +280,25 @@
       gap: 0.45rem;
     }
 
+    .check-field {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+      color: var(--ink);
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .check-field input {
+      width: 18px;
+      min-height: 18px;
+      height: 18px;
+      margin-top: 0.18rem;
+      accent-color: var(--cyan);
+    }
+
     input,
     select,
     textarea {
@@ -740,11 +759,16 @@
             <div class="stat"><strong id="totalRoutes">0</strong><span>routes tracked</span></div>
             <div class="stat"><strong id="protectedRoutes">0</strong><span>protected routes</span></div>
             <div class="stat"><strong id="allowlistCount">0</strong><span>allowed emails</span></div>
-            <div class="stat"><strong id="authState">-</strong><span>auth provider</span></div>
+            <div class="stat"><strong id="authState">-</strong><span>enforcement</span></div>
           </div>
         </section>
 
         <section class="panel" aria-label="Allowed emails">
+          <label class="check-field" for="accessEnabled">
+            <input id="accessEnabled" type="checkbox">
+            <span>Enable access control</span>
+          </label>
+          <p>Leave this off while accounts and page policies are still being defined. All pages and APIs stay freely accessible until it is enabled.</p>
           <label class="field" for="allowedEmails">
             Allowed emails
             <textarea id="allowedEmails" spellcheck="false" placeholder="scott@example.com&#10;jodi@example.com"></textarea>
@@ -833,6 +857,7 @@
       authGate: document.querySelector("#authGate"),
       authMessage: document.querySelector("#authMessage"),
       authState: document.querySelector("#authState"),
+      accessEnabled: document.querySelector("#accessEnabled"),
       allowedEmails: document.querySelector("#allowedEmails"),
       bootstrapForm: document.querySelector("#bootstrapForm"),
       bootstrapToken: document.querySelector("#bootstrapToken"),
@@ -932,6 +957,7 @@
       });
 
       return {
+        enabled: elements.accessEnabled.checked,
         allowedEmails: parseEmailBox(),
         routes: state.config.routes.map((route) => ({
           id: route.id,
@@ -968,10 +994,10 @@
       elements.totalRoutes.textContent = routes.length;
       elements.protectedRoutes.textContent = protectedCount;
       elements.allowlistCount.textContent = effectiveEmails.length;
-      elements.authState.textContent = state.config.authProvider || "Mojo";
       elements.updatedText.textContent = state.config.updatedAt
         ? `Updated ${new Date(state.config.updatedAt).toLocaleString()} by ${state.config.updatedBy || "unknown"}.`
-        : "Default route policy is active.";
+        : "Access control is off by default.";
+      elements.authState.textContent = state.config.enabled ? "Enabled" : "Off";
       elements.emptyState.classList.toggle("visible", visibleRoutes.length === 0);
     }
 
@@ -1079,13 +1105,19 @@
         state.modes = payload.modes;
         state.config.authProvider = payload.authProvider || "mojo-auth";
         state.config.storage = payload.storage || "";
+        elements.accessEnabled.checked = state.config.enabled === true;
         elements.allowedEmails.value = [
           ...(state.config.allowedEmails || []),
           ...(state.config.envAllowedEmails || [])
         ].join("\n");
         renderFilters();
         renderRoutes();
-        showNotice("Route access is enforced by Mojo app-session middleware.", "");
+        showNotice(
+          state.config.enabled
+            ? "Access control is enabled and enforced by Mojo app-session middleware."
+            : "Access control is off. All pages and APIs remain freely accessible.",
+          state.config.enabled ? "ok" : ""
+        );
       } catch (error) {
         showNotice(error.message, "error");
       } finally {
@@ -1228,12 +1260,18 @@
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Access configuration could not be saved.");
         state.config = payload.config;
+        elements.accessEnabled.checked = state.config.enabled === true;
         elements.allowedEmails.value = [
           ...(state.config.allowedEmails || []),
           ...(state.config.envAllowedEmails || [])
         ].join("\n");
         renderRoutes();
-        showNotice("Access configuration saved.", "ok");
+        showNotice(
+          state.config.enabled
+            ? "Access configuration saved and enforcement is enabled."
+            : "Access configuration saved. Enforcement remains off.",
+          "ok"
+        );
       } catch (error) {
         showNotice(error.message, "error");
       } finally {
@@ -1249,6 +1287,7 @@
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Access defaults could not be restored.");
         state.config = payload.config;
+        elements.accessEnabled.checked = state.config.enabled === true;
         elements.allowedEmails.value = [
           ...(state.config.allowedEmails || []),
           ...(state.config.envAllowedEmails || [])

@@ -31,6 +31,7 @@ function publicConfig(config, env) {
 
   return {
     version: expanded.version,
+    enabled: expanded.enabled === true,
     updatedAt: expanded.updatedAt,
     updatedBy: expanded.updatedBy,
     allowedEmails: config.allowedEmails || [],
