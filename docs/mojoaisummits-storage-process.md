@@ -72,6 +72,14 @@ MOJO_STORAGE_ALLOWED_EMAILS=scott@example.com,robert@example.com,jodi@example.co
 
 If the allowlist is empty, Cloudflare Access controls access by policy alone.
 
+This repo includes a manual GitHub Actions workflow for creating the Access applications:
+
+- Workflow: `Configure Mojo AI Summits Cloudflare Access`
+- Script: `scripts/configure-cloudflare-access.mjs`
+- Required secret permissions: the Cloudflare API token must have Zero Trust / Access application write permission.
+
+Run the workflow with a comma-separated list of allowed emails. The initial safe default is `ravenshroud@gmail.com`.
+
 ## Local Development
 
 By default, the API requires Cloudflare Access headers. For local testing only, create a local `.dev.vars` file that is not committed:
