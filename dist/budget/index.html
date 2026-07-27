@@ -123,7 +123,7 @@
 
     p { margin: 0; color: var(--muted); line-height: 1.55; }
 
-    .metrics, .toolbar, .grid, .edit-grid, .side-list { display: grid; gap: 1rem; }
+    .metrics, .toolbar, .grid { display: grid; gap: 1rem; }
 
     .metric {
       display: flex;
@@ -145,7 +145,7 @@
     }
 
     .grid {
-      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+      grid-template-columns: 1fr;
       align-items: start;
     }
 
@@ -222,7 +222,20 @@
 
     th { background: rgba(22, 102, 255, 0.12); }
     td { color: var(--muted); font-size: 0.92rem; }
-    td strong, .selected-name { color: var(--white); font-weight: 800; }
+    td strong { color: var(--white); font-weight: 800; }
+
+    .receipt-link {
+      color: var(--white);
+      font-weight: 800;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(0, 230, 255, 0.5);
+      transition: color 180ms ease, border-color 180ms ease;
+    }
+
+    .receipt-link:hover {
+      color: var(--cyan);
+      border-color: var(--white);
+    }
 
     .pill {
       display: inline-flex;
@@ -243,17 +256,6 @@
       border-color: rgba(255, 211, 106, 0.4);
       background: rgba(255, 211, 106, 0.08);
     }
-
-    .side-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid rgba(0, 230, 255, 0.14);
-      color: var(--muted);
-    }
-
-    .side-row strong { color: var(--cyan); }
 
     .inline-select {
       min-width: 12rem;
@@ -277,16 +279,8 @@
       text-transform: none;
     }
 
-    .edit-grid {
-      grid-template-columns: 1fr 1fr;
-      margin-top: 1rem;
-    }
-
-    .full { grid-column: 1 / -1; }
-    .selected-name { word-break: break-word; }
-
     @media (max-width: 980px) {
-      header, .hero, .toolbar, .grid, .edit-grid { grid-template-columns: 1fr; }
+      header, .hero, .toolbar, .grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -361,61 +355,11 @@
                 <th>Amount</th>
                 <th>Reimbursement</th>
                 <th>Status</th>
-                <th>Edit</th>
               </tr>
             </thead>
             <tbody id="rows"></tbody>
           </table>
         </div>
-      </section>
-
-      <section class="panel">
-        <h2>Review Panel</h2>
-        <p id="selectedName" class="selected-name">Select a receipt to review its amount, category, event, and status.</p>
-        <form id="editForm" class="edit-grid">
-          <input id="receiptKey" type="hidden">
-          <label>Date<input id="receiptDate" type="date"></label>
-          <label>
-            Owner
-            <select id="ownerInput">
-              <option value="scott">Scott</option>
-              <option value="jodi">Jodi</option>
-              <option value="robert">Robert</option>
-              <option value="ron">Ron</option>
-              <option value="angel">Angel</option>
-              <option value="charlie">Charlie</option>
-              <option value="unassigned">Unassigned</option>
-            </select>
-          </label>
-          <label>Vendor<input id="vendorInput" placeholder="Vendor or payee"></label>
-          <label>Category<input id="categoryInput" placeholder="Travel, software, venue"></label>
-          <label>
-            Tax Category
-            <select id="taxCategoryInput"></select>
-          </label>
-          <label>Event<input id="eventInput" placeholder="Dallas 2027, company"></label>
-          <label>Amount<input id="amountInput" inputmode="decimal" placeholder="0.00"></label>
-          <label>
-            Status
-            <select id="statusInput">
-              <option value="needs-review">Needs review</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="reimbursed">Reimbursed</option>
-              <option value="excluded">Excluded</option>
-            </select>
-          </label>
-          <label class="checkbox-row">
-            <input id="needsReimbursementInput" type="checkbox">
-            Needs reimbursement
-          </label>
-          <label class="checkbox-row">
-            <input id="reimbursedInput" type="checkbox">
-            Reimbursed
-          </label>
-          <label class="full">Notes<textarea id="notesInput" placeholder="Purpose, approval notes, reimbursement details"></textarea></label>
-          <button class="full" type="submit">Save Receipt</button>
-        </form>
-        <div class="side-list" id="summaryLists"></div>
       </section>
     </div>
   </main>
@@ -445,23 +389,6 @@
     const metrics = document.querySelector("#metrics");
     const reviewButton = document.querySelector("#reviewButton");
     const downloadButton = document.querySelector("#downloadButton");
-    const editForm = document.querySelector("#editForm");
-    const selectedName = document.querySelector("#selectedName");
-    const fields = {
-      key: document.querySelector("#receiptKey"),
-      receiptDate: document.querySelector("#receiptDate"),
-      owner: document.querySelector("#ownerInput"),
-      vendor: document.querySelector("#vendorInput"),
-      category: document.querySelector("#categoryInput"),
-      taxCategory: document.querySelector("#taxCategoryInput"),
-      event: document.querySelector("#eventInput"),
-      amount: document.querySelector("#amountInput"),
-      status: document.querySelector("#statusInput"),
-      needsReimbursement: document.querySelector("#needsReimbursementInput"),
-      reimbursed: document.querySelector("#reimbursedInput"),
-      notes: document.querySelector("#notesInput")
-    };
-    const summaryLists = document.querySelector("#summaryLists");
     let state = { rows: [], summary: {} };
 
     function escapeHtml(value) {
@@ -496,6 +423,10 @@
       return taxCategories
         .map((category) => `<option value="${escapeHtml(category)}" ${category === selected ? "selected" : ""}>${escapeHtml(category)}</option>`)
         .join("");
+    }
+
+    function receiptViewUrl(key) {
+      return `/storage/api?view=1&key=${encodeURIComponent(key)}`;
     }
 
     function normalizeRow(row) {
@@ -539,33 +470,20 @@
       `;
     }
 
-    function renderSummaryLists() {
-      const summary = state.summary || {};
-      const categoryRows = Object.entries(summary.byCategory || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
-      const taxRows = Object.entries(summary.byTaxCategory || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
-      const ownerRows = Object.entries(summary.byOwner || {}).sort((a, b) => b[1] - a[1]);
-      const renderRows = (title, rows) => `
-        <div>
-          <p class="eyebrow">${title}</p>
-          ${rows.length ? rows.map(([label, amount]) => `
-            <div class="side-row"><span>${escapeHtml(label)}</span><strong>${money.format(amount)}</strong></div>
-          `).join("") : `<div class="side-row"><span>No reviewed costs yet</span><strong>${money.format(0)}</strong></div>`}
-        </div>
-      `;
-      summaryLists.innerHTML = `${renderRows("By owner", ownerRows)}${renderRows("By category", categoryRows)}${renderRows("By tax category", taxRows)}`;
-    }
-
     function renderRows() {
       const rows = filteredRows();
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="10">No receipts match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="9">No receipts match the current filters.</td></tr>`;
         return;
       }
 
       rowsElement.innerHTML = rows.map((row) => `
         <tr>
           <td>${escapeHtml(row.receiptDate || "")}</td>
-          <td><strong>${escapeHtml(row.name)}</strong><br><span title="${escapeHtml(row.key)}">${escapeHtml(row.event || "No event assigned")}</span></td>
+          <td>
+            <a class="receipt-link" href="${receiptViewUrl(row.key)}" target="_blank" rel="noopener">${escapeHtml(row.name)}</a>
+            <br><span title="${escapeHtml(row.key)}">${escapeHtml(row.event || "No event assigned")}</span>
+          </td>
           <td>${escapeHtml(row.owner || "unassigned")}</td>
           <td>${escapeHtml(row.vendor || "")}</td>
           <td>${escapeHtml(row.category || "")}</td>
@@ -588,14 +506,12 @@
             </div>
           </td>
           <td>${statusPill(row)}</td>
-          <td><button class="secondary" type="button" data-edit="${encodeURIComponent(row.key)}">Edit</button></td>
         </tr>
       `).join("");
     }
 
     function render() {
       renderMetrics();
-      renderSummaryLists();
       renderRows();
     }
 
@@ -608,24 +524,6 @@
       } catch (error) {
         setNotice(error.message, "error");
       }
-    }
-
-    function selectReceipt(key) {
-      const row = state.rows.find((item) => item.key === key);
-      if (!row) return;
-      selectedName.textContent = row.name;
-      fields.key.value = row.key;
-      fields.receiptDate.value = row.receiptDate || "";
-      fields.owner.value = row.owner || "unassigned";
-      fields.vendor.value = row.vendor || "";
-      fields.category.value = row.category || "Uncategorized";
-      fields.taxCategory.value = row.taxCategory || "Unassigned";
-      fields.event.value = row.event || "";
-      fields.amount.value = row.amount || "";
-      fields.status.value = row.status || "needs-review";
-      fields.needsReimbursement.checked = Boolean(row.needsReimbursement);
-      fields.reimbursed.checked = Boolean(row.reimbursed) || row.status === "reimbursed";
-      fields.notes.value = row.notes || "";
     }
 
     async function saveReceipt(row, successMessage = "Receipt review saved.") {
@@ -643,11 +541,6 @@
         setNotice(error.message, "error");
       }
     }
-
-    rowsElement.addEventListener("click", (event) => {
-      const key = event.target.dataset.edit;
-      if (key) selectReceipt(decodeURIComponent(key));
-    });
 
     rowsElement.addEventListener("change", (event) => {
       const taxKey = event.target.dataset.inlineTax;
@@ -678,29 +571,6 @@
       input.addEventListener("change", renderRows);
     });
 
-    editForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      if (!fields.key.value) {
-        setNotice("Select a receipt before saving.", "error");
-        return;
-      }
-
-      saveReceipt({
-        key: fields.key.value,
-        receiptDate: fields.receiptDate.value,
-        owner: fields.owner.value,
-        vendor: fields.vendor.value,
-        category: fields.category.value,
-        taxCategory: fields.taxCategory.value,
-        event: fields.event.value,
-        amount: fields.amount.value,
-        status: fields.status.value,
-        needsReimbursement: fields.needsReimbursement.checked,
-        reimbursed: fields.reimbursed.checked,
-        notes: fields.notes.value
-      });
-    });
-
     reviewButton.addEventListener("click", async () => {
       setNotice("Creating daily receipt review snapshot...");
       try {
@@ -716,7 +586,6 @@
       window.location.href = `${api}?download=csv`;
     });
 
-    fields.taxCategory.innerHTML = taxCategoryOptions();
     loadBudget();
   </script>
 </body>

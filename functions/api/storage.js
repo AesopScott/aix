@@ -198,10 +198,11 @@ async function downloadObject(request, env) {
   const object = await env.MOJO_SUMMITS_STORAGE.get(key);
   if (!object) return json({ error: "File not found." }, { status: 404 });
 
+  const disposition = url.searchParams.get("view") === "1" ? "inline" : "attachment";
   const headers = new Headers();
   headers.set("cache-control", "private, no-store");
   headers.set("content-type", object.httpMetadata?.contentType || "application/octet-stream");
-  headers.set("content-disposition", `attachment; filename="${displayNameFromKey(key)}"`);
+  headers.set("content-disposition", `${disposition}; filename="${displayNameFromKey(key)}"`);
   if (object.size) headers.set("content-length", String(object.size));
   if (object.httpEtag) headers.set("etag", object.httpEtag);
 
