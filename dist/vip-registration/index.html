@@ -353,15 +353,12 @@
       <section class="registration-panel" aria-labelledby="registrationTitle">
         <div class="panel-head">
           <h2 id="registrationTitle">VIP Details</h2>
-          <span class="invite-badge" id="inviteBadge">Invite pending</span>
+          <span class="invite-badge" id="inviteBadge">Invite required</span>
         </div>
 
         <form id="vipRegistrationForm">
           <div class="form-grid">
-            <div class="field full" id="inviteCodeField">
-              <label for="inviteCode">Invite code</label>
-              <input type="text" id="inviteCode" name="inviteCode" placeholder="Mojo-4321" autocomplete="off" required>
-            </div>
+            <input type="hidden" id="inviteCode" name="inviteCode" value="">
             <div class="field">
               <label for="fullName">Full name</label>
               <input type="text" id="fullName" name="name" placeholder="Full name" autocomplete="name" required>
@@ -438,11 +435,10 @@
   const form = document.getElementById('vipRegistrationForm');
   const success = document.getElementById('registrationSuccess');
   const verificationStatus = document.getElementById('phoneVerificationStatus');
-  const defaultInviteCode = 'Mojo-4321';
 
   function getInviteCode(){
     const params = new URLSearchParams(window.location.search);
-    return (params.get('invite') || sessionStorage.getItem('mojoVipInviteCode') || defaultInviteCode).trim();
+    return (params.get('invite') || sessionStorage.getItem('mojoVipInviteCode') || '').trim();
   }
 
   function setMessage(element, text, type){
@@ -467,8 +463,9 @@
   const incomingInviteCode = getInviteCode();
   if (incomingInviteCode) {
     inviteInput.value = incomingInviteCode;
-    inviteInput.readOnly = true;
-    inviteBadge.textContent = incomingInviteCode;
+    inviteBadge.textContent = `Invite ${incomingInviteCode}`;
+  } else {
+    setMessage(formError, 'Enter your six-digit invite code from the home page before registering.', 'error');
   }
 
   emailInput.addEventListener('input', () => {
@@ -569,9 +566,8 @@
     payload.foodPreferences = formData.getAll('foodPreference');
     payload.phoneVerificationStatus = verificationStatus.value;
 
-    if (!payload.inviteCode) {
-      setMessage(formError, 'Invite code is required.', 'error');
-      inviteInput.focus();
+    if (!/^\d{6}$/.test(String(payload.inviteCode || '').trim())) {
+      setMessage(formError, 'Enter a valid six-digit invite code.', 'error');
       return;
     }
     if (isBlockedEmail(payload.email)) {
@@ -589,7 +585,7 @@
     submitButton.disabled = true;
     submitButton.textContent = 'Submitting...';
     try {
-      await postJson('/api/vip-registration', payload);
+      await postJson('/crm/api/public/vip-registration', payload);
       form.classList.add('hide');
       success.classList.add('show');
     } catch (error) {

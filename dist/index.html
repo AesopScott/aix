@@ -1699,7 +1699,7 @@
     <form id="inviteCodeForm">
       <div class="field full">
         <label for="inviteCode">Invite code</label>
-        <input type="text" id="inviteCode" name="inviteCode" placeholder="Mojo-4321" autocomplete="off" required>
+        <input type="text" id="inviteCode" name="inviteCode" placeholder="Enter code" autocomplete="off" required>
       </div>
       <p class="form-error" id="inviteCodeError">Enter the invite code from your invitation.</p>
       <button type="submit" class="btn-primary">Continue to VIP Registration</button>
@@ -1951,14 +1951,35 @@
   });
   const inviteCodeForm = document.getElementById('inviteCodeForm');
   if (inviteCodeForm) {
-    inviteCodeForm.addEventListener('submit', (e) => {
+    inviteCodeForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const input = document.getElementById('inviteCode');
       const error = document.getElementById('inviteCodeError');
-      const code = (input?.value || '').trim();
-      if (!code) {
+      const submit = inviteCodeForm.querySelector('button[type=submit]');
+      const code = (input?.value || '').replace(/\D/g, '').slice(0, 6);
+      if (input) input.value = code;
+      if (!/^\d{6}$/.test(code)) {
+        if (error) error.textContent = 'Enter the six-digit invite code from your invitation.';
         error?.classList.add('show');
         input?.focus();
+        return;
+      }
+      if (submit) {
+        submit.disabled = true;
+        submit.textContent = 'Checking...';
+      }
+      try {
+        const response = await fetch(`/crm/api/public/vip-invite-codes/${encodeURIComponent(code)}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'That invite code is invalid or has already been used.');
+      } catch (validationError) {
+        if (error) error.textContent = validationError.message || 'That invite code is invalid or has already been used.';
+        error?.classList.add('show');
+        input?.focus();
+        if (submit) {
+          submit.disabled = false;
+          submit.textContent = 'Continue to VIP Registration';
+        }
         return;
       }
       error?.classList.remove('show');

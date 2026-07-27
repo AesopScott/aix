@@ -65,7 +65,7 @@ function cleanPayload(payload) {
 }
 
 function validateRegistration(registration) {
-  if (!registration.inviteCode) return "Invite code is required.";
+  if (!/^\d{6}$/.test(registration.inviteCode)) return "Enter a valid six-digit invite code.";
   if (!registration.name) return "Name is required.";
   if (!registration.email) return "Company email is required.";
   if (!isValidEmail(registration.email)) return "Enter a valid email address.";
@@ -88,20 +88,12 @@ export async function onRequestPost({ request, env }) {
 
   if (error) return json({ error }, { status: 400 });
 
-  if (!env.MOJO_SUMMITS_SETUP_STATE) {
-    return json({ error: "VIP registration storage is not configured." }, { status: 500 });
-  }
-
-  const id = crypto.randomUUID();
-  const createdAt = new Date().toISOString();
-  const record = {
-    id,
-    createdAt,
-    source: "mojoaisummits.com/vip-registration",
-    ...registration
-  };
-
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`vip-registration:${createdAt}:${id}`, JSON.stringify(record));
-
-  return json({ ok: true, id });
+  const crmUrl = new URL("/crm/api/public/vip-registration", request.url);
+  const response = await fetch(crmUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(registration)
+  });
+  const data = await response.json().catch(() => ({}));
+  return json(data, { status: response.status });
 }
