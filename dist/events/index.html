@@ -11,27 +11,21 @@
 
     :root {
       --navy: #0A0F1E;
-      --navy-2: #0d1424;
-      --navy-3: #10192c;
       --slate: #1B2333;
       --blue: #1666FF;
       --cyan: #00E6FF;
       --white: #FFFFFF;
-      --ink: #8b8f9c;
-      --ink-dim: #55586a;
-      --glass: rgba(27,35,51,0.55);
-      --border: rgba(150,160,190,0.10);
       --ease: cubic-bezier(.22,1,.36,1);
 
       --bg: var(--navy);
-      --panel: var(--glass);
-      --panel-2: var(--navy-2);
-      --line: var(--border);
-      --line-2: var(--border);
+      --panel: var(--slate);
+      --panel-2: var(--navy);
+      --line: var(--slate);
+      --line-2: var(--blue);
       --text: var(--white);
-      --dim: var(--ink);
-      --faint: var(--ink-dim);
-      --input: var(--navy-2);
+      --dim: var(--white);
+      --faint: var(--cyan);
+      --input: var(--navy);
       --chip: var(--slate);
     }
 
@@ -126,13 +120,12 @@
     .brand-lockup:hover .brand-mark,
     .brand-mark:hover {
       transform: scale(1.5);
-      filter: drop-shadow(0 0 22px rgba(0,230,255,.28));
+      filter: drop-shadow(0 0 22px var(--cyan));
     }
     .brand-divider {
       width: 1px;
       height: 35px;
-      background: linear-gradient(to bottom, transparent, rgba(0,230,255,.9), transparent);
-      box-shadow: 0 0 14px rgba(0,230,255,.24);
+      background: var(--cyan);
     }
     .brand-name {
       display: flex;
@@ -149,18 +142,17 @@
       font-size: 26px;
       letter-spacing: .08em;
       white-space: nowrap;
-      background: linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+      background: linear-gradient(90deg, var(--blue) 0%, var(--cyan) 82%);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
-      text-shadow: 0 0 18px rgba(0,230,255,.16);
     }
     .brand-secondary {
       font-family: 'Inter', sans-serif;
       font-weight: 600;
       font-size: 12px;
       letter-spacing: .38em;
-      color: rgba(222,235,255,.78);
+      color: var(--white);
       padding-left: .38em;
       text-align: center;
       white-space: nowrap;

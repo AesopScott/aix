@@ -628,7 +628,7 @@
         <h1 id="page-title">Operating links.</h1>
         <p>Internal operating pages, protected data tools, and guest-share surfaces for Mojo AI Summits.</p>
         <div class="status-strip" aria-label="Route status">
-          <span class="tag ok">Cloudflare Access intended</span>
+          <span class="tag ok">Mojo Auth enforced</span>
           <span class="tag warning">Do not publish in public nav</span>
           <span class="tag">mojoaisummits.com</span>
         </div>
@@ -663,7 +663,7 @@
 
     <section class="system-note" aria-labelledby="access-title">
       <h2 id="access-title">Access Boundary</h2>
-      <p><strong>Internal routes:</strong> protect `/admin/*`, `/crm/*`, `/setup/*`, `/events/*`, `/storage/*`, and `/budget/*` with Cloudflare Access before sharing broadly.</p>
+      <p><strong>Internal routes:</strong> protect `/admin/*`, `/crm/*`, `/setup/*`, `/events/*`, `/storage/*`, and `/budget/*` with Mojo Auth before sharing broadly.</p>
       <p><strong>Guest-share route:</strong> `/vip-registration/` is intentionally available for invited guests and previews, but it should stay out of public navigation.</p>
     </section>
   </main>
@@ -674,7 +674,7 @@
         group: "Operations",
         title: "Access Console",
         path: "/access/",
-        summary: "Authentication modes, allowed emails, route classifications, and Cloudflare Access sync.",
+        summary: "Authentication modes, app users, allowed emails, and route classifications.",
         status: "Access Protected",
         tags: ["access", "authentication", "allowlist"]
       },

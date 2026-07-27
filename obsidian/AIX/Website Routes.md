@@ -8,7 +8,7 @@
 - Included internal routes: `/crm/`, `/setup/`, `/events/`, `/storage/`, and `/budget/`.
 - Included controlled-share route: `/vip-registration/`, for invite-code previews and direct guest invite links.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.
-- Access guidance: protect `/admin/`, `/crm/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, and internal APIs `/api/crm`, `/api/setup-state`, `/api/events`, `/api/storage`, and `/api/budget` with Cloudflare Access. Keep `/crm/api/public/...` public for invite-code lookup and guest registration callbacks.
+- Access guidance: protect `/admin/`, `/crm/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, and internal APIs `/api/crm`, `/api/setup-state`, `/api/events`, `/api/storage`, and `/api/budget` with Mojo Auth. `/access/` is the public login/configuration shell; `/api/access-config` and `/api/access-users` require an owner/admin Mojo Auth session. Keep `/crm/api/public/...` public for invite-code lookup and guest registration callbacks.
 
 ## Internal Event Playbook
 

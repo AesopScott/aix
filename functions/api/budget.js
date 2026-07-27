@@ -122,7 +122,7 @@ function requireBudgetAccess(request, env, data = {}) {
       response: json(
         {
           error:
-            "Budget is locked until Cloudflare Access is configured for this route."
+            "Budget is locked until Mojo Auth is configured for this route."
         },
         { status: 403 }
       )

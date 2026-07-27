@@ -6,14 +6,14 @@ Mojo AI Summits needs a controlled place for shared company and event files. The
 
 - Cloudflare R2 for object storage.
 - Cloudflare Pages Functions for upload, list, download, and delete operations.
-- Cloudflare Access in front of the storage portal and API.
+- Mojo Auth middleware in front of the storage portal and API.
 
 ## Routes
 
 - Portal: `https://mojoaisummits.com/storage/`
 - API: `https://mojoaisummits.com/api/storage`
 
-The API intentionally rejects requests unless Cloudflare Access has authenticated the user. It first reads the `Cf-Access-Authenticated-User-Email` header, then falls back to the Access JWT/cookie when Pages does not expose the email header to the Function.
+The API intentionally rejects requests unless Mojo Auth has authenticated the user. Middleware validates the app-owned HttpOnly session cookie, attaches the user to the request context, and the storage API records that user as the uploader.
 
 ## R2 Bucket
 
@@ -50,15 +50,14 @@ Each upload also includes an event, city, or folder value. Example object keys:
 - `media/dallas-2027/2026-07-26T18-10-00-000Z-c3d4e5f6-stage-photo.jpg`
 - `receipts/scott/2026-07-26T18-10-00-000Z-d4e5f6a7-hotel-receipt.pdf`
 
-## Cloudflare Access Setup
+## Mojo Auth Setup
 
-Before using the storage portal in production, protect both routes with Cloudflare Access:
+Before using the storage portal in production, protect both routes through `/access`:
 
-- `mojoaisummits.com/storage/*`
-- `mojoaisummits.com/api/storage`
-- `mojoaisummits.com/api/storage/*`
+- `/storage/`
+- `/api/storage`
 
-The repo-level Access configuration script protects the storage portal plus the other internal operating routes: `/admin/`, `/crm/`, `/setup/`, `/events/`, `/budget/`, `/mockups/`, and their internal APIs, including `/api/events`. Use the same allow policy for these routes. Recommended groups:
+The repo-level access configuration protects the storage portal plus the other internal operating routes: `/admin/`, `/crm/`, `/setup/`, `/events/`, `/budget/`, `/mockups/`, and their internal APIs, including `/api/events`. Recommended account groups:
 
 - Founders: Scott, Robert, Jodi, Ron
 - Event Ops: Charlie, The Event Lounge
@@ -67,36 +66,34 @@ The repo-level Access configuration script protects the storage portal plus the 
 - Media: Photography, Sound, and Cinematography Team
 - Finance/Admin: Robert
 
-The Pages Functions middleware and internal APIs can also enforce an optional email allowlist by setting this Pages environment variable:
+Mojo Auth users are managed in `/access`. Passwords are stored only as PBKDF2-SHA256 hashes with random salts. Sessions are stored as token hashes and issued as HttpOnly cookies.
 
-```text
-MOJO_ACCESS_ALLOWED_EMAILS=scott@example.com,robert@example.com,jodi@example.com
+For production D1-backed auth, create and migrate a D1 database, then bind it as `MOJO_AUTH_DB`:
+
+```powershell
+npx wrangler d1 create mojo-summits-auth
+npx wrangler d1 execute mojo-summits-auth --remote --file migrations/0001_auth.sql
 ```
 
-If the allowlist is empty, Cloudflare Access controls access by policy alone.
+Until `MOJO_AUTH_DB` is bound, Mojo Auth stores users and sessions in `MOJO_SUMMITS_SETUP_STATE`.
 
-This repo includes a manual GitHub Actions workflow for creating the Access applications:
+To create the first owner account, set a temporary Pages secret:
 
-- Workflow: `Configure Mojo AI Summits Cloudflare Access`
-- Script: `scripts/configure-cloudflare-access.mjs`
-- Required GitHub secret: `CLOUDFLARE_ACCESS_API_TOKEN`
-- Required token permissions:
-  - `Access: Apps and Policies Write`
-  - `Access: Organizations, Identity Providers, and Groups Write`
+```powershell
+npx wrangler pages secret put MOJO_AUTH_BOOTSTRAP_TOKEN --project-name mojo-ai-summits
+```
 
-Run the workflow with a comma-separated list of allowed emails. Until Mojo AI Summits full-time addresses are created, use:
+Then submit the first owner through `/api/auth/bootstrap` from the `/access` page or a trusted admin script using `Authorization: Bearer <token>`. Remove or rotate the bootstrap token after the owner exists.
 
-- `scott@mojoaistudio.com`
-- `jodi@sofractional.com`
-- `robert@cyber1grc.com`
+Recommended first users:
 
-The workflow also ensures the `One-time PIN login` identity provider exists so approved users can receive a Cloudflare Access login code by email.
-
-The existing `CLOUDFLARE_API_TOKEN` is kept focused on Pages deployment. Access configuration uses a separate account-owned token so deployment and Zero Trust administration can be rotated independently.
+- Scott: owner
+- Robert: admin or owner
+- Jodi: admin
 
 ## Local Development
 
-By default, the API requires Cloudflare Access headers. For local testing only, create a local `.dev.vars` file that is not committed:
+By default, the API requires a Mojo Auth session. For local testing only, create a local `.dev.vars` file that is not committed:
 
 ```text
 MOJO_ACCESS_ALLOW_OPEN=true
@@ -124,7 +121,7 @@ Before declaring storage ready:
 
 - Confirm the R2 bucket exists.
 - Confirm `MOJO_SUMMITS_STORAGE` is bound to the Pages project.
-- Confirm `/storage/` requires Cloudflare Access login.
-- Confirm `/api/storage` requires Cloudflare Access.
+- Confirm `/storage/` requires Mojo Auth login.
+- Confirm `/api/storage` requires Mojo Auth login.
 - Confirm an approved user can upload, list, download, and delete a test file.
 - Confirm an unapproved user cannot access either route.

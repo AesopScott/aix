@@ -109,7 +109,7 @@ function requireStorageAccess(request, env, data = {}) {
       response: json(
         {
           error:
-            "Storage is locked until Cloudflare Access is configured for this route."
+            "Storage is locked until Mojo Auth is configured for this route."
         },
         { status: 403 }
       )

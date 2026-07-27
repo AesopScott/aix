@@ -96,7 +96,7 @@ function requireCrmAccess(request, env, data = {}) {
       response: json(
         {
           error:
-            "CRM is locked until Cloudflare Access is configured for this route."
+            "CRM is locked until Mojo Auth is configured for this route."
         },
         { status: 403 }
       )

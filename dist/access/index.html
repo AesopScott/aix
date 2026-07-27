@@ -1088,7 +1088,7 @@
         ].join("\n");
         renderFilters();
         renderRoutes();
-        if (!state.syncAvailable) showNotice("Cloudflare sync requires account credentials in Pages environment.", "");
+        if (!state.syncAvailable) showNotice("Route access is enforced by Mojo app-session middleware.", "");
       } catch (error) {
         showNotice(error.message, "error");
       } finally {

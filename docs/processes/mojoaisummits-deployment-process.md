@@ -40,6 +40,7 @@ The Pages project needs the bindings defined in `wrangler.jsonc`:
 
 - `MOJO_SUMMITS_SETUP_STATE`: KV namespace for the setup checklist shared state.
 - `MOJO_SUMMITS_STORAGE`: R2 bucket binding for internal storage.
+- `MOJO_AUTH_DB`: optional D1 database binding for Mojo Auth users and sessions. If this binding is absent, Mojo Auth falls back to `MOJO_SUMMITS_SETUP_STATE`.
 
 Current storage bucket name:
 
@@ -88,9 +89,10 @@ After rollback, fix the repo and push a corrected deployment so GitHub `main` an
 After deployment, verify:
 
 - `https://mojoaisummits.com/` loads.
-- Public routes such as `/virtual/` and `/vip-registration/` load without Cloudflare Access.
-- Internal routes such as `/setup/`, `/events/`, `/crm/`, `/storage/`, `/budget/`, and `/mockups/` require Cloudflare Access.
+- Public routes such as `/virtual/` and `/vip-registration/` load without Mojo Auth.
+- `/access/` loads without a session so it can show the login screen.
+- Internal routes such as `/setup/`, `/events/`, `/crm/`, `/storage/`, `/budget/`, and `/mockups/` require a Mojo Auth session.
 - Internal APIs such as `/api/setup-state`, `/api/events`, `/api/crm`, `/api/storage`, and `/api/budget` are not publicly accessible.
-- An approved Access user can open `/setup/` and shared checklist state works.
+- An approved Mojo Auth user can open `/setup/` and shared checklist state works.
 
 Do not push a production deployment with the R2 binding until the `mojo-summits-private` bucket exists, because Cloudflare Pages expects configured bindings to reference available resources.
