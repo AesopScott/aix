@@ -142,8 +142,15 @@ function safeKey(value) {
   return key;
 }
 
+function displayNameFromKey(key) {
+  return safeDownloadName(key).replace(
+    /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9]{8}-/i,
+    ""
+  );
+}
+
 function objectToRecord(object) {
-  const originalName = object.customMetadata?.originalName || safeDownloadName(object.key);
+  const originalName = object.customMetadata?.originalName || displayNameFromKey(object.key);
 
   return {
     key: object.key,
@@ -192,7 +199,7 @@ async function downloadObject(request, env) {
   const headers = new Headers();
   headers.set("cache-control", "private, no-store");
   headers.set("content-type", object.httpMetadata?.contentType || "application/octet-stream");
-  headers.set("content-disposition", `attachment; filename="${safeDownloadName(key)}"`);
+  headers.set("content-disposition", `attachment; filename="${displayNameFromKey(key)}"`);
   if (object.size) headers.set("content-length", String(object.size));
   if (object.httpEtag) headers.set("etag", object.httpEtag);
 
@@ -247,7 +254,7 @@ export async function onRequestPost({ request, env }) {
     }
   });
 
-  return json({ ok: true, key });
+  return json({ ok: true, key, name: file.name });
 }
 
 export async function onRequestDelete({ request, env }) {

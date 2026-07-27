@@ -440,7 +440,11 @@
     }
 
     function displayName(file) {
-      return file.name || String(file.key || "").split("/").pop() || "Untitled file";
+      const rawName = file.name || String(file.key || "").split("/").pop() || "Untitled file";
+      return rawName.replace(
+        /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9]{8}-/i,
+        ""
+      );
     }
 
     async function readJson(response) {
@@ -509,7 +513,7 @@
           body: formData
         }).then(readJson);
         uploadForm.reset();
-        setNotice(uploadNotice, `Uploaded ${data.key}.`, "ok");
+        setNotice(uploadNotice, `Uploaded ${data.name || displayName(data)}.`, "ok");
         await loadFiles();
       } catch (error) {
         setNotice(uploadNotice, error.message, "error");
