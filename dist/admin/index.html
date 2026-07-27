@@ -189,8 +189,7 @@
 
     .hero-copy,
     .control-panel,
-    .group,
-    .system-note {
+    .group {
       border: 1px solid var(--line);
       border-radius: 8px;
       background:
@@ -479,21 +478,6 @@
 
     .empty.visible { display: block; }
 
-    .system-note {
-      display: grid;
-      gap: 0.75rem;
-      margin-top: 1rem;
-      padding: 1.15rem;
-    }
-
-    .system-note strong { color: var(--white); }
-
-    .system-note code {
-      color: var(--cyan);
-      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-      font-size: 0.9em;
-    }
-
     .refresh-note {
       min-height: 1.2rem;
       color: var(--muted);
@@ -661,11 +645,6 @@
     <div class="groups" id="groups"></div>
     <div class="empty" id="emptyState">No company hub links match the current filters.</div>
 
-    <section class="system-note" aria-labelledby="access-title">
-      <h2 id="access-title">Access Boundary</h2>
-      <p><strong>Internal routes:</strong> protect `/admin/*`, `/crm/*`, `/setup/*`, `/events/*`, `/storage/*`, and `/budget/*` with Mojo Auth before sharing broadly.</p>
-      <p><strong>Guest-share route:</strong> `/vip-registration/` is intentionally available for invited guests and previews, but it should stay out of public navigation.</p>
-    </section>
   </main>
 
   <script>

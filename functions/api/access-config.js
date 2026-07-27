@@ -81,7 +81,7 @@ export async function onRequestPut({ request, env, data }) {
 }
 
 export async function onRequestPost() {
-  return json({ error: "External access sync is not part of Mojo Auth." }, { status: 405 });
+  return json({ error: "POST is not supported for access configuration." }, { status: 405 });
 }
 
 export async function onRequestDelete({ request, env, data }) {
