@@ -140,7 +140,7 @@
     .metric.loss strong { color: var(--warning); }
 
     .toolbar {
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       align-items: end;
       margin-bottom: 1rem;
       padding: 1.25rem;
@@ -348,7 +348,6 @@
         <input id="searchInput" placeholder="vendor, category, event">
       </label>
       <button id="refreshButton" class="secondary" type="button">Refresh Receipts</button>
-      <button id="reviewButton" type="button">Review Receipts</button>
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
     </section>
 
@@ -403,7 +402,6 @@
     const notice = document.querySelector("#notice");
     const metrics = document.querySelector("#metrics");
     const refreshButton = document.querySelector("#refreshButton");
-    const reviewButton = document.querySelector("#reviewButton");
     const downloadButton = document.querySelector("#downloadButton");
     let state = { rows: [], summary: {} };
 
@@ -613,17 +611,6 @@
     });
 
     refreshButton.addEventListener("click", refreshReceipts);
-
-    reviewButton.addEventListener("click", async () => {
-      setNotice("Creating daily receipt review snapshot...");
-      try {
-        const data = await fetch(`${api}?action=review`, { method: "POST" }).then(readJson);
-        setNotice(`Daily receipt review saved to ${data.key}.`, "ok");
-        await loadBudget();
-      } catch (error) {
-        setNotice(error.message, "error");
-      }
-    });
 
     downloadButton.addEventListener("click", () => {
       window.location.href = `${api}?download=csv`;
