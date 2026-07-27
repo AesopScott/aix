@@ -507,6 +507,33 @@
       font-size: 0.82rem;
     }
 
+    .group-members {
+      display: grid;
+      gap: 0.45rem;
+      padding-top: 0.25rem;
+    }
+
+    .group-members-title {
+      color: var(--cyan);
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .group-member-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.42rem;
+      align-items: flex-start;
+    }
+
+    .group-empty {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
     .user-form .inline-result {
       grid-column: 1 / -1;
     }
@@ -1177,12 +1204,27 @@
 
     function renderAccessGroups() {
       const groups = state.config?.groups || [];
+      const usersByEmail = new Map((state.users || []).map((user) => [user.email, user]));
       elements.accessGroups.innerHTML = groups.map((group) => {
         const isPublic = group.id === "public";
+        const emails = group.emails || [];
+        const memberList = isPublic
+          ? '<p class="group-empty">Public routes do not have members because they do not require sign-in.</p>'
+          : emails.length
+            ? `<div class="group-member-list">${emails.map((email) => {
+                const user = usersByEmail.get(email);
+                const status = user ? user.status : "email only";
+                return `<span class="tag ${status === "active" ? "public" : status === "disabled" ? "closed" : ""}">${escapeHtml(email)} (${escapeHtml(status)})</span>`;
+              }).join("")}</div>`
+            : '<p class="group-empty">No members yet.</p>';
         return `
           <section class="access-group-card">
             <h3>${escapeHtml(group.label)}</h3>
             <p>${escapeHtml(group.summary)}</p>
+            <div class="group-members">
+              <span class="group-members-title">Members ${isPublic ? "" : `(${emails.length})`}</span>
+              ${memberList}
+            </div>
             ${isPublic
               ? '<p class="role-help">No email list. Routes assigned to Public do not require sign-in.</p>'
               : `<label class="field" for="group-${escapeHtml(group.id)}">
@@ -1365,6 +1407,7 @@
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Users could not be loaded.");
       state.users = payload.users || [];
+      if (state.config) renderAccessGroups();
       renderUsers();
       if (state.config) renderRoutes();
     }

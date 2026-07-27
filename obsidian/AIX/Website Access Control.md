@@ -13,6 +13,7 @@ Current state:
 - Routes/pages/APIs are assigned to groups, and group email membership determines which non-admin users can access protected routes.
 - `Admin` and `owner` roles can manage the access console and bypass protected-route group lists; `member` accounts depend on group membership.
 - The account creation UI now asks for an access group (`Admin` or `Mojo team`) instead of exposing raw `member/admin/owner` role choices.
+- Access group cards show visible membership lists with account status, backed by the editable group email lists.
 
 Operational note:
 - Owner/admin users should create additional accounts from `/access/` after the first owner signs in.
