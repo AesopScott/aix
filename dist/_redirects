@@ -8,6 +8,7 @@
 /sms-terms /sms-terms/ 301
 /dallas /dallas/ 301
 /virtual /virtual/ 301
+/virtual/ /virtual/index.html 200
 /virtual-events /virtual/ 301
 /events /events/ 301
 /events/* /events/index.html 200
