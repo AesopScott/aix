@@ -475,6 +475,15 @@
       font-size: 0.92rem;
     }
 
+    .role-help {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0;
+      line-height: 1.35;
+      text-transform: none;
+    }
+
     .user-form .inline-result {
       grid-column: 1 / -1;
     }
@@ -894,7 +903,7 @@
       <section class="workspace" aria-label="Route access configuration">
         <section class="user-admin hidden" id="userAdmin" aria-labelledby="users-title">
           <h2 id="users-title">Users</h2>
-          <p class="form-help">Create an account by email, role, and password. The site does not send email; give the password to the user yourself.</p>
+          <p class="form-help">Create an account by email, role, and password. The site does not send email; give the password to the user yourself. Members only get routes they are assigned to; admins and owners can manage access and open every protected route.</p>
           <form class="user-form" id="userForm" novalidate>
             <label class="field" for="userName">
               Name optional
@@ -905,12 +914,13 @@
               <input id="userEmail" type="email" autocomplete="off" required>
             </label>
             <label class="field" for="userRole">
-              Role
+              Site role
               <select id="userRole">
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
                 <option value="owner">Owner</option>
               </select>
+              <span class="role-help">Use member for normal users. Admin and owner both bypass route lists and can manage this console.</span>
             </label>
             <label class="field" for="userPassword">
               Password
