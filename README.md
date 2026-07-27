@@ -4,6 +4,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 
 - Production: https://mojoaisummits.com/
 - Company hub: https://mojoaisummits.com/admin/
+- Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
 - VIP registration: https://mojoaisummits.com/vip-registration/
 - Internal CRM: https://mojoaisummits.com/crm/
@@ -17,14 +18,24 @@ Static Cloudflare Pages site for Mojo AI Summits.
 
 The company hub lives at `/admin/` and lists company-only routes that should not appear in the public site navigation.
 
+The access console lives at `/access/` and stores route access modes plus the email allowlist in `MOJO_SUMMITS_SETUP_STATE` under `access-control:config:v1`. The page shell is public so users can sign in; the configuration and user-management APIs require an owner/admin Mojo Auth session.
+
 Authentication is enforced in two layers:
 
-- Cloudflare Access applications created by `scripts/configure-cloudflare-access.mjs`.
-- Pages Functions middleware in `functions/_middleware.js` for internal routes and APIs.
+- Mojo Auth users and sessions stored in Cloudflare-hosted app data.
+- Pages Functions middleware in `functions/_middleware.js` for route-level access modes.
+
+Access modes:
+
+- `Public`: no Mojo account required.
+- `Authenticated`: any active Mojo Auth user may continue.
+- `Allowlist`: an active Mojo Auth user must be in the configured allowlist. Owners and admins may continue so they can manage access.
+- `Closed`: middleware rejects the route.
 
 Protected internal routes:
 
 - `/admin/`
+- `/api/access-config` and `/api/access-users`
 - `/crm/` and `/api/crm`
 - `/setup/` and `/api/setup-state`
 - `/events/` and `/api/events`
@@ -33,7 +44,20 @@ Protected internal routes:
 
 Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
 
-Set `MOJO_ACCESS_ALLOWED_EMAILS` on the Pages project to add a server-side email allowlist that mirrors the Cloudflare Access policy. For local development only, set `MOJO_ACCESS_ALLOW_OPEN=true` or `MOJO_STORAGE_ALLOW_OPEN=true` in `.dev.vars`.
+Mojo Auth endpoints:
+
+- `/api/auth/me`: current user and bootstrap status.
+- `/api/auth/login`: email/password login.
+- `/api/auth/logout`: session revocation.
+- `/api/auth/bootstrap`: first owner creation, guarded by `MOJO_AUTH_BOOTSTRAP_TOKEN`.
+- `/api/access-users`: owner/admin user management for `/access`.
+- `/api/access-config`: owner/admin route access configuration for `/access`.
+
+Passwords are stored as PBKDF2-SHA256 hashes with random salts. The raw password is never stored. Sessions are random bearer tokens stored as SHA-256 hashes and sent to the browser in an HttpOnly cookie.
+
+Mojo Auth uses a D1 database bound as `MOJO_AUTH_DB` when available. Until that binding exists, it stores users and sessions in the existing `MOJO_SUMMITS_SETUP_STATE` KV namespace. Apply `migrations/0001_auth.sql` to the D1 database before binding it in production.
+
+For local development only, set `MOJO_ACCESS_ALLOW_OPEN=true` or `MOJO_STORAGE_ALLOW_OPEN=true` in `.dev.vars`.
 
 ## Internal Storage
 
@@ -42,7 +66,7 @@ The storage portal uses a private Cloudflare R2 bucket bound to Pages Functions 
 - Bucket: `mojo-summits-private`
 - API route: `/api/storage`
 - Portal route: `/storage/`
-- Access control: protect both `/storage/*` and `/api/storage*` with Cloudflare Access before production use. The repo middleware also rejects unauthenticated production requests to both routes.
+- Access control: `/storage/*` and `/api/storage*` require a Mojo Auth session unless route access is changed in `/access`.
 - Cloudflare prerequisite: R2 must be enabled on the Cloudflare account before the bucket can be created and before this binding can deploy successfully.
 
 ## Deploy

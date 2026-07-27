@@ -1,0 +1,385 @@
+const USER_INDEX_KEY = "auth:users:index:v1";
+const USER_PREFIX = "auth:user:";
+const SESSION_PREFIX = "auth:session:";
+const SESSION_COOKIE = "mojo_auth";
+const SESSION_TTL_SECONDS = 8 * 60 * 60;
+const PASSWORD_ITERATIONS = 210000;
+
+const encoder = new TextEncoder();
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
+function randomBase64(byteLength = 32) {
+  const bytes = new Uint8Array(byteLength);
+  crypto.getRandomValues(bytes);
+  return bytesToBase64(bytes);
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
+}
+
+function cleanText(value, max = 240) {
+  return String(value || "").trim().slice(0, max);
+}
+
+function timingSafeEqual(a, b) {
+  const left = String(a || "");
+  const right = String(b || "");
+  let diff = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    diff |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return diff === 0;
+}
+
+async function sha256Base64(value) {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
+  return bytesToBase64(new Uint8Array(digest));
+}
+
+async function hashPassword(password, salt = randomBase64(16), iterations = PASSWORD_ITERATIONS) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(String(password || "")),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt: base64ToBytes(salt),
+      iterations
+    },
+    key,
+    256
+  );
+  return `pbkdf2-sha256$${iterations}$${salt}$${bytesToBase64(new Uint8Array(bits))}`;
+}
+
+async function verifyPassword(password, storedHash) {
+  const [algorithm, iterations, salt, expectedHash] = String(storedHash || "").split("$");
+  if (algorithm !== "pbkdf2-sha256" || !iterations || !salt || !expectedHash) return false;
+
+  const actual = await hashPassword(password, salt, Number(iterations));
+  return timingSafeEqual(actual, storedHash);
+}
+
+function parseCookies(value) {
+  return Object.fromEntries(
+    String(value || "")
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const separator = part.indexOf("=");
+        if (separator === -1) return [part, ""];
+        return [part.slice(0, separator), decodeURIComponent(part.slice(separator + 1))];
+      })
+  );
+}
+
+function authDatabase(env) {
+  return env.MOJO_AUTH_DB?.prepare ? env.MOJO_AUTH_DB : null;
+}
+
+function authKv(env) {
+  return env.MOJO_SUMMITS_SETUP_STATE;
+}
+
+function publicUser(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name || "",
+    role: user.role || "member",
+    status: user.status || "active",
+    createdAt: user.createdAt || user.created_at || "",
+    updatedAt: user.updatedAt || user.updated_at || "",
+    lastLoginAt: user.lastLoginAt || user.last_login_at || ""
+  };
+}
+
+function rowToUser(row) {
+  return row
+    ? {
+        id: row.id,
+        email: row.email,
+        name: row.name,
+        role: row.role,
+        status: row.status,
+        passwordHash: row.password_hash,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        lastLoginAt: row.last_login_at
+      }
+    : null;
+}
+
+async function userIndex(env) {
+  const stored = await authKv(env)?.get(USER_INDEX_KEY, "json").catch(() => null);
+  return Array.isArray(stored) ? stored.map(normalizeEmail).filter(Boolean) : [];
+}
+
+async function writeUserIndex(env, emails) {
+  const uniqueEmails = [...new Set(emails.map(normalizeEmail).filter(Boolean))].sort();
+  await authKv(env)?.put(USER_INDEX_KEY, JSON.stringify(uniqueEmails));
+}
+
+export async function countUsers(env) {
+  const db = authDatabase(env);
+  if (db) {
+    const row = await db.prepare("SELECT COUNT(*) AS count FROM auth_users").first();
+    return Number(row?.count || 0);
+  }
+
+  return (await userIndex(env)).length;
+}
+
+export async function listUsers(env) {
+  const db = authDatabase(env);
+  if (db) {
+    const { results } = await db
+      .prepare(
+        "SELECT id, email, name, role, status, created_at, updated_at, last_login_at FROM auth_users ORDER BY email"
+      )
+      .all();
+    return (results || []).map(rowToUser).map(publicUser);
+  }
+
+  const emails = await userIndex(env);
+  const users = await Promise.all(emails.map((email) => getUserByEmail(env, email)));
+  return users.filter(Boolean).map(publicUser).sort((a, b) => a.email.localeCompare(b.email));
+}
+
+export async function getUserByEmail(env, email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  const db = authDatabase(env);
+  if (db) {
+    const row = await db
+      .prepare("SELECT * FROM auth_users WHERE email = ?")
+      .bind(normalizedEmail)
+      .first();
+    return rowToUser(row);
+  }
+
+  return authKv(env)?.get(`${USER_PREFIX}${normalizedEmail}`, "json").catch(() => null) || null;
+}
+
+export async function createUser(env, input = {}, actor = "") {
+  const email = normalizeEmail(input.email);
+  if (!isValidEmail(email)) throw new Error("Enter a valid email address.");
+  if (await getUserByEmail(env, email)) throw new Error("A user with that email already exists.");
+
+  const password = String(input.password || "");
+  if (password.length < 12) throw new Error("Password must be at least 12 characters.");
+
+  const now = new Date().toISOString();
+  const user = {
+    id: crypto.randomUUID(),
+    email,
+    name: cleanText(input.name || email),
+    role: ["owner", "admin", "member"].includes(input.role) ? input.role : "member",
+    status: input.status === "disabled" ? "disabled" : "active",
+    passwordHash: await hashPassword(password),
+    createdAt: now,
+    updatedAt: now,
+    createdBy: normalizeEmail(actor)
+  };
+
+  const db = authDatabase(env);
+  if (db) {
+    await db
+      .prepare(
+        `INSERT INTO auth_users (
+          id, email, name, role, status, password_hash, created_at, updated_at, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        user.id,
+        user.email,
+        user.name,
+        user.role,
+        user.status,
+        user.passwordHash,
+        user.createdAt,
+        user.updatedAt,
+        user.createdBy
+      )
+      .run();
+    return publicUser(user);
+  }
+
+  const emails = await userIndex(env);
+  await authKv(env)?.put(`${USER_PREFIX}${email}`, JSON.stringify(user));
+  await writeUserIndex(env, [...emails, email]);
+  return publicUser(user);
+}
+
+export async function updateUser(env, email, input = {}, actor = "") {
+  const normalizedEmail = normalizeEmail(email || input.email);
+  const existing = await getUserByEmail(env, normalizedEmail);
+  if (!existing) throw new Error("User was not found.");
+
+  const now = new Date().toISOString();
+  const next = {
+    ...existing,
+    name: input.name === undefined ? existing.name : cleanText(input.name || existing.email),
+    role: ["owner", "admin", "member"].includes(input.role) ? input.role : existing.role,
+    status: ["active", "disabled"].includes(input.status) ? input.status : existing.status,
+    updatedAt: now,
+    updatedBy: normalizeEmail(actor)
+  };
+
+  if (input.password) {
+    if (String(input.password).length < 12) throw new Error("Password must be at least 12 characters.");
+    next.passwordHash = await hashPassword(input.password);
+  }
+
+  const db = authDatabase(env);
+  if (db) {
+    await db
+      .prepare(
+        `UPDATE auth_users
+         SET name = ?, role = ?, status = ?, password_hash = ?, updated_at = ?, updated_by = ?
+         WHERE email = ?`
+      )
+      .bind(next.name, next.role, next.status, next.passwordHash, now, next.updatedBy, normalizedEmail)
+      .run();
+    if (next.status === "disabled") await revokeUserSessions(env, normalizedEmail);
+    return publicUser(next);
+  }
+
+  await authKv(env)?.put(`${USER_PREFIX}${normalizedEmail}`, JSON.stringify(next));
+  if (next.status === "disabled") await revokeUserSessions(env, normalizedEmail);
+  return publicUser(next);
+}
+
+export async function authenticateUser(env, email, password) {
+  const user = await getUserByEmail(env, email);
+  if (!user || user.status !== "active") return null;
+  if (!(await verifyPassword(password, user.passwordHash))) return null;
+  return user;
+}
+
+export async function createSession(env, user, userAgent = "") {
+  const token = `${crypto.randomUUID()}.${randomBase64(32)}`;
+  const tokenHash = await sha256Base64(token);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + SESSION_TTL_SECONDS * 1000).toISOString();
+  const session = {
+    id: crypto.randomUUID(),
+    tokenHash,
+    userEmail: user.email,
+    createdAt: now.toISOString(),
+    expiresAt,
+    userAgent: cleanText(userAgent, 500)
+  };
+
+  const db = authDatabase(env);
+  if (db) {
+    await db
+      .prepare(
+        `INSERT INTO auth_sessions (
+          id, token_hash, user_email, created_at, expires_at, user_agent
+        ) VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .bind(session.id, session.tokenHash, session.userEmail, session.createdAt, session.expiresAt, session.userAgent)
+      .run();
+    await db
+      .prepare("UPDATE auth_users SET last_login_at = ? WHERE email = ?")
+      .bind(session.createdAt, user.email)
+      .run();
+  } else {
+    await authKv(env)?.put(`${SESSION_PREFIX}${tokenHash}`, JSON.stringify(session), {
+      expirationTtl: SESSION_TTL_SECONDS
+    });
+    await updateUser(env, user.email, { lastLoginAt: session.createdAt }, user.email).catch(() => null);
+  }
+
+  return { token, session };
+}
+
+export async function getSessionUser(request, env) {
+  const token = parseCookies(request.headers.get("cookie"))[SESSION_COOKIE];
+  if (!token) return null;
+
+  const tokenHash = await sha256Base64(token);
+  const db = authDatabase(env);
+  const session = db
+    ? await db
+        .prepare("SELECT * FROM auth_sessions WHERE token_hash = ?")
+        .bind(tokenHash)
+        .first()
+    : await authKv(env)?.get(`${SESSION_PREFIX}${tokenHash}`, "json").catch(() => null);
+
+  if (!session || new Date(session.expires_at || session.expiresAt || 0).getTime() <= Date.now()) {
+    return null;
+  }
+
+  const email = session.user_email || session.userEmail;
+  const user = await getUserByEmail(env, email);
+  if (!user || user.status !== "active") return null;
+  return publicUser(user);
+}
+
+export async function revokeSession(request, env) {
+  const token = parseCookies(request.headers.get("cookie"))[SESSION_COOKIE];
+  if (!token) return;
+
+  const tokenHash = await sha256Base64(token);
+  const db = authDatabase(env);
+  if (db) {
+    await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
+  } else {
+    await authKv(env)?.delete(`${SESSION_PREFIX}${tokenHash}`);
+  }
+}
+
+export async function revokeUserSessions(env, email) {
+  const normalizedEmail = normalizeEmail(email);
+  const db = authDatabase(env);
+  if (db) {
+    await db.prepare("DELETE FROM auth_sessions WHERE user_email = ?").bind(normalizedEmail).run();
+  }
+}
+
+export function sessionCookie(token, request) {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=${SESSION_TTL_SECONDS}; SameSite=Lax${secure}`;
+}
+
+export function clearSessionCookie(request) {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+}
+
+export function canManageAccess(user) {
+  return user?.role === "owner" || user?.role === "admin";
+}
+
+export function authStorageKind(env) {
+  return authDatabase(env) ? "d1" : "kv";
+}
+
+export { SESSION_TTL_SECONDS };

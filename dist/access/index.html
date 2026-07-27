@@ -1,0 +1,1310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <title>Mojo AI Summits Access Console</title>
+  <style>
+    :root {
+      --deep-navy: #0A0F1E;
+      --electric-blue: #1666FF;
+      --cyan: #00E6FF;
+      --slate: #1B2333;
+      --white: #FFFFFF;
+      --ink: #EAF6FF;
+      --muted: rgba(255, 255, 255, 0.68);
+      --line: rgba(0, 230, 255, 0.24);
+      --line-strong: rgba(0, 230, 255, 0.46);
+      --panel: rgba(27, 35, 51, 0.88);
+      --panel-soft: rgba(10, 15, 30, 0.72);
+      --amber: #FFD36A;
+      --mint: #6AF0B6;
+      --rose: #FF7A90;
+      --violet: #A6A5FF;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(22, 102, 255, 0.18), transparent 36%),
+        linear-gradient(180deg, #050814 0%, var(--deep-navy) 48%, #07101F 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.82), transparent 74%);
+    }
+
+    a { color: inherit; }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 15, 30, 0.9);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 1px 28px rgba(0, 230, 255, 0.08);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      width: min(1320px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1rem 0;
+    }
+
+    .brand-stack {
+      display: grid;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+
+    .brand-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      width: fit-content;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      display: block;
+      width: auto;
+      height: 39px;
+    }
+
+    .brand-divider {
+      width: 1px;
+      height: 35px;
+      background: linear-gradient(to bottom, transparent, rgba(0, 230, 255, 0.9), transparent);
+      box-shadow: 0 0 14px rgba(0, 230, 255, 0.24);
+    }
+
+    .brand-name {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .brand-primary {
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      background: linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .brand-secondary {
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: .38em;
+      color: rgba(222, 235, 255, .78);
+      padding-left: .38em;
+      white-space: nowrap;
+    }
+
+    .hub-label,
+    .eyebrow,
+    label,
+    .tiny-label {
+      color: var(--cyan);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hub-label {
+      display: block;
+      padding-left: 51px;
+      color: rgba(222, 235, 255, 0.78);
+      letter-spacing: 0.32em;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    nav a {
+      color: var(--cyan);
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    main {
+      position: relative;
+      width: min(1320px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1.25rem 0 4rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    aside {
+      position: sticky;
+      top: 88px;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .panel,
+    .route-table,
+    .notice {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(27, 35, 51, 0.94), rgba(10, 15, 30, 0.78)),
+        var(--slate);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .panel {
+      display: grid;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    .headline {
+      display: grid;
+      gap: 0.75rem;
+      padding: 1.25rem;
+      min-height: 210px;
+      align-content: end;
+      background:
+        linear-gradient(115deg, rgba(22, 102, 255, 0.28), transparent 56%),
+        linear-gradient(180deg, rgba(27, 35, 51, 0.94), rgba(10, 15, 30, 0.78));
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1,
+    h2,
+    h3 {
+      color: var(--white);
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      max-width: 10ch;
+      font-size: clamp(2.3rem, 5.2vw, 4.9rem);
+      line-height: 0.94;
+    }
+
+    h2 { font-size: 1.35rem; }
+    h3 { font-size: 1.02rem; }
+
+    p {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+
+    .stat {
+      min-height: 78px;
+      padding: 0.8rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.58);
+    }
+
+    .stat strong {
+      display: block;
+      margin-bottom: 0.28rem;
+      color: var(--white);
+      font-size: 1.24rem;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.3;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.72rem 0.82rem;
+      color: var(--white);
+      background: rgba(10, 15, 30, 0.8);
+      outline: none;
+    }
+
+    textarea {
+      min-height: 132px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0, 230, 255, 0.16);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+
+    .actions .wide {
+      grid-column: 1 / -1;
+    }
+
+    button {
+      min-height: 42px;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      padding: 0.72rem 0.85rem;
+      color: var(--white);
+      background: rgba(22, 102, 255, 0.28);
+      cursor: pointer;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    button:hover,
+    button:focus-visible {
+      border-color: var(--cyan);
+      background: rgba(22, 102, 255, 0.42);
+      outline: none;
+    }
+
+    button.secondary {
+      background: rgba(10, 15, 30, 0.62);
+    }
+
+    button.danger {
+      border-color: rgba(255, 122, 144, 0.52);
+      background: rgba(255, 122, 144, 0.12);
+      color: #ffdce2;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.58;
+    }
+
+    .notice {
+      display: none;
+      padding: 0.95rem 1rem;
+      color: var(--muted);
+    }
+
+    .notice.visible { display: block; }
+    .notice.ok { border-color: rgba(106, 240, 182, 0.42); }
+    .notice.error { border-color: rgba(255, 122, 144, 0.5); }
+
+    .hidden { display: none !important; }
+
+    .auth-gate {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+      gap: 1rem;
+      align-items: stretch;
+      margin-bottom: 1rem;
+    }
+
+    .auth-card {
+      display: grid;
+      gap: 0.85rem;
+      align-content: start;
+      padding: 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.58);
+    }
+
+    .session-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.5);
+    }
+
+    .session-user {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
+    }
+
+    .user-admin {
+      display: grid;
+      gap: 0.8rem;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.5);
+    }
+
+    .user-form {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.65rem;
+      align-items: end;
+    }
+
+    .user-list {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .user-row {
+      display: grid;
+      grid-template-columns: minmax(160px, 1.2fr) minmax(90px, 0.45fr) minmax(90px, 0.45fr) auto;
+      gap: 0.55rem;
+      align-items: center;
+      padding: 0.65rem;
+      border: 1px solid rgba(0, 230, 255, 0.13);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.42);
+    }
+
+    .user-row strong {
+      color: var(--white);
+      overflow-wrap: anywhere;
+    }
+
+    .compact-button {
+      min-height: 34px;
+      padding: 0.45rem 0.62rem;
+      font-size: 0.82rem;
+    }
+
+    .workspace {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) minmax(150px, 200px);
+      gap: 0.75rem;
+      align-items: end;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.5);
+    }
+
+    .route-table {
+      overflow: hidden;
+    }
+
+    .table-head,
+    .route-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.25fr) minmax(170px, 0.75fr) minmax(190px, 0.75fr) minmax(250px, 1fr);
+      gap: 0;
+      align-items: stretch;
+    }
+
+    .table-head {
+      border-bottom: 1px solid var(--line);
+      background: rgba(22, 102, 255, 0.12);
+    }
+
+    .table-head span {
+      padding: 0.85rem 1rem;
+      color: var(--cyan);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .route-row {
+      border-bottom: 1px solid rgba(0, 230, 255, 0.13);
+      background: rgba(10, 15, 30, 0.36);
+    }
+
+    .route-row:last-child {
+      border-bottom: 0;
+    }
+
+    .cell {
+      min-width: 0;
+      padding: 1rem;
+      border-right: 1px solid rgba(0, 230, 255, 0.13);
+    }
+
+    .cell:last-child {
+      border-right: 0;
+    }
+
+    .route-title {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .route-title strong {
+      color: var(--white);
+      font-size: 1.03rem;
+      line-height: 1.25;
+    }
+
+    .route-title p {
+      font-size: 0.88rem;
+    }
+
+    .tags,
+    .domains {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.42rem;
+      align-items: flex-start;
+    }
+
+    .tag,
+    .domain {
+      display: inline-flex;
+      align-items: center;
+      min-height: 27px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.24rem 0.58rem;
+      background: rgba(0, 230, 255, 0.08);
+      color: var(--cyan);
+      font-size: 0.72rem;
+      font-weight: 850;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .tag.public {
+      border-color: rgba(106, 240, 182, 0.4);
+      background: rgba(106, 240, 182, 0.09);
+      color: var(--mint);
+    }
+
+    .tag.authenticated {
+      border-color: rgba(166, 165, 255, 0.42);
+      background: rgba(166, 165, 255, 0.1);
+      color: var(--violet);
+    }
+
+    .tag.allowlist {
+      border-color: rgba(0, 230, 255, 0.48);
+      color: var(--cyan);
+    }
+
+    .tag.closed {
+      border-color: rgba(255, 122, 144, 0.52);
+      background: rgba(255, 122, 144, 0.12);
+      color: var(--rose);
+    }
+
+    .tag.default {
+      border-color: rgba(255, 211, 106, 0.42);
+      color: var(--amber);
+      background: rgba(255, 211, 106, 0.08);
+    }
+
+    .mode-select {
+      min-height: 40px;
+      font-weight: 850;
+    }
+
+    .empty {
+      display: none;
+      padding: 2rem;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: center;
+      background: rgba(10, 15, 30, 0.48);
+    }
+
+    .empty.visible { display: block; }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .auth-gate,
+      .user-form,
+      .user-row {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: static;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .toolbar,
+      .table-head,
+      .route-row {
+        grid-template-columns: 1fr;
+      }
+
+      .table-head {
+        display: none;
+      }
+
+      .cell {
+        border-right: 0;
+        border-bottom: 1px solid rgba(0, 230, 255, 0.13);
+      }
+
+      .cell:last-child {
+        border-bottom: 0;
+      }
+
+      nav {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 720px) {
+      main,
+      .topbar {
+        width: min(100% - 1rem, 1320px);
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .brand-mark { height: 34px; }
+      .brand-divider { height: 30px; }
+      .brand-primary {
+        font-size: 20px;
+        letter-spacing: .03em;
+      }
+      .brand-secondary {
+        font-size: 9.5px;
+        letter-spacing: .32em;
+        padding-left: .32em;
+      }
+      .hub-label {
+        padding-left: 46px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand-stack">
+        <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+          <img class="brand-mark" src="/assets/logo-mark.png" alt="">
+          <span class="brand-divider" aria-hidden="true"></span>
+          <span class="brand-name" aria-hidden="true">
+            <span class="brand-primary">MOJO AI</span>
+            <span class="brand-secondary">Summits</span>
+          </span>
+        </a>
+        <span class="hub-label">Access Console</span>
+      </div>
+      <nav aria-label="Company shortcuts">
+        <a href="/admin/">Hub</a>
+        <a href="/crm/">CRM</a>
+        <a href="/setup/">Setup</a>
+        <a href="/storage/">Storage</a>
+        <a href="/budget/">Budget</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="auth-gate" id="authGate" aria-labelledby="auth-title">
+      <div class="panel headline">
+        <p class="eyebrow">Authentication</p>
+        <h1 id="auth-title">Access control.</h1>
+        <p id="authMessage">Checking session.</p>
+      </div>
+      <form class="auth-card" id="loginForm">
+        <h2>Sign In</h2>
+        <label class="field" for="loginEmail">
+          Email
+          <input id="loginEmail" type="email" autocomplete="email" required>
+        </label>
+        <label class="field" for="loginPassword">
+          Password
+          <input id="loginPassword" type="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Sign In</button>
+      </form>
+      <form class="auth-card hidden" id="bootstrapForm">
+        <h2>Create Owner</h2>
+        <label class="field" for="bootstrapToken">
+          Bootstrap token
+          <input id="bootstrapToken" type="password" autocomplete="one-time-code" required>
+        </label>
+        <label class="field" for="bootstrapName">
+          Name
+          <input id="bootstrapName" type="text" autocomplete="name" required>
+        </label>
+        <label class="field" for="bootstrapEmail">
+          Email
+          <input id="bootstrapEmail" type="email" autocomplete="email" required>
+        </label>
+        <label class="field" for="bootstrapPassword">
+          Password
+          <input id="bootstrapPassword" type="password" autocomplete="new-password" required minlength="12">
+        </label>
+        <button type="submit">Create Owner</button>
+      </form>
+    </section>
+
+    <div class="session-bar hidden" id="sessionBar">
+      <div class="session-user" id="sessionUser"></div>
+      <button class="secondary compact-button" id="logoutButton" type="button">Sign Out</button>
+    </div>
+
+    <div class="layout hidden" id="appLayout">
+      <aside>
+        <section class="panel headline" aria-labelledby="page-title">
+          <p class="eyebrow">Authentication</p>
+          <h1 id="page-title">Access control.</h1>
+          <p id="updatedText">Loading route policy.</p>
+        </section>
+
+        <section class="panel" aria-label="Access summary">
+          <div class="stats">
+            <div class="stat"><strong id="totalRoutes">0</strong><span>routes tracked</span></div>
+            <div class="stat"><strong id="protectedRoutes">0</strong><span>protected routes</span></div>
+            <div class="stat"><strong id="allowlistCount">0</strong><span>allowed emails</span></div>
+            <div class="stat"><strong id="syncState">-</strong><span>Cloudflare sync</span></div>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="Allowed emails">
+          <label class="field" for="allowedEmails">
+            Allowed emails
+            <textarea id="allowedEmails" spellcheck="false" placeholder="scott@example.com&#10;jodi@example.com"></textarea>
+          </label>
+          <div class="actions">
+            <button id="saveButton" type="button">Save</button>
+            <button id="syncButton" class="secondary" type="button">Sync</button>
+            <button id="resetButton" class="danger wide" type="button">Reset Defaults</button>
+          </div>
+        </section>
+
+        <div class="notice" id="notice" role="status"></div>
+      </aside>
+
+      <section class="workspace" aria-label="Route access configuration">
+        <section class="user-admin hidden" id="userAdmin" aria-labelledby="users-title">
+          <h2 id="users-title">Users</h2>
+          <form class="user-form" id="userForm">
+            <label class="field" for="userName">
+              Name
+              <input id="userName" type="text" autocomplete="off">
+            </label>
+            <label class="field" for="userEmail">
+              Email
+              <input id="userEmail" type="email" autocomplete="off" required>
+            </label>
+            <label class="field" for="userPassword">
+              Password
+              <input id="userPassword" type="password" autocomplete="new-password" minlength="12" required>
+            </label>
+            <label class="field" for="userRole">
+              Role
+              <select id="userRole">
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+                <option value="owner">Owner</option>
+              </select>
+            </label>
+            <button type="submit">Add User</button>
+          </form>
+          <div class="user-list" id="userList"></div>
+        </section>
+
+        <div class="toolbar">
+          <label class="field" for="searchInput">
+            Search
+            <input id="searchInput" type="search" placeholder="Find route, page, API, domain">
+          </label>
+          <label class="field" for="groupFilter">
+            Group
+            <select id="groupFilter"></select>
+          </label>
+          <label class="field" for="modeFilter">
+            Mode
+            <select id="modeFilter"></select>
+          </label>
+        </div>
+
+        <div class="route-table" aria-live="polite">
+          <div class="table-head" aria-hidden="true">
+            <span>Route</span>
+            <span>Access</span>
+            <span>Classification</span>
+            <span>Cloudflare domains</span>
+          </div>
+          <div id="routeRows"></div>
+        </div>
+        <div class="empty" id="emptyState">No routes match the current filters.</div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const state = {
+      config: null,
+      modes: [],
+      syncAvailable: false,
+      session: null,
+      users: [],
+      search: "",
+      group: "all",
+      mode: "all",
+      busy: false
+    };
+
+    const elements = {
+      appLayout: document.querySelector("#appLayout"),
+      authGate: document.querySelector("#authGate"),
+      authMessage: document.querySelector("#authMessage"),
+      allowedEmails: document.querySelector("#allowedEmails"),
+      bootstrapForm: document.querySelector("#bootstrapForm"),
+      bootstrapToken: document.querySelector("#bootstrapToken"),
+      bootstrapName: document.querySelector("#bootstrapName"),
+      bootstrapEmail: document.querySelector("#bootstrapEmail"),
+      bootstrapPassword: document.querySelector("#bootstrapPassword"),
+      emptyState: document.querySelector("#emptyState"),
+      groupFilter: document.querySelector("#groupFilter"),
+      loginForm: document.querySelector("#loginForm"),
+      loginEmail: document.querySelector("#loginEmail"),
+      loginPassword: document.querySelector("#loginPassword"),
+      logoutButton: document.querySelector("#logoutButton"),
+      modeFilter: document.querySelector("#modeFilter"),
+      notice: document.querySelector("#notice"),
+      protectedRoutes: document.querySelector("#protectedRoutes"),
+      routeRows: document.querySelector("#routeRows"),
+      saveButton: document.querySelector("#saveButton"),
+      searchInput: document.querySelector("#searchInput"),
+      syncButton: document.querySelector("#syncButton"),
+      syncState: document.querySelector("#syncState"),
+      resetButton: document.querySelector("#resetButton"),
+      sessionBar: document.querySelector("#sessionBar"),
+      sessionUser: document.querySelector("#sessionUser"),
+      totalRoutes: document.querySelector("#totalRoutes"),
+      allowlistCount: document.querySelector("#allowlistCount"),
+      updatedText: document.querySelector("#updatedText"),
+      userAdmin: document.querySelector("#userAdmin"),
+      userEmail: document.querySelector("#userEmail"),
+      userForm: document.querySelector("#userForm"),
+      userList: document.querySelector("#userList"),
+      userName: document.querySelector("#userName"),
+      userPassword: document.querySelector("#userPassword"),
+      userRole: document.querySelector("#userRole")
+    };
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function routeSearchText(route) {
+      return [
+        route.label,
+        route.summary,
+        route.group,
+        route.kind,
+        route.mode,
+        ...(route.cloudflareDomains || [])
+      ].join(" ").toLowerCase();
+    }
+
+    function modeLabel(mode) {
+      return (state.modes.find((entry) => entry.value === mode) || {}).label || mode;
+    }
+
+    function showNotice(message, type = "") {
+      elements.notice.textContent = message;
+      elements.notice.className = `notice visible ${type}`.trim();
+    }
+
+    function clearNotice() {
+      elements.notice.className = "notice";
+      elements.notice.textContent = "";
+    }
+
+    function setBusy(value) {
+      state.busy = value;
+      elements.saveButton.disabled = value;
+      elements.syncButton.disabled = value || !state.syncAvailable;
+      elements.resetButton.disabled = value;
+      document.querySelectorAll(".mode-select").forEach((select) => {
+        select.disabled = value;
+      });
+    }
+
+    function canManageAccess() {
+      const role = state.session?.user?.role;
+      return role === "owner" || role === "admin";
+    }
+
+    function parseEmailBox() {
+      return elements.allowedEmails.value
+        .split(/[\n,]/)
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean);
+    }
+
+    function routeModeMap() {
+      return new Map(state.config.routes.map((route) => [route.id, route.mode]));
+    }
+
+    function currentPayload() {
+      const modes = routeModeMap();
+      document.querySelectorAll(".mode-select").forEach((select) => {
+        modes.set(select.dataset.routeId, select.value);
+      });
+
+      return {
+        allowedEmails: parseEmailBox(),
+        routes: state.config.routes.map((route) => ({
+          id: route.id,
+          mode: modes.get(route.id) || route.mode
+        }))
+      };
+    }
+
+    function renderFilters() {
+      const groups = [...new Set(state.config.routes.map((route) => route.group))];
+      elements.groupFilter.innerHTML = [
+        '<option value="all">All groups</option>',
+        ...groups.map((group) => `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`)
+      ].join("");
+
+      elements.modeFilter.innerHTML = [
+        '<option value="all">All modes</option>',
+        ...state.modes.map((mode) => `<option value="${escapeHtml(mode.value)}">${escapeHtml(mode.label)}</option>`)
+      ].join("");
+    }
+
+    function routeVisible(route) {
+      const query = state.search.trim().toLowerCase();
+      const searchOk = !query || routeSearchText(route).includes(query);
+      const groupOk = state.group === "all" || route.group === state.group;
+      const modeOk = state.mode === "all" || route.mode === state.mode;
+      return searchOk && groupOk && modeOk;
+    }
+
+    function renderSummary(visibleRoutes) {
+      const routes = state.config.routes;
+      const protectedCount = routes.filter((route) => route.mode === "authenticated" || route.mode === "allowlist").length;
+      const effectiveEmails = state.config.effectiveAllowedEmails || [];
+      elements.totalRoutes.textContent = routes.length;
+      elements.protectedRoutes.textContent = protectedCount;
+      elements.allowlistCount.textContent = effectiveEmails.length;
+      elements.syncState.textContent = state.syncAvailable ? "Ready" : "Manual";
+      elements.updatedText.textContent = state.config.updatedAt
+        ? `Updated ${new Date(state.config.updatedAt).toLocaleString()} by ${state.config.updatedBy || "unknown"}.`
+        : "Default route policy is active.";
+      elements.emptyState.classList.toggle("visible", visibleRoutes.length === 0);
+    }
+
+    function renderSession() {
+      const user = state.session?.user;
+      const authenticated = Boolean(user);
+      elements.authGate.classList.toggle("hidden", authenticated);
+      elements.sessionBar.classList.toggle("hidden", !authenticated);
+      elements.appLayout.classList.toggle("hidden", !authenticated || !canManageAccess());
+      elements.userAdmin.classList.toggle("hidden", !authenticated || !canManageAccess());
+
+      if (authenticated) {
+        elements.sessionUser.innerHTML = `
+          <span class="tag authenticated">${escapeHtml(user.email)}</span>
+          <span class="tag">${escapeHtml(user.role)}</span>
+          <span class="tag">${escapeHtml(user.status)}</span>
+        `;
+      } else {
+        elements.sessionUser.innerHTML = "";
+      }
+
+      const bootstrapRequired = Boolean(state.session?.bootstrapRequired);
+      elements.bootstrapForm.classList.toggle("hidden", !bootstrapRequired);
+      elements.loginForm.classList.toggle("hidden", bootstrapRequired);
+      elements.authMessage.textContent = bootstrapRequired
+        ? "No owner account exists yet."
+        : authenticated && !canManageAccess()
+          ? "Your account is signed in, but access administration requires an owner or admin role."
+          : "Sign in to manage route access.";
+    }
+
+    function renderUsers() {
+      if (!canManageAccess()) return;
+      elements.userList.innerHTML = state.users.map((user) => `
+        <div class="user-row">
+          <strong>${escapeHtml(user.email)}</strong>
+          <span class="tag ${user.status === "active" ? "public" : "closed"}">${escapeHtml(user.status)}</span>
+          <span class="tag">${escapeHtml(user.role)}</span>
+          <button class="danger compact-button" data-disable-user="${escapeHtml(user.email)}" type="button" ${user.status === "disabled" ? "disabled" : ""}>Disable</button>
+        </div>
+      `).join("");
+
+      document.querySelectorAll("[data-disable-user]").forEach((button) => {
+        button.addEventListener("click", () => disableUser(button.dataset.disableUser));
+      });
+    }
+
+    function renderRoutes() {
+      const visibleRoutes = state.config.routes.filter(routeVisible);
+      renderSummary(visibleRoutes);
+      elements.routeRows.innerHTML = visibleRoutes.map((route) => {
+        const locked = route.id === "access" || route.id === "api-access-config";
+        return `
+          <div class="route-row" data-route-id="${escapeHtml(route.id)}">
+            <div class="cell">
+              <div class="route-title">
+                <strong>${escapeHtml(route.label)}</strong>
+                <p>${escapeHtml(route.summary)}</p>
+              </div>
+            </div>
+            <div class="cell">
+              <select class="mode-select" data-route-id="${escapeHtml(route.id)}" aria-label="Access mode for ${escapeHtml(route.label)}">
+                ${state.modes.map((mode) => {
+                  const disabled = locked && mode.value === "public" ? "disabled" : "";
+                  return `<option value="${escapeHtml(mode.value)}" ${mode.value === route.mode ? "selected" : ""} ${disabled}>${escapeHtml(mode.label)}</option>`;
+                }).join("")}
+              </select>
+            </div>
+            <div class="cell">
+              <div class="tags">
+                <span class="tag ${escapeHtml(route.mode)}">${escapeHtml(modeLabel(route.mode))}</span>
+                <span class="tag">${escapeHtml(route.kind)}</span>
+                <span class="tag">${escapeHtml(route.group)}</span>
+                ${route.mode !== route.defaultMode ? '<span class="tag default">changed</span>' : ""}
+              </div>
+            </div>
+            <div class="cell">
+              <div class="domains">
+                ${(route.cloudflareDomains || []).map((domain) => `<span class="domain">${escapeHtml(domain)}</span>`).join("")}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      document.querySelectorAll(".mode-select").forEach((select) => {
+        select.addEventListener("change", () => {
+          const route = state.config.routes.find((entry) => entry.id === select.dataset.routeId);
+          if (!route) return;
+          route.mode = select.value;
+          renderRoutes();
+        });
+      });
+      setBusy(state.busy);
+    }
+
+    async function loadConfig() {
+      clearNotice();
+      setBusy(true);
+      try {
+        const response = await fetch("/api/access-config");
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Access configuration could not be loaded.");
+        state.config = payload.config;
+        state.modes = payload.modes;
+        state.syncAvailable = payload.syncAvailable;
+        elements.allowedEmails.value = [
+          ...(state.config.allowedEmails || []),
+          ...(state.config.envAllowedEmails || [])
+        ].join("\n");
+        renderFilters();
+        renderRoutes();
+        if (!state.syncAvailable) showNotice("Cloudflare sync requires account credentials in Pages environment.", "");
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function loadUsers() {
+      if (!canManageAccess()) return;
+      const response = await fetch("/api/access-users");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Users could not be loaded.");
+      state.users = payload.users || [];
+      renderUsers();
+    }
+
+    async function loadSession() {
+      clearNotice();
+      try {
+        const response = await fetch("/api/auth/me");
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Session could not be checked.");
+        state.session = payload;
+        renderSession();
+        if (payload.authenticated && canManageAccess()) {
+          await loadConfig();
+          await loadUsers();
+        } else if (payload.authenticated) {
+          showNotice("Your account is not an access administrator.", "error");
+        }
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    }
+
+    async function login(event) {
+      event.preventDefault();
+      clearNotice();
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email: elements.loginEmail.value,
+            password: elements.loginPassword.value
+          })
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Sign in failed.");
+        elements.loginPassword.value = "";
+        await loadSession();
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    }
+
+    async function bootstrap(event) {
+      event.preventDefault();
+      clearNotice();
+      try {
+        const response = await fetch("/api/auth/bootstrap", {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${elements.bootstrapToken.value}`,
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            name: elements.bootstrapName.value,
+            email: elements.bootstrapEmail.value,
+            password: elements.bootstrapPassword.value
+          })
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Owner account could not be created.");
+        elements.bootstrapForm.reset();
+        await loadSession();
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    }
+
+    async function logout() {
+      clearNotice();
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+      state.session = null;
+      state.config = null;
+      state.users = [];
+      elements.appLayout.classList.add("hidden");
+      await loadSession();
+    }
+
+    async function addUser(event) {
+      event.preventDefault();
+      clearNotice();
+      try {
+        const response = await fetch("/api/access-users", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: elements.userName.value,
+            email: elements.userEmail.value,
+            password: elements.userPassword.value,
+            role: elements.userRole.value
+          })
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "User could not be created.");
+        elements.userForm.reset();
+        await loadUsers();
+        showNotice("User created.", "ok");
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    }
+
+    async function disableUser(email) {
+      clearNotice();
+      try {
+        const response = await fetch(`/api/access-users?email=${encodeURIComponent(email)}`, {
+          method: "DELETE"
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "User could not be disabled.");
+        await loadUsers();
+        showNotice("User disabled.", "ok");
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    }
+
+    async function saveConfig() {
+      clearNotice();
+      setBusy(true);
+      try {
+        const response = await fetch("/api/access-config", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(currentPayload())
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Access configuration could not be saved.");
+        state.config = payload.config;
+        elements.allowedEmails.value = [
+          ...(state.config.allowedEmails || []),
+          ...(state.config.envAllowedEmails || [])
+        ].join("\n");
+        renderRoutes();
+        showNotice("Access configuration saved.", "ok");
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function syncConfig() {
+      clearNotice();
+      setBusy(true);
+      try {
+        const response = await fetch("/api/access-config?action=sync", { method: "POST" });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Cloudflare Access sync failed.");
+        showNotice(`Cloudflare Access synced: ${payload.ensured.length} applications updated, ${payload.removed.length} removed.`, "ok");
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function resetConfig() {
+      clearNotice();
+      setBusy(true);
+      try {
+        const response = await fetch("/api/access-config", { method: "DELETE" });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Access defaults could not be restored.");
+        state.config = payload.config;
+        elements.allowedEmails.value = [
+          ...(state.config.allowedEmails || []),
+          ...(state.config.envAllowedEmails || [])
+        ].join("\n");
+        renderFilters();
+        renderRoutes();
+        showNotice("Default access policy restored.", "ok");
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    elements.searchInput.addEventListener("input", (event) => {
+      state.search = event.target.value;
+      renderRoutes();
+    });
+
+    elements.groupFilter.addEventListener("change", (event) => {
+      state.group = event.target.value;
+      renderRoutes();
+    });
+
+    elements.modeFilter.addEventListener("change", (event) => {
+      state.mode = event.target.value;
+      renderRoutes();
+    });
+
+    elements.saveButton.addEventListener("click", saveConfig);
+    elements.syncButton.addEventListener("click", syncConfig);
+    elements.resetButton.addEventListener("click", resetConfig);
+    elements.loginForm.addEventListener("submit", login);
+    elements.bootstrapForm.addEventListener("submit", bootstrap);
+    elements.logoutButton.addEventListener("click", logout);
+    elements.userForm.addEventListener("submit", addUser);
+
+    loadSession();
+  </script>
+</body>
+</html>

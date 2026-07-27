@@ -106,7 +106,9 @@ function accessSessionEmail(request) {
   return "";
 }
 
-function requireBudgetAccess(request, env) {
+function requireBudgetAccess(request, env, data = {}) {
+  if (data?.auth?.email) return { email: data.auth.email };
+
   const email = accessSessionEmail(request);
   const allowedEmails = parseAllowedEmails(env.MOJO_STORAGE_ALLOWED_EMAILS);
   const openForLocalDev = env.MOJO_STORAGE_ALLOW_OPEN === "true";
@@ -684,8 +686,8 @@ async function refreshReceiptList(env) {
   );
 }
 
-export async function onRequestGet({ request, env }) {
-  const access = requireBudgetAccess(request, env);
+export async function onRequestGet({ request, env, data }) {
+  const access = requireBudgetAccess(request, env, data);
   if (access.response) return access.response;
 
   const bucketError = requireBucket(env);
@@ -741,8 +743,8 @@ export async function onRequestGet({ request, env }) {
   return json(payload);
 }
 
-export async function onRequestPost({ request, env }) {
-  const access = requireBudgetAccess(request, env);
+export async function onRequestPost({ request, env, data }) {
+  const access = requireBudgetAccess(request, env, data);
   if (access.response) return access.response;
 
   const bucketError = requireBucket(env);

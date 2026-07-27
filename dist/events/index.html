@@ -108,6 +108,81 @@
       letter-spacing: .2em;
       line-height: 1;
     }
+    .brand-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      color: inherit;
+    }
+    .brand-mark {
+      height: 39px;
+      width: auto;
+      display: block;
+      transform-origin: center;
+      transition: transform 3.6s var(--ease), filter 3.6s var(--ease);
+      will-change: transform;
+    }
+    .brand-lockup:hover .brand-mark,
+    .brand-mark:hover {
+      transform: scale(1.5);
+      filter: drop-shadow(0 0 22px rgba(0,230,255,.28));
+    }
+    .brand-divider {
+      width: 1px;
+      height: 35px;
+      background: linear-gradient(to bottom, transparent, rgba(0,230,255,.9), transparent);
+      box-shadow: 0 0 14px rgba(0,230,255,.24);
+    }
+    .brand-name {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .brand-primary {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      background: linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 18px rgba(0,230,255,.16);
+    }
+    .brand-secondary {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: .38em;
+      color: rgba(222,235,255,.78);
+      padding-left: .38em;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .sidebar .brand-lockup {
+      gap: 8px;
+    }
+    .sidebar .brand-mark {
+      height: 34px;
+    }
+    .sidebar .brand-divider {
+      height: 30px;
+    }
+    .sidebar .brand-primary {
+      font-size: 20px;
+      letter-spacing: .03em;
+    }
+    .sidebar .brand-secondary {
+      font-size: 9.5px;
+      letter-spacing: .32em;
+      padding-left: .32em;
+    }
     .status-card {
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -194,6 +269,9 @@
       justify-content: space-between;
       gap: 24px;
       margin-bottom: 22px;
+    }
+    .factory-brand {
+      margin-bottom: 26px;
     }
     .kicker {
       margin: 0 0 9px;
@@ -509,12 +587,13 @@
 <body>
   <div class="shell" id="appShell">
     <aside class="sidebar">
-      <a class="brand" href="/events/">
-        <img src="/assets/logo-badge.png" alt="MoJo AI Summits">
-        <div>
-          <div class="brand-title">MOJO <span>AI</span> SUMMITS</div>
-          <div class="brand-sub">EVENT PLAYBOOKS</div>
-        </div>
+      <a class="brand-lockup" href="/events/" aria-label="MOJO AI Summits event playbooks">
+        <img class="brand-mark" src="/assets/logo-mark.png" alt="">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-name" aria-hidden="true">
+          <span class="brand-primary">MOJO AI</span>
+          <span class="brand-secondary">Summits</span>
+        </span>
       </a>
       <div class="status-card">
         <div class="status-row">
@@ -538,7 +617,15 @@
     <main class="main">
       <div class="topbar">
         <div>
-          <p class="kicker" id="pageKicker">MoJo Event Factory</p>
+          <a class="brand-lockup factory-brand" href="/" aria-label="MOJO AI Summits home">
+            <img class="brand-mark" src="/assets/logo-mark.png" alt="">
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-name" aria-hidden="true">
+              <span class="brand-primary">MOJO AI</span>
+              <span class="brand-secondary">Summits</span>
+            </span>
+          </a>
+          <p class="kicker" id="pageKicker">Event Factory</p>
           <h1 id="pageTitle">Generate an Event Playbook</h1>
           <p class="lede" id="pageLede">Enter the event profile, generate a named event page, then use that page as the working playbook for milestones, speakers, sponsors, production, risk, and post-event capture.</p>
           <div class="meta-line" id="pageMeta"></div>
@@ -1167,7 +1254,7 @@
       const profile = app.current?.playbook?.profile || {};
       document.getElementById("appShell").classList.toggle("generator-mode", !app.current);
       document.title = app.current ? `${profile.name || app.current.title} - Event Playbook` : "MoJo Event Playbook Generator";
-      document.getElementById("pageKicker").textContent = app.current ? `${profile.format || "Hybrid"} playbook` : "MoJo Event Factory";
+      document.getElementById("pageKicker").textContent = app.current ? `${profile.format || "Hybrid"} playbook` : "Event Factory";
       document.getElementById("pageTitle").textContent = app.current ? (profile.name || app.current.title || "Untitled event") : "Generate an Event Playbook";
       document.getElementById("pageLede").textContent = app.current
         ? (profile.promise || "Use this page as the working event playbook.")

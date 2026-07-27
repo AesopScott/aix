@@ -19,7 +19,7 @@ export const DEFAULT_ACCESS_RULES = [
     group: "Company",
     label: "Access Console",
     summary: "Authentication and route access controls.",
-    mode: "allowlist",
+    mode: "public",
     matches: [{ exact: "/access" }, { prefix: "/access/" }],
     cloudflareDomains: ["mojoaisummits.com/access", "mojoaisummits.com/access/*"]
   },
@@ -152,6 +152,26 @@ export const DEFAULT_ACCESS_RULES = [
     mode: "allowlist",
     matches: [{ exact: "/api/access-config" }, { prefix: "/api/access-config/" }],
     cloudflareDomains: ["mojoaisummits.com/api/access-config", "mojoaisummits.com/api/access-config/*"]
+  },
+  {
+    id: "api-access-users",
+    kind: "api",
+    group: "APIs",
+    label: "Access Users API",
+    summary: "App-owned user database management endpoint.",
+    mode: "allowlist",
+    matches: [{ exact: "/api/access-users" }, { prefix: "/api/access-users/" }],
+    cloudflareDomains: ["mojoaisummits.com/api/access-users", "mojoaisummits.com/api/access-users/*"]
+  },
+  {
+    id: "api-auth",
+    kind: "api",
+    group: "APIs",
+    label: "Authentication API",
+    summary: "Login, logout, session, and bootstrap endpoints.",
+    mode: "public",
+    matches: [{ exact: "/api/auth" }, { prefix: "/api/auth/" }],
+    cloudflareDomains: ["mojoaisummits.com/api/auth", "mojoaisummits.com/api/auth/*"]
   },
   {
     id: "api-setup-state",
@@ -295,7 +315,7 @@ export function sanitizeAccessConfig(input = {}, actor = "") {
     const mode = ACCESS_MODES.includes(incoming.mode) ? incoming.mode : definition.mode;
     return {
       id: definition.id,
-      mode: definition.id === "access" || definition.id === "api-access-config"
+      mode: definition.id === "api-access-config" || definition.id === "api-access-users"
         ? mode === "public" ? "allowlist" : mode
         : mode
     };

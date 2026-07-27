@@ -501,6 +501,59 @@
       line-height: 1.45;
     }
 
+    .found-panel {
+      display: grid;
+      gap: 0.65rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.9rem;
+      background: rgba(10, 15, 30, 0.56);
+    }
+
+    .found-panel[hidden] {
+      display: none;
+    }
+
+    .found-panel strong {
+      color: var(--white);
+      font-size: 0.95rem;
+    }
+
+    .found-list {
+      display: grid;
+      gap: 0.5rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .found-list a {
+      display: grid;
+      gap: 0.2rem;
+      border: 1px solid rgba(0, 230, 255, 0.16);
+      border-radius: 6px;
+      padding: 0.65rem;
+      background: rgba(22, 102, 255, 0.08);
+      text-decoration: none;
+    }
+
+    .found-list a:hover,
+    .found-list a:focus-visible {
+      border-color: var(--cyan);
+      outline: none;
+    }
+
+    .found-list span {
+      color: var(--white);
+      font-weight: 800;
+    }
+
+    .found-list code {
+      color: var(--cyan);
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.82rem;
+    }
+
     @media (max-width: 900px) {
       .hero {
         grid-template-columns: 1fr;
@@ -560,6 +613,7 @@
       </div>
       <nav aria-label="Company hub shortcuts">
         <a href="/crm/">CRM</a>
+        <a href="/access/">Access</a>
         <a href="/setup/">Setup</a>
         <a href="/storage/">Storage</a>
         <a href="/budget/">Budget</a>
@@ -596,6 +650,10 @@
           </label>
           <button id="refreshButton" type="button">Refresh Links</button>
           <p class="refresh-note" id="refreshNote" aria-live="polite"></p>
+          <div class="found-panel" id="foundPanel" hidden>
+            <strong>Unlinked pages found</strong>
+            <ul class="found-list" id="foundList"></ul>
+          </div>
         </div>
       </aside>
     </section>
@@ -612,6 +670,14 @@
 
   <script>
     const routes = [
+      {
+        group: "Operations",
+        title: "Access Console",
+        path: "/access/",
+        summary: "Authentication modes, allowed emails, route classifications, and Cloudflare Access sync.",
+        status: "Access Protected",
+        tags: ["access", "authentication", "allowlist"]
+      },
       {
         group: "Operations",
         title: "Setup Checklist",
@@ -675,6 +741,8 @@
     const groupFilter = document.querySelector("#groupFilter");
     const refreshButton = document.querySelector("#refreshButton");
     const refreshNote = document.querySelector("#refreshNote");
+    const foundPanel = document.querySelector("#foundPanel");
+    const foundList = document.querySelector("#foundList");
     const emptyState = document.querySelector("#emptyState");
     const routeCount = document.querySelector("#routeCount");
     const groupCount = document.querySelector("#groupCount");
@@ -798,6 +866,18 @@
       `).join("");
     }
 
+    function renderFoundList() {
+      foundPanel.hidden = discoveredRoutes.length === 0;
+      foundList.innerHTML = discoveredRoutes.map((route) => `
+        <li>
+          <a href="${escapeHtml(route.path)}">
+            <span>${escapeHtml(route.title)}</span>
+            <code>${escapeHtml(route.path)}</code>
+          </a>
+        </li>
+      `).join("");
+    }
+
     async function redirectCandidates() {
       try {
         const response = await fetch("/_redirects", { cache: "no-store" });
@@ -852,9 +932,13 @@
       }));
 
       renderFilters();
+      if (discoveredRoutes.length) {
+        groupFilter.value = "Found Pages";
+      }
       renderRoutes();
+      renderFoundList();
       refreshNote.textContent = discoveredRoutes.length
-        ? `Found ${discoveredRoutes.length} unlinked page${discoveredRoutes.length === 1 ? "" : "s"}.`
+        ? `Found ${discoveredRoutes.length} unlinked page${discoveredRoutes.length === 1 ? "" : "s"}. Listed here and added to the Found Pages space below.`
         : "No unlinked pages found.";
       refreshButton.disabled = false;
     }

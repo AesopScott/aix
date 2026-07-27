@@ -1,12 +1,15 @@
 import {
   accessModeLabel,
-  accessSessionEmail,
   expandAccessConfig,
   isLocalRequest,
   json,
   readAccessConfig,
   routeForPath
 } from "./_access-control.js";
+import {
+  canManageAccess,
+  getSessionUser
+} from "./_auth.js";
 
 function forbidden(route, message, status = 403) {
   return json(
@@ -17,6 +20,17 @@ function forbidden(route, message, status = 403) {
     },
     { status }
   );
+}
+
+function wantsHtml(request) {
+  return String(request.headers.get("accept") || "").includes("text/html");
+}
+
+function loginRedirect(request) {
+  const url = new URL(request.url);
+  const loginUrl = new URL("/access/", url);
+  loginUrl.searchParams.set("next", `${url.pathname}${url.search}`);
+  return Response.redirect(loginUrl, 302);
 }
 
 export async function onRequest(context) {
@@ -39,20 +53,22 @@ export async function onRequest(context) {
     return forbidden(route, "This Mojo AI Summits route is closed.");
   }
 
-  const email = accessSessionEmail(context.request);
-  if (!email) {
-    return forbidden(
-      route,
-      "This page is restricted. Sign in through Cloudflare Access to continue."
-    );
+  const user = await getSessionUser(context.request, context.env);
+  if (!user) {
+    return wantsHtml(context.request)
+      ? loginRedirect(context.request)
+      : forbidden(route, "Sign in with a Mojo AI Summits account to continue.", 401);
   }
 
-  const normalizedEmail = email.toLowerCase();
   const expanded = expandAccessConfig(config, context.env);
-  if (route.mode === "allowlist" && !expanded.allowedEmails.includes(normalizedEmail)) {
+  if (
+    route.mode === "allowlist" &&
+    !canManageAccess(user) &&
+    !expanded.allowedEmails.includes(user.email)
+  ) {
     return forbidden(route, "This account is not approved for this Mojo AI Summits route.");
   }
 
-  context.data.auth = { email: normalizedEmail, mode: route.mode };
+  context.data.auth = { ...user, mode: route.mode };
   return context.next();
 }

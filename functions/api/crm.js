@@ -79,7 +79,9 @@ function accessSessionEmail(request) {
   return "";
 }
 
-function requireCrmAccess(request, env) {
+function requireCrmAccess(request, env, data = {}) {
+  if (data?.auth?.email) return { email: data.auth.email };
+
   const email = accessSessionEmail(request);
   const allowedEmails = parseAllowedEmails(env.MOJO_STORAGE_ALLOWED_EMAILS);
   const openForLocalDev = env.MOJO_STORAGE_ALLOW_OPEN === "true";
@@ -217,8 +219,8 @@ export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: jsonHeaders });
 }
 
-export async function onRequestGet({ request, env }) {
-  const access = requireCrmAccess(request, env);
+export async function onRequestGet({ request, env, data }) {
+  const access = requireCrmAccess(request, env, data);
   if (access.response) return access.response;
 
   if (!env.MOJO_SUMMITS_SETUP_STATE) {
@@ -279,8 +281,8 @@ export async function onRequestGet({ request, env }) {
   });
 }
 
-export async function onRequestPost({ request, env }) {
-  const access = requireCrmAccess(request, env);
+export async function onRequestPost({ request, env, data }) {
+  const access = requireCrmAccess(request, env, data);
   if (access.response) return access.response;
 
   if (!env.MOJO_SUMMITS_SETUP_STATE) {

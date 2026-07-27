@@ -93,7 +93,9 @@ function accessSessionEmail(request) {
   return "";
 }
 
-function requireStorageAccess(request, env) {
+function requireStorageAccess(request, env, data = {}) {
+  if (data?.auth?.email) return { email: data.auth.email };
+
   const email = accessSessionEmail(request);
   const allowedEmails = parseAllowedEmails(env.MOJO_STORAGE_ALLOWED_EMAILS);
   const openForLocalDev = env.MOJO_STORAGE_ALLOW_OPEN === "true";
@@ -220,8 +222,8 @@ async function downloadObject(request, env) {
   return new Response(object.body, { headers });
 }
 
-export async function onRequestGet({ request, env }) {
-  const access = requireStorageAccess(request, env);
+export async function onRequestGet({ request, env, data }) {
+  const access = requireStorageAccess(request, env, data);
   if (access.response) return access.response;
 
   const bucketError = requireBucket(env);
@@ -233,8 +235,8 @@ export async function onRequestGet({ request, env }) {
   return listObjects(request, env);
 }
 
-export async function onRequestPost({ request, env }) {
-  const access = requireStorageAccess(request, env);
+export async function onRequestPost({ request, env, data }) {
+  const access = requireStorageAccess(request, env, data);
   if (access.response) return access.response;
 
   const bucketError = requireBucket(env);
@@ -283,8 +285,8 @@ export async function onRequestPost({ request, env }) {
   return json({ ok: true, key, name: file.name });
 }
 
-export async function onRequestDelete({ request, env }) {
-  const access = requireStorageAccess(request, env);
+export async function onRequestDelete({ request, env, data }) {
+  const access = requireStorageAccess(request, env, data);
   if (access.response) return access.response;
 
   const bucketError = requireBucket(env);
