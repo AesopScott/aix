@@ -24,16 +24,16 @@
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
 
   :root{
-    --navy: #05060a;
-    --navy-2: #090b12;
-    --navy-3: #0c0e18;
-    --slate: #12141c;
+    --navy: #0A0F1E;
+    --navy-2: #0d1424;
+    --navy-3: #10192c;
+    --slate: #1B2333;
     --blue: #1666FF;
     --cyan: #00E6FF;
     --white: #FFFFFF;
     --ink: #8b8f9c;
     --ink-dim: #55586a;
-    --glass: rgba(18,20,28,0.55);
+    --glass: rgba(27,35,51,0.55);
     --border: rgba(150,160,190,0.10);
     --ease: cubic-bezier(.22,1,.36,1);
   }
@@ -150,18 +150,6 @@
     justify-content:space-between;
     position:relative;
   }
-  .nav-cta{
-    font-family:'Space Grotesk', sans-serif;
-    font-weight:600;
-    font-size:10.5px;
-    letter-spacing:.2em;
-    text-transform:uppercase;
-    padding-bottom:4px;
-    border-bottom: 1px solid var(--cyan);
-    color: var(--cyan);
-    transition: color .25s;
-  }
-  .nav-cta:hover{ color: var(--white); }
   .brand-lockup{
     display:inline-flex;
     align-items:center;
@@ -227,7 +215,8 @@
     top:50%;
     transform: translate(-50%,-50%);
   }
-  .nav-links a{
+  .nav-links a,
+  .nav-links button{
     font-family:'Space Grotesk', sans-serif;
     font-weight:600;
     font-size:12.6px;
@@ -236,7 +225,14 @@
     color: var(--ink-dim);
     transition: color .25s;
   }
-  .nav-links a:hover{ color: var(--white); }
+  .nav-links button{
+    border:0;
+    background:transparent;
+    padding:0;
+    cursor:pointer;
+  }
+  .nav-links a:hover,
+  .nav-links button:hover{ color: var(--white); }
 
   /* ---------- hero ---------- */
   .hero{
@@ -1107,6 +1103,14 @@
   }
   .modal-card .btn-primary{ align-self:center; margin-top:4px; }
   .modal-card .form-success{ margin-top:0; text-align:center; }
+  .form-error{
+    margin-top:-4px;
+    color:#ffb9c2;
+    font-size:13px;
+    line-height:1.5;
+    display:none;
+  }
+  .form-error.show{ display:block; }
   .checkbox-group{ display:flex; flex-direction:column; gap:11px; }
   .checkbox-row{
     display:flex;
@@ -1362,13 +1366,6 @@
     .brand-divider{ height:30px; }
     .brand-primary{ font-size:20px; letter-spacing:.03em; }
     .brand-secondary{ font-size:9.5px; letter-spacing:.32em; padding-left:.32em; }
-    .nav-cta{
-      max-width:112px;
-      font-size:9.5px;
-      letter-spacing:.12em;
-      line-height:1.35;
-      text-align:right;
-    }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -1436,6 +1433,7 @@
       <a href="#topics">Topics</a>
       <a href="#experience">Experience</a>
       <a href="#events">Events</a>
+      <button type="button" data-modal-open="inviteCodeModal">Register</button>
     </div>
   </nav>
 </header>
@@ -1453,6 +1451,7 @@
     <div class="hero-boardroom" aria-hidden="true"><img src="assets/boardroom-transparent.png" alt=""></div>
     <p class="hero-sub">An AI forum for leaders who are already responsible for adoption, integration, security, operations, and measurable business progress. Dallas begins the 2027 season, followed by Denver, Raleigh, and Chicago.</p>
     <div class="hero-cta-row">
+      <button type="button" class="btn-primary" data-modal-open="inviteCodeModal">Register with Invite Code</button>
       <a href="#experience" class="btn-ghost">Explore the Experience</a>
     </div>
     <div class="stat-bar">
@@ -1690,6 +1689,23 @@
     </div>
   </footer>
 </main>
+
+<div class="modal-overlay" id="inviteCodeModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="inviteCodeModalTitle">
+    <button type="button" class="modal-close" data-modal-close aria-label="Close">&#10005;</button>
+    <span class="eyebrow"><span>VIP access</span></span>
+    <h3 id="inviteCodeModalTitle">Enter Your Invite Code</h3>
+    <p class="modal-sub">VIP registration opens after your invite code is submitted.</p>
+    <form id="inviteCodeForm">
+      <div class="field full">
+        <label for="inviteCode">Invite code</label>
+        <input type="text" id="inviteCode" name="inviteCode" placeholder="Mojo-4321" autocomplete="off" required>
+      </div>
+      <p class="form-error" id="inviteCodeError">Enter the invite code from your invitation.</p>
+      <button type="submit" class="btn-primary">Continue to VIP Registration</button>
+    </form>
+  </div>
+</div>
 
 <div class="modal-overlay" id="pitchModal" aria-hidden="true">
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pitchModalTitle">
@@ -1933,6 +1949,27 @@
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay); });
     overlay.querySelectorAll('[data-modal-close]').forEach((btn) => btn.addEventListener('click', () => closeModal(overlay)));
   });
+  const inviteCodeForm = document.getElementById('inviteCodeForm');
+  if (inviteCodeForm) {
+    inviteCodeForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('inviteCode');
+      const error = document.getElementById('inviteCodeError');
+      const code = (input?.value || '').trim();
+      if (!code) {
+        error?.classList.add('show');
+        input?.focus();
+        return;
+      }
+      error?.classList.remove('show');
+      try {
+        sessionStorage.setItem('mojoVipInviteCode', code);
+      } catch (storageError) {
+        // The query string still carries the code if private browsing blocks storage.
+      }
+      window.location.href = `/vip-registration/?invite=${encodeURIComponent(code)}`;
+    });
+  }
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       document.querySelectorAll('.modal-overlay.open').forEach(closeModal);

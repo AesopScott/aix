@@ -38,5 +38,15 @@
   Pragma: no-cache
   Expires: 0
 
+/vip-registration
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/vip-registration/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
 /*.png
   Cache-Control: public, max-age=86400

@@ -3,6 +3,7 @@
 Static Cloudflare Pages site for Mojo AI Summits.
 
 - Production: https://mojoaisummits.com/
+- VIP registration: https://mojoaisummits.com/vip-registration/
 - Setup checklist: https://mojoaisummits.com/setup/
 - Internal storage portal: https://mojoaisummits.com/storage/
 - Internal budget and P&L: https://mojoaisummits.com/budget/
@@ -26,3 +27,11 @@ Required GitHub secrets:
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
+
+## VIP Registration
+
+The home page registration action asks for an invite code, then sends guests to `/vip-registration/`.
+VIP registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `vip-registration:*`.
+The perpetual show/share code is `Mojo-4321`; direct visits to `/vip-registration/` prefill this code.
+
+Phone verification is wired through `/api/phone-verification`. Until an SMS provider is configured, the route records phone status as `pending_sms_setup` and registrations are saved for manual phone confirmation.

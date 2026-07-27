@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIP Registration | MOJO AI Summits</title>
+<meta name="description" content="VIP registration for invitation-only MOJO AI Summits executive events.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="/assets/logo-badge.png">
+<link rel="apple-touch-icon" href="/assets/logo-badge.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
+
+  :root{
+    --navy:#0A0F1E;
+    --navy-2:#0d1424;
+    --navy-3:#10192c;
+    --slate:#1B2333;
+    --blue:#1666FF;
+    --cyan:#00E6FF;
+    --white:#FFFFFF;
+    --ink:#a6adbd;
+    --ink-dim:#687188;
+    --border:rgba(255,255,255,.12);
+    --danger:#ffb9c2;
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      linear-gradient(135deg, rgba(22,102,255,.14), transparent 28%),
+      linear-gradient(315deg, rgba(0,230,255,.11), transparent 30%),
+      var(--navy);
+    color:var(--white);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{ color:inherit; text-decoration:none; }
+  p,h1,h2,h3{ margin:0; }
+  ::selection{ background:var(--blue); color:var(--white); }
+
+  .shell{
+    width:min(1120px, calc(100% - 48px));
+    margin:0 auto;
+    padding:28px 0 54px;
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+  }
+  .brand-lockup{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand-lockup img{ width:56px; height:auto; }
+  .brand-divider{
+    width:1px;
+    height:38px;
+    background:linear-gradient(to bottom, transparent, var(--cyan), transparent);
+  }
+  .brand-name{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    text-transform:uppercase;
+    line-height:1;
+  }
+  .brand-primary{
+    font-weight:700;
+    font-size:25px;
+    letter-spacing:.08em;
+    background:linear-gradient(90deg, var(--blue), var(--cyan));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .brand-secondary{
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.38em;
+    color:rgba(255,255,255,.82);
+  }
+  .home-link{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--cyan);
+    border-bottom:1px solid rgba(0,230,255,.45);
+    padding-bottom:4px;
+  }
+  .main-grid{
+    display:grid;
+    grid-template-columns:minmax(0,.78fr) minmax(420px,1fr);
+    gap:56px;
+    align-items:start;
+    padding-top:70px;
+  }
+  .eyebrow{
+    display:inline-flex;
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.38em;
+    text-transform:uppercase;
+    color:var(--cyan);
+  }
+  h1{
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:clamp(42px, 6vw, 72px);
+    font-weight:600;
+    line-height:1;
+  }
+  .intro p{
+    margin-top:22px;
+    max-width:480px;
+    color:var(--ink);
+    font-size:18px;
+    line-height:1.65;
+  }
+  .status-list{
+    margin-top:38px;
+    display:grid;
+    gap:16px;
+  }
+  .status-item{
+    display:flex;
+    align-items:center;
+    gap:13px;
+    color:rgba(255,255,255,.82);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+  }
+  .status-mark{
+    flex:0 0 auto;
+    width:10px;
+    height:10px;
+    border:1px solid var(--cyan);
+    box-shadow:0 0 16px rgba(0,230,255,.42);
+  }
+  .registration-panel{
+    background:rgba(27,35,51,.62);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:34px;
+    box-shadow:0 32px 90px rgba(0,0,0,.38);
+    backdrop-filter:blur(12px);
+  }
+  .panel-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:24px;
+    margin-bottom:28px;
+  }
+  .panel-head h2{
+    font-family:'Fraunces', serif;
+    font-size:30px;
+    font-weight:600;
+  }
+  .invite-badge{
+    max-width:190px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    padding:8px 10px;
+    border:1px solid rgba(0,230,255,.38);
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:10px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  form{
+    display:grid;
+    gap:20px;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px 20px;
+  }
+  .field.full{ grid-column:1 / -1; }
+  label{
+    display:block;
+    margin-bottom:9px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+  }
+  input{
+    width:100%;
+    border:0;
+    border-bottom:1px solid var(--border);
+    background:transparent;
+    color:var(--white);
+    padding:11px 0;
+    font:15px 'Inter', sans-serif;
+    outline:none;
+    transition:border-color .24s var(--ease);
+  }
+  input:focus{ border-color:var(--cyan); }
+  input::placeholder{ color:var(--ink-dim); }
+  input[readonly]{ color:var(--ink); }
+  .phone-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:14px;
+    align-items:end;
+  }
+  .btn-primary,
+  .btn-ghost{
+    border-radius:2px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background .25s var(--ease), border-color .25s var(--ease), color .25s var(--ease), opacity .25s var(--ease);
+  }
+  .btn-primary{
+    border:1px solid var(--cyan);
+    background:transparent;
+    color:var(--cyan);
+    padding:15px 24px;
+  }
+  .btn-primary:hover:not(:disabled){ background:var(--cyan); color:#051019; }
+  .btn-ghost{
+    border:1px solid var(--border);
+    background:rgba(255,255,255,.03);
+    color:var(--white);
+    padding:12px 16px;
+  }
+  .btn-ghost:hover:not(:disabled){ border-color:rgba(0,230,255,.5); color:var(--cyan); }
+  button:disabled{ opacity:.48; cursor:not-allowed; }
+  .checkbox-group{
+    display:grid;
+    gap:12px;
+  }
+  .checkbox-grid{
+    grid-template-columns:1fr 1fr;
+    gap:12px 16px;
+  }
+  .checkbox-row{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.4;
+  }
+  .checkbox-row input{
+    width:18px;
+    height:18px;
+    accent-color:var(--cyan);
+  }
+  .message{
+    display:none;
+    color:var(--ink);
+    font-size:13px;
+    line-height:1.5;
+  }
+  .message.show{ display:block; }
+  .message.error{ color:var(--danger); }
+  .message.success{ color:var(--cyan); }
+  .verify-code{
+    display:none;
+    grid-template-columns:1fr auto;
+    gap:14px;
+    align-items:end;
+  }
+  .verify-code.show{ display:grid; }
+  .fine-print{
+    color:var(--ink-dim);
+    font-size:12px;
+    line-height:1.5;
+  }
+  .form-success{
+    display:none;
+    margin-top:24px;
+    padding:24px;
+    border:1px solid rgba(0,230,255,.28);
+    background:rgba(0,230,255,.06);
+    color:var(--white);
+    border-radius:8px;
+  }
+  .form-success.show{ display:block; }
+  .form-success h3{
+    font-family:'Fraunces', serif;
+    font-size:28px;
+    margin-bottom:8px;
+  }
+  .form-success p{ color:var(--ink); line-height:1.6; }
+  .hide{ display:none; }
+
+  @media (max-width:900px){
+    .main-grid{ grid-template-columns:1fr; gap:38px; padding-top:46px; }
+    .intro p{ max-width:680px; }
+  }
+  @media (max-width:620px){
+    .shell{ width:min(100% - 32px, 1120px); padding-top:22px; }
+    header{ align-items:flex-start; }
+    .brand-lockup img{ width:46px; }
+    .brand-primary{ font-size:20px; letter-spacing:.04em; }
+    .brand-secondary{ font-size:9.5px; letter-spacing:.32em; }
+    .home-link{ font-size:9.5px; letter-spacing:.14em; }
+    .registration-panel{ padding:26px 20px; }
+    .panel-head{ flex-direction:column; gap:14px; }
+    .form-grid,
+    .phone-row,
+    .verify-code{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+        <img src="/assets/logo-mark.png" alt="">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-name" aria-hidden="true">
+          <span class="brand-primary">MOJO AI</span>
+          <span class="brand-secondary">Summits</span>
+        </span>
+      </a>
+      <a class="home-link" href="/">Back Home</a>
+    </header>
+
+    <main class="main-grid">
+      <section class="intro">
+        <span class="eyebrow">VIP registration</span>
+        <h1>Confirm your seat in the executive room.</h1>
+        <p>Use your invitation details to register for MOJO AI Summits. We reserve these seats for leaders, presenters, and round table hosts joining the private AI leadership conversations.</p>
+        <div class="status-list" aria-label="Registration requirements">
+          <div class="status-item"><span class="status-mark"></span><span>Invite code required</span></div>
+          <div class="status-item"><span class="status-mark"></span><span>Company email required</span></div>
+          <div class="status-item"><span class="status-mark"></span><span>Phone confirmation recorded</span></div>
+        </div>
+      </section>
+
+      <section class="registration-panel" aria-labelledby="registrationTitle">
+        <div class="panel-head">
+          <h2 id="registrationTitle">VIP Details</h2>
+          <span class="invite-badge" id="inviteBadge">Invite pending</span>
+        </div>
+
+        <form id="vipRegistrationForm">
+          <div class="form-grid">
+            <div class="field full" id="inviteCodeField">
+              <label for="inviteCode">Invite code</label>
+              <input type="text" id="inviteCode" name="inviteCode" placeholder="Mojo-4321" autocomplete="off" required>
+            </div>
+            <div class="field">
+              <label for="fullName">Full name</label>
+              <input type="text" id="fullName" name="name" placeholder="Full name" autocomplete="name" required>
+            </div>
+            <div class="field">
+              <label for="email">Company email</label>
+              <input type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
+            </div>
+            <div class="field full">
+              <label for="phone">Mobile phone</label>
+              <div class="phone-row">
+                <input type="tel" id="phone" name="phone" placeholder="+1 555 123 4567" autocomplete="tel" required>
+                <button type="button" class="btn-ghost" id="sendCodeButton">Verify Phone</button>
+              </div>
+            </div>
+            <div class="field full verify-code" id="verifyCodeRow">
+              <div>
+                <label for="phoneCode">SMS code</label>
+                <input type="text" id="phoneCode" name="phoneCode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456">
+              </div>
+              <button type="button" class="btn-ghost" id="confirmCodeButton">Confirm Code</button>
+            </div>
+            <div class="field full">
+              <p class="message" id="phoneMessage"></p>
+            </div>
+            <div class="field full">
+              <label>Event role</label>
+              <div class="checkbox-group">
+                <label class="checkbox-row"><input type="checkbox" name="isPresenter" value="true"> I am a presenter</label>
+                <label class="checkbox-row"><input type="checkbox" name="isRoundtableLeader" value="true"> I am leading a round table</label>
+              </div>
+            </div>
+            <div class="field full">
+              <label>Food preferences</label>
+              <div class="checkbox-group checkbox-grid">
+                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Vegetarian"> Vegetarian</label>
+                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Vegan"> Vegan</label>
+                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Gluten-free"> Gluten-free</label>
+                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Dairy-free"> Dairy-free</label>
+                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Nut allergy"> Nut allergy</label>
+                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="No preference"> No preference</label>
+              </div>
+            </div>
+            <div class="field full">
+              <label for="foodNotes">Food notes <span class="opt">(optional)</span></label>
+              <input type="text" id="foodNotes" name="foodNotes" placeholder="Allergies, restrictions, or anything the catering team should know">
+            </div>
+          </div>
+          <input type="hidden" id="phoneVerificationStatus" name="phoneVerificationStatus" value="unverified">
+          <p class="message error" id="formError"></p>
+          <p class="fine-print">Personal Gmail and Googlemail addresses are not accepted for VIP registration.</p>
+          <button type="submit" class="btn-primary" id="submitButton">Submit VIP Registration</button>
+        </form>
+
+        <div class="form-success" id="registrationSuccess" aria-live="polite">
+          <h3>Registration received.</h3>
+          <p>Your details have been sent to the MOJO AI Summits team. Phone verification is recorded with your registration status.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+  const inviteInput = document.getElementById('inviteCode');
+  const inviteBadge = document.getElementById('inviteBadge');
+  const emailInput = document.getElementById('email');
+  const phoneInput = document.getElementById('phone');
+  const sendCodeButton = document.getElementById('sendCodeButton');
+  const verifyCodeRow = document.getElementById('verifyCodeRow');
+  const phoneCodeInput = document.getElementById('phoneCode');
+  const confirmCodeButton = document.getElementById('confirmCodeButton');
+  const phoneMessage = document.getElementById('phoneMessage');
+  const formError = document.getElementById('formError');
+  const form = document.getElementById('vipRegistrationForm');
+  const success = document.getElementById('registrationSuccess');
+  const verificationStatus = document.getElementById('phoneVerificationStatus');
+  const defaultInviteCode = 'Mojo-4321';
+
+  function getInviteCode(){
+    const params = new URLSearchParams(window.location.search);
+    return (params.get('invite') || sessionStorage.getItem('mojoVipInviteCode') || defaultInviteCode).trim();
+  }
+
+  function setMessage(element, text, type){
+    element.textContent = text;
+    element.className = `message show ${type || ''}`.trim();
+  }
+
+  function clearMessage(element){
+    element.textContent = '';
+    element.className = 'message';
+  }
+
+  function isBlockedEmail(email){
+    const domain = String(email || '').trim().toLowerCase().split('@').pop();
+    return domain === 'gmail.com' || domain === 'googlemail.com';
+  }
+
+  function normalizePhone(phone){
+    return String(phone || '').replace(/[^\d+]/g, '');
+  }
+
+  const incomingInviteCode = getInviteCode();
+  if (incomingInviteCode) {
+    inviteInput.value = incomingInviteCode;
+    inviteInput.readOnly = true;
+    inviteBadge.textContent = incomingInviteCode;
+  }
+
+  emailInput.addEventListener('input', () => {
+    if (isBlockedEmail(emailInput.value)) {
+      setMessage(formError, 'Use a company email address. Gmail and Googlemail addresses are not accepted.', 'error');
+    } else {
+      clearMessage(formError);
+    }
+  });
+
+  phoneInput.addEventListener('input', () => {
+    verificationStatus.value = 'unverified';
+    verifyCodeRow.classList.remove('show');
+    clearMessage(phoneMessage);
+  });
+
+  async function postJson(url, payload){
+    const response = await fetch(url, {
+      method:'POST',
+      headers:{ 'content-type':'application/json' },
+      body:JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Unable to complete this step.');
+    return data;
+  }
+
+  sendCodeButton.addEventListener('click', async () => {
+    clearMessage(formError);
+    const phone = normalizePhone(phoneInput.value);
+    if (phone.length < 10) {
+      setMessage(phoneMessage, 'Enter a valid mobile phone number before verification.', 'error');
+      phoneInput.focus();
+      return;
+    }
+    sendCodeButton.disabled = true;
+    sendCodeButton.textContent = 'Checking...';
+    try {
+      const data = await postJson('/api/phone-verification', {
+        action:'start',
+        phone,
+        inviteCode:inviteInput.value.trim()
+      });
+      if (data.requiresCode) {
+        verificationStatus.value = 'code_sent';
+        verifyCodeRow.classList.add('show');
+        setMessage(phoneMessage, 'Code sent. Enter the SMS code to confirm this phone number.', 'success');
+      } else {
+        verificationStatus.value = data.status || 'pending_sms_setup';
+        verifyCodeRow.classList.remove('show');
+        setMessage(phoneMessage, data.message || 'SMS verification is pending configuration. Your registration can still be submitted for manual confirmation.', 'success');
+      }
+    } catch (error) {
+      verificationStatus.value = 'unverified';
+      setMessage(phoneMessage, error.message, 'error');
+    } finally {
+      sendCodeButton.disabled = false;
+      sendCodeButton.textContent = 'Verify Phone';
+    }
+  });
+
+  confirmCodeButton.addEventListener('click', async () => {
+    clearMessage(formError);
+    const code = phoneCodeInput.value.trim();
+    if (!code) {
+      setMessage(phoneMessage, 'Enter the SMS code to confirm your phone.', 'error');
+      phoneCodeInput.focus();
+      return;
+    }
+    confirmCodeButton.disabled = true;
+    confirmCodeButton.textContent = 'Confirming...';
+    try {
+      await postJson('/api/phone-verification', {
+        action:'confirm',
+        phone:normalizePhone(phoneInput.value),
+        code
+      });
+      verificationStatus.value = 'verified';
+      setMessage(phoneMessage, 'Phone verified.', 'success');
+      verifyCodeRow.classList.remove('show');
+    } catch (error) {
+      setMessage(phoneMessage, error.message, 'error');
+    } finally {
+      confirmCodeButton.disabled = false;
+      confirmCodeButton.textContent = 'Confirm Code';
+    }
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearMessage(formError);
+    const formData = new FormData(form);
+    const payload = Object.fromEntries(formData.entries());
+    payload.email = String(payload.email || '').trim();
+    payload.phone = normalizePhone(payload.phone);
+    payload.isPresenter = formData.has('isPresenter');
+    payload.isRoundtableLeader = formData.has('isRoundtableLeader');
+    payload.foodPreferences = formData.getAll('foodPreference');
+    payload.phoneVerificationStatus = verificationStatus.value;
+
+    if (!payload.inviteCode) {
+      setMessage(formError, 'Invite code is required.', 'error');
+      inviteInput.focus();
+      return;
+    }
+    if (isBlockedEmail(payload.email)) {
+      setMessage(formError, 'Use a company email address. Gmail and Googlemail addresses are not accepted.', 'error');
+      emailInput.focus();
+      return;
+    }
+    if (payload.phoneVerificationStatus === 'unverified' || payload.phoneVerificationStatus === 'code_sent') {
+      setMessage(formError, 'Verify the phone number first so the registration has a phone confirmation status.', 'error');
+      phoneInput.focus();
+      return;
+    }
+
+    const submitButton = document.getElementById('submitButton');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Submitting...';
+    try {
+      await postJson('/api/vip-registration', payload);
+      form.classList.add('hide');
+      success.classList.add('show');
+    } catch (error) {
+      setMessage(formError, error.message, 'error');
+      submitButton.disabled = false;
+      submitButton.textContent = 'Submit VIP Registration';
+    }
+  });
+</script>
+</body>
+</html>
