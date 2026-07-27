@@ -9,6 +9,7 @@ const jsonHeaders = {
 };
 
 const receiptOwners = new Set(["scott", "jodi", "robert", "ron", "angel", "charlie", "unassigned"]);
+const receiptEvents = new Set(["Global", "Dallas", "Denver", "Raleigh", "Chicago"]);
 const allowedStatuses = new Set(["needs-review", "reviewed", "reimbursed", "excluded"]);
 const taxCategories = new Set([
   "Unassigned",
@@ -348,6 +349,12 @@ function ownerFromKey(key) {
   return receiptOwners.has(owner) ? owner : "unassigned";
 }
 
+function eventFromMetadata(metadata = {}) {
+  const event = String(metadata.receiptEvent || metadata.event || "").trim();
+  if (receiptEvents.has(event)) return event;
+  return "";
+}
+
 function emptyLedger() {
   return {
     version: 1,
@@ -442,7 +449,7 @@ function mergeReceipt(ledger, object) {
     owner: existing.owner || ownerFromKey(object.key),
     vendor,
     category,
-    event: existing.event || object.customMetadata?.event || "",
+    event: existing.event || eventFromMetadata(object.customMetadata),
     receiptDate,
     amount,
     taxCategory: taxCategories.has(existing.taxCategory) ? existing.taxCategory : "Unassigned",

@@ -14,6 +14,13 @@ const folderLabels = {
 
 const allowedFolders = new Set(Object.keys(folderLabels));
 const receiptOwners = new Set(["scott", "jodi", "robert", "ron", "angel", "charlie"]);
+const receiptEvents = {
+  global: "Global",
+  dallas: "Dallas",
+  denver: "Denver",
+  raleigh: "Raleigh",
+  chicago: "Chicago"
+};
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -157,6 +164,10 @@ function objectToRecord(object) {
   return {
     key: object.key,
     name: originalName,
+    area: object.customMetadata?.area || "",
+    event: object.customMetadata?.event || "",
+    receiptOwner: object.customMetadata?.receiptOwner || "",
+    receiptEvent: object.customMetadata?.receiptEvent || "",
     size: object.size,
     uploaded: object.uploaded ? object.uploaded.toISOString() : "",
     etag: object.etag || "",
@@ -242,7 +253,13 @@ export async function onRequestPost({ request, env }) {
   const receiptOwner = receiptOwners.has(String(form.get("receiptOwner") || "").toLowerCase())
     ? String(form.get("receiptOwner")).toLowerCase()
     : "unassigned";
+  const rawReceiptEvent = String(form.get("receiptEvent") || "").toLowerCase();
+  const receiptEventKey = Object.prototype.hasOwnProperty.call(receiptEvents, rawReceiptEvent)
+    ? rawReceiptEvent
+    : "global";
+  const receiptEvent = receiptEvents[receiptEventKey];
   const event = area === "receipts" ? receiptOwner : safeSegment(form.get("event"), "company");
+  const trackedEvent = area === "receipts" ? receiptEvent : event;
   const originalName = safeSegment(file.name, "file");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const id = crypto.randomUUID().slice(0, 8);
@@ -256,7 +273,10 @@ export async function onRequestPost({ request, env }) {
       uploadedBy: access.email,
       originalName: file.name,
       area,
-      event
+      event: trackedEvent,
+      receiptOwner,
+      receiptEvent,
+      receiptEventKey
     }
   });
 

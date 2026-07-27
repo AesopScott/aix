@@ -379,6 +379,16 @@
             </select>
           </label>
           <label>
+            Receipt event
+            <select name="receiptEvent">
+              <option value="global">Global</option>
+              <option value="dallas">Dallas</option>
+              <option value="denver">Denver</option>
+              <option value="raleigh">Raleigh</option>
+              <option value="chicago">Chicago</option>
+            </select>
+          </label>
+          <label>
             Event, city, or folder
             <input name="event" placeholder="company, dallas-2027, sponsor-board">
           </label>
@@ -428,6 +438,7 @@
             <thead>
               <tr>
                 <th>File</th>
+                <th>Event</th>
                 <th>Size</th>
                 <th>Uploaded</th>
                 <th>Actions</th>
@@ -518,6 +529,7 @@
           .map((file) => `
             <tr>
               <td class="file-key" title="${escapeHtml(file.key)}">${escapeHtml(displayName(file))}</td>
+              <td>${escapeHtml(file.receiptEvent || file.event || "")}</td>
               <td>${formatBytes(file.size)}</td>
               <td>${file.uploaded ? new Date(file.uploaded).toLocaleString() : ""}</td>
               <td>
