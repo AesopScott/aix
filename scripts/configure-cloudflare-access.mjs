@@ -12,7 +12,11 @@ const apps = [
   },
   {
     name: "Mojo AI Summits Storage API",
-    domain: "mojoaisummits.com/api/storage*"
+    domain: "mojoaisummits.com/api/storage"
+  },
+  {
+    name: "Mojo AI Summits Storage API Children",
+    domain: "mojoaisummits.com/api/storage/*"
   }
 ];
 

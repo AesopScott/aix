@@ -53,7 +53,8 @@ Each upload also includes an event, city, or folder value. Example object keys:
 Before using the storage portal in production, protect both routes with Cloudflare Access:
 
 - `mojoaisummits.com/storage/*`
-- `mojoaisummits.com/api/storage*`
+- `mojoaisummits.com/api/storage`
+- `mojoaisummits.com/api/storage/*`
 
 Use the same allow policy for both routes. Recommended groups:
 
