@@ -219,6 +219,19 @@
       gap: 1rem;
     }
 
+    .receipt-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.7rem;
+      margin: 1rem 0;
+    }
+
+    .receipt-filter {
+      min-height: 3.2rem;
+      background: rgba(22, 102, 255, 0.1);
+      color: var(--white);
+    }
+
     .row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -302,6 +315,7 @@
       header,
       .hero,
       .grid,
+      .receipt-grid,
       .row {
         grid-template-columns: 1fr;
       }
@@ -346,7 +360,19 @@
               <option value="event-assets">Event assets</option>
               <option value="media">Media</option>
               <option value="public-assets">Public assets</option>
+              <option value="receipts">Receipts</option>
               <option value="archive">Archive</option>
+            </select>
+          </label>
+          <label>
+            Receipt person
+            <select name="receiptOwner">
+              <option value="scott">Scott</option>
+              <option value="jodi">Jodi</option>
+              <option value="robert">Robert</option>
+              <option value="ron">Ron</option>
+              <option value="angel">Angel</option>
+              <option value="charlie">Charlie</option>
             </select>
           </label>
           <label>
@@ -374,6 +400,7 @@
                 <option value="event-assets/">Event assets</option>
                 <option value="media/">Media</option>
                 <option value="public-assets/">Public assets</option>
+                <option value="receipts/">Receipts</option>
                 <option value="archive/">Archive</option>
               </select>
             </label>
@@ -383,6 +410,14 @@
             </label>
           </div>
           <button class="secondary" id="refreshButton" type="button">Refresh List</button>
+        </div>
+        <div class="receipt-grid" aria-label="Receipt filters">
+          <button class="receipt-filter secondary" type="button" data-receipts="scott">Scott receipts</button>
+          <button class="receipt-filter secondary" type="button" data-receipts="jodi">Jodi receipts</button>
+          <button class="receipt-filter secondary" type="button" data-receipts="robert">Robert receipts</button>
+          <button class="receipt-filter secondary" type="button" data-receipts="ron">Ron receipts</button>
+          <button class="receipt-filter secondary" type="button" data-receipts="angel">Angel receipts</button>
+          <button class="receipt-filter secondary" type="button" data-receipts="charlie">Charlie receipts</button>
         </div>
         <div id="listNotice" class="notice">Loading files...</div>
         <div class="table-wrap" id="tableWrap" hidden>
@@ -412,6 +447,7 @@
     const prefixFilter = document.querySelector("#prefixFilter");
     const prefixSearch = document.querySelector("#prefixSearch");
     const refreshButton = document.querySelector("#refreshButton");
+    const receiptButtons = document.querySelectorAll("[data-receipts]");
 
     function formatBytes(size) {
       if (!Number.isFinite(size)) return "";
@@ -545,6 +581,13 @@
 
     refreshButton.addEventListener("click", loadFiles);
     prefixFilter.addEventListener("change", loadFiles);
+    receiptButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        prefixFilter.value = "receipts/";
+        prefixSearch.value = `receipts/${button.dataset.receipts}/`;
+        loadFiles();
+      });
+    });
     loadFiles();
   </script>
 </body>

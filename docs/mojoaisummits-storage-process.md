@@ -40,6 +40,7 @@ The portal organizes uploads into these top-level areas:
 - `event-assets/`: speaker files, sponsor files, city event assets.
 - `media/`: photography, sound, cinematography, raw captures, edited assets.
 - `public-assets/`: files intended for public use or eventual website publication.
+- `receipts/`: receipt uploads grouped by person.
 - `archive/`: completed event records and long-term retention.
 
 Each upload also includes an event, city, or folder value. Example object keys:
@@ -47,6 +48,7 @@ Each upload also includes an event, city, or folder value. Example object keys:
 - `private/company/2026-07-26T18-10-00-000Z-a1b2c3d4-operating-agreement.pdf`
 - `event-assets/dallas-2027/2026-07-26T18-10-00-000Z-b2c3d4e5-speaker-deck.pdf`
 - `media/dallas-2027/2026-07-26T18-10-00-000Z-c3d4e5f6-stage-photo.jpg`
+- `receipts/scott/2026-07-26T18-10-00-000Z-d4e5f6a7-hotel-receipt.pdf`
 
 ## Cloudflare Access Setup
 

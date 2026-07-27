@@ -8,10 +8,12 @@ const folderLabels = {
   "event-assets": "Event assets",
   media: "Media",
   "public-assets": "Public assets",
+  receipts: "Receipts",
   archive: "Archive"
 };
 
 const allowedFolders = new Set(Object.keys(folderLabels));
+const receiptOwners = new Set(["scott", "jodi", "robert", "ron", "angel", "charlie"]);
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -236,7 +238,10 @@ export async function onRequestPost({ request, env }) {
   const area = allowedFolders.has(String(form.get("area") || ""))
     ? String(form.get("area"))
     : "private";
-  const event = safeSegment(form.get("event"), "company");
+  const receiptOwner = receiptOwners.has(String(form.get("receiptOwner") || "").toLowerCase())
+    ? String(form.get("receiptOwner")).toLowerCase()
+    : "unassigned";
+  const event = area === "receipts" ? receiptOwner : safeSegment(form.get("event"), "company");
   const originalName = safeSegment(file.name, "file");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const id = crypto.randomUUID().slice(0, 8);
