@@ -90,7 +90,7 @@ After deployment, verify:
 - `https://mojoaisummits.com/` loads.
 - `https://mojoaisummits.com/setup/` loads and shared checklist state works.
 - `https://mojoaisummits.com/storage/` is protected by Cloudflare Access.
-- `https://mojoaisummits.com/api/storage` is not publicly accessible.
+- `https://mojoaisummits.com/storage/api` is not publicly accessible.
 - Mockup URLs under `/mockups/` still load.
 
 Do not push a production deployment with the R2 binding until the `mojo-summits-private` bucket exists, because Cloudflare Pages expects configured bindings to reference available resources.

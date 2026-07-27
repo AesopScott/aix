@@ -11,7 +11,7 @@ Mojo AI Summits needs a controlled place for shared company and event files. The
 ## Routes
 
 - Portal: `https://mojoaisummits.com/storage/`
-- API: `https://mojoaisummits.com/api/storage`
+- API: `https://mojoaisummits.com/storage/api`
 
 The API intentionally rejects requests unless Cloudflare Access passes an authenticated user email through the `Cf-Access-Authenticated-User-Email` header.
 
@@ -53,8 +53,6 @@ Each upload also includes an event, city, or folder value. Example object keys:
 Before using the storage portal in production, protect both routes with Cloudflare Access:
 
 - `mojoaisummits.com/storage/*`
-- `mojoaisummits.com/api/storage`
-- `mojoaisummits.com/api/storage/*`
 
 Use the same allow policy for both routes. Recommended groups:
 
@@ -123,6 +121,6 @@ Before declaring storage ready:
 - Confirm the R2 bucket exists.
 - Confirm `MOJO_SUMMITS_STORAGE` is bound to the Pages project.
 - Confirm `/storage/` requires Cloudflare Access login.
-- Confirm `/api/storage` returns 403 without Cloudflare Access.
+- Confirm `/storage/api` requires Cloudflare Access.
 - Confirm an approved user can upload, list, download, and delete a test file.
 - Confirm an unapproved user cannot access either route.

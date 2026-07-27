@@ -9,7 +9,10 @@ const apps = [
   {
     name: "Mojo AI Summits Storage Portal",
     domain: "mojoaisummits.com/storage/*"
-  },
+  }
+];
+
+const obsoleteApps = [
   {
     name: "Mojo AI Summits Storage API",
     domain: "mojoaisummits.com/api/storage"
@@ -122,10 +125,23 @@ async function ensureApplication(app, existingApps) {
   return created;
 }
 
+async function removeObsoleteApplications(existingApps) {
+  const obsoleteMatches = existingApps.filter((existing) =>
+    obsoleteApps.some((app) => existing.domain === app.domain || existing.name === app.name)
+  );
+
+  for (const existing of obsoleteMatches) {
+    await cloudflare(`/apps/${existing.id}`, { method: "DELETE" });
+    console.log(`Removed obsolete app: ${existing.name} (${existing.domain})`);
+  }
+}
+
 const existingProviders = await listIdentityProviders();
 await ensureOneTimePinIdentityProvider(existingProviders);
 
 const existingApps = await listApplications();
+await removeObsoleteApplications(existingApps);
+
 for (const app of apps) {
   await ensureApplication(app, existingApps);
 }
