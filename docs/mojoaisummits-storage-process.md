@@ -76,11 +76,12 @@ This repo includes a manual GitHub Actions workflow for creating the Access appl
 
 - Workflow: `Configure Mojo AI Summits Cloudflare Access`
 - Script: `scripts/configure-cloudflare-access.mjs`
-- Required secret permissions: the Cloudflare API token must have Zero Trust / Access application write permission.
+- Required GitHub secret: `CLOUDFLARE_ACCESS_API_TOKEN`
+- Required token permission: `Access: Apps and Policies Write`
 
 Run the workflow with a comma-separated list of allowed emails. The initial safe default is `ravenshroud@gmail.com`.
 
-As of July 26, 2026, the existing `CLOUDFLARE_API_TOKEN` can deploy Pages and manage R2, but it does not have permission to manage Cloudflare Access applications. The workflow fails with Cloudflare API error `10000: Authentication error` until the token is replaced or expanded with Zero Trust / Access application write permission.
+The existing `CLOUDFLARE_API_TOKEN` is kept focused on Pages deployment. Access configuration uses a separate account-owned token so deployment and Zero Trust administration can be rotated independently.
 
 ## Local Development
 
