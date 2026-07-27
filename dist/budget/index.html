@@ -138,7 +138,7 @@
     .metric.loss strong { color: var(--warning); }
 
     .toolbar {
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       align-items: end;
       margin-bottom: 1rem;
       padding: 1.25rem;
@@ -334,6 +334,7 @@
         Search
         <input id="searchInput" placeholder="vendor, category, event">
       </label>
+      <button id="refreshButton" class="secondary" type="button">Refresh Receipts</button>
       <button id="reviewButton" type="button">Review Receipts</button>
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
     </section>
@@ -387,6 +388,7 @@
     const rowsElement = document.querySelector("#rows");
     const notice = document.querySelector("#notice");
     const metrics = document.querySelector("#metrics");
+    const refreshButton = document.querySelector("#refreshButton");
     const reviewButton = document.querySelector("#reviewButton");
     const downloadButton = document.querySelector("#downloadButton");
     let state = { rows: [], summary: {} };
@@ -542,6 +544,29 @@
       }
     }
 
+    async function refreshReceipts() {
+      const previousCount = state.summary?.receiptCount || 0;
+      setNotice("Checking storage for newly uploaded receipts...");
+      refreshButton.disabled = true;
+      try {
+        const data = await fetch(`${api}?action=refresh`, { method: "POST" }).then(readJson);
+        state = data;
+        const nextCount = state.summary?.receiptCount || 0;
+        const addedCount = Math.max(0, nextCount - previousCount);
+        setNotice(
+          addedCount > 0
+            ? `Storage refresh complete. ${addedCount} new receipt${addedCount === 1 ? "" : "s"} added.`
+            : `Storage refresh complete. No new receipts found.`,
+          "ok"
+        );
+        render();
+      } catch (error) {
+        setNotice(error.message, "error");
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
     rowsElement.addEventListener("change", (event) => {
       const taxKey = event.target.dataset.inlineTax;
       const needsKey = event.target.dataset.inlineNeeds;
@@ -570,6 +595,8 @@
       input.addEventListener("input", renderRows);
       input.addEventListener("change", renderRows);
     });
+
+    refreshButton.addEventListener("click", refreshReceipts);
 
     reviewButton.addEventListener("click", async () => {
       setNotice("Creating daily receipt review snapshot...");

@@ -469,10 +469,11 @@ function needsExtraction(record, object) {
   return missingCoreData && (!extraction.status || staleExtraction || retryableSkip);
 }
 
-async function syncLedger(env) {
+async function syncLedger(env, options = {}) {
   const ledger = await readLedger(env);
   const receipts = await listAllReceipts(env);
   const currentKeys = new Set(receipts.map((receipt) => receipt.key));
+  const extract = options.extract !== false;
   let changed = false;
   let extractionsThisSync = 0;
 
@@ -480,7 +481,7 @@ async function syncLedger(env) {
     if (!ledger.receipts[receipt.key]) changed = true;
     mergeReceipt(ledger, receipt);
     const record = ledger.receipts[receipt.key];
-    if (extractionsThisSync < MAX_EXTRACTIONS_PER_SYNC && needsExtraction(record, receipt)) {
+    if (extract && extractionsThisSync < MAX_EXTRACTIONS_PER_SYNC && needsExtraction(record, receipt)) {
       extractionsThisSync += 1;
       try {
         const extraction = await extractReceiptData(env, receipt);
@@ -575,6 +576,16 @@ function sortedRows(ledger) {
   });
 }
 
+function budgetPayload(ledger, extra = {}) {
+  return {
+    ...extra,
+    ledgerUpdatedAt: ledger.updatedAt,
+    lastReviewAt: ledger.lastReviewAt,
+    summary: summarize(ledger),
+    rows: sortedRows(ledger)
+  };
+}
+
 async function updateReceipt(request, env, access) {
   const payload = await request.json().catch(() => null);
   const key = String(payload?.key || "");
@@ -642,6 +653,17 @@ async function createReview(env, access) {
   return json({ ok: true, key, review });
 }
 
+async function refreshReceiptList(env) {
+  const ledger = await syncLedger(env, { extract: false });
+  return json(
+    budgetPayload(ledger, {
+      ok: true,
+      refreshedAt: new Date().toISOString(),
+      extractionSkipped: true
+    })
+  );
+}
+
 export async function onRequestGet({ request, env }) {
   const access = requireBudgetAccess(request, env);
   if (access.response) return access.response;
@@ -651,12 +673,7 @@ export async function onRequestGet({ request, env }) {
 
   const url = new URL(request.url);
   const ledger = await syncLedger(env);
-  const payload = {
-    ledgerUpdatedAt: ledger.updatedAt,
-    lastReviewAt: ledger.lastReviewAt,
-    summary: summarize(ledger),
-    rows: sortedRows(ledger)
-  };
+  const payload = budgetPayload(ledger);
 
   if (url.searchParams.get("download") === "csv") {
     const csv = [
@@ -713,6 +730,7 @@ export async function onRequestPost({ request, env }) {
 
   const url = new URL(request.url);
   if (url.searchParams.get("action") === "review") return createReview(env, access);
+  if (url.searchParams.get("action") === "refresh") return refreshReceiptList(env);
 
   return updateReceipt(request, env, access);
 }
