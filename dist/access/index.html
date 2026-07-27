@@ -722,6 +722,10 @@
       <div class="auth-card hidden" id="firstOwnerInvitePanel">
         <h2>First Owner Invite</h2>
         <p>Create the initial owner invite for scott@mojoaisummits.com. Use the invite link to set your password and sign in as owner.</p>
+        <label class="field" for="firstOwnerInviteToken">
+          Bootstrap token
+          <input id="firstOwnerInviteToken" type="password" autocomplete="one-time-code" required>
+        </label>
         <button id="firstOwnerInviteButton" type="button">Create Scott Invite</button>
         <p id="firstOwnerInviteResult"></p>
       </div>
@@ -861,6 +865,7 @@
       firstOwnerInvitePanel: document.querySelector("#firstOwnerInvitePanel"),
       firstOwnerInviteButton: document.querySelector("#firstOwnerInviteButton"),
       firstOwnerInviteResult: document.querySelector("#firstOwnerInviteResult"),
+      firstOwnerInviteToken: document.querySelector("#firstOwnerInviteToken"),
       acceptInviteForm: document.querySelector("#acceptInviteForm"),
       emptyState: document.querySelector("#emptyState"),
       inviteList: document.querySelector("#inviteList"),
@@ -1230,7 +1235,10 @@
       try {
         const response = await fetch("/api/auth/invite", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            authorization: `Bearer ${elements.firstOwnerInviteToken.value}`,
+            "content-type": "application/json"
+          },
           body: JSON.stringify({ action: "first-owner" })
         });
         const payload = await response.json();

@@ -7,6 +7,11 @@ import {
 } from "../../_auth.js";
 import { json } from "../../_access-control.js";
 
+function bearerToken(request) {
+  const authorization = request.headers.get("authorization") || "";
+  return authorization.replace(/^Bearer\s+/i, "").trim();
+}
+
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const token = url.searchParams.get("token") || "";
@@ -24,9 +29,17 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   const payload = await request.json().catch(() => null);
   if (payload?.action === "first-owner") {
+    if (!env.MOJO_AUTH_BOOTSTRAP_TOKEN) {
+      return json({ error: "First owner invite bootstrap is not enabled." }, { status: 403 });
+    }
+
+    if (bearerToken(request) !== env.MOJO_AUTH_BOOTSTRAP_TOKEN) {
+      return json({ error: "Bootstrap token is invalid." }, { status: 403 });
+    }
+
     try {
       const result = await createFirstOwnerInvite(env, request.url);
-      return json({ ok: true, ...result }, { status: 201 });
+      return json({ ok: true, invite: result.invite, acceptUrl: result.acceptUrl }, { status: 201 });
     } catch (error) {
       return json({ error: error?.message || "First owner invite could not be created." }, { status: 400 });
     }

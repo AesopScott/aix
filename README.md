@@ -58,7 +58,7 @@ Mojo Auth endpoints:
 
 Passwords are stored as PBKDF2-SHA256 hashes with random salts. The raw password is never stored. Sessions are random bearer tokens stored as SHA-256 hashes and sent to the browser in an HttpOnly cookie.
 
-When there are zero users, `/access/` can create the initial owner invite for `scott@mojoaisummits.com`. After that, owner/admin users create invites from `/access`. Invite links use random single-use tokens; only token hashes are stored. The full invite URL is returned once when the invite is created, then the invitee opens `/access/?invite=...` to create their own separate Mojo password.
+When there are zero users, `/access/` can create the initial owner invite for `scott@mojoaisummits.com` with the temporary `MOJO_AUTH_BOOTSTRAP_TOKEN`. After that, owner/admin users create invites from `/access`. Invite links use random single-use tokens; only token hashes are stored. The full invite URL is returned once when the invite is created, then the invitee opens `/access/?invite=...` to create their own separate Mojo password.
 
 Mojo Auth uses a D1 database bound as `MOJO_AUTH_DB` when available. Until that binding exists, it stores users and sessions in the existing `MOJO_SUMMITS_SETUP_STATE` KV namespace. Apply `migrations/0001_auth.sql` to the D1 database before binding it in production.
 
