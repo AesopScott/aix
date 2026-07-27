@@ -178,7 +178,7 @@ export const DEFAULT_ACCESS_RULES = [
     kind: "api",
     group: "APIs",
     label: "Authentication API",
-    summary: "Login, logout, session, and bootstrap endpoints.",
+    summary: "Login, logout, session, and invite endpoints.",
     mode: "public",
     matches: [{ exact: "/api/auth" }, { prefix: "/api/auth/" }],
     domains: ["mojoaisummits.com/api/auth", "mojoaisummits.com/api/auth/*"]

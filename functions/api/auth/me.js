@@ -13,7 +13,7 @@ export async function onRequestGet({ request, env }) {
     ok: true,
     authenticated: Boolean(user),
     user,
-    bootstrapRequired: userCount === 0,
+    firstOwnerRequired: userCount === 0,
     storage: authStorageKind(env)
   });
 }

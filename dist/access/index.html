@@ -1020,7 +1020,7 @@
         elements.sessionUser.innerHTML = "";
       }
 
-      const firstOwnerRequired = Boolean(state.session?.bootstrapRequired);
+      const firstOwnerRequired = Boolean(state.session?.firstOwnerRequired);
       const acceptingInvite = Boolean(state.inviteToken && !authenticated);
       elements.firstOwnerInvitePanel.classList.toggle("hidden", !firstOwnerRequired || acceptingInvite);
       elements.loginForm.classList.toggle("hidden", firstOwnerRequired || acceptingInvite);
