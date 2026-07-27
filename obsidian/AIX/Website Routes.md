@@ -8,7 +8,7 @@
 - Included internal routes: `/crm/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, `/mockups/`, and individual `/mockups/mockup*/` pages.
 - Included controlled-share route: `/vip-registration/`, for invite-code previews and direct guest invite links.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.
-- Access guidance: protect `/admin/*`, `/crm/*`, `/setup/*`, `/events/*`, `/storage/*`, `/budget/*`, and `/mockups/*` with Cloudflare Access before sharing broadly.
+- Access guidance: protect `/admin/`, `/crm/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, `/mockups/`, and internal APIs `/api/crm`, `/api/setup-state`, `/api/events`, `/api/storage`, and `/api/budget` with Cloudflare Access. Keep `/crm/api/public/...` public for invite-code lookup and guest registration callbacks.
 
 ## Internal Event Playbook
 

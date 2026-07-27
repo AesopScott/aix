@@ -88,9 +88,9 @@ After rollback, fix the repo and push a corrected deployment so GitHub `main` an
 After deployment, verify:
 
 - `https://mojoaisummits.com/` loads.
-- `https://mojoaisummits.com/setup/` loads and shared checklist state works.
-- `https://mojoaisummits.com/storage/` is protected by Cloudflare Access.
-- `https://mojoaisummits.com/storage/api` is not publicly accessible.
-- Mockup URLs under `/mockups/` still load.
+- Public routes such as `/virtual/` and `/vip-registration/` load without Cloudflare Access.
+- Internal routes such as `/setup/`, `/events/`, `/crm/`, `/storage/`, `/budget/`, and `/mockups/` require Cloudflare Access.
+- Internal APIs such as `/api/setup-state`, `/api/events`, `/api/crm`, `/api/storage`, and `/api/budget` are not publicly accessible.
+- An approved Access user can open `/setup/` and shared checklist state works.
 
 Do not push a production deployment with the R2 binding until the `mojo-summits-private` bucket exists, because Cloudflare Pages expects configured bindings to reference available resources.
