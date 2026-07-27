@@ -109,3 +109,11 @@ export async function onRequestPut({ request, env, params }) {
   const events = await writeIndex(env, event);
   return json({ event, events });
 }
+
+export async function onRequestDelete({ env, params }) {
+  const slug = slugify(params.slug);
+  await env.MOJO_SUMMITS_SETUP_STATE.delete(`${EVENT_PREFIX}${slug}`);
+  const index = (await readIndex(env)).filter((item) => item?.slug !== slug);
+  await env.MOJO_SUMMITS_SETUP_STATE.put(INDEX_KEY, JSON.stringify(index.slice(0, 200)));
+  return json({ deleted: slug, events: index });
+}

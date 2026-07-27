@@ -504,13 +504,20 @@
       gap: 10px;
       margin-top: 14px;
     }
-    .event-link {
-      display: block;
+    .event-link-card {
       border: 1px solid var(--line);
       border-radius: 4px;
       background: var(--panel-2);
       padding: 13px 14px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+    }
+    .event-link {
+      display: block;
       color: var(--text);
+      min-width: 0;
     }
     .event-link strong {
       display: block;
@@ -521,6 +528,23 @@
       color: var(--faint);
       font-family: 'Space Grotesk', sans-serif;
       font-size: 11px;
+    }
+    .event-remove {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--line-2);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--faint);
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .event-remove:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
     }
     .empty {
       color: var(--faint);
@@ -1043,6 +1067,14 @@
       renderFooter();
     }
 
+    function deleteLocalPlaybook(slug) {
+      localStorage.removeItem(PLAYBOOK_KEY_PREFIX + slug);
+      const next = readLocalIndex().filter((item) => item.slug !== slug);
+      writeLocalIndex(next);
+      app.index = next;
+      renderFooter();
+    }
+
     async function api(path, options = {}) {
       const response = await fetch(path, {
         headers: { "content-type": "application/json", ...(options.headers || {}) },
@@ -1274,10 +1306,13 @@
         return;
       }
       links.innerHTML = app.index.map((item) => `
-        <a class="event-link" href="${eventUrl(item.slug)}">
-          <strong>${escapeHtml(item.title || item.slug)}</strong>
-          <span>${escapeHtml(item.slug)}${item.date ? ` | ${escapeHtml(item.date)}` : ""}</span>
-        </a>
+        <div class="event-link-card">
+          <a class="event-link" href="${eventUrl(item.slug)}">
+            <strong>${escapeHtml(item.title || item.slug)}</strong>
+            <span>${escapeHtml(item.slug)}${item.date ? ` | ${escapeHtml(item.date)}` : ""}</span>
+          </a>
+          <button class="event-remove" type="button" data-delete-event="${escapeHtml(item.slug)}" aria-label="Remove ${escapeHtml(item.title || item.slug)}">×</button>
+        </div>
       `).join("");
     }
 
@@ -1369,6 +1404,24 @@
         app.slug = "";
         window.history.pushState({}, "", "/events/");
         renderPlaybook();
+      });
+      document.getElementById("eventFooter").addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-delete-event]");
+        if (!button) return;
+        const slug = button.dataset.deleteEvent;
+        deleteLocalPlaybook(slug);
+        try {
+          await api(`/api/events/${encodeURIComponent(slug)}`, { method: "DELETE" });
+        } catch {
+          // Static previews only need the local generated link removed.
+        }
+        if (app.current?.slug === slug) {
+          app.current = null;
+          app.slug = "";
+          window.history.pushState({}, "", "/events/");
+          renderPlaybook();
+        }
+        toast("Generated page removed.");
       });
       window.addEventListener("beforeunload", (event) => {
         if (!app.dirty) return;
