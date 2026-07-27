@@ -146,10 +146,10 @@
       white-space: nowrap;
     }
 
-    .hub-label,
     .eyebrow,
     label,
-    .tag {
+    .tag,
+    button {
       color: var(--cyan);
       font-size: 0.72rem;
       font-weight: 800;
@@ -280,7 +280,8 @@
     }
 
     input,
-    select {
+    select,
+    button {
       width: 100%;
       min-height: 44px;
       border: 1px solid var(--line);
@@ -290,6 +291,27 @@
       background: rgba(10, 15, 30, 0.8);
       font: inherit;
       outline: none;
+    }
+
+    button {
+      cursor: pointer;
+      border-color: var(--line-strong);
+      background: linear-gradient(135deg, rgba(22, 102, 255, 0.86), rgba(0, 230, 255, 0.18));
+      color: var(--white);
+      transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    button:hover,
+    button:focus-visible {
+      border-color: var(--cyan);
+      box-shadow: 0 0 22px rgba(0, 230, 255, 0.24);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.7;
+      transform: none;
     }
 
     input:focus,
@@ -314,14 +336,6 @@
       background: rgba(0, 230, 255, 0.08);
       color: var(--cyan);
       white-space: nowrap;
-    }
-
-    .hub-label {
-      display: block;
-      padding-left: 51px;
-      color: rgba(222, 235, 255, 0.78);
-      font-size: 0.7rem;
-      letter-spacing: 0.32em;
     }
 
     .tag.warning {
@@ -480,6 +494,13 @@
       font-size: 0.9em;
     }
 
+    .refresh-note {
+      min-height: 1.2rem;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+
     @media (max-width: 900px) {
       .hero {
         grid-template-columns: 1fr;
@@ -521,9 +542,6 @@
         letter-spacing: .32em;
         padding-left: .32em;
       }
-      .hub-label {
-        padding-left: 46px;
-      }
     }
   </style>
 </head>
@@ -539,7 +557,6 @@
             <span class="brand-secondary">Summits</span>
           </span>
         </a>
-        <span class="hub-label">Company Hub</span>
       </div>
       <nav aria-label="Company hub shortcuts">
         <a href="/crm/">CRM</a>
@@ -577,6 +594,8 @@
             Group
             <select id="groupFilter"></select>
           </label>
+          <button id="refreshButton" type="button">Refresh Links</button>
+          <p class="refresh-note" id="refreshNote" aria-live="polite"></p>
         </div>
       </aside>
     </section>
@@ -643,13 +662,23 @@
       }
     ];
 
+    const candidateRoutes = [
+      "/",
+      "/dallas/",
+      "/virtual/",
+      "/privacy/",
+      "/sms-terms/"
+    ];
+
     const groupsElement = document.querySelector("#groups");
     const searchInput = document.querySelector("#searchInput");
     const groupFilter = document.querySelector("#groupFilter");
+    const refreshButton = document.querySelector("#refreshButton");
+    const refreshNote = document.querySelector("#refreshNote");
     const emptyState = document.querySelector("#emptyState");
     const routeCount = document.querySelector("#routeCount");
     const groupCount = document.querySelector("#groupCount");
-    const groupNames = [...new Set(routes.map((route) => route.group))];
+    let discoveredRoutes = [];
 
     function escapeHtml(value) {
       return String(value || "")
@@ -677,22 +706,56 @@
       return "";
     }
 
+    function allRoutes() {
+      return [...routes, ...discoveredRoutes];
+    }
+
+    function groupNames() {
+      return [...new Set(allRoutes().map((route) => route.group))];
+    }
+
+    function normalizePath(path) {
+      if (!path || !path.startsWith("/")) return "";
+      if (path === "/") return path;
+      return path.endsWith("/") ? path : `${path}/`;
+    }
+
+    function routeTitle(path, title = "") {
+      const cleanedTitle = title
+        .replace(/\s+/g, " ")
+        .replace(/\s*[|-]\s*Mojo AI Summits.*$/i, "")
+        .replace(/^MOJO AI Summits\s*[:|-]\s*/i, "")
+        .trim();
+      if (cleanedTitle) return cleanedTitle;
+      if (path === "/") return "Home";
+      return path
+        .replace(/^\/|\/$/g, "")
+        .split("/")
+        .pop()
+        .split("-")
+        .map((part) => part ? part[0].toUpperCase() + part.slice(1) : "")
+        .join(" ");
+    }
+
     function renderFilters() {
+      const selected = groupFilter.value || "all";
+      const names = groupNames();
       groupFilter.innerHTML = [
         '<option value="all">All groups</option>',
-        ...groupNames.map((group) => `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`)
+        ...names.map((group) => `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`)
       ].join("");
+      groupFilter.value = selected === "all" || names.includes(selected) ? selected : "all";
     }
 
     function renderRoutes() {
       const query = searchInput.value.trim().toLowerCase();
       const selectedGroup = groupFilter.value;
-      const visibleRoutes = routes.filter((route) => {
+      const visibleRoutes = allRoutes().filter((route) => {
         const groupOk = selectedGroup === "all" || route.group === selectedGroup;
         const searchOk = !query || searchText(route).includes(query);
         return groupOk && searchOk;
       });
-      const visibleGroups = groupNames
+      const visibleGroups = groupNames()
         .map((group) => ({
           group,
           routes: visibleRoutes.filter((route) => route.group === group)
@@ -735,10 +798,71 @@
       `).join("");
     }
 
+    async function redirectCandidates() {
+      try {
+        const response = await fetch("/_redirects", { cache: "no-store" });
+        if (!response.ok) return [];
+        const text = await response.text();
+        return text
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line && !line.startsWith("#"))
+          .map((line) => normalizePath(line.split(/\s+/)[0]))
+          .filter(Boolean);
+      } catch {
+        return [];
+      }
+    }
+
+    async function pageExists(path) {
+      try {
+        const response = await fetch(path, { method: "GET", cache: "no-store" });
+        if (!response.ok) return null;
+        const text = await response.text();
+        const title = /<title>([\s\S]*?)<\/title>/i.exec(text)?.[1] || "";
+        return { path, title };
+      } catch {
+        return null;
+      }
+    }
+
+    async function refreshLinks() {
+      refreshButton.disabled = true;
+      refreshNote.textContent = "Looking for unlinked pages...";
+
+      const existingPaths = new Set(allRoutes().map((route) => normalizePath(route.path)));
+      const candidates = [
+        ...candidateRoutes,
+        ...(await redirectCandidates())
+      ]
+        .map(normalizePath)
+        .filter((path) => path && path !== "/admin/" && !path.startsWith("/mockups/"))
+        .filter((path, index, list) => list.indexOf(path) === index)
+        .filter((path) => !existingPaths.has(path));
+
+      const found = (await Promise.all(candidates.map(pageExists))).filter(Boolean);
+      discoveredRoutes = found.map((page) => ({
+        group: "Found Pages",
+        title: routeTitle(page.path, page.title),
+        path: page.path,
+        summary: "Discovered by checking available site routes that are not already linked here.",
+        status: "Discovered",
+        tags: ["found", "refresh"]
+      }));
+
+      renderFilters();
+      renderRoutes();
+      refreshNote.textContent = discoveredRoutes.length
+        ? `Found ${discoveredRoutes.length} unlinked page${discoveredRoutes.length === 1 ? "" : "s"}.`
+        : "No unlinked pages found.";
+      refreshButton.disabled = false;
+    }
+
     renderFilters();
     renderRoutes();
     searchInput.addEventListener("input", renderRoutes);
     groupFilter.addEventListener("change", renderRoutes);
+    refreshButton.addEventListener("click", refreshLinks);
   </script>
 </body>
 </html>
