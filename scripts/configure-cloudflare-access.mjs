@@ -65,6 +65,31 @@ async function listApplications() {
   return Array.isArray(result) ? result : result?.result || [];
 }
 
+async function listIdentityProviders() {
+  const result = await cloudflare("/identity_providers");
+  return Array.isArray(result) ? result : result?.result || [];
+}
+
+async function ensureOneTimePinIdentityProvider(existingProviders) {
+  const existing = existingProviders.find((provider) => provider.type === "onetimepin");
+  if (existing) {
+    console.log(`Exists: ${existing.name} identity provider`);
+    return existing;
+  }
+
+  const created = await cloudflare("/identity_providers", {
+    method: "POST",
+    body: JSON.stringify({
+      name: "One-time PIN login",
+      type: "onetimepin",
+      config: {}
+    })
+  });
+
+  console.log("Created: One-time PIN login identity provider");
+  return created;
+}
+
 async function ensureApplication(app, existingApps) {
   const existing = existingApps.find((item) => item.domain === app.domain || item.name === app.name);
   if (existing) {
@@ -87,6 +112,9 @@ async function ensureApplication(app, existingApps) {
   console.log(`Created: ${app.name} (${app.domain})`);
   return created;
 }
+
+const existingProviders = await listIdentityProviders();
+await ensureOneTimePinIdentityProvider(existingProviders);
 
 const existingApps = await listApplications();
 for (const app of apps) {
