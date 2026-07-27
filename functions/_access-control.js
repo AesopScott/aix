@@ -164,6 +164,16 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/access-users", "mojoaisummits.com/api/access-users/*"]
   },
   {
+    id: "api-access-invites",
+    kind: "api",
+    group: "APIs",
+    label: "Access Invites API",
+    summary: "Invite creation and revocation endpoint.",
+    mode: "allowlist",
+    matches: [{ exact: "/api/access-invites" }, { prefix: "/api/access-invites/" }],
+    domains: ["mojoaisummits.com/api/access-invites", "mojoaisummits.com/api/access-invites/*"]
+  },
+  {
     id: "api-auth",
     kind: "api",
     group: "APIs",
@@ -307,7 +317,7 @@ export function sanitizeAccessConfig(input = {}, actor = "") {
     const mode = ACCESS_MODES.includes(incoming.mode) ? incoming.mode : definition.mode;
     return {
       id: definition.id,
-      mode: definition.id === "api-access-config" || definition.id === "api-access-users"
+      mode: ["api-access-config", "api-access-users", "api-access-invites"].includes(definition.id)
         ? mode === "public" ? "allowlist" : mode
         : mode
     };

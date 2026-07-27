@@ -77,15 +77,11 @@ npx wrangler d1 execute mojo-summits-auth --remote --file migrations/0001_auth.s
 
 Until `MOJO_AUTH_DB` is bound, Mojo Auth stores users and sessions in `MOJO_SUMMITS_SETUP_STATE`.
 
-To create the first owner account, set a temporary Pages secret:
+To create the first owner account, open `/access/` while there are zero Mojo Auth users and create the initial Scott owner invite. Open the returned invite link, set a password, and `scott@mojoaisummits.com` becomes the owner account.
 
-```powershell
-npx wrangler pages secret put MOJO_AUTH_BOOTSTRAP_TOKEN --project-name mojo-ai-summits
-```
+After the owner exists, create access invites in `/access` instead of assigning passwords directly. The owner/admin chooses the invitee email and role, then copies the generated single-use link. The invitee opens `/access/?invite=...` and creates their own separate Mojo password.
 
-Then submit the first owner through `/api/auth/bootstrap` from the `/access` page or a trusted admin script using `Authorization: Bearer <token>`. Remove or rotate the bootstrap token after the owner exists.
-
-Recommended first users:
+Recommended first invites:
 
 - Scott: owner
 - Robert: admin or owner

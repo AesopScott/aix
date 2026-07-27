@@ -719,25 +719,24 @@
         </label>
         <button type="submit">Sign In</button>
       </form>
-      <form class="auth-card hidden" id="bootstrapForm">
-        <h2>Create Owner</h2>
-        <label class="field" for="bootstrapToken">
-          Bootstrap token
-          <input id="bootstrapToken" type="password" autocomplete="one-time-code" required>
+      <div class="auth-card hidden" id="firstOwnerInvitePanel">
+        <h2>First Owner Invite</h2>
+        <p>Create the initial owner invite for scott@mojoaisummits.com. Use the invite link to set your password and sign in as owner.</p>
+        <button id="firstOwnerInviteButton" type="button">Create Scott Invite</button>
+        <p id="firstOwnerInviteResult"></p>
+      </div>
+      <form class="auth-card hidden" id="acceptInviteForm">
+        <h2>Accept Invite</h2>
+        <p id="inviteMessage">Checking invite.</p>
+        <label class="field" for="invitePassword">
+          Create password
+          <input id="invitePassword" type="password" autocomplete="new-password" required minlength="12">
         </label>
-        <label class="field" for="bootstrapName">
-          Name
-          <input id="bootstrapName" type="text" autocomplete="name" required>
+        <label class="field" for="invitePasswordConfirm">
+          Confirm password
+          <input id="invitePasswordConfirm" type="password" autocomplete="new-password" required minlength="12">
         </label>
-        <label class="field" for="bootstrapEmail">
-          Email
-          <input id="bootstrapEmail" type="email" autocomplete="email" required>
-        </label>
-        <label class="field" for="bootstrapPassword">
-          Password
-          <input id="bootstrapPassword" type="password" autocomplete="new-password" required minlength="12">
-        </label>
-        <button type="submit">Create Owner</button>
+        <button type="submit">Create Account</button>
       </form>
     </section>
 
@@ -784,7 +783,7 @@
 
       <section class="workspace" aria-label="Route access configuration">
         <section class="user-admin hidden" id="userAdmin" aria-labelledby="users-title">
-          <h2 id="users-title">Users</h2>
+          <h2 id="users-title">Users and Invites</h2>
           <form class="user-form" id="userForm">
             <label class="field" for="userName">
               Name
@@ -794,10 +793,6 @@
               Email
               <input id="userEmail" type="email" autocomplete="off" required>
             </label>
-            <label class="field" for="userPassword">
-              Password
-              <input id="userPassword" type="password" autocomplete="new-password" minlength="12" required>
-            </label>
             <label class="field" for="userRole">
               Role
               <select id="userRole">
@@ -806,8 +801,9 @@
                 <option value="owner">Owner</option>
               </select>
             </label>
-            <button type="submit">Add User</button>
+            <button type="submit">Create Invite</button>
           </form>
+          <div class="user-list" id="inviteList"></div>
           <div class="user-list" id="userList"></div>
         </section>
 
@@ -846,6 +842,9 @@
       modes: [],
       session: null,
       users: [],
+      invites: [],
+      inviteToken: new URLSearchParams(location.search).get("invite") || "",
+      invite: null,
       search: "",
       group: "all",
       mode: "all",
@@ -859,12 +858,15 @@
       authState: document.querySelector("#authState"),
       accessEnabled: document.querySelector("#accessEnabled"),
       allowedEmails: document.querySelector("#allowedEmails"),
-      bootstrapForm: document.querySelector("#bootstrapForm"),
-      bootstrapToken: document.querySelector("#bootstrapToken"),
-      bootstrapName: document.querySelector("#bootstrapName"),
-      bootstrapEmail: document.querySelector("#bootstrapEmail"),
-      bootstrapPassword: document.querySelector("#bootstrapPassword"),
+      firstOwnerInvitePanel: document.querySelector("#firstOwnerInvitePanel"),
+      firstOwnerInviteButton: document.querySelector("#firstOwnerInviteButton"),
+      firstOwnerInviteResult: document.querySelector("#firstOwnerInviteResult"),
+      acceptInviteForm: document.querySelector("#acceptInviteForm"),
       emptyState: document.querySelector("#emptyState"),
+      inviteList: document.querySelector("#inviteList"),
+      inviteMessage: document.querySelector("#inviteMessage"),
+      invitePassword: document.querySelector("#invitePassword"),
+      invitePasswordConfirm: document.querySelector("#invitePasswordConfirm"),
       groupFilter: document.querySelector("#groupFilter"),
       loginForm: document.querySelector("#loginForm"),
       loginEmail: document.querySelector("#loginEmail"),
@@ -887,7 +889,6 @@
       userForm: document.querySelector("#userForm"),
       userList: document.querySelector("#userList"),
       userName: document.querySelector("#userName"),
-      userPassword: document.querySelector("#userPassword"),
       userRole: document.querySelector("#userRole")
     };
 
@@ -1019,18 +1020,35 @@
         elements.sessionUser.innerHTML = "";
       }
 
-      const bootstrapRequired = Boolean(state.session?.bootstrapRequired);
-      elements.bootstrapForm.classList.toggle("hidden", !bootstrapRequired);
-      elements.loginForm.classList.toggle("hidden", bootstrapRequired);
-      elements.authMessage.textContent = bootstrapRequired
-        ? "No owner account exists yet."
-        : authenticated && !canManageAccess()
-          ? "Your account is signed in, but access administration requires an owner or admin role."
-          : "Sign in to manage route access.";
+      const firstOwnerRequired = Boolean(state.session?.bootstrapRequired);
+      const acceptingInvite = Boolean(state.inviteToken && !authenticated);
+      elements.firstOwnerInvitePanel.classList.toggle("hidden", !firstOwnerRequired || acceptingInvite);
+      elements.loginForm.classList.toggle("hidden", firstOwnerRequired || acceptingInvite);
+      elements.acceptInviteForm.classList.toggle("hidden", !acceptingInvite);
+      elements.authMessage.textContent = acceptingInvite
+        ? "Create your Mojo access account."
+        : firstOwnerRequired
+          ? "No owner account exists yet."
+          : authenticated && !canManageAccess()
+            ? "Your account is signed in, but access administration requires an owner or admin role."
+            : "Sign in to manage route access.";
     }
 
     function renderUsers() {
       if (!canManageAccess()) return;
+      elements.inviteList.innerHTML = `
+        <h3>Pending Invites</h3>
+        ${state.invites.length ? state.invites.map((invite) => `
+          <div class="user-row">
+            <strong>${escapeHtml(invite.email)}</strong>
+            <span class="tag ${invite.status === "pending" ? "authenticated" : invite.status === "accepted" ? "public" : "closed"}">${escapeHtml(invite.status)}</span>
+            <span class="tag">${escapeHtml(invite.role)}</span>
+            ${invite.acceptUrl ? `<button class="secondary compact-button" data-copy-invite="${escapeHtml(invite.acceptUrl)}" type="button">Copy Link</button>` : ""}
+            <button class="danger compact-button" data-revoke-invite="${escapeHtml(invite.id)}" type="button" ${invite.status !== "pending" ? "disabled" : ""}>Revoke</button>
+          </div>
+        `).join("") : '<p>No invites have been created yet.</p>'}
+      `;
+
       elements.userList.innerHTML = state.users.map((user) => `
         <div class="user-row">
           <strong>${escapeHtml(user.email)}</strong>
@@ -1043,13 +1061,19 @@
       document.querySelectorAll("[data-disable-user]").forEach((button) => {
         button.addEventListener("click", () => disableUser(button.dataset.disableUser));
       });
+      document.querySelectorAll("[data-copy-invite]").forEach((button) => {
+        button.addEventListener("click", () => copyInvite(button.dataset.copyInvite));
+      });
+      document.querySelectorAll("[data-revoke-invite]").forEach((button) => {
+        button.addEventListener("click", () => revokeInvite(button.dataset.revokeInvite));
+      });
     }
 
     function renderRoutes() {
       const visibleRoutes = state.config.routes.filter(routeVisible);
       renderSummary(visibleRoutes);
       elements.routeRows.innerHTML = visibleRoutes.map((route) => {
-        const locked = route.id === "access" || route.id === "api-access-config";
+        const locked = ["api-access-config", "api-access-users", "api-access-invites"].includes(route.id);
         return `
           <div class="route-row" data-route-id="${escapeHtml(route.id)}">
             <div class="cell">
@@ -1134,6 +1158,30 @@
       renderUsers();
     }
 
+    async function loadInvites() {
+      if (!canManageAccess()) return;
+      const response = await fetch("/api/access-invites");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Invites could not be loaded.");
+      state.invites = payload.invites || [];
+      renderUsers();
+    }
+
+    async function loadInvite() {
+      if (!state.inviteToken) return;
+      try {
+        const response = await fetch(`/api/auth/invite?token=${encodeURIComponent(state.inviteToken)}`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Invite could not be loaded.");
+        state.invite = payload.invite;
+        elements.inviteMessage.textContent = `Invite for ${payload.invite.email}. Create a separate Mojo password for this site.`;
+      } catch (error) {
+        elements.inviteMessage.textContent = error.message;
+        elements.invitePassword.disabled = true;
+        elements.invitePasswordConfirm.disabled = true;
+      }
+    }
+
     async function loadSession() {
       clearNotice();
       try {
@@ -1145,8 +1193,11 @@
         if (payload.authenticated && canManageAccess()) {
           await loadConfig();
           await loadUsers();
+          await loadInvites();
         } else if (payload.authenticated) {
           showNotice("Your account is not an access administrator.", "error");
+        } else if (state.inviteToken) {
+          await loadInvite();
         }
       } catch (error) {
         showNotice(error.message, "error");
@@ -1174,26 +1225,18 @@
       }
     }
 
-    async function bootstrap(event) {
-      event.preventDefault();
+    async function createFirstOwnerInvite() {
       clearNotice();
       try {
-        const response = await fetch("/api/auth/bootstrap", {
+        const response = await fetch("/api/auth/invite", {
           method: "POST",
-          headers: {
-            authorization: `Bearer ${elements.bootstrapToken.value}`,
-            "content-type": "application/json"
-          },
-          body: JSON.stringify({
-            name: elements.bootstrapName.value,
-            email: elements.bootstrapEmail.value,
-            password: elements.bootstrapPassword.value
-          })
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "first-owner" })
         });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Owner account could not be created.");
-        elements.bootstrapForm.reset();
-        await loadSession();
+        if (!response.ok) throw new Error(payload.error || "Scott owner invite could not be created.");
+        elements.firstOwnerInviteResult.innerHTML = `<a href="${escapeHtml(payload.acceptUrl)}">Open Scott owner invite</a>`;
+        showNotice("Scott owner invite created. Open the invite link to set your password.", "ok");
       } catch (error) {
         showNotice(error.message, "error");
       }
@@ -1205,29 +1248,84 @@
       state.session = null;
       state.config = null;
       state.users = [];
+      state.invites = [];
       elements.appLayout.classList.add("hidden");
       await loadSession();
     }
 
-    async function addUser(event) {
+    async function createInvite(event) {
       event.preventDefault();
       clearNotice();
       try {
-        const response = await fetch("/api/access-users", {
+        const response = await fetch("/api/access-invites", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             name: elements.userName.value,
             email: elements.userEmail.value,
-            password: elements.userPassword.value,
             role: elements.userRole.value
           })
         });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "User could not be created.");
+        if (!response.ok) throw new Error(payload.error || "Invite could not be created.");
         elements.userForm.reset();
-        await loadUsers();
-        showNotice("User created.", "ok");
+        state.invites.unshift({ ...payload.invite, acceptUrl: payload.acceptUrl });
+        renderUsers();
+        showNotice(`Invite created. Link: ${payload.acceptUrl}`, "ok");
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    }
+
+    async function copyInvite(url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        showNotice("Invite link copied.", "ok");
+      } catch {
+        showNotice(url, "ok");
+      }
+    }
+
+    async function revokeInvite(id) {
+      clearNotice();
+      try {
+        const response = await fetch(`/api/access-invites?id=${encodeURIComponent(id)}`, {
+          method: "DELETE"
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Invite could not be revoked.");
+        await loadInvites();
+        showNotice("Invite revoked.", "ok");
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    }
+
+    async function acceptInvite(event) {
+      event.preventDefault();
+      clearNotice();
+      if (elements.invitePassword.value !== elements.invitePasswordConfirm.value) {
+        showNotice("Passwords do not match.", "error");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/invite", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            token: state.inviteToken,
+            password: elements.invitePassword.value
+          })
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Invite could not be accepted.");
+        history.replaceState({}, "", "/access/");
+        state.inviteToken = "";
+        state.invite = null;
+        elements.acceptInviteForm.reset();
+        await loadSession();
+        showNotice("Account created. You are signed in.", "ok");
       } catch (error) {
         showNotice(error.message, "error");
       }
@@ -1320,9 +1418,10 @@
     elements.saveButton.addEventListener("click", saveConfig);
     elements.resetButton.addEventListener("click", resetConfig);
     elements.loginForm.addEventListener("submit", login);
-    elements.bootstrapForm.addEventListener("submit", bootstrap);
+    elements.firstOwnerInviteButton.addEventListener("click", createFirstOwnerInvite);
+    elements.acceptInviteForm.addEventListener("submit", acceptInvite);
     elements.logoutButton.addEventListener("click", logout);
-    elements.userForm.addEventListener("submit", addUser);
+    elements.userForm.addEventListener("submit", createInvite);
 
     loadSession();
   </script>

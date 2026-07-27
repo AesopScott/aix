@@ -28,3 +28,22 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_token_hash ON auth_sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_email ON auth_sessions(user_email);
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at ON auth_sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS auth_invites (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'revoked')),
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  created_by TEXT NOT NULL DEFAULT '',
+  expires_at TEXT NOT NULL,
+  accepted_at TEXT NOT NULL DEFAULT '',
+  revoked_at TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_invites_email ON auth_invites(email);
+CREATE INDEX IF NOT EXISTS idx_auth_invites_status ON auth_invites(status);
+CREATE INDEX IF NOT EXISTS idx_auth_invites_token_hash ON auth_invites(token_hash);
+CREATE INDEX IF NOT EXISTS idx_auth_invites_expires_at ON auth_invites(expires_at);

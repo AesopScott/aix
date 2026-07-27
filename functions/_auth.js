@@ -1,8 +1,12 @@
 const USER_INDEX_KEY = "auth:users:index:v1";
 const USER_PREFIX = "auth:user:";
+const INVITE_INDEX_KEY = "auth:invites:index:v1";
+const INVITE_PREFIX = "auth:invite:";
+const INVITE_TOKEN_PREFIX = "auth:invite-token:";
 const SESSION_PREFIX = "auth:session:";
 const SESSION_COOKIE = "mojo_auth";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
+const INVITE_TTL_SECONDS = 7 * 24 * 60 * 60;
 const PASSWORD_ITERATIONS = 210000;
 
 const encoder = new TextEncoder();
@@ -124,6 +128,22 @@ function publicUser(user) {
   };
 }
 
+function publicInvite(invite) {
+  if (!invite) return null;
+  return {
+    id: invite.id,
+    email: invite.email,
+    name: invite.name || "",
+    role: invite.role || "member",
+    status: invite.status || "pending",
+    createdAt: invite.createdAt || invite.created_at || "",
+    createdBy: invite.createdBy || invite.created_by || "",
+    expiresAt: invite.expiresAt || invite.expires_at || "",
+    acceptedAt: invite.acceptedAt || invite.accepted_at || "",
+    revokedAt: invite.revokedAt || invite.revoked_at || ""
+  };
+}
+
 function rowToUser(row) {
   return row
     ? {
@@ -140,9 +160,37 @@ function rowToUser(row) {
     : null;
 }
 
+function rowToInvite(row) {
+  return row
+    ? {
+        id: row.id,
+        email: row.email,
+        name: row.name,
+        role: row.role,
+        status: row.status,
+        tokenHash: row.token_hash,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        expiresAt: row.expires_at,
+        acceptedAt: row.accepted_at,
+        revokedAt: row.revoked_at
+      }
+    : null;
+}
+
 async function userIndex(env) {
   const stored = await authKv(env)?.get(USER_INDEX_KEY, "json").catch(() => null);
   return Array.isArray(stored) ? stored.map(normalizeEmail).filter(Boolean) : [];
+}
+
+async function inviteIndex(env) {
+  const stored = await authKv(env)?.get(INVITE_INDEX_KEY, "json").catch(() => null);
+  return Array.isArray(stored) ? stored.map(String).filter(Boolean) : [];
+}
+
+async function writeInviteIndex(env, ids) {
+  const uniqueIds = [...new Set(ids.map(String).filter(Boolean))];
+  await requireAuthKv(env).put(INVITE_INDEX_KEY, JSON.stringify(uniqueIds));
 }
 
 async function writeUserIndex(env, emails) {
@@ -176,6 +224,29 @@ export async function listUsers(env) {
   return users.filter(Boolean).map(publicUser).sort((a, b) => a.email.localeCompare(b.email));
 }
 
+export async function listInvites(env) {
+  const db = authDatabase(env);
+  if (db) {
+    const { results } = await db
+      .prepare(
+        `SELECT id, email, name, role, status, token_hash, created_at, created_by, expires_at, accepted_at, revoked_at
+         FROM auth_invites
+         ORDER BY created_at DESC`
+      )
+      .all();
+    return (results || []).map(rowToInvite).map(publicInvite);
+  }
+
+  const ids = await inviteIndex(env);
+  const invites = await Promise.all(
+    ids.map((id) => authKv(env)?.get(`${INVITE_PREFIX}${id}`, "json").catch(() => null))
+  );
+  return invites
+    .filter(Boolean)
+    .map(publicInvite)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
 export async function getUserByEmail(env, email) {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return null;
@@ -190,6 +261,123 @@ export async function getUserByEmail(env, email) {
   }
 
   return authKv(env)?.get(`${USER_PREFIX}${normalizedEmail}`, "json").catch(() => null) || null;
+}
+
+async function getInviteByToken(env, token) {
+  const tokenHash = await sha256Base64(token);
+  const db = authDatabase(env);
+  if (db) {
+    return rowToInvite(
+      await db
+        .prepare("SELECT * FROM auth_invites WHERE token_hash = ?")
+        .bind(tokenHash)
+        .first()
+    );
+  }
+
+  const id = await authKv(env)?.get(`${INVITE_TOKEN_PREFIX}${tokenHash}`).catch(() => null);
+  if (!id) return null;
+  return authKv(env)?.get(`${INVITE_PREFIX}${id}`, "json").catch(() => null) || null;
+}
+
+async function writeInvite(env, invite) {
+  const db = authDatabase(env);
+  if (db) {
+    await db
+      .prepare(
+        `INSERT INTO auth_invites (
+          id, email, name, role, status, token_hash, created_at, created_by, expires_at, accepted_at, revoked_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        invite.id,
+        invite.email,
+        invite.name,
+        invite.role,
+        invite.status,
+        invite.tokenHash,
+        invite.createdAt,
+        invite.createdBy,
+        invite.expiresAt,
+        invite.acceptedAt || "",
+        invite.revokedAt || ""
+      )
+      .run();
+    return;
+  }
+
+  const ids = await inviteIndex(env);
+  await requireAuthKv(env).put(`${INVITE_PREFIX}${invite.id}`, JSON.stringify(invite));
+  await requireAuthKv(env).put(`${INVITE_TOKEN_PREFIX}${invite.tokenHash}`, invite.id, {
+    expirationTtl: INVITE_TTL_SECONDS
+  });
+  await writeInviteIndex(env, [...ids, invite.id]);
+}
+
+async function updateInvite(env, invite) {
+  const db = authDatabase(env);
+  if (db) {
+    await db
+      .prepare(
+        `UPDATE auth_invites
+         SET status = ?, accepted_at = ?, revoked_at = ?
+         WHERE id = ?`
+      )
+      .bind(invite.status, invite.acceptedAt || "", invite.revokedAt || "", invite.id)
+      .run();
+    return;
+  }
+
+  await requireAuthKv(env).put(`${INVITE_PREFIX}${invite.id}`, JSON.stringify(invite));
+}
+
+export async function createInvite(env, input = {}, actor = "", requestUrl = "") {
+  const email = normalizeEmail(input.email);
+  if (!isValidEmail(email)) throw new Error("Enter a valid email address.");
+  if (await getUserByEmail(env, email)) throw new Error("A user with that email already exists.");
+
+  const token = `${crypto.randomUUID()}.${randomBase64(32)}`;
+  const now = new Date();
+  const invite = {
+    id: crypto.randomUUID(),
+    email,
+    name: cleanText(input.name || email),
+    role: ["owner", "admin", "member"].includes(input.role) ? input.role : "member",
+    status: "pending",
+    tokenHash: await sha256Base64(token),
+    createdAt: now.toISOString(),
+    createdBy: normalizeEmail(actor),
+    expiresAt: new Date(now.getTime() + INVITE_TTL_SECONDS * 1000).toISOString(),
+    acceptedAt: "",
+    revokedAt: ""
+  };
+
+  await writeInvite(env, invite);
+  const acceptUrl = requestUrl
+    ? (() => {
+        const url = new URL("/access/", requestUrl);
+        url.searchParams.set("invite", token);
+        return url.toString();
+      })()
+    : "";
+  return { invite: publicInvite(invite), token, acceptUrl };
+}
+
+export async function createFirstOwnerInvite(env, requestUrl = "") {
+  if ((await countUsers(env)) > 0) {
+    throw new Error("The first owner account already exists.");
+  }
+
+  return createInvite(
+    env,
+    {
+      email: "scott@mojoaisummits.com",
+      name: "Scott",
+      role: "owner"
+    },
+    "first-owner-invite",
+    requestUrl
+  );
 }
 
 export async function createUser(env, input = {}, actor = "") {
@@ -240,6 +428,60 @@ export async function createUser(env, input = {}, actor = "") {
   await requireAuthKv(env).put(`${USER_PREFIX}${email}`, JSON.stringify(user));
   await writeUserIndex(env, [...emails, email]);
   return publicUser(user);
+}
+
+export async function invitePreview(env, token) {
+  const invite = await getInviteByToken(env, token);
+  if (!invite) throw new Error("Invite link is invalid.");
+  if (invite.status !== "pending") throw new Error("Invite link has already been used or revoked.");
+  if (new Date(invite.expiresAt).getTime() <= Date.now()) throw new Error("Invite link has expired.");
+  if (await getUserByEmail(env, invite.email)) throw new Error("A user already exists for this invite.");
+  return publicInvite(invite);
+}
+
+export async function acceptInvite(env, token, password) {
+  const invite = await getInviteByToken(env, token);
+  if (!invite) throw new Error("Invite link is invalid.");
+  if (invite.status !== "pending") throw new Error("Invite link has already been used or revoked.");
+  if (new Date(invite.expiresAt).getTime() <= Date.now()) throw new Error("Invite link has expired.");
+
+  const user = await createUser(
+    env,
+    {
+      email: invite.email,
+      name: invite.name,
+      role: invite.role,
+      status: "active",
+      password
+    },
+    invite.createdBy || "invite"
+  );
+
+  await updateInvite(env, {
+    ...invite,
+    status: "accepted",
+    acceptedAt: new Date().toISOString()
+  });
+
+  return user;
+}
+
+export async function revokeInvite(env, id, actor = "") {
+  const db = authDatabase(env);
+  const invite = db
+    ? rowToInvite(await db.prepare("SELECT * FROM auth_invites WHERE id = ?").bind(id).first())
+    : await authKv(env)?.get(`${INVITE_PREFIX}${id}`, "json").catch(() => null);
+  if (!invite) throw new Error("Invite was not found.");
+  if (invite.status !== "pending") return publicInvite(invite);
+
+  const next = {
+    ...invite,
+    status: "revoked",
+    revokedAt: new Date().toISOString(),
+    revokedBy: normalizeEmail(actor)
+  };
+  await updateInvite(env, next);
+  return publicInvite(next);
 }
 
 export async function updateUser(env, email, input = {}, actor = "") {
