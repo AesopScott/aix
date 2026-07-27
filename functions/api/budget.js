@@ -8,6 +8,20 @@ const jsonHeaders = {
 
 const receiptOwners = new Set(["scott", "jodi", "robert", "ron", "angel", "charlie", "unassigned"]);
 const allowedStatuses = new Set(["needs-review", "reviewed", "reimbursed", "excluded"]);
+const taxCategories = new Set([
+  "Unassigned",
+  "Advertising and marketing",
+  "Meals and entertainment",
+  "Travel",
+  "Lodging",
+  "Venue and event costs",
+  "Software and subscriptions",
+  "Professional services",
+  "Contract labor",
+  "Office and administrative",
+  "Taxes and licenses",
+  "Other"
+]);
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -210,6 +224,8 @@ function mergeReceipt(ledger, object) {
   const inferredAmount = inferAmountFromName(name);
   const amount = existing.amount ?? inferredAmount ?? "";
   const status = allowedStatuses.has(existing.status) ? existing.status : "needs-review";
+  const reimbursed = Boolean(existing.reimbursed) || status === "reimbursed";
+  const needsReimbursement = Boolean(existing.needsReimbursement) && !reimbursed;
 
   ledger.receipts[object.key] = {
     key: object.key,
@@ -220,8 +236,11 @@ function mergeReceipt(ledger, object) {
     event: existing.event || object.customMetadata?.event || "",
     receiptDate: existing.receiptDate || (object.uploaded ? object.uploaded.toISOString().slice(0, 10) : ""),
     amount,
+    taxCategory: taxCategories.has(existing.taxCategory) ? existing.taxCategory : "Unassigned",
+    needsReimbursement,
+    reimbursed,
     notes: existing.notes || "",
-    status,
+    status: reimbursed ? "reimbursed" : status,
     reviewedAt: existing.reviewedAt || "",
     excluded: Boolean(existing.excluded),
     uploaded: object.uploaded ? object.uploaded.toISOString() : "",
@@ -265,6 +284,10 @@ function cleanAmount(value) {
   return Number.isFinite(amount) && amount >= 0 ? amount : "";
 }
 
+function cleanBoolean(value) {
+  return value === true || value === "true" || value === "on" || value === 1 || value === "1";
+}
+
 function summarize(ledger) {
   const rows = Object.values(ledger.receipts || {});
   const activeRows = rows.filter((row) => row.status !== "excluded" && !row.excluded);
@@ -273,12 +296,15 @@ function summarize(ledger) {
   const needsReview = activeRows.filter((row) => row.status === "needs-review").length;
   const byOwner = {};
   const byCategory = {};
+  const byTaxCategory = {};
 
   for (const row of activeRows) {
     const amount = Number(row.amount) || 0;
     byOwner[row.owner || "unassigned"] = (byOwner[row.owner || "unassigned"] || 0) + amount;
     byCategory[row.category || "Uncategorized"] =
       (byCategory[row.category || "Uncategorized"] || 0) + amount;
+    byTaxCategory[row.taxCategory || "Unassigned"] =
+      (byTaxCategory[row.taxCategory || "Unassigned"] || 0) + amount;
   }
 
   return {
@@ -290,9 +316,11 @@ function summarize(ledger) {
     unpricedCount,
     needsReview,
     reviewedCount: activeRows.filter((row) => row.status === "reviewed").length,
-    reimbursedCount: activeRows.filter((row) => row.status === "reimbursed").length,
+    needsReimbursementCount: activeRows.filter((row) => row.needsReimbursement).length,
+    reimbursedCount: activeRows.filter((row) => row.reimbursed || row.status === "reimbursed").length,
     byOwner,
-    byCategory
+    byCategory,
+    byTaxCategory
   };
 }
 
@@ -316,6 +344,9 @@ async function updateReceipt(request, env, access) {
   if (!existing) return json({ error: "Receipt was not found in the ledger." }, { status: 404 });
 
   const status = allowedStatuses.has(payload.status) ? payload.status : existing.status;
+  const reimbursed = cleanBoolean(payload.reimbursed) || status === "reimbursed";
+  const needsReimbursement = cleanBoolean(payload.needsReimbursement) && !reimbursed;
+  const nextStatus = reimbursed && status !== "excluded" ? "reimbursed" : status;
   ledger.receipts[key] = {
     ...existing,
     owner: receiptOwners.has(String(payload.owner || "").toLowerCase())
@@ -326,11 +357,14 @@ async function updateReceipt(request, env, access) {
     event: cleanText(payload.event, existing.event),
     receiptDate: cleanText(payload.receiptDate, existing.receiptDate).slice(0, 10),
     amount: cleanAmount(payload.amount),
+    taxCategory: taxCategories.has(payload.taxCategory) ? payload.taxCategory : existing.taxCategory || "Unassigned",
+    needsReimbursement,
+    reimbursed,
     notes: cleanText(payload.notes, existing.notes),
-    status,
-    excluded: status === "excluded",
+    status: nextStatus,
+    excluded: nextStatus === "excluded",
     reviewedAt:
-      status === "reviewed" || status === "reimbursed" || status === "excluded"
+      nextStatus === "reviewed" || nextStatus === "reimbursed" || nextStatus === "excluded"
         ? new Date().toISOString()
         : existing.reviewedAt || "",
     reviewedBy: access.email
@@ -383,14 +417,30 @@ export async function onRequestGet({ request, env }) {
 
   if (url.searchParams.get("download") === "csv") {
     const csv = [
-      ["Date", "Owner", "Vendor", "Category", "Event", "Amount", "Status", "Receipt", "Key"],
+      [
+        "Date",
+        "Owner",
+        "Vendor",
+        "Category",
+        "Tax Category",
+        "Event",
+        "Amount",
+        "Needs Reimbursement",
+        "Reimbursed",
+        "Status",
+        "Receipt",
+        "Key"
+      ],
       ...payload.rows.map((row) => [
         row.receiptDate,
         row.owner,
         row.vendor,
         row.category,
+        row.taxCategory,
         row.event,
         row.amount,
+        row.needsReimbursement ? "Yes" : "No",
+        row.reimbursed ? "Yes" : "No",
         row.status,
         row.name,
         row.key

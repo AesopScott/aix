@@ -163,6 +163,13 @@
       font: inherit;
     }
 
+    input[type="checkbox"] {
+      width: 1.1rem;
+      height: 1.1rem;
+      padding: 0;
+      accent-color: var(--cyan);
+    }
+
     textarea { min-height: 5.5rem; resize: vertical; }
 
     button {
@@ -203,7 +210,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 980px;
+      min-width: 1240px;
     }
 
     th, td {
@@ -247,6 +254,28 @@
     }
 
     .side-row strong { color: var(--cyan); }
+
+    .inline-select {
+      min-width: 12rem;
+      padding: 0.58rem 0.65rem;
+      font-size: 0.86rem;
+    }
+
+    .reimburse-controls {
+      display: grid;
+      gap: 0.45rem;
+      min-width: 10rem;
+    }
+
+    .checkbox-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      color: var(--muted);
+      font-size: 0.84rem;
+      letter-spacing: 0;
+      text-transform: none;
+    }
 
     .edit-grid {
       grid-template-columns: 1fr 1fr;
@@ -328,7 +357,9 @@
                 <th>Owner</th>
                 <th>Vendor</th>
                 <th>Category</th>
+                <th>Tax Category</th>
                 <th>Amount</th>
+                <th>Reimbursement</th>
                 <th>Status</th>
                 <th>Edit</th>
               </tr>
@@ -358,6 +389,10 @@
           </label>
           <label>Vendor<input id="vendorInput" placeholder="Vendor or payee"></label>
           <label>Category<input id="categoryInput" placeholder="Travel, software, venue"></label>
+          <label>
+            Tax Category
+            <select id="taxCategoryInput"></select>
+          </label>
           <label>Event<input id="eventInput" placeholder="Dallas 2027, company"></label>
           <label>Amount<input id="amountInput" inputmode="decimal" placeholder="0.00"></label>
           <label>
@@ -369,6 +404,14 @@
               <option value="excluded">Excluded</option>
             </select>
           </label>
+          <label class="checkbox-row">
+            <input id="needsReimbursementInput" type="checkbox">
+            Needs reimbursement
+          </label>
+          <label class="checkbox-row">
+            <input id="reimbursedInput" type="checkbox">
+            Reimbursed
+          </label>
           <label class="full">Notes<textarea id="notesInput" placeholder="Purpose, approval notes, reimbursement details"></textarea></label>
           <button class="full" type="submit">Save Receipt</button>
         </form>
@@ -379,6 +422,20 @@
 
   <script>
     const api = "/budget/api";
+    const taxCategories = [
+      "Unassigned",
+      "Advertising and marketing",
+      "Meals and entertainment",
+      "Travel",
+      "Lodging",
+      "Venue and event costs",
+      "Software and subscriptions",
+      "Professional services",
+      "Contract labor",
+      "Office and administrative",
+      "Taxes and licenses",
+      "Other"
+    ];
     const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
     const ownerFilter = document.querySelector("#ownerFilter");
     const statusFilter = document.querySelector("#statusFilter");
@@ -396,9 +453,12 @@
       owner: document.querySelector("#ownerInput"),
       vendor: document.querySelector("#vendorInput"),
       category: document.querySelector("#categoryInput"),
+      taxCategory: document.querySelector("#taxCategoryInput"),
       event: document.querySelector("#eventInput"),
       amount: document.querySelector("#amountInput"),
       status: document.querySelector("#statusInput"),
+      needsReimbursement: document.querySelector("#needsReimbursementInput"),
+      reimbursed: document.querySelector("#reimbursedInput"),
       notes: document.querySelector("#notesInput")
     };
     const summaryLists = document.querySelector("#summaryLists");
@@ -432,6 +492,29 @@
       return `<span class="pill ${warn ? "warn" : ""}">${escapeHtml(label)}</span>`;
     }
 
+    function taxCategoryOptions(selected = "Unassigned") {
+      return taxCategories
+        .map((category) => `<option value="${escapeHtml(category)}" ${category === selected ? "selected" : ""}>${escapeHtml(category)}</option>`)
+        .join("");
+    }
+
+    function normalizeRow(row) {
+      return {
+        key: row.key,
+        receiptDate: row.receiptDate || "",
+        owner: row.owner || "unassigned",
+        vendor: row.vendor || "",
+        category: row.category || "Uncategorized",
+        taxCategory: row.taxCategory || "Unassigned",
+        event: row.event || "",
+        amount: row.amount || "",
+        status: row.status || "needs-review",
+        needsReimbursement: Boolean(row.needsReimbursement),
+        reimbursed: Boolean(row.reimbursed) || row.status === "reimbursed",
+        notes: row.notes || ""
+      };
+    }
+
     function filteredRows() {
       const owner = ownerFilter.value;
       const status = statusFilter.value;
@@ -452,13 +535,14 @@
         <div class="metric"><span>Revenue tracked</span><strong>${money.format(summary.revenue || 0)}</strong></div>
         <div class="metric"><span>Receipt costs</span><strong>${money.format(summary.expenses || 0)}</strong></div>
         <div class="metric loss"><span>Net position</span><strong>${money.format(summary.net || 0)}</strong></div>
-        <div class="metric"><span>Receipts needing review</span><strong>${summary.needsReview || 0}</strong></div>
+        <div class="metric"><span>Needs reimbursement</span><strong>${summary.needsReimbursementCount || 0}</strong></div>
       `;
     }
 
     function renderSummaryLists() {
       const summary = state.summary || {};
       const categoryRows = Object.entries(summary.byCategory || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      const taxRows = Object.entries(summary.byTaxCategory || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
       const ownerRows = Object.entries(summary.byOwner || {}).sort((a, b) => b[1] - a[1]);
       const renderRows = (title, rows) => `
         <div>
@@ -468,13 +552,13 @@
           `).join("") : `<div class="side-row"><span>No reviewed costs yet</span><strong>${money.format(0)}</strong></div>`}
         </div>
       `;
-      summaryLists.innerHTML = `${renderRows("By owner", ownerRows)}${renderRows("By category", categoryRows)}`;
+      summaryLists.innerHTML = `${renderRows("By owner", ownerRows)}${renderRows("By category", categoryRows)}${renderRows("By tax category", taxRows)}`;
     }
 
     function renderRows() {
       const rows = filteredRows();
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="8">No receipts match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="10">No receipts match the current filters.</td></tr>`;
         return;
       }
 
@@ -485,7 +569,24 @@
           <td>${escapeHtml(row.owner || "unassigned")}</td>
           <td>${escapeHtml(row.vendor || "")}</td>
           <td>${escapeHtml(row.category || "")}</td>
+          <td>
+            <select class="inline-select" data-inline-tax="${encodeURIComponent(row.key)}">
+              ${taxCategoryOptions(row.taxCategory || "Unassigned")}
+            </select>
+          </td>
           <td>${Number(row.amount) > 0 ? money.format(Number(row.amount)) : "<span class=\"pill warn\">Set amount</span>"}</td>
+          <td>
+            <div class="reimburse-controls">
+              <label class="checkbox-row">
+                <input type="checkbox" data-inline-needs="${encodeURIComponent(row.key)}" ${row.needsReimbursement ? "checked" : ""}>
+                Needs
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" data-inline-reimbursed="${encodeURIComponent(row.key)}" ${row.reimbursed || row.status === "reimbursed" ? "checked" : ""}>
+                Reimbursed
+              </label>
+            </div>
+          </td>
           <td>${statusPill(row)}</td>
           <td><button class="secondary" type="button" data-edit="${encodeURIComponent(row.key)}">Edit</button></td>
         </tr>
@@ -518,15 +619,58 @@
       fields.owner.value = row.owner || "unassigned";
       fields.vendor.value = row.vendor || "";
       fields.category.value = row.category || "Uncategorized";
+      fields.taxCategory.value = row.taxCategory || "Unassigned";
       fields.event.value = row.event || "";
       fields.amount.value = row.amount || "";
       fields.status.value = row.status || "needs-review";
+      fields.needsReimbursement.checked = Boolean(row.needsReimbursement);
+      fields.reimbursed.checked = Boolean(row.reimbursed) || row.status === "reimbursed";
       fields.notes.value = row.notes || "";
+    }
+
+    async function saveReceipt(row, successMessage = "Receipt review saved.") {
+      setNotice("Saving receipt review...");
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(row)
+        }).then(readJson);
+        state = data;
+        setNotice(successMessage, "ok");
+        render();
+      } catch (error) {
+        setNotice(error.message, "error");
+      }
     }
 
     rowsElement.addEventListener("click", (event) => {
       const key = event.target.dataset.edit;
       if (key) selectReceipt(decodeURIComponent(key));
+    });
+
+    rowsElement.addEventListener("change", (event) => {
+      const taxKey = event.target.dataset.inlineTax;
+      const needsKey = event.target.dataset.inlineNeeds;
+      const reimbursedKey = event.target.dataset.inlineReimbursed;
+      const key = decodeURIComponent(taxKey || needsKey || reimbursedKey || "");
+      if (!key) return;
+
+      const row = state.rows.find((item) => item.key === key);
+      if (!row) return;
+
+      const next = normalizeRow(row);
+      if (taxKey) next.taxCategory = event.target.value;
+      if (needsKey) next.needsReimbursement = event.target.checked;
+      if (reimbursedKey) next.reimbursed = event.target.checked;
+      if (next.reimbursed) {
+        next.needsReimbursement = false;
+        next.status = "reimbursed";
+      } else if (reimbursedKey && row.status === "reimbursed") {
+        next.status = "reviewed";
+      }
+
+      saveReceipt(next, "Receipt updated.");
     });
 
     [ownerFilter, statusFilter, searchInput].forEach((input) => {
@@ -541,29 +685,20 @@
         return;
       }
 
-      setNotice("Saving receipt review...");
-      try {
-        const data = await fetch(api, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            key: fields.key.value,
-            receiptDate: fields.receiptDate.value,
-            owner: fields.owner.value,
-            vendor: fields.vendor.value,
-            category: fields.category.value,
-            event: fields.event.value,
-            amount: fields.amount.value,
-            status: fields.status.value,
-            notes: fields.notes.value
-          })
-        }).then(readJson);
-        state = data;
-        setNotice("Receipt review saved.", "ok");
-        render();
-      } catch (error) {
-        setNotice(error.message, "error");
-      }
+      saveReceipt({
+        key: fields.key.value,
+        receiptDate: fields.receiptDate.value,
+        owner: fields.owner.value,
+        vendor: fields.vendor.value,
+        category: fields.category.value,
+        taxCategory: fields.taxCategory.value,
+        event: fields.event.value,
+        amount: fields.amount.value,
+        status: fields.status.value,
+        needsReimbursement: fields.needsReimbursement.checked,
+        reimbursed: fields.reimbursed.checked,
+        notes: fields.notes.value
+      });
     });
 
     reviewButton.addEventListener("click", async () => {
@@ -581,6 +716,7 @@
       window.location.href = `${api}?download=csv`;
     });
 
+    fields.taxCategory.innerHTML = taxCategoryOptions();
     loadBudget();
   </script>
 </body>
