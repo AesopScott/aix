@@ -1170,7 +1170,8 @@
   /* ---------- photo strip ---------- */
   .photo-strip-section{ padding: 90px 32px; }
   .photo-strip{
-    max-width:1600px;
+    width:min(1638px, calc(150vw - 96px));
+    max-width:none;
     margin:0 auto;
     display:grid;
     grid-template-columns: repeat(10, 1fr);
