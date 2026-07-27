@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       allowed_emails:
-        description: "Comma-separated emails allowed into the storage portal"
+        description: "Comma-separated emails allowed into internal Mojo AI Summits pages"
         required: true
         default: "scott@mojoaistudio.com,jodi@sofractional.com,robert@cyber1grc.com"
 

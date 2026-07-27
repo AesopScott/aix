@@ -1,22 +1,73 @@
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const token = process.env.CLOUDFLARE_API_TOKEN;
-const allowedEmails = String(process.env.MOJO_ACCESS_ALLOWED_EMAILS || "")
+const allowedEmails = String(
+  process.env.MOJO_ACCESS_ALLOWED_EMAILS || process.env.MOJO_STORAGE_ALLOWED_EMAILS || ""
+)
   .split(",")
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
 
 const apps = [
   {
-    name: "Mojo AI Summits Storage Portal",
-    domain: "mojoaisummits.com/storage/*"
+    name: "Mojo AI Summits Admin Hub",
+    domain: "mojoaisummits.com/admin"
   },
   {
-    name: "Mojo AI Summits Budget Portal",
-    domain: "mojoaisummits.com/budget/*"
-  }
-];
-
-const obsoleteApps = [
+    name: "Mojo AI Summits Admin Hub Children",
+    domain: "mojoaisummits.com/admin/*"
+  },
+  {
+    name: "Mojo AI Summits CRM",
+    domain: "mojoaisummits.com/crm"
+  },
+  {
+    name: "Mojo AI Summits CRM Slash",
+    domain: "mojoaisummits.com/crm/"
+  },
+  {
+    name: "Mojo AI Summits CRM API",
+    domain: "mojoaisummits.com/api/crm"
+  },
+  {
+    name: "Mojo AI Summits CRM API Children",
+    domain: "mojoaisummits.com/api/crm/*"
+  },
+  {
+    name: "Mojo AI Summits Setup Checklist",
+    domain: "mojoaisummits.com/setup"
+  },
+  {
+    name: "Mojo AI Summits Setup Checklist Children",
+    domain: "mojoaisummits.com/setup/*"
+  },
+  {
+    name: "Mojo AI Summits Setup State API",
+    domain: "mojoaisummits.com/api/setup-state"
+  },
+  {
+    name: "Mojo AI Summits Event Playbook",
+    domain: "mojoaisummits.com/events"
+  },
+  {
+    name: "Mojo AI Summits Event Playbook Children",
+    domain: "mojoaisummits.com/events/*"
+  },
+  {
+    name: "Mojo AI Summits Event Playbook API",
+    domain: "mojoaisummits.com/api/events"
+  },
+  {
+    name: "Mojo AI Summits Event Playbook API Children",
+    domain: "mojoaisummits.com/api/events/*"
+  },
+  {
+    name: "Mojo AI Summits Storage Portal",
+    domain: "mojoaisummits.com/storage"
+  },
+  {
+    name: "Mojo AI Summits Storage Portal Children",
+    domain: "mojoaisummits.com/storage/*"
+  },
   {
     name: "Mojo AI Summits Storage API",
     domain: "mojoaisummits.com/api/storage"
@@ -24,8 +75,34 @@ const obsoleteApps = [
   {
     name: "Mojo AI Summits Storage API Children",
     domain: "mojoaisummits.com/api/storage/*"
+  },
+  {
+    name: "Mojo AI Summits Budget Portal",
+    domain: "mojoaisummits.com/budget"
+  },
+  {
+    name: "Mojo AI Summits Budget Portal Children",
+    domain: "mojoaisummits.com/budget/*"
+  },
+  {
+    name: "Mojo AI Summits Budget API",
+    domain: "mojoaisummits.com/api/budget"
+  },
+  {
+    name: "Mojo AI Summits Budget API Children",
+    domain: "mojoaisummits.com/api/budget/*"
+  },
+  {
+    name: "Mojo AI Summits Design Mockups",
+    domain: "mojoaisummits.com/mockups"
+  },
+  {
+    name: "Mojo AI Summits Design Mockups Children",
+    domain: "mojoaisummits.com/mockups/*"
   }
 ];
+
+const obsoleteApps = [];
 
 function appPayload(app) {
   return {
@@ -43,7 +120,9 @@ if (!accountId || !token) {
 }
 
 if (allowedEmails.length === 0) {
-  throw new Error("MOJO_ACCESS_ALLOWED_EMAILS must contain at least one email address.");
+  throw new Error(
+    "MOJO_ACCESS_ALLOWED_EMAILS or MOJO_STORAGE_ALLOWED_EMAILS must contain at least one email address."
+  );
 }
 
 const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/access`;

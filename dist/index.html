@@ -43,6 +43,7 @@
   section{ scroll-margin-top: 96px; }
   #topics,
   #experience,
+  #virtual-series,
   #events{ scroll-margin-top: 0; }
   body{
     margin:0;
@@ -975,6 +976,111 @@
     background: linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 18%, var(--navy-2) 82%, var(--navy) 100%);
   }
 
+  /* ---------- virtual event series ---------- */
+  .virtual-band{
+    position:relative;
+    overflow:hidden;
+    background:
+      linear-gradient(180deg, var(--navy) 0%, rgba(13,20,36,.98) 24%, var(--navy) 100%);
+  }
+  .virtual-band::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(90deg, rgba(0,230,255,.07) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(0,230,255,.05) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: linear-gradient(180deg, transparent, #000 22%, #000 72%, transparent);
+    opacity:.28;
+    pointer-events:none;
+  }
+  .virtual-layout{
+    position:relative;
+    display:grid;
+    grid-template-columns: .82fr 1.18fr;
+    gap:48px;
+    align-items:start;
+  }
+  .virtual-copy{
+    position:sticky;
+    top:108px;
+  }
+  .virtual-copy h2{
+    margin-top:18px;
+    font-size:clamp(30px, 4.1vw, 50px);
+    line-height:1.08;
+  }
+  .virtual-copy p{
+    margin-top:18px;
+    color:var(--ink);
+    font-size:17px;
+    line-height:1.7;
+  }
+  .virtual-actions{
+    margin-top:30px;
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .virtual-grid{
+    display:grid;
+    gap:12px;
+  }
+  .virtual-event{
+    display:grid;
+    grid-template-columns: 92px minmax(0, 1fr) auto;
+    gap:22px;
+    align-items:center;
+    padding:20px 0;
+    border-top:1px solid var(--border);
+  }
+  .virtual-event:last-child{ border-bottom:1px solid var(--border); }
+  .virtual-date{
+    display:grid;
+    gap:4px;
+    text-align:center;
+    color:var(--cyan);
+  }
+  .virtual-date span{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+  }
+  .virtual-date strong{
+    font-family:'Fraunces', serif;
+    font-size:38px;
+    font-style:italic;
+    line-height:1;
+    color:var(--white);
+  }
+  .virtual-event h3{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:24px;
+  }
+  .virtual-event p{
+    margin-top:8px;
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.55;
+  }
+  .virtual-badge{
+    justify-self:end;
+    min-width:112px;
+    border:1px solid rgba(0,230,255,.28);
+    padding:9px 10px;
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-align:center;
+    text-transform:uppercase;
+  }
+
   /* ---------- signup ---------- */
   .signup{
     background: transparent;
@@ -1373,6 +1479,10 @@
     .stat-bar{ grid-template-columns: 1fr; row-gap:24px; }
     .stat{ border-left:none; padding:0; }
     .topic-map{ grid-template-columns: 1fr; }
+    .virtual-layout{ grid-template-columns: 1fr; gap:26px; }
+    .virtual-copy{ position:relative; top:auto; }
+    .virtual-event{ grid-template-columns: 76px minmax(0, 1fr); }
+    .virtual-badge{ grid-column: 2; justify-self:start; }
     .nav-links{ display:none; }
     .format-visual{ grid-template-columns: 1fr; }
     .format-half + .format-half{ border-left:0; border-top:1px solid var(--border); }
@@ -1456,6 +1566,7 @@
     <div class="nav-links">
       <a href="#topics">Topics</a>
       <a href="#experience">Experience</a>
+      <a href="/virtual/">Virtual</a>
       <a href="#events">Events</a>
       <button type="button" data-modal-open="inviteCodeModal">Register</button>
     </div>
@@ -1476,12 +1587,12 @@
     <p class="hero-sub">An AI forum for leaders who are already responsible for adoption, integration, security, operations, and measurable business progress. Dallas begins the 2027 season, followed by Denver, Raleigh, and Chicago.</p>
     <div class="hero-cta-row">
       <button type="button" class="btn-primary" data-modal-open="inviteCodeModal">Register with Invite Code</button>
-      <a href="#experience" class="btn-ghost">Explore the Experience</a>
+      <a href="/virtual/" class="btn-ghost">Explore Virtual Events</a>
     </div>
     <div class="stat-bar">
       <div class="stat"><div class="stat-fig">150</div><div class="stat-label">Executive seats</div></div>
       <div class="stat"><div class="stat-fig">Six</div><div class="stat-label"><span class="keep-line">Cohort discussion tracks</span></div></div>
-      <div class="stat"><div class="stat-fig">4</div><div class="stat-label">Cities, 2027 season</div></div>
+      <div class="stat"><div class="stat-fig">5</div><div class="stat-label">Virtual events, fall 2026</div></div>
     </div>
   </section>
 
@@ -1610,6 +1721,64 @@
         </div>
       </div>
 
+    </div>
+  </section>
+
+  <section class="section-pad virtual-band" id="virtual-series">
+    <div class="wrap">
+      <div class="virtual-layout">
+        <div class="virtual-copy reveal">
+          <span class="eyebrow"><span>Fall 2026 virtual series</span></span>
+          <h2>Five focused AI rooms before the city summits begin.</h2>
+          <p>Each virtual event is built as a working executive session: a sharp AI leadership topic, a practical operating conversation, and a curated path into the 2027 in-person summit season.</p>
+          <div class="virtual-actions">
+            <a class="btn-primary" href="/virtual/">View Virtual Series</a>
+            <button type="button" class="btn-ghost" data-modal-open="inviteCodeModal">Register with Invite Code</button>
+          </div>
+        </div>
+        <div class="virtual-grid reveal">
+          <article class="virtual-event">
+            <div class="virtual-date"><span>Sep</span><strong>04</strong><span>Fri</span></div>
+            <div>
+              <h3>AI Executive Readiness</h3>
+              <p>Set the leadership baseline for value, risk, ownership, and adoption.</p>
+            </div>
+            <span class="virtual-badge">Virtual</span>
+          </article>
+          <article class="virtual-event">
+            <div class="virtual-date"><span>Sep</span><strong>25</strong><span>Fri</span></div>
+            <div>
+              <h3>AI Use Cases That Survive Finance</h3>
+              <p>Turn experiments into credible business cases, controls, and decisions.</p>
+            </div>
+            <span class="virtual-badge">Virtual</span>
+          </article>
+          <article class="virtual-event">
+            <div class="virtual-date"><span>Oct</span><strong>16</strong><span>Fri</span></div>
+            <div>
+              <h3>AI Integration and Workflow</h3>
+              <p>Connect data, systems, teams, and vendors without creating chaos.</p>
+            </div>
+            <span class="virtual-badge">Virtual</span>
+          </article>
+          <article class="virtual-event">
+            <div class="virtual-date"><span>Nov</span><strong>06</strong><span>Fri</span></div>
+            <div>
+              <h3>AI Security, Governance, and Trust</h3>
+              <p>Clarify the executive controls needed before AI spreads further.</p>
+            </div>
+            <span class="virtual-badge">Virtual</span>
+          </article>
+          <article class="virtual-event">
+            <div class="virtual-date"><span>Nov</span><strong>27</strong><span>Fri</span></div>
+            <div>
+              <h3>AI Operating Model for 2027</h3>
+              <p>Close the series with the decisions leaders need heading into January.</p>
+            </div>
+            <span class="virtual-badge">Virtual</span>
+          </article>
+        </div>
+      </div>
     </div>
   </section>
 

@@ -1,0 +1,1212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <title>MoJo Event Playbook Generator</title>
+  <style>
+    :root {
+      --bg: #0A0F1E;
+      --panel: #101728;
+      --panel-2: #0C1322;
+      --line: #1E2942;
+      --line-2: #2A3752;
+      --text: #FFFFFF;
+      --dim: #93A3BF;
+      --faint: #5C6B85;
+      --blue: #1666FF;
+      --cyan: #00E6FF;
+      --danger: #FF4D2E;
+      --input: #070C17;
+      --chip: #16203A;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    button, input, textarea, select { font: inherit; }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { color: var(--text); }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 282px minmax(0, 1fr);
+    }
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--panel-2);
+      border-right: 1px solid var(--line);
+      padding: 22px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--text);
+    }
+    .brand img { width: 52px; height: auto; display: block; }
+    .brand-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .09em;
+      line-height: 1;
+    }
+    .brand-title span { color: var(--blue); }
+    .brand-sub {
+      margin-top: 4px;
+      color: var(--cyan);
+      font-size: 7.5px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      line-height: 1;
+    }
+    .status-card {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 12px 13px;
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+    }
+    .status-label {
+      color: var(--faint);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .16em;
+    }
+    .status-value {
+      color: var(--cyan);
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .bar {
+      height: 4px;
+      margin-top: 8px;
+      background: var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      width: var(--progress, 0%);
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+    }
+    .nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .nav-list a {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 9px;
+      border-radius: 4px;
+      color: var(--dim);
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+    .nav-list a:hover { background: var(--panel); color: var(--text); }
+    .nav-dot {
+      width: 5px;
+      height: 5px;
+      flex: none;
+      transform: rotate(45deg);
+      background: var(--line-2);
+    }
+    .nav-count {
+      margin-left: auto;
+      color: var(--faint);
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 10px;
+    }
+    .side-actions {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .main {
+      min-width: 0;
+      padding: 34px clamp(18px, 4vw, 56px) 48px;
+    }
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+    .kicker {
+      margin: 0 0 9px;
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      max-width: 860px;
+      font-size: clamp(34px, 5vw, 64px);
+      line-height: .96;
+      letter-spacing: 0;
+    }
+    .lede {
+      max-width: 780px;
+      margin: 14px 0 0;
+      color: var(--dim);
+      font-size: 16px;
+    }
+    .meta-line {
+      margin-top: 12px;
+      color: var(--faint);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn {
+      border: 1px solid var(--line-2);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--dim);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .btn:hover { border-color: var(--cyan); color: var(--cyan); }
+    .btn-primary {
+      border: none;
+      color: #05101F;
+      background: linear-gradient(120deg, var(--blue), var(--cyan));
+    }
+    .btn-primary:hover { color: #05101F; filter: brightness(1.08); }
+    .btn-danger:hover { border-color: var(--danger); color: var(--danger); }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: clamp(18px, 3vw, 28px);
+      margin-bottom: 18px;
+    }
+    .section {
+      scroll-margin-top: 16px;
+      border-top: 1px solid var(--line);
+      padding-top: 28px;
+      margin-top: 30px;
+    }
+    .section:first-child { border-top: 0; margin-top: 0; }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    h2 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 34px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+    .section p {
+      margin: 7px 0 0;
+      color: var(--dim);
+      max-width: 760px;
+    }
+    .tag {
+      flex: none;
+      color: var(--cyan);
+      border: 1px solid var(--line-2);
+      border-radius: 999px;
+      padding: 5px 8px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .field {
+      grid-column: span var(--span, 2);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+    .field label {
+      color: var(--dim);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--line-2);
+      border-radius: 4px;
+      outline: none;
+      background: var(--input);
+      color: var(--text);
+      padding: 11px 12px;
+      min-height: 43px;
+    }
+    .field textarea {
+      min-height: 94px;
+      resize: vertical;
+    }
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px rgba(0, 230, 255, .12);
+    }
+    .repeat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .repeat-item {
+      border: 1px solid var(--line);
+      border-left: 2px solid var(--blue);
+      border-radius: 4px;
+      background: var(--panel-2);
+      padding: 14px 16px 16px;
+    }
+    .repeat-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      color: var(--faint);
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 8px;
+    }
+    .check {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--panel-2);
+      padding: 10px 11px;
+      color: var(--dim);
+      cursor: pointer;
+    }
+    .check input { margin-top: 2px; accent-color: var(--cyan); }
+    .footer-links {
+      margin-top: 42px;
+      border-top: 1px solid var(--line);
+      padding-top: 22px;
+    }
+    .event-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .event-link {
+      display: block;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--panel-2);
+      padding: 13px 14px;
+      color: var(--text);
+    }
+    .event-link strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    .event-link span {
+      color: var(--faint);
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 11px;
+    }
+    .empty {
+      color: var(--faint);
+      border: 1px dashed var(--line-2);
+      border-radius: 4px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      max-width: 360px;
+      border: 1px solid var(--line-2);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 12px 14px;
+      box-shadow: 0 14px 50px rgba(0,0,0,.28);
+      display: none;
+    }
+    .toast.show { display: block; }
+
+    @media (max-width: 980px) {
+      .shell { display: block; }
+      .sidebar {
+        position: relative;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .nav-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      }
+      .side-actions { margin-top: 0; }
+    }
+    @media (max-width: 760px) {
+      .topbar { display: block; }
+      .button-row { margin-top: 16px; }
+      .grid { grid-template-columns: 1fr; }
+      .field { grid-column: span 1 !important; }
+      .section-head { display: block; }
+      .tag { display: inline-block; margin-top: 10px; }
+    }
+    @media print {
+      .sidebar, .generator, .button-row, .footer-links, .repeat-head button { display: none !important; }
+      .shell { display: block; }
+      .main { padding: 0; }
+      body { background: #fff; color: #111; }
+      .panel, .repeat-item { border-color: #bbb; background: #fff; color: #111; }
+      .field input, .field textarea, .field select { border-color: #ddd; color: #111; background: #fff; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="/events/">
+        <img src="/assets/logo-badge.png" alt="MoJo AI Summits">
+        <div>
+          <div class="brand-title">MOJO <span>AI</span> SUMMITS</div>
+          <div class="brand-sub">EVENT PLAYBOOKS</div>
+        </div>
+      </a>
+      <div class="status-card">
+        <div class="status-row">
+          <span class="status-label">MILESTONES DONE</span>
+          <span class="status-value" id="milestonePct">0%</span>
+        </div>
+        <div class="bar"><span id="milestoneBar"></span></div>
+        <div class="status-row" style="margin-top:8px">
+          <span class="status-label" id="blockedCount">0 blocked</span>
+          <span class="status-label" id="openCount">0 open</span>
+        </div>
+      </div>
+      <nav class="nav-list" id="sideNav"></nav>
+      <div class="side-actions">
+        <button class="btn btn-primary" id="newEventBtn" type="button">New Event</button>
+        <button class="btn" id="saveBtn" type="button">Save Playbook</button>
+        <button class="btn" id="printBtn" type="button">Print</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <p class="kicker" id="pageKicker">MoJo Event Factory</p>
+          <h1 id="pageTitle">Generate an Event Playbook</h1>
+          <p class="lede" id="pageLede">Enter the event profile, generate a named event page, then use that page as the working playbook for milestones, speakers, sponsors, production, risk, and post-event capture.</p>
+          <div class="meta-line" id="pageMeta"></div>
+        </div>
+        <div class="button-row">
+          <a class="btn" href="/setup/">Setup Checklist</a>
+          <a class="btn" href="/">Home</a>
+        </div>
+      </div>
+
+      <section class="panel generator" id="generatorPanel">
+        <div class="section-head">
+          <div>
+            <h2>Event Profile</h2>
+            <p>This is the only required setup step. The event name and date become the generated page slug.</p>
+          </div>
+          <span class="tag">Generator</span>
+        </div>
+        <form id="eventForm" class="grid">
+          <div class="field" style="--span:3">
+            <label for="eventName">Event name</label>
+            <input id="eventName" name="name" required placeholder="MoJo AI Summit Dallas">
+          </div>
+          <div class="field" style="--span:2">
+            <label for="eventDate">Primary date</label>
+            <input id="eventDate" name="date" type="date" required>
+          </div>
+          <div class="field" style="--span:1">
+            <label for="eventFormat">Format</label>
+            <select id="eventFormat" name="format">
+              <option>Hybrid</option>
+              <option>In-person</option>
+              <option>Virtual</option>
+            </select>
+          </div>
+          <div class="field" style="--span:2">
+            <label for="eventSeries">Series / edition</label>
+            <input id="eventSeries" name="series" placeholder="Executive Series">
+          </div>
+          <div class="field" style="--span:2">
+            <label for="eventTz">Primary time zone</label>
+            <input id="eventTz" name="tz" value="America/Denver">
+          </div>
+          <div class="field" style="--span:2">
+            <label for="eventTarget">Target attendance</label>
+            <input id="eventTarget" name="target" placeholder="500 curated leaders">
+          </div>
+          <div class="field" style="--span:2">
+            <label for="eventClient">Client / brand of record</label>
+            <input id="eventClient" name="client" value="MoJo AI Summits">
+          </div>
+          <div class="field" style="--span:2">
+            <label for="eventRegistration">Registration URL</label>
+            <input id="eventRegistration" name="reg" placeholder="https://mojoaisummits.com/dallas/">
+          </div>
+          <div class="field" style="--span:2">
+            <label for="eventProduction">Production model</label>
+            <select id="eventProduction" name="prod">
+              <option>MoJo-owned</option>
+              <option>Client-produced</option>
+            </select>
+          </div>
+          <div class="field" style="--span:3">
+            <label for="eventPromise">Attendee promise</label>
+            <textarea id="eventPromise" name="promise" placeholder="Where AI leaders meet, learn, and build."></textarea>
+          </div>
+          <div class="field" style="--span:3">
+            <label for="eventSuccess">What success looks like</label>
+            <textarea id="eventSuccess" name="success" placeholder="Name the numbers and proof points this event must create."></textarea>
+          </div>
+          <div class="field" style="--span:6">
+            <button class="btn btn-primary" type="submit">Generate Event Page</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" id="playbookPanel">
+        <div id="playbook"></div>
+      </section>
+
+      <footer class="footer-links" id="eventFooter">
+        <div class="section-head">
+          <div>
+            <h2>Generated Event Pages</h2>
+            <p>Each generated link opens a dedicated playbook page using the event name and primary date as the slug.</p>
+          </div>
+          <span class="tag">Footer Links</span>
+        </div>
+        <div id="eventLinks" class="event-links"></div>
+      </footer>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const INDEX_KEY = "mojo-event-pages:v1";
+    const PLAYBOOK_KEY_PREFIX = "mojo-event-playbook:";
+    const STATUS = ["Not started", "Planning", "In progress", "Blocked", "Confirmed"];
+
+    const sections = [
+      {
+        id: "profile",
+        title: "Event profile",
+        sub: "The handful of facts every other section inherits.",
+        kind: "fields",
+        fields: [
+          ["name", "Event name", "text", 3],
+          ["date", "Primary date", "date", 2],
+          ["format", "Format", "select", 1, ["Hybrid", "In-person", "Virtual"]],
+          ["series", "Series / edition", "text", 2],
+          ["tz", "Primary time zone", "text", 2],
+          ["target", "Target attendance", "text", 2],
+          ["client", "Client / brand of record", "text", 2],
+          ["reg", "Registration URL", "text", 2],
+          ["prod", "Production model", "select", 2, ["MoJo-owned", "Client-produced"]],
+          ["promise", "Attendee promise", "area", 3],
+          ["success", "What success looks like", "area", 3]
+        ]
+      },
+      {
+        id: "milestones",
+        title: "Milestones & owners",
+        sub: "The execution spine. Every line has a name, owner, status, and date.",
+        kind: "repeat",
+        addLabel: "Add milestone",
+        fields: [
+          ["task", "Milestone", "text", 2],
+          ["owner", "Owner", "text", 1],
+          ["phase", "Phase", "select", 1, ["Strategy", "Sales", "Production", "Marketing", "Day of", "Post-event"]],
+          ["due", "Due", "date", 1],
+          ["status", "Status", "select", 1, STATUS],
+          ["notes", "Notes", "area", 6]
+        ]
+      },
+      {
+        id: "runofshow",
+        title: "Run of show",
+        sub: "Minute by minute, in order. This is what stage, AV, and the show caller use.",
+        kind: "repeat",
+        addLabel: "Add run cue",
+        fields: [
+          ["time", "Time", "text", 1],
+          ["segment", "Segment", "text", 2],
+          ["owner", "Owner", "text", 1],
+          ["room", "Room / channel", "text", 1],
+          ["assets", "Assets", "select", 1, STATUS],
+          ["detail", "Cue detail", "area", 6]
+        ]
+      },
+      {
+        id: "speakers",
+        title: "Speakers & faculty",
+        sub: "Every person on stage, and everything needed before they get there.",
+        kind: "repeat",
+        addLabel: "Add speaker",
+        fields: [
+          ["name", "Name", "text", 2],
+          ["role", "Role", "text", 2],
+          ["session", "Session", "text", 2],
+          ["bio", "Bio / headshot", "select", 1, STATUS],
+          ["slides", "Slides", "select", 1, STATUS],
+          ["contact", "Contact / notes", "area", 4]
+        ]
+      },
+      {
+        id: "sponsors",
+        title: "Sponsors & partners",
+        sub: "Track what they bought, what we owe them, and who delivers it.",
+        kind: "repeat",
+        addLabel: "Add sponsor",
+        fields: [
+          ["name", "Sponsor", "text", 2],
+          ["package", "Package / rights", "text", 2],
+          ["owner", "MoJo owner", "text", 1],
+          ["status", "Status", "select", 1, STATUS],
+          ["deliverables", "Deliverables and boundaries", "area", 6]
+        ]
+      },
+      {
+        id: "registration",
+        title: "Registration & attendees",
+        sub: "How people get in, what we need to know, and how attendance is reported.",
+        kind: "fields",
+        fields: [
+          ["system", "Registration system", "text", 2],
+          ["url", "Registration URL", "text", 2],
+          ["codes", "Invite / comp codes", "text", 2],
+          ["fields", "Required fields", "area", 3],
+          ["reporting", "Attendance reporting", "area", 3]
+        ]
+      },
+      {
+        id: "marketing",
+        title: "Marketing & campaign beats",
+        sub: "Every send, post, partner push, and invitation moment that drives registration.",
+        kind: "repeat",
+        addLabel: "Add campaign beat",
+        fields: [
+          ["beat", "Beat", "text", 2],
+          ["channel", "Channel", "text", 1],
+          ["owner", "Owner", "text", 1],
+          ["date", "Date", "date", 1],
+          ["status", "Status", "select", 1, STATUS],
+          ["notes", "Message / asset notes", "area", 6]
+        ]
+      },
+      {
+        id: "venue",
+        title: "Venue & space",
+        sub: "Rooms, capacities, access windows, AV, and the person who unlocks doors.",
+        kind: "fields",
+        fields: [
+          ["venue", "Venue", "text", 2],
+          ["contact", "Venue contact", "text", 2],
+          ["rooms", "Rooms held & capacities", "area", 2],
+          ["loadin", "Load-in window", "text", 2],
+          ["loadout", "Load-out window", "text", 2],
+          ["hotel", "Hotel block", "text", 2],
+          ["av", "AV vendor & package", "area", 3],
+          ["access", "Wi-Fi, power, rigging, permits", "area", 3]
+        ]
+      },
+      {
+        id: "fnb",
+        title: "Food, beverage & hospitality",
+        sub: "Every meal, break, reception, guarantee deadline, and dietary constraint.",
+        kind: "repeat",
+        addLabel: "Add F&B service",
+        fields: [
+          ["what", "Service", "text", 2],
+          ["when", "Day & time", "text", 2],
+          ["where", "Location", "text", 1],
+          ["count", "Headcount", "text", 1],
+          ["status", "Status", "select", 1, STATUS],
+          ["detail", "Menu, dietary, bar", "area", 5]
+        ]
+      },
+      {
+        id: "crew",
+        title: "Production crew & travel",
+        sub: "Who is on site, when they arrive, and how to reach them when timing matters.",
+        kind: "repeat",
+        addLabel: "Add crew member",
+        fields: [
+          ["name", "Name", "text", 2],
+          ["role", "Role on site", "text", 2],
+          ["mobile", "Mobile", "text", 2],
+          ["travel", "Travel", "text", 3],
+          ["hotel", "Hotel & confirmation", "text", 3]
+        ]
+      },
+      {
+        id: "shipping",
+        title: "Shipping & materials",
+        sub: "Anything that has to physically arrive, and the date it becomes a problem.",
+        kind: "repeat",
+        addLabel: "Add shipment",
+        fields: [
+          ["what", "Contents", "text", 2],
+          ["carrier", "Carrier", "text", 1],
+          ["tracking", "Tracking", "text", 1],
+          ["arrive", "Must arrive by", "date", 1],
+          ["status", "Status", "select", 1, STATUS],
+          ["contact", "Receiving contact & return plan", "area", 6]
+        ]
+      },
+      {
+        id: "onsitekit",
+        title: "On-site kit",
+        sub: "The box that lives behind registration. Check it before it ships.",
+        kind: "checks",
+        checks: [
+          "Printed run of show", "Badge stock & printer", "Lanyards", "Signage & wayfinding",
+          "Podium & confidence monitor", "Handheld mics", "Clickers & batteries",
+          "Laptops and dongles", "Power strips", "Gaffer tape", "Toolkit", "First-aid kit",
+          "Water and snacks for crew", "Printed attendee list", "Wi-Fi credentials card"
+        ]
+      },
+      {
+        id: "platform",
+        title: "Virtual platform & broadcast",
+        sub: "The stream is the venue. Include a plan for when it drops.",
+        kind: "fields",
+        fields: [
+          ["platform", "Platform", "text", 2],
+          ["stream", "Attendee join link", "text", 2],
+          ["backup", "Backup stream / failover", "text", 2],
+          ["producer", "Stream producer", "text", 2],
+          ["moderator", "Chat & Q&A moderator", "text", 2],
+          ["rehearsal", "Full tech rehearsal", "text", 2],
+          ["recording", "Recording & captions", "area", 3],
+          ["contingency", "If the stream drops", "area", 3]
+        ]
+      },
+      {
+        id: "virtualkit",
+        title: "Broadcast readiness",
+        sub: "The pre-flight list. Nothing goes live until every line is ticked.",
+        kind: "checks",
+        checks: [
+          "All speakers tech-checked", "Backup stream tested live", "Slides loaded",
+          "Lower thirds built", "Holding slide ready", "Captions enabled", "Q&A owner assigned",
+          "Poll questions loaded", "Recording confirmed", "Speaker green room link sent",
+          "Attendee join instructions sent", "Replay page ready"
+        ]
+      },
+      {
+        id: "budget",
+        title: "Budget & vendors",
+        sub: "What it costs, who we owe, and whether the paper is signed.",
+        kind: "repeat",
+        addLabel: "Add budget line",
+        fields: [
+          ["item", "Line item", "text", 2],
+          ["vendor", "Vendor", "text", 2],
+          ["est", "Estimate", "text", 1],
+          ["actual", "Actual", "text", 1],
+          ["contract", "Contract", "select", 1, STATUS],
+          ["contact", "Vendor contact / payment notes", "area", 5]
+        ]
+      },
+      {
+        id: "client",
+        title: "Client deliverables & approvals",
+        sub: "What the client signs off on, and by when.",
+        kind: "repeat",
+        addLabel: "Add deliverable",
+        fields: [
+          ["item", "Deliverable", "text", 2],
+          ["owner", "MoJo owner", "text", 1],
+          ["approver", "Approver", "text", 1],
+          ["due", "Due", "date", 1],
+          ["status", "Status", "select", 1, STATUS],
+          ["notes", "Scope note / round count", "area", 6]
+        ]
+      },
+      {
+        id: "risk",
+        title: "Risk, compliance & contingency",
+        sub: "The section that saves the event. Fill it in early.",
+        kind: "fields",
+        fields: [
+          ["insurance", "Insurance & liability", "text", 3],
+          ["cancel", "Cancellation / force majeure", "text", 3],
+          ["accessibility", "Accessibility commitments", "area", 3],
+          ["conduct", "Code of conduct & escalation", "area", 3],
+          ["contingency", "Contingency plans", "area", 6]
+        ]
+      },
+      {
+        id: "post",
+        title: "Content capture & post-event",
+        sub: "The summit ends; the asset does not. Decide follow-through before the room clears.",
+        kind: "fields",
+        fields: [
+          ["capture", "Photo & video", "text", 3],
+          ["recordings", "Session recordings", "text", 3],
+          ["survey", "Attendee survey", "text", 3],
+          ["leads", "Lead handoff", "text", 3],
+          ["recap", "Recap & repurposing plan", "area", 3],
+          ["debrief", "Debrief", "area", 3]
+        ]
+      }
+    ];
+
+    const app = {
+      index: [],
+      slug: slugFromLocation(),
+      current: null,
+      dirty: false
+    };
+
+    function slugify(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/&/g, " and ")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 96) || "event";
+    }
+
+    function slugFromLocation() {
+      const path = window.location.pathname.replace(/\/+$/, "");
+      const match = path.match(/\/events\/([^/]+)$/);
+      const param = new URLSearchParams(window.location.search).get("event");
+      const hash = window.location.hash.replace(/^#\/?/, "");
+      return match ? decodeURIComponent(match[1]) : (param || hash || "");
+    }
+
+    function eventUrl(slug) {
+      return `/events/${encodeURIComponent(slug)}/`;
+    }
+
+    function readLocalIndex() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(INDEX_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function writeLocalIndex(index) {
+      localStorage.setItem(INDEX_KEY, JSON.stringify(index));
+    }
+
+    function readLocalPlaybook(slug) {
+      try {
+        return JSON.parse(localStorage.getItem(PLAYBOOK_KEY_PREFIX + slug) || "null");
+      } catch {
+        return null;
+      }
+    }
+
+    function writeLocalPlaybook(record) {
+      localStorage.setItem(PLAYBOOK_KEY_PREFIX + record.slug, JSON.stringify(record));
+      const next = readLocalIndex().filter((item) => item.slug !== record.slug);
+      next.unshift(summaryFor(record));
+      writeLocalIndex(next);
+      app.index = next;
+      renderFooter();
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        headers: { "content-type": "application/json", ...(options.headers || {}) },
+        ...options
+      });
+      if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+      return response.json();
+    }
+
+    async function loadIndex() {
+      app.index = readLocalIndex();
+      try {
+        const remote = await api("/api/events");
+        if (Array.isArray(remote.events)) {
+          const bySlug = new Map([...remote.events, ...app.index].map((item) => [item.slug, item]));
+          app.index = Array.from(bySlug.values()).sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+          writeLocalIndex(app.index);
+        }
+      } catch {
+        // Local static previews do not have Pages Functions. localStorage remains the source.
+      }
+      renderFooter();
+    }
+
+    async function loadPlaybook(slug) {
+      const local = readLocalPlaybook(slug);
+      if (local) return normalizeRecord(local);
+      try {
+        const remote = await api(`/api/events/${encodeURIComponent(slug)}`);
+        return normalizeRecord(remote.event);
+      } catch {
+        return null;
+      }
+    }
+
+    async function saveRecord(record) {
+      record.updatedAt = new Date().toISOString();
+      writeLocalPlaybook(record);
+      try {
+        await api(record.slug ? `/api/events/${encodeURIComponent(record.slug)}` : "/api/events", {
+          method: record.slug ? "PUT" : "POST",
+          body: JSON.stringify(record)
+        });
+      } catch {
+        // Keep local save as the no-surprises fallback.
+      }
+      app.dirty = false;
+    }
+
+    function cleanProfile(form) {
+      const data = Object.fromEntries(new FormData(form).entries());
+      return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, String(value || "").trim()]));
+    }
+
+    function newRecordFromProfile(profile) {
+      const slug = slugify(`${profile.name}-${profile.date}`);
+      const playbook = blankPlaybook();
+      playbook.profile = { ...playbook.profile, ...profile };
+      return {
+        slug,
+        title: profile.name,
+        date: profile.date,
+        format: profile.format || "Hybrid",
+        production: profile.prod || "MoJo-owned",
+        playbook,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    function summaryFor(record) {
+      return {
+        slug: record.slug,
+        title: record.title || record.playbook?.profile?.name || record.slug,
+        date: record.date || record.playbook?.profile?.date || "",
+        format: record.format || record.playbook?.profile?.format || "Hybrid",
+        updatedAt: record.updatedAt || new Date().toISOString()
+      };
+    }
+
+    function blankPlaybook() {
+      const playbook = {};
+      sections.forEach((section) => {
+        if (section.kind === "repeat") playbook[section.id] = [];
+        else if (section.kind === "checks") playbook[section.id] = {};
+        else playbook[section.id] = {};
+      });
+      return playbook;
+    }
+
+    function normalizeRecord(record) {
+      const next = record && typeof record === "object" ? record : {};
+      next.playbook = { ...blankPlaybook(), ...(next.playbook || {}) };
+      next.slug = next.slug || slugify(`${next.playbook.profile?.name || "event"}-${next.playbook.profile?.date || ""}`);
+      next.title = next.title || next.playbook.profile?.name || next.slug;
+      next.date = next.date || next.playbook.profile?.date || "";
+      return next;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function toast(message) {
+      const el = document.getElementById("toast");
+      el.textContent = message;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 2400);
+    }
+
+    function countSection(section) {
+      const data = app.current?.playbook?.[section.id];
+      if (!data) return 0;
+      if (section.kind === "repeat") return data.length;
+      if (section.kind === "checks") return Object.values(data).filter(Boolean).length;
+      return Object.values(data).filter((value) => String(value || "").trim()).length;
+    }
+
+    function milestoneStats() {
+      const rows = app.current?.playbook?.milestones || [];
+      const active = rows.filter((row) => String(row.task || "").trim());
+      const done = active.filter((row) => row.status === "Confirmed").length;
+      const blocked = active.filter((row) => row.status === "Blocked").length;
+      const open = active.length - done;
+      const pct = active.length ? Math.round((done / active.length) * 100) : 0;
+      return { pct, blocked, open };
+    }
+
+    function renderNav() {
+      const nav = document.getElementById("sideNav");
+      nav.innerHTML = sections.map((section) => {
+        const count = countSection(section);
+        return `<a href="#${section.id}"><span class="nav-dot" style="background:${count ? "var(--cyan)" : "var(--line-2)"}"></span><span>${escapeHtml(section.title)}</span><span class="nav-count">${count || "-"}</span></a>`;
+      }).join("");
+      const stats = milestoneStats();
+      document.getElementById("milestonePct").textContent = `${stats.pct}%`;
+      document.getElementById("milestoneBar").style.setProperty("--progress", `${stats.pct}%`);
+      document.getElementById("blockedCount").textContent = `${stats.blocked} blocked`;
+      document.getElementById("openCount").textContent = `${stats.open} open`;
+    }
+
+    function inputHtml(section, field, value, path) {
+      const [key, label, type, span, options] = field;
+      const id = `${section.id}-${path}-${key}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+      const escaped = escapeHtml(value || "");
+      if (type === "area") {
+        return `<div class="field" style="--span:${span || 2}"><label for="${id}">${escapeHtml(label)}</label><textarea id="${id}" data-path="${path}.${key}">${escaped}</textarea></div>`;
+      }
+      if (type === "select") {
+        const opts = (options || []).map((option) => `<option${option === value ? " selected" : ""}>${escapeHtml(option)}</option>`).join("");
+        return `<div class="field" style="--span:${span || 2}"><label for="${id}">${escapeHtml(label)}</label><select id="${id}" data-path="${path}.${key}">${opts}</select></div>`;
+      }
+      return `<div class="field" style="--span:${span || 2}"><label for="${id}">${escapeHtml(label)}</label><input id="${id}" type="${type || "text"}" value="${escaped}" data-path="${path}.${key}"></div>`;
+    }
+
+    function renderSection(section) {
+      const data = app.current.playbook[section.id];
+      let body = "";
+      if (section.kind === "fields") {
+        body = `<div class="grid">${section.fields.map((field) => inputHtml(section, field, data[field[0]], section.id)).join("")}</div>`;
+      } else if (section.kind === "repeat") {
+        const rows = data || [];
+        body = `<div class="repeat-list">${rows.map((row, index) => `
+          <div class="repeat-item">
+            <div class="repeat-head">
+              <span>${escapeHtml(section.addLabel)} ${String(index + 1).padStart(2, "0")}</span>
+              <button class="btn btn-danger" type="button" data-remove="${section.id}.${index}">Remove</button>
+            </div>
+            <div class="grid">${section.fields.map((field) => inputHtml(section, field, row[field[0]], `${section.id}.${index}`)).join("")}</div>
+          </div>
+        `).join("")}</div>
+        <div class="button-row" style="margin-top:12px"><button class="btn" type="button" data-add="${section.id}">${escapeHtml(section.addLabel)}</button></div>`;
+      } else {
+        body = `<div class="check-grid">${section.checks.map((label) => {
+          const checked = data[label] ? " checked" : "";
+          return `<label class="check"><input type="checkbox"${checked} data-check="${section.id}.${escapeHtml(label)}"><span>${escapeHtml(label)}</span></label>`;
+        }).join("")}</div>`;
+      }
+      return `<section class="section" id="${section.id}">
+        <div class="section-head">
+          <div><h2>${escapeHtml(section.title)}</h2><p>${escapeHtml(section.sub)}</p></div>
+          <span class="tag">${escapeHtml(section.kind)}</span>
+        </div>
+        ${body}
+      </section>`;
+    }
+
+    function renderPlaybook() {
+      const profile = app.current?.playbook?.profile || {};
+      document.title = app.current ? `${profile.name || app.current.title} - Event Playbook` : "MoJo Event Playbook Generator";
+      document.getElementById("pageKicker").textContent = app.current ? `${profile.format || "Hybrid"} playbook` : "MoJo Event Factory";
+      document.getElementById("pageTitle").textContent = app.current ? (profile.name || app.current.title || "Untitled event") : "Generate an Event Playbook";
+      document.getElementById("pageLede").textContent = app.current
+        ? (profile.promise || "Use this page as the working event playbook.")
+        : "Enter the event profile, generate a named event page, then use that page as the working playbook for milestones, speakers, sponsors, production, risk, and post-event capture.";
+      document.getElementById("pageMeta").textContent = app.current
+        ? [profile.date, profile.tz, profile.target].filter(Boolean).join("  |  ")
+        : "";
+      document.getElementById("generatorPanel").style.display = app.current ? "none" : "";
+      document.getElementById("playbookPanel").style.display = app.current ? "" : "none";
+
+      if (!app.current) {
+        document.getElementById("playbook").innerHTML = "";
+        renderNav();
+        return;
+      }
+
+      document.getElementById("playbook").innerHTML = sections.map(renderSection).join("");
+      renderNav();
+    }
+
+    function renderFooter() {
+      const links = document.getElementById("eventLinks");
+      if (!app.index.length) {
+        links.innerHTML = `<div class="empty">No generated event pages yet.</div>`;
+        return;
+      }
+      links.innerHTML = app.index.map((item) => `
+        <a class="event-link" href="${eventUrl(item.slug)}">
+          <strong>${escapeHtml(item.title || item.slug)}</strong>
+          <span>${escapeHtml(item.slug)}${item.date ? ` | ${escapeHtml(item.date)}` : ""}</span>
+        </a>
+      `).join("");
+    }
+
+    function setByPath(path, value) {
+      const parts = path.split(".");
+      let target = app.current.playbook;
+      for (let i = 0; i < parts.length - 1; i++) target = target[parts[i]];
+      target[parts[parts.length - 1]] = value;
+      if (parts[0] === "profile") {
+        app.current.title = app.current.playbook.profile.name || app.current.title;
+        app.current.date = app.current.playbook.profile.date || app.current.date;
+        app.current.format = app.current.playbook.profile.format || app.current.format;
+      }
+      app.dirty = true;
+      renderNav();
+    }
+
+    function bindEvents() {
+      document.getElementById("eventForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const profile = cleanProfile(event.currentTarget);
+        if (!profile.name || !profile.date) {
+          toast("Event name and primary date are required.");
+          return;
+        }
+        const record = newRecordFromProfile(profile);
+        app.current = record;
+        await saveRecord(record);
+        window.history.pushState({}, "", eventUrl(record.slug));
+        renderPlaybook();
+        toast(`Generated ${record.slug}`);
+      });
+
+      document.getElementById("playbook").addEventListener("input", (event) => {
+        const path = event.target.dataset.path;
+        if (path) setByPath(path, event.target.value);
+      });
+      document.getElementById("playbook").addEventListener("change", (event) => {
+        const checkPath = event.target.dataset.check;
+        if (checkPath) {
+          const [section, label] = checkPath.split(".");
+          app.current.playbook[section][label] = event.target.checked;
+          app.dirty = true;
+          renderNav();
+        }
+      });
+      document.getElementById("playbook").addEventListener("click", (event) => {
+        const add = event.target.dataset.add;
+        const remove = event.target.dataset.remove;
+        if (add) {
+          const section = sections.find((item) => item.id === add);
+          const row = Object.fromEntries(section.fields.map((field) => [field[0], field[2] === "select" ? field[4][0] : ""]));
+          app.current.playbook[add].push(row);
+          app.dirty = true;
+          renderPlaybook();
+        }
+        if (remove) {
+          const [section, index] = remove.split(".");
+          app.current.playbook[section].splice(Number(index), 1);
+          app.dirty = true;
+          renderPlaybook();
+        }
+      });
+
+      document.getElementById("saveBtn").addEventListener("click", async () => {
+        if (!app.current) {
+          toast("Generate or open an event page first.");
+          return;
+        }
+        await saveRecord(app.current);
+        toast("Playbook saved.");
+      });
+      document.getElementById("printBtn").addEventListener("click", () => window.print());
+      document.getElementById("newEventBtn").addEventListener("click", () => {
+        app.current = null;
+        app.slug = "";
+        window.history.pushState({}, "", "/events/");
+        renderPlaybook();
+      });
+      window.addEventListener("beforeunload", (event) => {
+        if (!app.dirty) return;
+        event.preventDefault();
+        event.returnValue = "";
+      });
+    }
+
+    async function init() {
+      bindEvents();
+      await loadIndex();
+      if (app.slug) {
+        app.current = await loadPlaybook(app.slug);
+        if (!app.current) {
+          toast("That generated page is not available in this browser yet.");
+        }
+      }
+      renderPlaybook();
+    }
+
+    init();
+  </script>
+</body>
+</html>

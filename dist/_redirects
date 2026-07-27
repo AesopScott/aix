@@ -1,3 +1,4 @@
+/admin /admin/ 301
 /setup /setup/ 301
 /storage /storage/ 301
 /budget /budget/ 301
@@ -6,3 +7,7 @@
 /privacy /privacy/ 301
 /sms-terms /sms-terms/ 301
 /dallas /dallas/ 301
+/virtual /virtual/ 301
+/virtual-events /virtual/ 301
+/events /events/ 301
+/events/* /events/index.html 200

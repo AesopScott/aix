@@ -11,7 +11,7 @@ Mojo AI Summits needs a controlled place for shared company and event files. The
 ## Routes
 
 - Portal: `https://mojoaisummits.com/storage/`
-- API: `https://mojoaisummits.com/storage/api`
+- API: `https://mojoaisummits.com/api/storage`
 
 The API intentionally rejects requests unless Cloudflare Access has authenticated the user. It first reads the `Cf-Access-Authenticated-User-Email` header, then falls back to the Access JWT/cookie when Pages does not expose the email header to the Function.
 
@@ -55,8 +55,10 @@ Each upload also includes an event, city, or folder value. Example object keys:
 Before using the storage portal in production, protect both routes with Cloudflare Access:
 
 - `mojoaisummits.com/storage/*`
+- `mojoaisummits.com/api/storage`
+- `mojoaisummits.com/api/storage/*`
 
-Use the same allow policy for both routes. Recommended groups:
+The repo-level Access configuration script protects the storage portal plus the other internal operating routes: `/admin/`, `/crm/`, `/setup/`, `/events/`, `/budget/`, `/mockups/`, and their internal APIs, including `/api/events`. Use the same allow policy for these routes. Recommended groups:
 
 - Founders: Scott, Robert, Jodi, Ron
 - Event Ops: Charlie, The Event Lounge
@@ -65,10 +67,10 @@ Use the same allow policy for both routes. Recommended groups:
 - Media: Photography, Sound, and Cinematography Team
 - Finance/Admin: Robert
 
-The API can also enforce an optional email allowlist by setting this Pages environment variable:
+The Pages Functions middleware and internal APIs can also enforce an optional email allowlist by setting this Pages environment variable:
 
 ```text
-MOJO_STORAGE_ALLOWED_EMAILS=scott@example.com,robert@example.com,jodi@example.com
+MOJO_ACCESS_ALLOWED_EMAILS=scott@example.com,robert@example.com,jodi@example.com
 ```
 
 If the allowlist is empty, Cloudflare Access controls access by policy alone.
@@ -97,7 +99,7 @@ The existing `CLOUDFLARE_API_TOKEN` is kept focused on Pages deployment. Access 
 By default, the API requires Cloudflare Access headers. For local testing only, create a local `.dev.vars` file that is not committed:
 
 ```text
-MOJO_STORAGE_ALLOW_OPEN=true
+MOJO_ACCESS_ALLOW_OPEN=true
 ```
 
 Then run Pages locally with an R2 binding:
@@ -123,6 +125,6 @@ Before declaring storage ready:
 - Confirm the R2 bucket exists.
 - Confirm `MOJO_SUMMITS_STORAGE` is bound to the Pages project.
 - Confirm `/storage/` requires Cloudflare Access login.
-- Confirm `/storage/api` requires Cloudflare Access.
+- Confirm `/api/storage` requires Cloudflare Access.
 - Confirm an approved user can upload, list, download, and delete a test file.
 - Confirm an unapproved user cannot access either route.

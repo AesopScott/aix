@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fall 2026 Virtual AI Events | MOJO AI Summits</title>
+  <meta name="description" content="Five invitation-only MOJO AI Summits virtual events for executive AI leaders on September 4, September 25, October 16, November 6, and November 27, 2026.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mojoaisummits.com/virtual/">
+  <meta property="og:title" content="Fall 2026 Virtual AI Events | MOJO AI Summits">
+  <meta property="og:description" content="A focused virtual AI leadership series for executives responsible for adoption, integration, security, operations, and measurable business progress.">
+  <meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Fall 2026 Virtual AI Events by MOJO AI Summits">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Fall 2026 Virtual AI Events | MOJO AI Summits">
+  <meta name="twitter:description" content="Five invitation-only virtual AI leadership sessions in fall 2026.">
+  <meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Fall 2026 Virtual AI Events by MOJO AI Summits">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
+
+    :root {
+      --navy: #0A0F1E;
+      --navy-2: #0d1424;
+      --slate: #1B2333;
+      --blue: #1666FF;
+      --cyan: #00E6FF;
+      --white: #FFFFFF;
+      --ink: #9aa3b8;
+      --muted: #5b6376;
+      --border: rgba(150, 160, 190, 0.14);
+      --glass: rgba(27, 35, 51, 0.58);
+      --ease: cubic-bezier(.22, 1, .36, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--navy);
+      color: var(--white);
+      font-family: Inter, sans-serif;
+      letter-spacing: 0;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(22, 102, 255, .24), transparent 34%),
+        radial-gradient(circle at 78% 20%, rgba(0, 230, 255, .12), transparent 28%),
+        linear-gradient(180deg, var(--navy), #080c18 78%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(0, 230, 255, .05) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(0, 230, 255, .035) 1px, transparent 1px);
+      background-size: 76px 76px;
+      mask-image: linear-gradient(180deg, #000, transparent 72%);
+      opacity: .36;
+      pointer-events: none;
+      z-index: 0;
+    }
+    a { color: inherit; text-decoration: none; }
+    p, h1, h2, h3 { margin: 0; }
+    h1, h2 { font-family: Fraunces, serif; font-weight: 600; }
+    h3 { font-family: Space Grotesk, sans-serif; }
+
+    .wrap {
+      width: min(1160px, calc(100% - 48px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(180deg, rgba(10, 15, 30, .9), rgba(10, 15, 30, .68));
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+    nav {
+      min-height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .brand-mark {
+      height: 39px;
+      width: auto;
+      display: block;
+      transform-origin: center;
+      transition: transform 3.6s var(--ease), filter 3.6s var(--ease);
+      will-change: transform;
+    }
+    .brand-lockup:hover .brand-mark,
+    .brand-mark:hover {
+      transform: scale(1.5);
+      filter: drop-shadow(0 0 22px rgba(0, 230, 255, .28));
+    }
+    .brand-divider {
+      width: 1px;
+      height: 35px;
+      background: linear-gradient(to bottom, transparent, rgba(0, 230, 255, .9), transparent);
+      box-shadow: 0 0 14px rgba(0, 230, 255, .24);
+    }
+    .brand-name {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .brand-primary {
+      font-family: Inter, sans-serif;
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      color: transparent;
+      background: linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      text-shadow: 0 0 18px rgba(0, 230, 255, .16);
+    }
+    .brand-secondary {
+      font-family: Inter, sans-serif;
+      color: rgba(222, 235, 255, .78);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .38em;
+      padding-left: .38em;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      color: var(--muted);
+      font-family: Space Grotesk, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+    .nav-actions a:hover { color: var(--white); }
+
+    .hero {
+      min-height: 82vh;
+      display: grid;
+      grid-template-columns: minmax(0, .98fr) minmax(340px, .72fr);
+      gap: 56px;
+      align-items: center;
+      padding: 74px 0 56px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      color: var(--cyan);
+      font-family: Orbitron, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .35em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin-top: 20px;
+      max-width: 760px;
+      font-size: clamp(46px, 7vw, 92px);
+      line-height: .98;
+      letter-spacing: 0;
+    }
+    .hero-copy {
+      margin-top: 24px;
+      max-width: 640px;
+      color: var(--ink);
+      font-size: 19px;
+      line-height: 1.65;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 50px;
+      padding: 0 24px;
+      border: 1px solid var(--border);
+      color: var(--ink);
+      font-family: Space Grotesk, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      transition: border-color .25s var(--ease), background .25s var(--ease), color .25s var(--ease);
+    }
+    .btn.primary {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    .btn:hover {
+      border-color: var(--cyan);
+      color: #06111d;
+      background: var(--cyan);
+    }
+    .series-card {
+      background: linear-gradient(180deg, rgba(27, 35, 51, .76), rgba(10, 15, 30, .58));
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 28px;
+      box-shadow: 0 34px 90px rgba(0, 0, 0, .42);
+    }
+    .series-card img {
+      width: min(172px, 58%);
+      display: block;
+      margin: 0 auto 26px;
+      filter: drop-shadow(0 0 28px rgba(0, 230, 255, .22));
+    }
+    .series-card dl {
+      display: grid;
+      gap: 16px;
+      margin: 0;
+    }
+    .series-card div {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .series-card dt {
+      color: var(--cyan);
+      font-family: Space Grotesk, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .series-card dd {
+      margin: 0;
+      color: var(--white);
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    section { position: relative; z-index: 1; }
+    .section {
+      padding: 84px 0;
+      border-top: 1px solid var(--border);
+    }
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, .72fr) minmax(260px, .52fr);
+      gap: 40px;
+      align-items: end;
+      margin-bottom: 34px;
+    }
+    .section-head h2 {
+      margin-top: 16px;
+      font-size: clamp(30px, 4vw, 52px);
+      line-height: 1.08;
+    }
+    .section-head p {
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    .event-list {
+      display: grid;
+      gap: 12px;
+    }
+    .event {
+      display: grid;
+      grid-template-columns: 120px minmax(0, .8fr) minmax(220px, .5fr);
+      gap: 28px;
+      align-items: center;
+      padding: 24px 0;
+      border-top: 1px solid var(--border);
+    }
+    .event:last-child { border-bottom: 1px solid var(--border); }
+    .date {
+      display: grid;
+      place-items: center;
+      min-height: 112px;
+      border: 1px solid rgba(0, 230, 255, .28);
+      background: rgba(0, 230, 255, .035);
+      text-align: center;
+    }
+    .date span {
+      color: var(--cyan);
+      font-family: Space Grotesk, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+    .date strong {
+      display: block;
+      margin: 4px 0;
+      font-family: Fraunces, serif;
+      font-size: 42px;
+      font-style: italic;
+      line-height: 1;
+    }
+    .event h3 {
+      color: var(--white);
+      font-family: Fraunces, serif;
+      font-size: clamp(24px, 2.4vw, 34px);
+      font-weight: 500;
+      line-height: 1.12;
+    }
+    .event p {
+      margin-top: 10px;
+      color: var(--ink);
+      line-height: 1.65;
+    }
+    .event ul {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .event li::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 10px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 230, 255, .6);
+      vertical-align: 1px;
+    }
+    .format-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .format {
+      padding: 28px 0 0;
+      border-top: 1px solid var(--border);
+    }
+    .format span {
+      color: var(--cyan);
+      font-family: Space Grotesk, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .format h3 {
+      margin-top: 14px;
+      color: var(--white);
+      font-family: Fraunces, serif;
+      font-size: 25px;
+      font-weight: 500;
+    }
+    .format p {
+      margin-top: 12px;
+      color: var(--ink);
+      line-height: 1.65;
+    }
+    .cta {
+      padding: 76px 0 86px;
+      text-align: center;
+    }
+    .cta h2 {
+      max-width: 760px;
+      margin: 16px auto 0;
+      font-size: clamp(32px, 4.6vw, 58px);
+      line-height: 1.06;
+    }
+    .cta p {
+      max-width: 590px;
+      margin: 18px auto 0;
+      color: var(--ink);
+      font-size: 17px;
+      line-height: 1.7;
+    }
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 42px 0;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+    }
+
+    @media (max-width: 880px) {
+      .wrap { width: min(100% - 36px, 1160px); }
+      .nav-actions { display: none; }
+      .hero, .section-head { grid-template-columns: 1fr; }
+      .hero { min-height: auto; padding-top: 48px; }
+      .event { grid-template-columns: 1fr; gap: 18px; }
+      .date { width: 120px; }
+      .format-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      nav { min-height: 70px; }
+      .brand-lockup { gap: 8px; }
+      .brand-mark { height: 34px; }
+      .brand-divider { height: 30px; }
+      .brand-primary { font-size: 20px; letter-spacing: .03em; }
+      .brand-secondary { font-size: 9.5px; letter-spacing: .32em; padding-left: .32em; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="wrap">
+      <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+        <img class="brand-mark" src="/assets/logo-mark.png" alt="">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-name" aria-hidden="true">
+          <span class="brand-primary">MOJO AI</span>
+          <span class="brand-secondary">Summits</span>
+        </span>
+      </a>
+      <div class="nav-actions" aria-label="Page navigation">
+        <a href="/virtual/" aria-current="page">Virtual</a>
+        <a href="#schedule">Schedule</a>
+        <a href="#format">Format</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <div>
+        <span class="eyebrow">Fall 2026 virtual series</span>
+        <h1>Executive AI conversations before the summit season.</h1>
+        <p class="hero-copy">MOJO AI Summits is building five focused virtual events for leaders responsible for AI adoption, integration, security, operations, and measurable business progress.</p>
+      </div>
+      <aside class="series-card" aria-label="Virtual event series summary">
+        <img src="/assets/logo-badge.png" alt="MOJO AI Summits">
+        <dl>
+          <div>
+            <dt>Cadence</dt>
+            <dd>Five Friday sessions from September through November 2026.</dd>
+          </div>
+          <div>
+            <dt>Audience</dt>
+            <dd>Executive and director-and-above leaders accountable for AI outcomes.</dd>
+          </div>
+          <div>
+            <dt>Purpose</dt>
+            <dd>Build trust, surface real operating questions, and prepare the 2027 summit pipeline.</dd>
+          </div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="section" id="schedule">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Confirmed dates</span>
+            <h2>Five virtual rooms, one executive AI arc.</h2>
+          </div>
+          <p>The working topics are scaffolded so the team can refine speakers, partners, invite segments, and run-of-show details without changing the date architecture.</p>
+        </div>
+        <div class="event-list">
+          <article class="event">
+            <div class="date"><span>Friday</span><strong>04</strong><span>Sep 2026</span></div>
+            <div>
+              <h3>AI Executive Readiness</h3>
+              <p>Establish the leadership baseline for adoption, value, operating ownership, and risk.</p>
+            </div>
+            <ul>
+              <li>Executive framing keynote</li>
+              <li>Readiness diagnostic discussion</li>
+              <li>Invite path into the summit cohort</li>
+            </ul>
+          </article>
+          <article class="event">
+            <div class="date"><span>Friday</span><strong>25</strong><span>Sep 2026</span></div>
+            <div>
+              <h3>AI Use Cases That Survive Finance</h3>
+              <p>Compare how teams move from promising experiments to funded, measurable work.</p>
+            </div>
+            <ul>
+              <li>ROI and use-case scoring</li>
+              <li>Budget owner questions</li>
+              <li>Sponsor-fit discovery</li>
+            </ul>
+          </article>
+          <article class="event">
+            <div class="date"><span>Friday</span><strong>16</strong><span>Oct 2026</span></div>
+            <div>
+              <h3>AI Integration and Workflow</h3>
+              <p>Focus on the systems, data, automation, and vendor decisions that make AI operational.</p>
+            </div>
+            <ul>
+              <li>Workflow case study</li>
+              <li>Integration constraints</li>
+              <li>Peer implementation notes</li>
+            </ul>
+          </article>
+          <article class="event">
+            <div class="date"><span>Friday</span><strong>06</strong><span>Nov 2026</span></div>
+            <div>
+              <h3>AI Security, Governance, and Trust</h3>
+              <p>Clarify controls, policies, and executive decision rights before AI use expands further.</p>
+            </div>
+            <ul>
+              <li>Security leader perspective</li>
+              <li>Governance operating model</li>
+              <li>Risk and vendor boundaries</li>
+            </ul>
+          </article>
+          <article class="event">
+            <div class="date"><span>Friday</span><strong>27</strong><span>Nov 2026</span></div>
+            <div>
+              <h3>AI Operating Model for 2027</h3>
+              <p>Translate the series into leadership priorities, summit programming, and relationship next steps.</p>
+            </div>
+            <ul>
+              <li>2027 planning discussion</li>
+              <li>Summit track preview</li>
+              <li>VIP and speaker nominations</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="format">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Operating format</span>
+            <h2>Built as a working room, not a passive webinar.</h2>
+          </div>
+          <p>Each event should give leaders a reason to attend live: practical framing, facilitated exchange, and a clear next relationship step.</p>
+        </div>
+        <div class="format-grid">
+          <article class="format">
+            <span>01</span>
+            <h3>Executive Briefing</h3>
+            <p>A concise opening presentation frames the business decision, not just the technology trend.</p>
+          </article>
+          <article class="format">
+            <span>02</span>
+            <h3>Facilitated Exchange</h3>
+            <p>Moderated prompts help leaders compare constraints, tradeoffs, and what is working in the field.</p>
+          </article>
+          <article class="format">
+            <span>03</span>
+            <h3>Relationship Follow-Up</h3>
+            <p>Invite-qualified attendees can be routed into sponsor conversations, VIP nominations, and city summit planning.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap">
+        <span class="eyebrow">Invitation only</span>
+        <h2>Curated rooms for the right AI leaders.</h2>
+        <p>The fall series stays invitation-only, with access handled through direct outreach from the MOJO AI Summits team.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">© 2026 MOJO AI Summits. Executive AI events.</div>
+  </footer>
+</body>
+</html>

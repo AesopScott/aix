@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <title>Mojo AI Summits Admin Links</title>
+  <style>
+    :root {
+      --deep-navy: #0A0F1E;
+      --electric-blue: #1666FF;
+      --cyan: #00E6FF;
+      --slate: #1B2333;
+      --white: #FFFFFF;
+      --ink: #EAF6FF;
+      --muted: rgba(255, 255, 255, 0.68);
+      --line: rgba(0, 230, 255, 0.24);
+      --line-strong: rgba(0, 230, 255, 0.44);
+      --amber: #FFD36A;
+      --mint: #6AF0B6;
+      --rose: #FF7A90;
+      --panel: rgba(27, 35, 51, 0.82);
+      --panel-soft: rgba(10, 15, 30, 0.78);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(22, 102, 255, 0.16), transparent 34%),
+        linear-gradient(180deg, #050814 0%, var(--deep-navy) 46%, #07101F 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 72%);
+    }
+
+    a { color: inherit; }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.2rem clamp(1rem, 4vw, 3rem);
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 15, 30, 0.88);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 1px 28px rgba(0, 230, 255, 0.08);
+    }
+
+    .brand {
+      display: grid;
+      gap: 0.25rem;
+      min-width: 0;
+    }
+
+    .brand strong {
+      font-size: clamp(1rem, 2vw, 1.4rem);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--white);
+      text-shadow: 0 0 24px rgba(22, 102, 255, 0.42);
+    }
+
+    .brand span,
+    .eyebrow,
+    label,
+    .tag {
+      color: var(--cyan);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    nav a {
+      color: var(--cyan);
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    main {
+      position: relative;
+      width: min(1240px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 2rem 0 4rem;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+      gap: 1rem;
+      align-items: stretch;
+      margin-bottom: 1rem;
+    }
+
+    .hero-copy,
+    .control-panel,
+    .group,
+    .system-note {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(27, 35, 51, 0.94), rgba(10, 15, 30, 0.78)),
+        var(--slate);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .hero-copy {
+      display: grid;
+      align-content: end;
+      gap: 1rem;
+      min-height: 320px;
+      padding: clamp(1.25rem, 4vw, 2rem);
+      background:
+        linear-gradient(115deg, rgba(22, 102, 255, 0.28), transparent 56%),
+        linear-gradient(180deg, rgba(27, 35, 51, 0.94), rgba(10, 15, 30, 0.78));
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      max-width: 11ch;
+      color: var(--white);
+      font-size: clamp(2.4rem, 7vw, 5.4rem);
+      line-height: 0.92;
+    }
+
+    h2 { font-size: 1.45rem; }
+    h3 { font-size: 1.05rem; }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .control-panel {
+      display: grid;
+      gap: 1rem;
+      align-content: start;
+      padding: 1.25rem;
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+    }
+
+    .metric {
+      min-height: 84px;
+      padding: 0.9rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.58);
+    }
+
+    .metric strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--white);
+      font-size: 1.35rem;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .filters {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.74rem 0.85rem;
+      color: var(--white);
+      background: rgba(10, 15, 30, 0.8);
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0, 230, 255, 0.16);
+    }
+
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.25rem 0.62rem;
+      background: rgba(0, 230, 255, 0.08);
+      color: var(--cyan);
+      white-space: nowrap;
+    }
+
+    .tag.warning {
+      border-color: rgba(255, 211, 106, 0.38);
+      background: rgba(255, 211, 106, 0.08);
+      color: var(--amber);
+    }
+
+    .tag.ok {
+      border-color: rgba(106, 240, 182, 0.38);
+      background: rgba(106, 240, 182, 0.08);
+      color: var(--mint);
+    }
+
+    .groups {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .group {
+      overflow: hidden;
+    }
+
+    .group-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: start;
+      padding: 1.05rem 1.15rem;
+      border-bottom: 1px solid var(--line);
+      background: rgba(22, 102, 255, 0.1);
+    }
+
+    .group-header p {
+      margin-top: 0.35rem;
+      font-size: 0.92rem;
+    }
+
+    .count {
+      flex: 0 0 auto;
+      min-width: 2.2rem;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      color: var(--cyan);
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 900;
+    }
+
+    .link-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0;
+    }
+
+    .link-card {
+      display: grid;
+      gap: 0.75rem;
+      min-height: 172px;
+      padding: 1.1rem;
+      border-right: 1px solid rgba(0, 230, 255, 0.13);
+      border-bottom: 1px solid rgba(0, 230, 255, 0.13);
+      text-decoration: none;
+      background: rgba(10, 15, 30, 0.36);
+      transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+    }
+
+    .link-card:nth-child(2n) { border-right: 0; }
+
+    .link-card:hover,
+    .link-card:focus-visible {
+      background: rgba(22, 102, 255, 0.16);
+      border-color: rgba(0, 230, 255, 0.34);
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .link-top {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .link-title {
+      display: grid;
+      gap: 0.3rem;
+      min-width: 0;
+    }
+
+    .link-title strong {
+      color: var(--white);
+      font-size: 1.06rem;
+      line-height: 1.25;
+    }
+
+    .link-title span,
+    .url {
+      color: var(--cyan);
+      font-size: 0.82rem;
+      font-weight: 800;
+      word-break: break-word;
+    }
+
+    .arrow {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--cyan);
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    .link-card:hover .arrow,
+    .link-card:focus-visible .arrow {
+      border-color: var(--cyan);
+      color: var(--white);
+    }
+
+    .link-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: auto;
+    }
+
+    .empty {
+      display: none;
+      padding: 2rem;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: center;
+      background: rgba(10, 15, 30, 0.48);
+    }
+
+    .empty.visible { display: block; }
+
+    .system-note {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      padding: 1.15rem;
+    }
+
+    .system-note strong { color: var(--white); }
+
+    .system-note code {
+      color: var(--cyan);
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 900px) {
+      header,
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      nav { justify-content: flex-start; }
+    }
+
+    @media (max-width: 720px) {
+      main { width: min(100% - 1rem, 1240px); }
+
+      .metric-row,
+      .link-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .link-card,
+      .link-card:nth-child(2n) {
+        border-right: 0;
+      }
+
+      .group-header {
+        display: grid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <strong>Mojo AI Summits</strong>
+      <span>Admin Links</span>
+    </div>
+    <nav aria-label="Admin shortcuts">
+      <a href="/crm/">CRM</a>
+      <a href="/setup/">Setup</a>
+      <a href="/storage/">Storage</a>
+      <a href="/budget/">Budget</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <p class="eyebrow">Company hub</p>
+        <h1 id="page-title">Private page links.</h1>
+        <p>Internal operating pages, protected data tools, design review links, and guest-share surfaces for Mojo AI Summits.</p>
+        <div class="status-strip" aria-label="Route status">
+          <span class="tag ok">Cloudflare Access intended</span>
+          <span class="tag warning">Do not publish in public nav</span>
+          <span class="tag">mojoaisummits.com</span>
+        </div>
+      </div>
+
+      <aside class="control-panel" aria-label="Admin link controls">
+        <div class="metric-row">
+          <div class="metric"><strong id="routeCount">0</strong><span>listed private and controlled routes</span></div>
+          <div class="metric"><strong id="groupCount">0</strong><span>route groups</span></div>
+        </div>
+        <div class="filters">
+          <label class="field" for="searchInput">
+            Search
+            <input id="searchInput" type="search" placeholder="Find CRM, receipts, mockups">
+          </label>
+          <label class="field" for="groupFilter">
+            Group
+            <select id="groupFilter"></select>
+          </label>
+        </div>
+      </aside>
+    </section>
+
+    <div class="groups" id="groups"></div>
+    <div class="empty" id="emptyState">No admin links match the current filters.</div>
+
+    <section class="system-note" aria-labelledby="access-title">
+      <h2 id="access-title">Access Boundary</h2>
+      <p><strong>Internal routes:</strong> protect `/admin/*`, `/crm/*`, `/setup/*`, `/events/*`, `/storage/*`, `/budget/*`, and `/mockups/*` with Cloudflare Access before sharing broadly.</p>
+      <p><strong>Guest-share route:</strong> `/vip-registration/` is intentionally available for invited guests and previews, but it should stay out of public navigation.</p>
+    </section>
+  </main>
+
+  <script>
+    const routes = [
+      {
+        group: "Operations",
+        title: "Setup Checklist",
+        path: "/setup/",
+        summary: "Master operating checklist, ownership tracker, virtual-event scaffold, and delivery status.",
+        status: "Internal",
+        tags: ["checklist", "owners", "operations"]
+      },
+      {
+        group: "Operations",
+        title: "Event Playbook",
+        path: "/events/",
+        summary: "Per-event playbook builder for agenda, speaker, sponsor, venue, production, and post-event work.",
+        status: "Internal",
+        tags: ["event", "playbook", "run of show"]
+      },
+      {
+        group: "Data Tools",
+        title: "CRM",
+        path: "/crm/",
+        summary: "VIP registrants, invite links, contact details, statuses, notes, and CSV export.",
+        status: "Internal",
+        tags: ["crm", "vip", "registrants"]
+      },
+      {
+        group: "Data Tools",
+        title: "Storage Portal",
+        path: "/storage/",
+        summary: "Cloudflare R2 portal for company records, event assets, receipts, media, and archive files.",
+        status: "Access Protected",
+        tags: ["storage", "r2", "files"]
+      },
+      {
+        group: "Data Tools",
+        title: "Budget and P&L",
+        path: "/budget/",
+        summary: "Receipt costs, tax categories, reimbursement status, event filters, and budget CSV export.",
+        status: "Access Protected",
+        tags: ["budget", "receipts", "reimbursement"]
+      },
+      {
+        group: "Design Review",
+        title: "Website Mockups",
+        path: "/mockups/",
+        summary: "Twelve rebuild directions for internal review and design selection.",
+        status: "Internal",
+        tags: ["mockups", "website", "design"]
+      },
+      {
+        group: "Design Review",
+        title: "Cherry and Brass",
+        path: "/mockups/mockup1/",
+        summary: "Warm editorial direction with cherry wood, brass rules, and ivory typography.",
+        status: "Internal",
+        tags: ["mockup", "direction 01"]
+      },
+      {
+        group: "Design Review",
+        title: "Obsidian Glass",
+        path: "/mockups/mockup2/",
+        summary: "Cool glass direction with chrome lines and centered symmetry.",
+        status: "Internal",
+        tags: ["mockup", "direction 02"]
+      },
+      {
+        group: "Design Review",
+        title: "Ivory Letterpress",
+        path: "/mockups/mockup3/",
+        summary: "Invitation-inspired direction with cream stock and gold foil rules.",
+        status: "Internal",
+        tags: ["mockup", "direction 03"]
+      },
+      {
+        group: "Design Review",
+        title: "Cigar Room",
+        path: "/mockups/mockup4/",
+        summary: "Private late-evening direction with oxblood leather and warm lamp glow.",
+        status: "Internal",
+        tags: ["mockup", "direction 04"]
+      },
+      {
+        group: "Design Review",
+        title: "Machined Chrome",
+        path: "/mockups/mockup5/",
+        summary: "Brushed steel direction with hard grid and spec-sheet precision.",
+        status: "Internal",
+        tags: ["mockup", "direction 05"]
+      },
+      {
+        group: "Design Review",
+        title: "Emerald Club",
+        path: "/mockups/mockup6/",
+        summary: "Green baize and brass-plaque direction with city board structure.",
+        status: "Internal",
+        tags: ["mockup", "direction 06"]
+      },
+      {
+        group: "Design Review",
+        title: "Midnight Private Bank",
+        path: "/mockups/mockup7/",
+        summary: "Restrained navy and silver direction with numbered sections.",
+        status: "Internal",
+        tags: ["mockup", "direction 07"]
+      },
+      {
+        group: "Design Review",
+        title: "Onyx and Champagne",
+        path: "/mockups/mockup8/",
+        summary: "Minimal high-contrast direction with Didone scale and negative space.",
+        status: "Internal",
+        tags: ["mockup", "direction 08"]
+      },
+      {
+        group: "Design Review",
+        title: "Bourbon and Smoked Glass",
+        path: "/mockups/mockup9/",
+        summary: "Amber smoked-glass direction with warm modern polish.",
+        status: "Internal",
+        tags: ["mockup", "direction 09"]
+      },
+      {
+        group: "Design Review",
+        title: "Broadsheet",
+        path: "/mockups/mockup10/",
+        summary: "Printed-record direction with masthead typography and column rules.",
+        status: "Internal",
+        tags: ["mockup", "direction 10"]
+      },
+      {
+        group: "Design Review",
+        title: "Onyx and Champagne - Scott",
+        path: "/mockups/mockup11/",
+        summary: "Working copy of direction 08 for the next design pass.",
+        status: "Internal",
+        tags: ["mockup", "direction 11", "scott"]
+      },
+      {
+        group: "Design Review",
+        title: "Ivory Letterpress - Jodi",
+        path: "/mockups/mockup12/",
+        summary: "Working copy of direction 03 for the next design pass.",
+        status: "Internal",
+        tags: ["mockup", "direction 12", "jodi"]
+      },
+      {
+        group: "Guest Share",
+        title: "VIP Registration",
+        path: "/vip-registration/",
+        summary: "Invite-code registration page for guest previews and direct invite links.",
+        status: "Controlled Share",
+        tags: ["vip", "registration", "guest"]
+      }
+    ];
+
+    const groupsElement = document.querySelector("#groups");
+    const searchInput = document.querySelector("#searchInput");
+    const groupFilter = document.querySelector("#groupFilter");
+    const emptyState = document.querySelector("#emptyState");
+    const routeCount = document.querySelector("#routeCount");
+    const groupCount = document.querySelector("#groupCount");
+    const groupNames = [...new Set(routes.map((route) => route.group))];
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function searchText(route) {
+      return [
+        route.group,
+        route.title,
+        route.path,
+        route.summary,
+        route.status,
+        ...(route.tags || [])
+      ].join(" ").toLowerCase();
+    }
+
+    function tagClass(status) {
+      if (status === "Access Protected") return "ok";
+      if (status === "Controlled Share") return "warning";
+      return "";
+    }
+
+    function renderFilters() {
+      groupFilter.innerHTML = [
+        '<option value="all">All groups</option>',
+        ...groupNames.map((group) => `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`)
+      ].join("");
+    }
+
+    function renderRoutes() {
+      const query = searchInput.value.trim().toLowerCase();
+      const selectedGroup = groupFilter.value;
+      const visibleRoutes = routes.filter((route) => {
+        const groupOk = selectedGroup === "all" || route.group === selectedGroup;
+        const searchOk = !query || searchText(route).includes(query);
+        return groupOk && searchOk;
+      });
+      const visibleGroups = groupNames
+        .map((group) => ({
+          group,
+          routes: visibleRoutes.filter((route) => route.group === group)
+        }))
+        .filter((entry) => entry.routes.length);
+
+      routeCount.textContent = visibleRoutes.length;
+      groupCount.textContent = visibleGroups.length;
+      emptyState.classList.toggle("visible", visibleRoutes.length === 0);
+
+      groupsElement.innerHTML = visibleGroups.map((entry) => `
+        <section class="group" aria-labelledby="${entry.group.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-title">
+          <div class="group-header">
+            <div>
+              <h2 id="${entry.group.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-title">${escapeHtml(entry.group)}</h2>
+              <p>${entry.group === "Guest Share" ? "Invite and preview routes that are controlled by context instead of public navigation." : "Company-only routes for the operating team."}</p>
+            </div>
+            <span class="count">${entry.routes.length}</span>
+          </div>
+          <div class="link-grid">
+            ${entry.routes.map((route) => `
+              <a class="link-card" href="${escapeHtml(route.path)}">
+                <span class="link-top">
+                  <span class="link-title">
+                    <strong>${escapeHtml(route.title)}</strong>
+                    <span>${escapeHtml(route.group)}</span>
+                  </span>
+                  <span class="arrow" aria-hidden="true">></span>
+                </span>
+                <span class="url">${escapeHtml(route.path)}</span>
+                <p>${escapeHtml(route.summary)}</p>
+                <span class="link-meta">
+                  <span class="tag ${tagClass(route.status)}">${escapeHtml(route.status)}</span>
+                  ${(route.tags || []).slice(0, 2).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}
+                </span>
+              </a>
+            `).join("")}
+          </div>
+        </section>
+      `).join("");
+    }
+
+    renderFilters();
+    renderRoutes();
+    searchInput.addEventListener("input", renderRoutes);
+    groupFilter.addEventListener("change", renderRoutes);
+  </script>
+</body>
+</html>

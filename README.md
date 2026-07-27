@@ -3,12 +3,38 @@
 Static Cloudflare Pages site for Mojo AI Summits.
 
 - Production: https://mojoaisummits.com/
+- Internal admin links: https://mojoaisummits.com/admin/
+- Fall 2026 virtual events: https://mojoaisummits.com/virtual/
 - VIP registration: https://mojoaisummits.com/vip-registration/
 - Internal CRM: https://mojoaisummits.com/crm/
 - Setup checklist: https://mojoaisummits.com/setup/
+- Event playbook: https://mojoaisummits.com/events/
 - Internal storage portal: https://mojoaisummits.com/storage/
 - Internal budget and P&L: https://mojoaisummits.com/budget/
 - Cloudflare Pages project: `mojo-ai-summits`
+
+## Internal Admin Links
+
+The internal admin hub lives at `/admin/` and lists company-only routes that should not appear in the public site navigation.
+
+Authentication is enforced in two layers:
+
+- Cloudflare Access applications created by `scripts/configure-cloudflare-access.mjs`.
+- Pages Functions middleware in `functions/_middleware.js` for internal routes and APIs.
+
+Protected internal routes:
+
+- `/admin/`
+- `/crm/` and `/api/crm`
+- `/setup/` and `/api/setup-state`
+- `/events/` and `/api/events`
+- `/storage/` and `/api/storage`
+- `/budget/` and `/api/budget`
+- `/mockups/`
+
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
+
+Set `MOJO_ACCESS_ALLOWED_EMAILS` on the Pages project to add a server-side email allowlist that mirrors the Cloudflare Access policy. For local development only, set `MOJO_ACCESS_ALLOW_OPEN=true` or `MOJO_STORAGE_ALLOW_OPEN=true` in `.dev.vars`.
 
 ## Internal Storage
 
@@ -17,7 +43,7 @@ The storage portal uses a private Cloudflare R2 bucket bound to Pages Functions 
 - Bucket: `mojo-summits-private`
 - API route: `/api/storage`
 - Portal route: `/storage/`
-- Access control: protect both `/storage/*` and `/api/storage*` with Cloudflare Access before production use.
+- Access control: protect both `/storage/*` and `/api/storage*` with Cloudflare Access before production use. The repo middleware also rejects unauthenticated production requests to both routes.
 - Cloudflare prerequisite: R2 must be enabled on the Cloudflare account before the bucket can be created and before this binding can deploy successfully.
 
 ## Deploy
@@ -34,6 +60,27 @@ Required GitHub secrets:
 The home page registration action asks for an invite code, then sends guests to `/vip-registration/`.
 VIP registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `vip-registration:*`.
 Direct visits to `/vip-registration/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
+
+## Fall 2026 Virtual Events
+
+The public virtual event series route lives at `/virtual/`.
+
+Confirmed virtual AI event dates:
+
+- September 4, 2026
+- September 25, 2026
+- October 16, 2026
+- November 6, 2026
+- November 27, 2026
+
+The internal `/setup/` checklist includes a repeatable virtual event series scaffold for strategy, platform setup, speaker readiness, audience promotion, live delivery, and follow-up.
+
+## Event Playbooks
+
+The internal event playbook generator lives at `/events/`.
+Create a playbook by entering the event profile and clicking Generate Event Page.
+Generated pages use the slug pattern `/events/[event-name]-[date]/` and are listed in the footer of `/events/`.
+In deployed environments, playbooks are stored in `MOJO_SUMMITS_SETUP_STATE`; local static previews fall back to browser `localStorage`.
 
 Phone verification is wired through `/api/phone-verification`. Until an SMS provider is configured, the route records phone status as `pending_sms_setup` and registrations are saved for manual phone confirmation.
 
