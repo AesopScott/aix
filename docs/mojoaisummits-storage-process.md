@@ -13,7 +13,7 @@ Mojo AI Summits needs a controlled place for shared company and event files. The
 - Portal: `https://mojoaisummits.com/storage/`
 - API: `https://mojoaisummits.com/storage/api`
 
-The API intentionally rejects requests unless Cloudflare Access passes an authenticated user email through the `Cf-Access-Authenticated-User-Email` header.
+The API intentionally rejects requests unless Cloudflare Access has authenticated the user. It first reads the `Cf-Access-Authenticated-User-Email` header, then falls back to the Access JWT/cookie when Pages does not expose the email header to the Function.
 
 ## R2 Bucket
 

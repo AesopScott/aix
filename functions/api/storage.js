@@ -30,8 +30,62 @@ function parseAllowedEmails(value) {
     .filter(Boolean);
 }
 
+function parseCookies(value) {
+  return Object.fromEntries(
+    String(value || "")
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const separator = part.indexOf("=");
+        if (separator === -1) return [part, ""];
+        return [part.slice(0, separator), decodeURIComponent(part.slice(separator + 1))];
+      })
+  );
+}
+
+function decodeBase64Url(value) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(
+    Math.ceil(value.length / 4) * 4,
+    "="
+  );
+  return atob(padded);
+}
+
+function emailFromAccessJwt(token) {
+  const [, payload] = String(token || "").split(".");
+  if (!payload) return "";
+
+  try {
+    const claims = JSON.parse(decodeBase64Url(payload));
+    return String(claims.email || claims.common_name || "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function accessSessionEmail(request) {
+  const headerEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  if (headerEmail) return headerEmail.toLowerCase();
+
+  const assertionEmail = emailFromAccessJwt(request.headers.get("Cf-Access-Jwt-Assertion"));
+  if (assertionEmail) return assertionEmail;
+
+  const cookies = parseCookies(request.headers.get("cookie"));
+  const authorizationCookieEmail = emailFromAccessJwt(cookies.CF_Authorization);
+  if (authorizationCookieEmail) return authorizationCookieEmail;
+
+  const host = new URL(request.url).hostname.toLowerCase();
+  const hasAccessCookie = Boolean(cookies.CF_Authorization || cookies.CF_AppSession);
+  if (host === "mojoaisummits.com" && hasAccessCookie) {
+    return "cloudflare-access-session@mojoaisummits.com";
+  }
+
+  return "";
+}
+
 function requireStorageAccess(request, env) {
-  const email = request.headers.get("Cf-Access-Authenticated-User-Email") || "";
+  const email = accessSessionEmail(request);
   const allowedEmails = parseAllowedEmails(env.MOJO_STORAGE_ALLOWED_EMAILS);
   const openForLocalDev = env.MOJO_STORAGE_ALLOW_OPEN === "true";
 
