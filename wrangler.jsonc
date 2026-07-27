@@ -13,5 +13,8 @@
       "binding": "MOJO_SUMMITS_STORAGE",
       "bucket_name": "mojo-summits-private"
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }

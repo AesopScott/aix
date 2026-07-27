@@ -1,5 +1,7 @@
 const LEDGER_KEY = "budget/receipt-ledger.json";
 const REVIEW_PREFIX = "budget/reviews/";
+const MAX_EXTRACTIONS_PER_SYNC = 5;
+const MAX_EXTRACTABLE_BYTES = 12 * 1024 * 1024;
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -154,6 +156,193 @@ function inferAmountFromName(name) {
   return Number.isFinite(amount) ? amount : null;
 }
 
+function textFromMarkdownResult(result) {
+  if (typeof result === "string") return result;
+  if (Array.isArray(result)) {
+    return result
+      .map((entry) => entry?.data || entry?.text || entry?.markdown || entry?.content || "")
+      .join("\n\n")
+      .trim();
+  }
+  if (result && typeof result === "object") {
+    return result.data || result.text || result.markdown || result.content || "";
+  }
+  return "";
+}
+
+function cleanMarkdownText(value) {
+  return String(value || "")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function parseIsoDateParts(year, month, day) {
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day);
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return "";
+  if (y < 2020 || y > 2035 || m < 1 || m > 12 || d < 1 || d > 31) return "";
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return "";
+  return `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function parseReceiptDate(text) {
+  const source = String(text || "");
+  const monthNames = {
+    jan: 1,
+    january: 1,
+    feb: 2,
+    february: 2,
+    mar: 3,
+    march: 3,
+    apr: 4,
+    april: 4,
+    may: 5,
+    jun: 6,
+    june: 6,
+    jul: 7,
+    july: 7,
+    aug: 8,
+    august: 8,
+    sep: 9,
+    sept: 9,
+    september: 9,
+    oct: 10,
+    october: 10,
+    nov: 11,
+    november: 11,
+    dec: 12,
+    december: 12
+  };
+  const candidates = [];
+
+  for (const line of source.split("\n")) {
+    const weight = /date|paid|purchase|transaction|order|invoice/i.test(line) ? 0 : 1;
+    const iso = line.match(/\b(20[2-3]\d)[/-](0?[1-9]|1[0-2])[/-](0?[1-9]|[12]\d|3[01])\b/);
+    if (iso) candidates.push({ date: parseIsoDateParts(iso[1], iso[2], iso[3]), weight });
+
+    const slash = line.match(/\b(0?[1-9]|1[0-2])[/-](0?[1-9]|[12]\d|3[01])[/-]((?:20)?[2-3]\d)\b/);
+    if (slash) {
+      const year = slash[3].length === 2 ? `20${slash[3]}` : slash[3];
+      candidates.push({ date: parseIsoDateParts(year, slash[1], slash[2]), weight });
+    }
+
+    const named = line.match(
+      /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sept?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+([0-3]?\d)(?:st|nd|rd|th)?[,]?\s+(20[2-3]\d)\b/i
+    );
+    if (named) {
+      const month = monthNames[named[1].toLowerCase().replace(/\.$/, "")];
+      candidates.push({ date: parseIsoDateParts(named[3], month, named[2]), weight });
+    }
+  }
+
+  return candidates
+    .filter((candidate) => candidate.date)
+    .sort((a, b) => a.weight - b.weight)[0]?.date || "";
+}
+
+function parseMoney(value) {
+  const amount = Number(String(value || "").replace(/[$,\s]/g, ""));
+  return Number.isFinite(amount) && amount > 0 && amount < 100000 ? Number(amount.toFixed(2)) : null;
+}
+
+function parseReceiptAmount(text) {
+  const source = String(text || "");
+  const labelPattern =
+    /\b(?:grand\s+total|amount\s+paid|total\s+paid|payment\s+total|balance\s+paid|balance\s+due|order\s+total|invoice\s+total|receipt\s+total|total)\b[^\d$-]{0,32}\$?\s*(\d{1,6}(?:,\d{3})*(?:\.\d{2})?)/i;
+
+  for (const line of source.split("\n")) {
+    if (/\bsubtotal|tax|tip|change|cash\s+tendered|card|visa|mastercard|amex|auth|approval\b/i.test(line)) {
+      continue;
+    }
+    const labelled = line.match(labelPattern);
+    const amount = labelled ? parseMoney(labelled[1]) : null;
+    if (amount) return amount;
+  }
+
+  const amounts = Array.from(source.matchAll(/\$?\b(\d{1,6}(?:,\d{3})*\.\d{2})\b/g))
+    .map((match) => parseMoney(match[1]))
+    .filter((amount) => amount !== null);
+
+  if (!amounts.length) return null;
+  return Math.max(...amounts);
+}
+
+function parseReceiptVendor(text, fallback) {
+  const ignored = /^(receipt|invoice|paid|date|total|subtotal|tax|thank you|page \d+)/i;
+  const line = String(text || "")
+    .split("\n")
+    .map((value) => value.replace(/^#+\s*/, "").trim())
+    .find((value) => value.length >= 3 && value.length <= 80 && !ignored.test(value));
+  return line || fallback || "";
+}
+
+function parseReceiptCategory(text, vendor) {
+  const haystack = `${vendor || ""}\n${text || ""}`.toLowerCase();
+  if (/hotel|lodging|inn|resort|marriott|hilton|hyatt|airbnb/.test(haystack)) return "Lodging";
+  if (/airline|flight|uber|lyft|taxi|parking|rental car|gas station|fuel/.test(haystack)) return "Travel";
+  if (/restaurant|cafe|coffee|bar|grill|kitchen|diner|doordash|ubereats/.test(haystack)) return "Meals and entertainment";
+  if (/software|subscription|saas|domain|hosting|cloudflare|github|openai/.test(haystack)) return "Software and subscriptions";
+  if (/venue|event|catering|audio|video|photography|av\b/.test(haystack)) return "Venue and event costs";
+  return "Uncategorized";
+}
+
+function supportsMarkdownExtraction(object) {
+  const type = String(object.httpMetadata?.contentType || object.customMetadata?.contentType || "").toLowerCase();
+  const name = displayNameFromKey(object.key).toLowerCase();
+  return (
+    type.startsWith("image/") ||
+    type === "application/pdf" ||
+    /\.(pdf|jpe?g|png|webp|gif|bmp|svg)$/i.test(name)
+  );
+}
+
+async function extractReceiptData(env, object) {
+  if (!env.AI?.toMarkdown) {
+    return { status: "skipped", reason: "Workers AI Markdown Conversion is not bound." };
+  }
+
+  if ((object.size || 0) > MAX_EXTRACTABLE_BYTES) {
+    return { status: "skipped", reason: "Receipt file is too large for automatic extraction." };
+  }
+
+  if (!supportsMarkdownExtraction(object)) {
+    return { status: "skipped", reason: "Receipt type is not supported for automatic extraction." };
+  }
+
+  const stored = await env.MOJO_SUMMITS_STORAGE.get(object.key);
+  if (!stored) return { status: "failed", reason: "Receipt file disappeared before extraction." };
+
+  const contentType =
+    stored.httpMetadata?.contentType ||
+    object.httpMetadata?.contentType ||
+    "application/octet-stream";
+  const blob = new Blob([await stored.arrayBuffer()], { type: contentType });
+  const converted = await env.AI.toMarkdown([
+    {
+      name: object.customMetadata?.originalName || displayNameFromKey(object.key),
+      blob
+    }
+  ]);
+  const markdown = cleanMarkdownText(textFromMarkdownResult(converted));
+  if (!markdown) return { status: "failed", reason: "No readable text was extracted." };
+
+  const vendor = parseReceiptVendor(markdown, "");
+  return {
+    status: "extracted",
+    extractedAt: new Date().toISOString(),
+    source: "workers-ai-markdown",
+    receiptDate: parseReceiptDate(markdown),
+    amount: parseReceiptAmount(markdown),
+    vendor,
+    category: parseReceiptCategory(markdown, vendor),
+    textSample: markdown.slice(0, 1200)
+  };
+}
+
 function ownerFromKey(key) {
   const owner = String(key || "").split("/")[1]?.toLowerCase() || "unassigned";
   return receiptOwners.has(owner) ? owner : "unassigned";
@@ -222,7 +411,27 @@ function mergeReceipt(ledger, object) {
   const existing = ledger.receipts[object.key] || {};
   const name = object.customMetadata?.originalName || displayNameFromKey(object.key);
   const inferredAmount = inferAmountFromName(name);
-  const amount = existing.amount ?? inferredAmount ?? "";
+  const extracted = existing.extraction?.status === "extracted" ? existing.extraction : {};
+  const uploadedDate = object.uploaded ? object.uploaded.toISOString().slice(0, 10) : "";
+  const allowAutomaticUpdate = !existing.reviewedAt && existing.status !== "reviewed" && existing.status !== "reimbursed";
+  const existingReceiptDate =
+    allowAutomaticUpdate && existing.receiptDate === uploadedDate ? "" : existing.receiptDate || "";
+  const amount =
+    existing.amount !== "" && existing.amount !== null && existing.amount !== undefined
+      ? existing.amount
+      : extracted.amount ?? inferredAmount ?? "";
+  const receiptDate =
+    extracted.receiptDate && allowAutomaticUpdate && !existingReceiptDate
+      ? extracted.receiptDate
+      : existingReceiptDate || extracted.receiptDate || "";
+  const vendor =
+    extracted.vendor && allowAutomaticUpdate && (!existing.vendor || existing.vendor === titleFromFilename(name))
+      ? extracted.vendor
+      : existing.vendor || titleFromFilename(name);
+  const category =
+    extracted.category && allowAutomaticUpdate && (!existing.category || existing.category === "Uncategorized")
+      ? extracted.category
+      : existing.category || "Uncategorized";
   const status = allowedStatuses.has(existing.status) ? existing.status : "needs-review";
   const reimbursed = Boolean(existing.reimbursed) || status === "reimbursed";
   const needsReimbursement = Boolean(existing.needsReimbursement) && !reimbursed;
@@ -231,10 +440,10 @@ function mergeReceipt(ledger, object) {
     key: object.key,
     name,
     owner: existing.owner || ownerFromKey(object.key),
-    vendor: existing.vendor || titleFromFilename(name),
-    category: existing.category || "Uncategorized",
+    vendor,
+    category,
     event: existing.event || object.customMetadata?.event || "",
-    receiptDate: existing.receiptDate || (object.uploaded ? object.uploaded.toISOString().slice(0, 10) : ""),
+    receiptDate,
     amount,
     taxCategory: taxCategories.has(existing.taxCategory) ? existing.taxCategory : "Unassigned",
     needsReimbursement,
@@ -245,8 +454,19 @@ function mergeReceipt(ledger, object) {
     excluded: Boolean(existing.excluded),
     uploaded: object.uploaded ? object.uploaded.toISOString() : "",
     size: object.size || 0,
-    etag: object.etag || ""
+    etag: object.etag || "",
+    extraction: existing.extraction || null
   };
+}
+
+function needsExtraction(record, object) {
+  const extraction = record.extraction || {};
+  const uploadedDate = object.uploaded ? object.uploaded.toISOString().slice(0, 10) : "";
+  const placeholderDate = !record.reviewedAt && record.receiptDate === uploadedDate;
+  const missingCoreData = !record.receiptDate || placeholderDate || !(Number(record.amount) > 0);
+  const staleExtraction = extraction.etag && object.etag && extraction.etag !== object.etag;
+  const retryableSkip = extraction.status === "skipped" && extraction.reason === "Workers AI Markdown Conversion is not bound.";
+  return missingCoreData && (!extraction.status || staleExtraction || retryableSkip);
 }
 
 async function syncLedger(env) {
@@ -254,10 +474,33 @@ async function syncLedger(env) {
   const receipts = await listAllReceipts(env);
   const currentKeys = new Set(receipts.map((receipt) => receipt.key));
   let changed = false;
+  let extractionsThisSync = 0;
 
   for (const receipt of receipts) {
     if (!ledger.receipts[receipt.key]) changed = true;
     mergeReceipt(ledger, receipt);
+    const record = ledger.receipts[receipt.key];
+    if (extractionsThisSync < MAX_EXTRACTIONS_PER_SYNC && needsExtraction(record, receipt)) {
+      extractionsThisSync += 1;
+      try {
+        const extraction = await extractReceiptData(env, receipt);
+        record.extraction = {
+          ...extraction,
+          etag: receipt.etag || "",
+          attemptedAt: new Date().toISOString()
+        };
+        mergeReceipt(ledger, receipt);
+        changed = true;
+      } catch (error) {
+        record.extraction = {
+          status: "failed",
+          reason: error?.message || "Receipt extraction failed.",
+          etag: receipt.etag || "",
+          attemptedAt: new Date().toISOString()
+        };
+        changed = true;
+      }
+    }
   }
 
   for (const [key, record] of Object.entries(ledger.receipts)) {
