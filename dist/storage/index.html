@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mojo AI Summits Storage</title>
+  <style>
+    :root {
+      --ink: #101010;
+      --panel: #17130f;
+      --panel-2: #211a13;
+      --line: rgba(221, 195, 140, 0.25);
+      --gold: #d8bd7a;
+      --gold-soft: #f0dfb0;
+      --text: #f7f0e3;
+      --muted: #b9aa91;
+      --danger: #c35b4e;
+      --ok: #93c5a4;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 5%, rgba(216, 189, 122, 0.12), transparent 32rem),
+        linear-gradient(145deg, #090807 0%, #15110e 48%, #0b0a09 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 2rem clamp(1rem, 4vw, 3rem);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .brand strong {
+      font-size: clamp(1.2rem, 2vw, 1.75rem);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 2rem 0 4rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.6fr);
+      gap: 1rem;
+    }
+
+    section {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+    }
+
+    .panel {
+      padding: 1.25rem;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 4.4rem);
+      line-height: 0.95;
+      max-width: 11ch;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 0.8rem;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: end;
+      margin-bottom: 1rem;
+      padding: 2rem;
+      min-height: 280px;
+      background:
+        linear-gradient(110deg, rgba(216, 189, 122, 0.12), transparent 45%),
+        rgba(255, 255, 255, 0.02);
+    }
+
+    .hero-copy {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .hero-meta {
+      display: grid;
+      gap: 0.75rem;
+      justify-self: end;
+      width: min(100%, 440px);
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 0;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .stat strong {
+      color: var(--gold-soft);
+      font-weight: 700;
+    }
+
+    label {
+      display: grid;
+      gap: 0.4rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.8rem 0.9rem;
+      color: var(--text);
+      background: rgba(10, 8, 7, 0.7);
+      font: inherit;
+    }
+
+    input[type="file"] {
+      color: var(--muted);
+    }
+
+    button {
+      cursor: pointer;
+      border-color: rgba(216, 189, 122, 0.55);
+      background: linear-gradient(135deg, rgba(216, 189, 122, 0.28), rgba(89, 64, 31, 0.58));
+      color: var(--gold-soft);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: transform 220ms ease, border-color 220ms ease, color 220ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: var(--gold-soft);
+      color: #fff7df;
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--muted);
+    }
+
+    button.danger {
+      border-color: rgba(195, 91, 78, 0.6);
+      background: rgba(195, 91, 78, 0.14);
+      color: #f0b4ab;
+    }
+
+    form,
+    .controls {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .notice {
+      margin-top: 1rem;
+      padding: 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 0.92rem;
+    }
+
+    .notice.error {
+      border-color: rgba(195, 91, 78, 0.55);
+      color: #f2b9b0;
+    }
+
+    .notice.ok {
+      border-color: rgba(147, 197, 164, 0.55);
+      color: var(--ok);
+    }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th,
+    td {
+      padding: 0.85rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(221, 195, 140, 0.14);
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--gold-soft);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    td {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .file-key {
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.45rem;
+    }
+
+    .actions button {
+      padding: 0.55rem 0.65rem;
+      white-space: nowrap;
+      font-size: 0.78rem;
+    }
+
+    .empty {
+      padding: 2rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 880px) {
+      header,
+      .hero,
+      .grid,
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-meta {
+        justify-self: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <strong>Mojo AI Summits</strong>
+      <span>Internal storage portal</span>
+    </div>
+    <a href="/setup/" style="color: var(--gold-soft); text-decoration: none; font-weight: 800;">Setup Checklist</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p style="color: var(--gold-soft); font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;">Cloudflare R2 Storage</p>
+        <h1>Shared files without a public file dump.</h1>
+        <p>Use this for final company and event files that need controlled access, consistent naming, and durable storage outside the public website.</p>
+      </div>
+      <div class="hero-meta">
+        <div class="stat"><span>Backend</span><strong>Cloudflare R2</strong></div>
+        <div class="stat"><span>Access layer</span><strong>Cloudflare Access</strong></div>
+        <div class="stat"><span>Primary bucket</span><strong>mojo-summits-private</strong></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Upload</h2>
+        <form id="uploadForm">
+          <label>
+            Storage area
+            <select name="area">
+              <option value="private">Private company records</option>
+              <option value="event-assets">Event assets</option>
+              <option value="media">Media</option>
+              <option value="public-assets">Public assets</option>
+              <option value="archive">Archive</option>
+            </select>
+          </label>
+          <label>
+            Event, city, or folder
+            <input name="event" placeholder="company, dallas-2027, sponsor-board">
+          </label>
+          <label>
+            File
+            <input name="file" type="file" required>
+          </label>
+          <button type="submit">Upload File</button>
+        </form>
+        <div id="uploadNotice" class="notice">Storage operations require Cloudflare Access authentication.</div>
+      </section>
+
+      <section class="panel">
+        <h2>Files</h2>
+        <div class="controls">
+          <div class="row">
+            <label>
+              Filter area
+              <select id="prefixFilter">
+                <option value="all">All files</option>
+                <option value="private/">Private company records</option>
+                <option value="event-assets/">Event assets</option>
+                <option value="media/">Media</option>
+                <option value="public-assets/">Public assets</option>
+                <option value="archive/">Archive</option>
+              </select>
+            </label>
+            <label>
+              Prefix search
+              <input id="prefixSearch" placeholder="event-assets/dallas-2027">
+            </label>
+          </div>
+          <button class="secondary" id="refreshButton" type="button">Refresh List</button>
+        </div>
+        <div id="listNotice" class="notice">Loading files...</div>
+        <div class="table-wrap" id="tableWrap" hidden>
+          <table>
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Size</th>
+                <th>Uploaded</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="fileRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const api = "/api/storage";
+    const uploadForm = document.querySelector("#uploadForm");
+    const uploadNotice = document.querySelector("#uploadNotice");
+    const listNotice = document.querySelector("#listNotice");
+    const tableWrap = document.querySelector("#tableWrap");
+    const fileRows = document.querySelector("#fileRows");
+    const prefixFilter = document.querySelector("#prefixFilter");
+    const prefixSearch = document.querySelector("#prefixSearch");
+    const refreshButton = document.querySelector("#refreshButton");
+
+    function formatBytes(size) {
+      if (!Number.isFinite(size)) return "";
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      let value = size;
+      let unit = 0;
+      while (value >= 1024 && unit < units.length - 1) {
+        value /= 1024;
+        unit += 1;
+      }
+      return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+    }
+
+    function setNotice(element, message, type = "") {
+      element.textContent = message;
+      element.className = `notice ${type}`.trim();
+    }
+
+    async function readJson(response) {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Storage request failed.");
+      return data;
+    }
+
+    function activePrefix() {
+      const search = prefixSearch.value.trim().replace(/^\/+/, "");
+      return search || prefixFilter.value;
+    }
+
+    async function loadFiles() {
+      setNotice(listNotice, "Loading files...");
+      tableWrap.hidden = true;
+      fileRows.innerHTML = "";
+
+      try {
+        const url = new URL(api, window.location.origin);
+        url.searchParams.set("prefix", activePrefix());
+        const data = await fetch(url).then(readJson);
+
+        if (!data.objects.length) {
+          setNotice(listNotice, "No files found for this storage area.");
+          return;
+        }
+
+        setNotice(listNotice, `${data.objects.length} file${data.objects.length === 1 ? "" : "s"} found.`, "ok");
+        tableWrap.hidden = false;
+        fileRows.innerHTML = data.objects
+          .map((file) => `
+            <tr>
+              <td class="file-key">${file.key}</td>
+              <td>${formatBytes(file.size)}</td>
+              <td>${file.uploaded ? new Date(file.uploaded).toLocaleString() : ""}</td>
+              <td>
+                <div class="actions">
+                  <button type="button" data-download="${encodeURIComponent(file.key)}">Download</button>
+                  <button type="button" class="danger" data-delete="${encodeURIComponent(file.key)}">Delete</button>
+                </div>
+              </td>
+            </tr>
+          `)
+          .join("");
+      } catch (error) {
+        setNotice(listNotice, error.message, "error");
+      }
+    }
+
+    uploadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(uploadForm);
+      const file = formData.get("file");
+
+      if (!file || !file.name) {
+        setNotice(uploadNotice, "Choose a file first.", "error");
+        return;
+      }
+
+      setNotice(uploadNotice, "Uploading file...");
+
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          body: formData
+        }).then(readJson);
+        uploadForm.reset();
+        setNotice(uploadNotice, `Uploaded ${data.key}.`, "ok");
+        await loadFiles();
+      } catch (error) {
+        setNotice(uploadNotice, error.message, "error");
+      }
+    });
+
+    fileRows.addEventListener("click", async (event) => {
+      const downloadKey = event.target.dataset.download;
+      const deleteKey = event.target.dataset.delete;
+
+      if (downloadKey) {
+        window.location.href = `${api}?key=${downloadKey}`;
+      }
+
+      if (deleteKey) {
+        const key = decodeURIComponent(deleteKey);
+        if (!window.confirm(`Delete ${key}?`)) return;
+
+        try {
+          const url = new URL(api, window.location.origin);
+          url.searchParams.set("key", key);
+          await fetch(url, { method: "DELETE" }).then(readJson);
+          await loadFiles();
+        } catch (error) {
+          setNotice(listNotice, error.message, "error");
+        }
+      }
+    });
+
+    refreshButton.addEventListener("click", loadFiles);
+    prefixFilter.addEventListener("change", loadFiles);
+    loadFiles();
+  </script>
+</body>
+</html>

@@ -7,5 +7,11 @@
       "binding": "MOJO_SUMMITS_SETUP_STATE",
       "id": "90f60403fcf2469987cec51bdc3cde72"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MOJO_SUMMITS_STORAGE",
+      "bucket_name": "mojo-summits-private"
+    }
   ]
 }
