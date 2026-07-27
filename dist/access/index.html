@@ -370,6 +370,12 @@
       background: rgba(10, 15, 30, 0.62);
     }
 
+    .muted-action {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 750;
+    }
+
     button.danger {
       border-color: rgba(255, 122, 144, 0.52);
       background: rgba(255, 122, 144, 0.12);
@@ -451,9 +457,19 @@
 
     .user-form {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: minmax(160px, 0.9fr) minmax(260px, 1.35fr) minmax(150px, 0.65fr) minmax(170px, 0.7fr);
       gap: 0.65rem;
       align-items: end;
+    }
+
+    .form-help {
+      max-width: 72rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .user-form .inline-result {
+      grid-column: 1 / -1;
     }
 
     .user-list {
@@ -812,13 +828,14 @@
       <section class="workspace" aria-label="Route access configuration">
         <section class="user-admin hidden" id="userAdmin" aria-labelledby="users-title">
           <h2 id="users-title">Users and Invites</h2>
-          <form class="user-form" id="userForm">
+          <p class="form-help">Create an invite link for the person's email and role. They set their own password from that link. This site does not send email, so copy the invite link and send it yourself.</p>
+          <form class="user-form" id="userForm" novalidate>
             <label class="field" for="userName">
-              Name
+              Name optional
               <input id="userName" type="text" autocomplete="off">
             </label>
             <label class="field" for="userEmail">
-              Email
+              Invitee email
               <input id="userEmail" type="email" autocomplete="off" required>
             </label>
             <label class="field" for="userRole">
@@ -829,7 +846,8 @@
                 <option value="owner">Owner</option>
               </select>
             </label>
-            <button type="submit">Create Invite</button>
+            <button id="createInviteButton" type="submit">Create Invite Link</button>
+            <p class="inline-result" id="userInviteResult" aria-live="polite"></p>
           </form>
           <div class="user-list" id="inviteList"></div>
           <div class="user-list" id="userList"></div>
@@ -916,8 +934,10 @@
       allowlistCount: document.querySelector("#allowlistCount"),
       updatedText: document.querySelector("#updatedText"),
       userAdmin: document.querySelector("#userAdmin"),
+      createInviteButton: document.querySelector("#createInviteButton"),
       userEmail: document.querySelector("#userEmail"),
       userForm: document.querySelector("#userForm"),
+      userInviteResult: document.querySelector("#userInviteResult"),
       userList: document.querySelector("#userList"),
       userName: document.querySelector("#userName"),
       userRole: document.querySelector("#userRole")
@@ -1075,7 +1095,7 @@
             <strong>${escapeHtml(invite.email)}</strong>
             <span class="tag authenticated">${escapeHtml(invite.status)}</span>
             <span class="tag">${escapeHtml(invite.role)}</span>
-            ${invite.acceptUrl ? `<button class="secondary compact-button" data-copy-invite="${escapeHtml(invite.acceptUrl)}" type="button">Copy Link</button>` : ""}
+            ${invite.acceptUrl ? `<button class="secondary compact-button" data-copy-invite="${escapeHtml(invite.acceptUrl)}" type="button">Copy Invite Link</button>` : '<span class="muted-action">Link shown only when created</span>'}
             <button class="danger compact-button" data-revoke-invite="${escapeHtml(invite.id)}" type="button">Revoke</button>
           </div>
         `).join("") : '<p>No pending invites.</p>'}
@@ -1312,27 +1332,49 @@
       await loadSession();
     }
 
+    function setUserInviteResult(message = "", type = "") {
+      elements.userInviteResult.textContent = message;
+      elements.userInviteResult.className = `inline-result ${type}`.trim();
+    }
+
+    function validEmail(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+    }
+
     async function createInvite(event) {
       event.preventDefault();
       clearNotice();
+      setUserInviteResult("");
+      const email = elements.userEmail.value.trim();
+      if (!validEmail(email)) {
+        setUserInviteResult("Enter the person's email before creating an invite link.", "error");
+        return;
+      }
+
+      elements.createInviteButton.disabled = true;
+      setUserInviteResult("Creating invite link...", "");
       try {
         const response = await fetch("/api/access-invites", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            name: elements.userName.value,
-            email: elements.userEmail.value,
+            name: elements.userName.value.trim(),
+            email,
             role: elements.userRole.value
           })
         });
-        const payload = await response.json();
+        const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload.error || "Invite could not be created.");
         elements.userForm.reset();
         state.invites.unshift({ ...payload.invite, acceptUrl: payload.acceptUrl });
         renderUsers();
-        showNotice(`Invite created. Link: ${payload.acceptUrl}`, "ok");
+        setUserInviteResult(`Invite link created for ${payload.invite.email}. Copy it from Pending Invites and send it yourself.`, "ok");
+        showNotice(`Invite link created. Copy it from Pending Invites and send it yourself: ${payload.acceptUrl}`, "ok");
       } catch (error) {
+        setUserInviteResult(error.message, "error");
         showNotice(error.message, "error");
+      } finally {
+        elements.createInviteButton.disabled = false;
       }
     }
 
