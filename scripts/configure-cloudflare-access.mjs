@@ -9,6 +9,10 @@ const apps = [
   {
     name: "Mojo AI Summits Storage Portal",
     domain: "mojoaisummits.com/storage/*"
+  },
+  {
+    name: "Mojo AI Summits Budget Portal",
+    domain: "mojoaisummits.com/budget/*"
   }
 ];
 

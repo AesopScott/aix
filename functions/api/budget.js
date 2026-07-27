@@ -1,0 +1,425 @@
+const LEDGER_KEY = "budget/receipt-ledger.json";
+const REVIEW_PREFIX = "budget/reviews/";
+
+const jsonHeaders = {
+  "content-type": "application/json; charset=utf-8",
+  "cache-control": "no-store"
+};
+
+const receiptOwners = new Set(["scott", "jodi", "robert", "ron", "angel", "charlie", "unassigned"]);
+const allowedStatuses = new Set(["needs-review", "reviewed", "reimbursed", "excluded"]);
+
+function json(data, init = {}) {
+  return new Response(JSON.stringify(data), {
+    ...init,
+    headers: {
+      ...jsonHeaders,
+      ...(init.headers || {})
+    }
+  });
+}
+
+function parseAllowedEmails(value) {
+  return String(value || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function parseCookies(value) {
+  return Object.fromEntries(
+    String(value || "")
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const separator = part.indexOf("=");
+        if (separator === -1) return [part, ""];
+        return [part.slice(0, separator), decodeURIComponent(part.slice(separator + 1))];
+      })
+  );
+}
+
+function decodeBase64Url(value) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(
+    Math.ceil(value.length / 4) * 4,
+    "="
+  );
+  return atob(padded);
+}
+
+function emailFromAccessJwt(token) {
+  const [, payload] = String(token || "").split(".");
+  if (!payload) return "";
+
+  try {
+    const claims = JSON.parse(decodeBase64Url(payload));
+    return String(claims.email || claims.common_name || "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function accessSessionEmail(request) {
+  const headerEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  if (headerEmail) return headerEmail.toLowerCase();
+
+  const assertionEmail = emailFromAccessJwt(request.headers.get("Cf-Access-Jwt-Assertion"));
+  if (assertionEmail) return assertionEmail;
+
+  const cookies = parseCookies(request.headers.get("cookie"));
+  const authorizationCookieEmail = emailFromAccessJwt(cookies.CF_Authorization);
+  if (authorizationCookieEmail) return authorizationCookieEmail;
+
+  const host = new URL(request.url).hostname.toLowerCase();
+  const hasAccessCookie = Boolean(cookies.CF_Authorization || cookies.CF_AppSession);
+  if (host === "mojoaisummits.com" && hasAccessCookie) {
+    return "cloudflare-access-session@mojoaisummits.com";
+  }
+
+  return "";
+}
+
+function requireBudgetAccess(request, env) {
+  const email = accessSessionEmail(request);
+  const allowedEmails = parseAllowedEmails(env.MOJO_STORAGE_ALLOWED_EMAILS);
+  const openForLocalDev = env.MOJO_STORAGE_ALLOW_OPEN === "true";
+
+  if (!email && openForLocalDev) {
+    return { email: "local-dev@mojoaisummits.com" };
+  }
+
+  if (!email) {
+    return {
+      response: json(
+        {
+          error:
+            "Budget is locked until Cloudflare Access is configured for this route."
+        },
+        { status: 403 }
+      )
+    };
+  }
+
+  const normalizedEmail = email.toLowerCase();
+  if (allowedEmails.length > 0 && !allowedEmails.includes(normalizedEmail)) {
+    return {
+      response: json({ error: "This account is not approved for budget access." }, { status: 403 })
+    };
+  }
+
+  return { email: normalizedEmail };
+}
+
+function requireBucket(env) {
+  return env.MOJO_SUMMITS_STORAGE
+    ? null
+    : json({ error: "R2 storage bucket binding is not configured." }, { status: 500 });
+}
+
+function displayNameFromKey(key) {
+  return (key.split("/").pop() || "receipt").replace(
+    /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9]{8}-/i,
+    ""
+  );
+}
+
+function titleFromFilename(name) {
+  return String(name || "")
+    .replace(/\.[a-z0-9]{2,8}$/i, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function inferAmountFromName(name) {
+  const text = String(name || "");
+  const match = text.match(/(?:\$|usd[\s_-]*)(\d{1,6}(?:,\d{3})*(?:\.\d{2})?)/i);
+  if (!match) return null;
+  const amount = Number(match[1].replace(/,/g, ""));
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function ownerFromKey(key) {
+  const owner = String(key || "").split("/")[1]?.toLowerCase() || "unassigned";
+  return receiptOwners.has(owner) ? owner : "unassigned";
+}
+
+function emptyLedger() {
+  return {
+    version: 1,
+    updatedAt: null,
+    lastReviewAt: null,
+    receipts: {}
+  };
+}
+
+async function readLedger(env) {
+  const object = await env.MOJO_SUMMITS_STORAGE.get(LEDGER_KEY);
+  if (!object) return emptyLedger();
+
+  const data = await object.json().catch(() => null);
+  if (!data || typeof data !== "object" || Array.isArray(data)) return emptyLedger();
+
+  return {
+    ...emptyLedger(),
+    ...data,
+    receipts:
+      data.receipts && typeof data.receipts === "object" && !Array.isArray(data.receipts)
+        ? data.receipts
+        : {}
+  };
+}
+
+async function writeLedger(env, ledger) {
+  const next = {
+    ...ledger,
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    receipts: ledger.receipts || {}
+  };
+
+  await env.MOJO_SUMMITS_STORAGE.put(LEDGER_KEY, JSON.stringify(next, null, 2), {
+    httpMetadata: { contentType: "application/json; charset=utf-8" },
+    customMetadata: { area: "budget", kind: "receipt-ledger" }
+  });
+
+  return next;
+}
+
+async function listAllReceipts(env) {
+  const objects = [];
+  let cursor;
+
+  do {
+    const result = await env.MOJO_SUMMITS_STORAGE.list({
+      prefix: "receipts/",
+      cursor,
+      limit: 1000
+    });
+    objects.push(...result.objects);
+    cursor = result.truncated ? result.cursor : undefined;
+  } while (cursor);
+
+  return objects.filter((object) => !object.key.endsWith("/"));
+}
+
+function mergeReceipt(ledger, object) {
+  const existing = ledger.receipts[object.key] || {};
+  const name = object.customMetadata?.originalName || displayNameFromKey(object.key);
+  const inferredAmount = inferAmountFromName(name);
+  const amount = existing.amount ?? inferredAmount ?? "";
+  const status = allowedStatuses.has(existing.status) ? existing.status : "needs-review";
+
+  ledger.receipts[object.key] = {
+    key: object.key,
+    name,
+    owner: existing.owner || ownerFromKey(object.key),
+    vendor: existing.vendor || titleFromFilename(name),
+    category: existing.category || "Uncategorized",
+    event: existing.event || object.customMetadata?.event || "",
+    receiptDate: existing.receiptDate || (object.uploaded ? object.uploaded.toISOString().slice(0, 10) : ""),
+    amount,
+    notes: existing.notes || "",
+    status,
+    reviewedAt: existing.reviewedAt || "",
+    excluded: Boolean(existing.excluded),
+    uploaded: object.uploaded ? object.uploaded.toISOString() : "",
+    size: object.size || 0,
+    etag: object.etag || ""
+  };
+}
+
+async function syncLedger(env) {
+  const ledger = await readLedger(env);
+  const receipts = await listAllReceipts(env);
+  const currentKeys = new Set(receipts.map((receipt) => receipt.key));
+  let changed = false;
+
+  for (const receipt of receipts) {
+    if (!ledger.receipts[receipt.key]) changed = true;
+    mergeReceipt(ledger, receipt);
+  }
+
+  for (const [key, record] of Object.entries(ledger.receipts)) {
+    if (!currentKeys.has(key)) {
+      ledger.receipts[key] = {
+        ...record,
+        status: record.status === "excluded" ? "excluded" : "needs-review",
+        missingReceiptFile: true
+      };
+      changed = true;
+    }
+  }
+
+  return changed ? writeLedger(env, ledger) : ledger;
+}
+
+function cleanText(value, fallback = "") {
+  return String(value ?? fallback).trim().slice(0, 240);
+}
+
+function cleanAmount(value) {
+  if (value === "" || value === null || value === undefined) return "";
+  const amount = Number(String(value).replace(/[$,]/g, ""));
+  return Number.isFinite(amount) && amount >= 0 ? amount : "";
+}
+
+function summarize(ledger) {
+  const rows = Object.values(ledger.receipts || {});
+  const activeRows = rows.filter((row) => row.status !== "excluded" && !row.excluded);
+  const totalExpenses = activeRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const unpricedCount = activeRows.filter((row) => !(Number(row.amount) > 0)).length;
+  const needsReview = activeRows.filter((row) => row.status === "needs-review").length;
+  const byOwner = {};
+  const byCategory = {};
+
+  for (const row of activeRows) {
+    const amount = Number(row.amount) || 0;
+    byOwner[row.owner || "unassigned"] = (byOwner[row.owner || "unassigned"] || 0) + amount;
+    byCategory[row.category || "Uncategorized"] =
+      (byCategory[row.category || "Uncategorized"] || 0) + amount;
+  }
+
+  return {
+    revenue: 0,
+    expenses: Number(totalExpenses.toFixed(2)),
+    net: Number((0 - totalExpenses).toFixed(2)),
+    receiptCount: rows.length,
+    activeReceiptCount: activeRows.length,
+    unpricedCount,
+    needsReview,
+    reviewedCount: activeRows.filter((row) => row.status === "reviewed").length,
+    reimbursedCount: activeRows.filter((row) => row.status === "reimbursed").length,
+    byOwner,
+    byCategory
+  };
+}
+
+function sortedRows(ledger) {
+  return Object.values(ledger.receipts || {}).sort((a, b) => {
+    const aDate = a.receiptDate || a.uploaded || "";
+    const bDate = b.receiptDate || b.uploaded || "";
+    return bDate.localeCompare(aDate) || String(a.name || "").localeCompare(String(b.name || ""));
+  });
+}
+
+async function updateReceipt(request, env, access) {
+  const payload = await request.json().catch(() => null);
+  const key = String(payload?.key || "");
+  if (!key.startsWith("receipts/")) {
+    return json({ error: "Expected a receipt key." }, { status: 400 });
+  }
+
+  const ledger = await syncLedger(env);
+  const existing = ledger.receipts[key];
+  if (!existing) return json({ error: "Receipt was not found in the ledger." }, { status: 404 });
+
+  const status = allowedStatuses.has(payload.status) ? payload.status : existing.status;
+  ledger.receipts[key] = {
+    ...existing,
+    owner: receiptOwners.has(String(payload.owner || "").toLowerCase())
+      ? String(payload.owner).toLowerCase()
+      : existing.owner,
+    vendor: cleanText(payload.vendor, existing.vendor),
+    category: cleanText(payload.category, existing.category || "Uncategorized"),
+    event: cleanText(payload.event, existing.event),
+    receiptDate: cleanText(payload.receiptDate, existing.receiptDate).slice(0, 10),
+    amount: cleanAmount(payload.amount),
+    notes: cleanText(payload.notes, existing.notes),
+    status,
+    excluded: status === "excluded",
+    reviewedAt:
+      status === "reviewed" || status === "reimbursed" || status === "excluded"
+        ? new Date().toISOString()
+        : existing.reviewedAt || "",
+    reviewedBy: access.email
+  };
+
+  const next = await writeLedger(env, ledger);
+  return json({ ok: true, ledger: next, summary: summarize(next), rows: sortedRows(next) });
+}
+
+async function createReview(env, access) {
+  const ledger = await syncLedger(env);
+  const summary = summarize(ledger);
+  const rows = sortedRows(ledger);
+  const review = {
+    reviewedAt: new Date().toISOString(),
+    reviewedBy: access.email,
+    summary,
+    needsReview: rows.filter((row) => row.status === "needs-review"),
+    unpriced: rows.filter((row) => row.status !== "excluded" && !(Number(row.amount) > 0))
+  };
+
+  const date = review.reviewedAt.slice(0, 10);
+  const key = `${REVIEW_PREFIX}${date}.json`;
+  await env.MOJO_SUMMITS_STORAGE.put(key, JSON.stringify(review, null, 2), {
+    httpMetadata: { contentType: "application/json; charset=utf-8" },
+    customMetadata: { area: "budget", kind: "daily-receipt-review" }
+  });
+
+  ledger.lastReviewAt = review.reviewedAt;
+  await writeLedger(env, ledger);
+
+  return json({ ok: true, key, review });
+}
+
+export async function onRequestGet({ request, env }) {
+  const access = requireBudgetAccess(request, env);
+  if (access.response) return access.response;
+
+  const bucketError = requireBucket(env);
+  if (bucketError) return bucketError;
+
+  const url = new URL(request.url);
+  const ledger = await syncLedger(env);
+  const payload = {
+    ledgerUpdatedAt: ledger.updatedAt,
+    lastReviewAt: ledger.lastReviewAt,
+    summary: summarize(ledger),
+    rows: sortedRows(ledger)
+  };
+
+  if (url.searchParams.get("download") === "csv") {
+    const csv = [
+      ["Date", "Owner", "Vendor", "Category", "Event", "Amount", "Status", "Receipt", "Key"],
+      ...payload.rows.map((row) => [
+        row.receiptDate,
+        row.owner,
+        row.vendor,
+        row.category,
+        row.event,
+        row.amount,
+        row.status,
+        row.name,
+        row.key
+      ])
+    ]
+      .map((line) => line.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    return new Response(csv, {
+      headers: {
+        "content-type": "text/csv; charset=utf-8",
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"mojo-ai-summits-budget.csv\""
+      }
+    });
+  }
+
+  return json(payload);
+}
+
+export async function onRequestPost({ request, env }) {
+  const access = requireBudgetAccess(request, env);
+  if (access.response) return access.response;
+
+  const bucketError = requireBucket(env);
+  if (bucketError) return bucketError;
+
+  const url = new URL(request.url);
+  if (url.searchParams.get("action") === "review") return createReview(env, access);
+
+  return updateReceipt(request, env, access);
+}

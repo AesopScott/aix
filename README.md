@@ -5,6 +5,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Production: https://mojoaisummits.com/
 - Setup checklist: https://mojoaisummits.com/setup/
 - Internal storage portal: https://mojoaisummits.com/storage/
+- Internal budget and P&L: https://mojoaisummits.com/budget/
 - Cloudflare Pages project: `mojo-ai-summits`
 
 ## Internal Storage
