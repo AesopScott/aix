@@ -257,6 +257,7 @@ export const DEFAULT_ACCESS_RULES = [
 
 export const DEFAULT_ACCESS_CONFIG = {
   version: 1,
+  enabled: false,
   updatedAt: null,
   updatedBy: "",
   allowedEmails: [],
@@ -319,6 +320,7 @@ export function sanitizeAccessConfig(input = {}, actor = "") {
 
   return {
     version: 1,
+    enabled: input.enabled === true,
     updatedAt: new Date().toISOString(),
     updatedBy: actor || String(input.updatedBy || ""),
     allowedEmails: parseAllowedEmails(input.allowedEmails),
@@ -355,6 +357,7 @@ export function expandAccessConfig(config, env = {}) {
 
   return {
     ...config,
+    enabled: config.enabled === true,
     allowedEmails,
     envAllowedEmails: envAllowedEmails(env),
     routes: DEFAULT_ACCESS_RULES.map((definition) => ({
