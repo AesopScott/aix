@@ -91,8 +91,8 @@ After deployment, verify:
 - `https://mojoaisummits.com/` loads.
 - Public routes such as `/virtual/` and `/vip-registration/` load without Mojo Auth.
 - `/access/` loads without a session so it can show the login screen.
-- Internal routes such as `/setup/`, `/events/`, `/crm/`, `/storage/`, `/budget/`, and `/mockups/` require a Mojo Auth session.
-- Internal APIs such as `/api/setup-state`, `/api/events`, `/api/crm`, `/api/storage`, and `/api/budget` are not publicly accessible.
-- An approved Mojo Auth user can open `/setup/` and shared checklist state works.
+- Before access control is enabled in `/access/`, internal routes such as `/setup/`, `/events/`, `/crm/`, `/storage/`, `/budget/`, and `/mockups/` remain freely accessible.
+- After access control is enabled in `/access/`, internal routes and APIs follow their configured Mojo Auth route modes.
+- After accounts and policies are configured, an approved Mojo Auth user can open `/setup/` and shared checklist state works.
 
 Do not push a production deployment with the R2 binding until the `mojo-summits-private` bucket exists, because Cloudflare Pages expects configured bindings to reference available resources.

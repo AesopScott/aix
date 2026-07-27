@@ -93,7 +93,7 @@ Recommended first users:
 
 ## Local Development
 
-By default, the API requires a Mojo Auth session. For local testing only, create a local `.dev.vars` file that is not committed:
+Access control is disabled by default while accounts and route policies are being configured. After access control is enabled in `/access/`, the API requires a Mojo Auth session unless the storage route mode is changed. For local testing of enforced access only, create a local `.dev.vars` file that is not committed:
 
 ```text
 MOJO_ACCESS_ALLOW_OPEN=true
@@ -121,7 +121,8 @@ Before declaring storage ready:
 
 - Confirm the R2 bucket exists.
 - Confirm `MOJO_SUMMITS_STORAGE` is bound to the Pages project.
-- Confirm `/storage/` requires Mojo Auth login.
-- Confirm `/api/storage` requires Mojo Auth login.
+- Before enabling access control, confirm `/storage/` and `/api/storage` remain reachable.
+- After enabling access control, confirm `/storage/` requires Mojo Auth login.
+- After enabling access control, confirm `/api/storage` requires Mojo Auth login.
 - Confirm an approved user can upload, list, download, and delete a test file.
 - Confirm an unapproved user cannot access either route.
