@@ -101,6 +101,16 @@ Confirmed virtual AI event dates:
 - November 6, 2026
 - November 27, 2026
 
+Shareable Zoom room pages are rendered by Pages Functions at `/virtual/[event-slug]` and `/virtual/[event-slug].php`. The `.php` route exists for share-link compatibility; Cloudflare serves it through the Function runtime rather than a PHP server. The page calls `/api/virtual-events/[event-slug]`, which reads the stored Zoom join URL from `MOJO_SUMMITS_SETUP_STATE` and stops returning it 15 minutes before the event start time.
+
+Create Zoom meetings locally with `scripts/create-zoom-virtual-events.mjs` after adding Zoom Server-to-Server OAuth values to an ignored `repository.env` file:
+
+- `ZOOM_ACCOUNT_ID`
+- `ZOOM_CLIENT_ID`
+- `ZOOM_CLIENT_SECRET`
+- `ZOOM_USER_ID` optional, defaults to `me`
+- `MOJO_SUMMITS_SETUP_STATE_ID` for writing join URLs into the Cloudflare KV namespace
+
 The internal `/setup/` checklist includes a repeatable virtual event series scaffold for strategy, platform setup, speaker readiness, audience promotion, live delivery, and follow-up.
 
 ## Event Playbooks

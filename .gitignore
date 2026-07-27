@@ -1,8 +1,10 @@
 .env
 .env.*
+repository.env
 !.env.example
 .wrangler/
 .obsidian-memory/
 node_modules/
 dist/.cache/
 *.log
+docs/processes/zoom-virtual-events.generated.json
