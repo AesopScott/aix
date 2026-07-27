@@ -885,7 +885,7 @@
       <section class="workspace" aria-label="Route access configuration">
         <section class="user-admin hidden" id="userAdmin" aria-labelledby="users-title">
           <h2 id="users-title">Users</h2>
-          <p class="form-help">Create an account by email, role, and password. The site does not send email; give the password to the user yourself. Members only get routes they are assigned to; admins and owners can manage access and open every protected route.</p>
+          <p class="form-help">Create an account by email, access group, and password. The site does not send email; give the password to the user yourself. Mojo team accounts get team routes; admin accounts can manage access and open every protected route.</p>
           <form class="user-form" id="userForm" novalidate>
             <label class="field" for="userName">
               Name optional
@@ -895,14 +895,13 @@
               Email
               <input id="userEmail" type="email" autocomplete="off" required>
             </label>
-            <label class="field" for="userRole">
-              Site role
-              <select id="userRole">
-                <option value="member">Member</option>
+            <label class="field" for="userGroup">
+              Access group
+              <select id="userGroup">
+                <option value="mojo-team">Mojo team</option>
                 <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
               </select>
-              <span class="role-help">Use member for normal users. Admin and owner both bypass route lists and can manage this console.</span>
+              <span class="role-help">Public is only for routes that do not require sign-in.</span>
             </label>
             <label class="field" for="userPassword">
               Password
@@ -1007,7 +1006,7 @@
       userList: document.querySelector("#userList"),
       userName: document.querySelector("#userName"),
       userPassword: document.querySelector("#userPassword"),
-      userRole: document.querySelector("#userRole")
+      userGroup: document.querySelector("#userGroup")
     };
 
     function escapeHtml(value) {
@@ -1082,6 +1081,26 @@
           emails: group.id === "public" ? [] : parseEmails(textarea?.value || "")
         };
       });
+    }
+
+    function syncGroupControls() {
+      state.config.groups = groupPayload();
+    }
+
+    function roleForAccessGroup(groupId) {
+      return groupId === "admin" ? "admin" : "member";
+    }
+
+    function addEmailToAccessGroup(groupId, email) {
+      syncGroupControls();
+      state.config.groups = (state.config.groups || []).map((group) => {
+        if (group.id !== groupId) return group;
+        return {
+          ...group,
+          emails: [...new Set([...(group.emails || []), email])].sort()
+        };
+      });
+      renderAccessGroups();
     }
 
     function routeModeMap() {
@@ -1498,6 +1517,7 @@
       setUserInviteResult("");
       const email = elements.userEmail.value.trim();
       const password = elements.userPassword.value;
+      const groupId = elements.userGroup.value;
       if (!validEmail(email)) {
         setUserInviteResult("Enter the user's email before creating the account.", "error");
         return;
@@ -1517,21 +1537,35 @@
             name: elements.userName.value.trim(),
             email,
             password,
-            role: elements.userRole.value
+            role: roleForAccessGroup(groupId)
           })
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload.error || "User could not be created.");
+        addEmailToAccessGroup(groupId, payload.user.email);
+        const configResponse = await fetch("/api/access-config", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(currentPayload())
+        });
+        const configPayload = await configResponse.json().catch(() => ({}));
+        if (!configResponse.ok) {
+          throw new Error(configPayload.error || "Account was created, but group membership could not be saved.");
+        }
+        state.config = configPayload.config;
+        renderAccessGroups();
         state.users = [
           payload.user,
           ...state.users.filter((user) => user.email !== payload.user.email)
         ].sort((a, b) => a.email.localeCompare(b.email));
         elements.userName.value = "";
         elements.userEmail.value = "";
-        elements.userRole.value = "member";
+        elements.userGroup.value = "mojo-team";
         renderUsers();
-        setUserInviteResult(`Account created for ${payload.user.email}. Give them the password shown in the password field.`, "ok");
-        showNotice(`Account created for ${payload.user.email}. Give them the password you entered.`, "ok");
+        renderRoutes();
+        const group = (state.config.groups || []).find((entry) => entry.id === groupId);
+        setUserInviteResult(`Account created for ${payload.user.email} and added to ${group?.label || groupId}. Give them the password shown in the password field.`, "ok");
+        showNotice(`Account created for ${payload.user.email} and added to ${group?.label || groupId}.`, "ok");
       } catch (error) {
         setUserInviteResult(error.message, "error");
         showNotice(error.message, "error");
