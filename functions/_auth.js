@@ -7,7 +7,7 @@ const SESSION_PREFIX = "auth:session:";
 const SESSION_COOKIE = "mojo_auth";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const INVITE_TTL_SECONDS = 7 * 24 * 60 * 60;
-const PASSWORD_ITERATIONS = 210000;
+const PASSWORD_ITERATIONS = 100000;
 
 const encoder = new TextEncoder();
 
