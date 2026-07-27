@@ -1,5 +1,6 @@
 import {
   canManageAccess,
+  createUser,
   getSessionUser,
   listUsers,
   updateUser
@@ -30,10 +31,13 @@ export async function onRequestPost({ request, env, data }) {
   const access = await requireManager(request, env, data);
   if (access.response) return access.response;
 
-  return json(
-    { error: "Create an invite through /api/access-invites so the user can set their own password." },
-    { status: 410 }
-  );
+  const payload = await request.json().catch(() => null);
+  try {
+    const user = await createUser(env, payload, access.user.email);
+    return json({ ok: true, user }, { status: 201 });
+  } catch (error) {
+    return json({ error: error?.message || "User could not be created." }, { status: 400 });
+  }
 }
 
 export async function onRequestPut({ request, env, data }) {

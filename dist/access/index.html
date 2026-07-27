@@ -376,6 +376,13 @@
       font-weight: 750;
     }
 
+    .password-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.5rem;
+      align-items: end;
+    }
+
     button.danger {
       border-color: rgba(255, 122, 144, 0.52);
       background: rgba(255, 122, 144, 0.12);
@@ -457,7 +464,7 @@
 
     .user-form {
       display: grid;
-      grid-template-columns: minmax(160px, 0.9fr) minmax(260px, 1.35fr) minmax(150px, 0.65fr) minmax(170px, 0.7fr);
+      grid-template-columns: minmax(140px, 0.8fr) minmax(230px, 1.15fr) minmax(130px, 0.55fr) minmax(280px, 1.4fr) minmax(150px, 0.6fr);
       gap: 0.65rem;
       align-items: end;
     }
@@ -827,15 +834,15 @@
 
       <section class="workspace" aria-label="Route access configuration">
         <section class="user-admin hidden" id="userAdmin" aria-labelledby="users-title">
-          <h2 id="users-title">Users and Invites</h2>
-          <p class="form-help">Create an invite link for the person's email and role. They set their own password from that link. This site does not send email, so copy the invite link and send it yourself.</p>
+          <h2 id="users-title">Users</h2>
+          <p class="form-help">Create an account by email, role, and password. The site does not send email; give the password to the user yourself.</p>
           <form class="user-form" id="userForm" novalidate>
             <label class="field" for="userName">
               Name optional
               <input id="userName" type="text" autocomplete="off">
             </label>
             <label class="field" for="userEmail">
-              Invitee email
+              Email
               <input id="userEmail" type="email" autocomplete="off" required>
             </label>
             <label class="field" for="userRole">
@@ -846,7 +853,14 @@
                 <option value="owner">Owner</option>
               </select>
             </label>
-            <button id="createInviteButton" type="submit">Create Invite Link</button>
+            <label class="field" for="userPassword">
+              Password
+              <span class="password-actions">
+                <input id="userPassword" type="text" autocomplete="new-password" required minlength="12">
+                <button id="generatePasswordButton" class="secondary compact-button" type="button">Generate</button>
+              </span>
+            </label>
+            <button id="createUserButton" type="submit">Create Account</button>
             <p class="inline-result" id="userInviteResult" aria-live="polite"></p>
           </form>
           <div class="user-list" id="inviteList"></div>
@@ -934,12 +948,14 @@
       allowlistCount: document.querySelector("#allowlistCount"),
       updatedText: document.querySelector("#updatedText"),
       userAdmin: document.querySelector("#userAdmin"),
-      createInviteButton: document.querySelector("#createInviteButton"),
+      createUserButton: document.querySelector("#createUserButton"),
+      generatePasswordButton: document.querySelector("#generatePasswordButton"),
       userEmail: document.querySelector("#userEmail"),
       userForm: document.querySelector("#userForm"),
       userInviteResult: document.querySelector("#userInviteResult"),
       userList: document.querySelector("#userList"),
       userName: document.querySelector("#userName"),
+      userPassword: document.querySelector("#userPassword"),
       userRole: document.querySelector("#userRole")
     };
 
@@ -1341,40 +1357,65 @@
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
     }
 
-    async function createInvite(event) {
+    function generatePassword() {
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!#$%&*?";
+      const bytes = new Uint8Array(18);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
+    }
+
+    function fillGeneratedPassword() {
+      elements.userPassword.value = generatePassword();
+      setUserInviteResult("Generated a password. Give this password to the user after creating the account.", "ok");
+      elements.userPassword.focus();
+      elements.userPassword.select();
+    }
+
+    async function createUserAccount(event) {
       event.preventDefault();
       clearNotice();
       setUserInviteResult("");
       const email = elements.userEmail.value.trim();
+      const password = elements.userPassword.value;
       if (!validEmail(email)) {
-        setUserInviteResult("Enter the person's email before creating an invite link.", "error");
+        setUserInviteResult("Enter the user's email before creating the account.", "error");
+        return;
+      }
+      if (password.length < 12) {
+        setUserInviteResult("Password must be at least 12 characters.", "error");
         return;
       }
 
-      elements.createInviteButton.disabled = true;
-      setUserInviteResult("Creating invite link...", "");
+      elements.createUserButton.disabled = true;
+      setUserInviteResult("Creating account...", "");
       try {
-        const response = await fetch("/api/access-invites", {
+        const response = await fetch("/api/access-users", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             name: elements.userName.value.trim(),
             email,
+            password,
             role: elements.userRole.value
           })
         });
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || "Invite could not be created.");
-        elements.userForm.reset();
-        state.invites.unshift({ ...payload.invite, acceptUrl: payload.acceptUrl });
+        if (!response.ok) throw new Error(payload.error || "User could not be created.");
+        state.users = [
+          payload.user,
+          ...state.users.filter((user) => user.email !== payload.user.email)
+        ].sort((a, b) => a.email.localeCompare(b.email));
+        elements.userName.value = "";
+        elements.userEmail.value = "";
+        elements.userRole.value = "member";
         renderUsers();
-        setUserInviteResult(`Invite link created for ${payload.invite.email}. Copy it from Pending Invites and send it yourself.`, "ok");
-        showNotice(`Invite link created. Copy it from Pending Invites and send it yourself: ${payload.acceptUrl}`, "ok");
+        setUserInviteResult(`Account created for ${payload.user.email}. Give them the password shown in the password field.`, "ok");
+        showNotice(`Account created for ${payload.user.email}. Give them the password you entered.`, "ok");
       } catch (error) {
         setUserInviteResult(error.message, "error");
         showNotice(error.message, "error");
       } finally {
-        elements.createInviteButton.disabled = false;
+        elements.createUserButton.disabled = false;
       }
     }
 
@@ -1551,7 +1592,8 @@
     elements.firstOwnerInviteButton.addEventListener("click", createFirstOwnerInvite);
     elements.acceptInviteForm.addEventListener("submit", acceptInvite);
     elements.logoutButton.addEventListener("click", logout);
-    elements.userForm.addEventListener("submit", createInvite);
+    elements.generatePasswordButton.addEventListener("click", fillGeneratedPassword);
+    elements.userForm.addEventListener("submit", createUserAccount);
 
     loadSession();
   </script>
