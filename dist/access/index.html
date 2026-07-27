@@ -1240,20 +1240,20 @@
         const peopleEditor = protectedMode
           ? `
               <div class="route-allowlist-field">
-                <span>People for this item</span>
+                <span>Allowed accounts</span>
                 <div class="route-people-list">
                   ${state.users.length ? state.users.map((user) => `
                     <label class="route-person-choice">
                       <input class="route-person" data-route-id="${escapeHtml(route.id)}" type="checkbox" value="${escapeHtml(user.email)}" ${routeAllowedEmails.includes(user.email) ? "checked" : ""} ${user.status !== "active" ? "disabled" : ""}>
                       <span>${escapeHtml(user.email)} (${escapeHtml(user.role)})</span>
                     </label>
-                  `).join("") : '<small class="route-allowlist-help">Create accounts above, then assign them here.</small>'}
+                  `).join("") : '<small class="route-allowlist-help">Create accounts above, then select which accounts can access this route.</small>'}
                 </div>
                 <label class="route-allowlist-field" for="routeAllowlist-${escapeHtml(route.id)}">
-                  <span>Extra emails</span>
+                  <span>Additional allowed emails</span>
                   <textarea id="routeAllowlist-${escapeHtml(route.id)}" class="route-allowlist" data-route-id="${escapeHtml(route.id)}" spellcheck="false" placeholder="extra.person@example.com">${escapeHtml(extraEmails.join("\n"))}</textarea>
                 </label>
-                <small class="route-allowlist-help">${routeAllowedEmails.length ? "Only the selected people and extra emails can access this item." : route.mode === "authenticated" ? "No people selected means any signed-in account can access this item." : "No people selected means this item uses the global Allowed Emails list."}</small>
+                <small class="route-allowlist-help">${routeAllowedEmails.length ? "Only these checked accounts and additional emails can access this route." : route.mode === "authenticated" ? "No accounts selected means any signed-in account can access this route." : "No accounts selected means this route uses the global fallback emails list."}</small>
               </div>
             `
           : "";
