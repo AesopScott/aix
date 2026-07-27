@@ -1067,27 +1067,31 @@
 
     function renderUsers() {
       if (!canManageAccess()) return;
+      const pendingInvites = state.invites.filter((invite) => invite.status === "pending");
       elements.inviteList.innerHTML = `
         <h3>Pending Invites</h3>
-        ${state.invites.length ? state.invites.map((invite) => `
+        ${pendingInvites.length ? pendingInvites.map((invite) => `
           <div class="user-row">
             <strong>${escapeHtml(invite.email)}</strong>
-            <span class="tag ${invite.status === "pending" ? "authenticated" : invite.status === "accepted" ? "public" : "closed"}">${escapeHtml(invite.status)}</span>
+            <span class="tag authenticated">${escapeHtml(invite.status)}</span>
             <span class="tag">${escapeHtml(invite.role)}</span>
             ${invite.acceptUrl ? `<button class="secondary compact-button" data-copy-invite="${escapeHtml(invite.acceptUrl)}" type="button">Copy Link</button>` : ""}
-            <button class="danger compact-button" data-revoke-invite="${escapeHtml(invite.id)}" type="button" ${invite.status !== "pending" ? "disabled" : ""}>Revoke</button>
+            <button class="danger compact-button" data-revoke-invite="${escapeHtml(invite.id)}" type="button">Revoke</button>
           </div>
-        `).join("") : '<p>No invites have been created yet.</p>'}
+        `).join("") : '<p>No pending invites.</p>'}
       `;
 
-      elements.userList.innerHTML = state.users.map((user) => `
-        <div class="user-row">
-          <strong>${escapeHtml(user.email)}</strong>
-          <span class="tag ${user.status === "active" ? "public" : "closed"}">${escapeHtml(user.status)}</span>
-          <span class="tag">${escapeHtml(user.role)}</span>
-          <button class="danger compact-button" data-disable-user="${escapeHtml(user.email)}" type="button" ${user.status === "disabled" ? "disabled" : ""}>Disable</button>
-        </div>
-      `).join("");
+      elements.userList.innerHTML = `
+        <h3>Accounts</h3>
+        ${state.users.length ? state.users.map((user) => `
+          <div class="user-row">
+            <strong>${escapeHtml(user.email)}</strong>
+            <span class="tag ${user.status === "active" ? "public" : "closed"}">${escapeHtml(user.status)}</span>
+            <span class="tag">${escapeHtml(user.role)}</span>
+            <button class="danger compact-button" data-disable-user="${escapeHtml(user.email)}" type="button" ${user.status === "disabled" ? "disabled" : ""}>Disable</button>
+          </div>
+        `).join("") : '<p>No accounts have been created yet.</p>'}
+      `;
 
       document.querySelectorAll("[data-disable-user]").forEach((button) => {
         button.addEventListener("click", () => disableUser(button.dataset.disableUser));
@@ -1349,6 +1353,8 @@
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Invite could not be revoked.");
+        state.invites = state.invites.filter((invite) => invite.id !== id);
+        renderUsers();
         await loadInvites();
         showNotice("Invite revoked.", "ok");
       } catch (error) {
