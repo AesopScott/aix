@@ -271,7 +271,7 @@ export const DEFAULT_ACCESS_CONFIG = {
   updatedAt: null,
   updatedBy: "",
   allowedEmails: [],
-  routes: DEFAULT_ACCESS_RULES.map((rule) => ({ id: rule.id, mode: rule.mode }))
+  routes: DEFAULT_ACCESS_RULES.map((rule) => ({ id: rule.id, mode: rule.mode, allowedEmails: [] }))
 };
 
 export const jsonHeaders = {
@@ -319,7 +319,8 @@ export function sanitizeAccessConfig(input = {}, actor = "") {
       id: definition.id,
       mode: ["api-access-config", "api-access-users", "api-access-invites"].includes(definition.id)
         ? mode === "public" ? "allowlist" : mode
-        : mode
+        : mode,
+      allowedEmails: parseAllowedEmails(incoming.allowedEmails)
     };
   });
 
@@ -367,7 +368,8 @@ export function expandAccessConfig(config, env = {}) {
     envAllowedEmails: envAllowedEmails(env),
     routes: DEFAULT_ACCESS_RULES.map((definition) => ({
       ...definition,
-      mode: routeSettings.get(definition.id)?.mode || definition.mode
+      mode: routeSettings.get(definition.id)?.mode || definition.mode,
+      allowedEmails: parseAllowedEmails(routeSettings.get(definition.id)?.allowedEmails)
     }))
   };
 }

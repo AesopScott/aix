@@ -27,7 +27,7 @@ async function managerFromRequest(request, env, data) {
 
 function publicConfig(config, env) {
   const expanded = expandAccessConfig(config, env);
-  const savedRouteModes = new Map((config.routes || []).map((route) => [route.id, route.mode]));
+  const savedRoutes = new Map((config.routes || []).map((route) => [route.id, route]));
 
   return {
     version: expanded.version,
@@ -43,7 +43,13 @@ function publicConfig(config, env) {
       group: route.group,
       label: route.label,
       summary: route.summary,
-      mode: savedRouteModes.get(route.id) || route.mode,
+      mode: savedRoutes.get(route.id)?.mode || route.mode,
+      allowedEmails: route.allowedEmails || [],
+      effectiveAllowedEmails: (route.allowedEmails || []).length
+        ? route.allowedEmails
+        : route.mode === "allowlist"
+          ? expanded.allowedEmails
+          : [],
       defaultMode: DEFAULT_ACCESS_RULES.find((definition) => definition.id === route.id)?.mode || route.mode,
       domains: route.domains
     }))

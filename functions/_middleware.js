@@ -78,10 +78,17 @@ export async function onRequest(context) {
   }
 
   const expanded = expandAccessConfig(config, context.env);
+  const assignedRouteEmails = Array.isArray(route.allowedEmails) ? route.allowedEmails : [];
+  const effectiveAllowedEmails = assignedRouteEmails.length
+    ? assignedRouteEmails
+    : route.mode === "allowlist"
+      ? expanded.allowedEmails
+      : [];
   if (
-    route.mode === "allowlist" &&
+    ["authenticated", "allowlist"].includes(route.mode) &&
+    effectiveAllowedEmails.length > 0 &&
     !canManageAccess(user) &&
-    !expanded.allowedEmails.includes(user.email)
+    !effectiveAllowedEmails.includes(user.email)
   ) {
     return forbidden(route, "This account is not approved for this Mojo AI Summits route.");
   }
