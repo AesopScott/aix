@@ -345,6 +345,43 @@
     .field select:focus {
       border-color: var(--cyan);
     }
+    .choice-field {
+      grid-column: span var(--span, 3);
+      min-width: 0;
+    }
+    .choice-label {
+      display: block;
+      margin-bottom: 10px;
+      color: var(--dim);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .24em;
+      text-transform: uppercase;
+    }
+    .segment-controls {
+      display: grid;
+      grid-template-columns: repeat(var(--choices, 3), minmax(0, 1fr));
+      gap: 8px;
+    }
+    .segment-button {
+      min-height: 54px;
+      border: 1px solid var(--line-2);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--dim);
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+    .segment-button:hover,
+    .segment-button[aria-pressed="true"] {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: var(--navy);
+    }
     .repeat-list {
       display: flex;
       flex-direction: column;
@@ -525,17 +562,26 @@
             <label for="eventName">Event name</label>
             <input id="eventName" name="name" required placeholder="MoJo AI Summit Dallas">
           </div>
-          <div class="field" style="--span:2">
+          <div class="field" style="--span:3">
             <label for="eventDate">Primary date</label>
             <input id="eventDate" name="date" type="date" required>
           </div>
-          <div class="field" style="--span:1">
-            <label for="eventFormat">Format</label>
-            <select id="eventFormat" name="format">
-              <option>Hybrid</option>
-              <option>In-person</option>
-              <option>Virtual</option>
-            </select>
+          <div class="choice-field" style="--span:3">
+            <span class="choice-label">Format</span>
+            <input id="eventFormat" name="format" type="hidden" value="Hybrid">
+            <div class="segment-controls" style="--choices:3" aria-label="Format">
+              <button class="segment-button" type="button" data-choice="format" data-choice-value="In-person" aria-pressed="false">In-person</button>
+              <button class="segment-button" type="button" data-choice="format" data-choice-value="Virtual" aria-pressed="false">Virtual</button>
+              <button class="segment-button" type="button" data-choice="format" data-choice-value="Hybrid" aria-pressed="true">Hybrid</button>
+            </div>
+          </div>
+          <div class="choice-field" style="--span:3">
+            <span class="choice-label">Production</span>
+            <input id="eventProduction" name="prod" type="hidden" value="MoJo-owned">
+            <div class="segment-controls" style="--choices:2" aria-label="Production">
+              <button class="segment-button" type="button" data-choice="prod" data-choice-value="MoJo-owned" aria-pressed="true">MoJo-owned</button>
+              <button class="segment-button" type="button" data-choice="prod" data-choice-value="Client-produced" aria-pressed="false">Client-produced</button>
+            </div>
           </div>
           <div class="field" style="--span:2">
             <label for="eventSeries">Series / edition</label>
@@ -556,13 +602,6 @@
           <div class="field" style="--span:2">
             <label for="eventRegistration">Registration URL</label>
             <input id="eventRegistration" name="reg" placeholder="https://mojoaisummits.com/dallas/">
-          </div>
-          <div class="field" style="--span:2">
-            <label for="eventProduction">Production model</label>
-            <select id="eventProduction" name="prod">
-              <option>MoJo-owned</option>
-              <option>Client-produced</option>
-            </select>
           </div>
           <div class="field" style="--span:3">
             <label for="eventPromise">Attendee promise</label>
@@ -1178,6 +1217,19 @@
     }
 
     function bindEvents() {
+      document.getElementById("eventForm").addEventListener("click", (event) => {
+        const button = event.target.closest("[data-choice]");
+        if (!button) return;
+
+        const group = button.dataset.choice;
+        const value = button.dataset.choiceValue;
+        const input = document.getElementById(group === "format" ? "eventFormat" : "eventProduction");
+        input.value = value;
+        document.querySelectorAll(`[data-choice="${group}"]`).forEach((choice) => {
+          choice.setAttribute("aria-pressed", String(choice === button));
+        });
+      });
+
       document.getElementById("eventForm").addEventListener("submit", async (event) => {
         event.preventDefault();
         const profile = cleanProfile(event.currentTarget);
