@@ -291,13 +291,8 @@ export function parseAllowedEmails(value) {
   ];
 }
 
-export function envAllowedEmails(env) {
-  return [
-    ...new Set([
-      ...parseAllowedEmails(env.MOJO_ACCESS_ALLOWED_EMAILS),
-      ...parseAllowedEmails(env.MOJO_STORAGE_ALLOWED_EMAILS)
-    ])
-  ];
+export function envAllowedEmails() {
+  return [];
 }
 
 export function sanitizeAccessConfig(input = {}, actor = "") {

@@ -18,7 +18,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 
 The company hub lives at `/admin/` and lists company-only routes that should not appear in the public site navigation.
 
-The access console lives at `/access/` and stores route access modes plus the email allowlist in `MOJO_SUMMITS_SETUP_STATE` under `access-control:config:v1`. The page shell is public so users can sign in; the configuration and user-management APIs require an owner/admin Mojo Auth session.
+The access console lives at `/access/` and stores the global enforcement switch, route access modes, and email allowlist in `MOJO_SUMMITS_SETUP_STATE` under `access-control:config:v1`. Access control is disabled by default, so all pages and APIs remain freely accessible while accounts and page policies are being defined. The page shell is public so users can sign in; saving configuration and managing users require an owner/admin Mojo Auth session.
 
 Authentication is enforced in two layers:
 
@@ -31,6 +31,8 @@ Access modes:
 - `Authenticated`: any active Mojo Auth user may continue.
 - `Allowlist`: an active Mojo Auth user must be in the configured allowlist. Owners and admins may continue so they can manage access.
 - `Closed`: middleware rejects the route.
+
+These modes are staged until `Enable access control` is turned on in `/access/`.
 
 Protected internal routes:
 
@@ -57,7 +59,7 @@ Passwords are stored as PBKDF2-SHA256 hashes with random salts. The raw password
 
 Mojo Auth uses a D1 database bound as `MOJO_AUTH_DB` when available. Until that binding exists, it stores users and sessions in the existing `MOJO_SUMMITS_SETUP_STATE` KV namespace. Apply `migrations/0001_auth.sql` to the D1 database before binding it in production.
 
-For local development only, set `MOJO_ACCESS_ALLOW_OPEN=true` or `MOJO_STORAGE_ALLOW_OPEN=true` in `.dev.vars`.
+For local development only, set `MOJO_ACCESS_ALLOW_OPEN=true` or `MOJO_STORAGE_ALLOW_OPEN=true` in `.dev.vars` to bypass enforced access after the global switch is enabled.
 
 ## Internal Storage
 
@@ -66,7 +68,7 @@ The storage portal uses a private Cloudflare R2 bucket bound to Pages Functions 
 - Bucket: `mojo-summits-private`
 - API route: `/api/storage`
 - Portal route: `/storage/`
-- Access control: `/storage/*` and `/api/storage*` require a Mojo Auth session unless route access is changed in `/access`.
+- Access control: `/storage/*` and `/api/storage*` require a Mojo Auth session only after access control is enabled in `/access`.
 - Cloudflare prerequisite: R2 must be enabled on the Cloudflare account before the bucket can be created and before this binding can deploy successfully.
 
 ## Deploy
