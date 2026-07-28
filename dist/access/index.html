@@ -972,6 +972,7 @@
           <div class="access-groups" id="accessGroups"></div>
           <div class="actions access-actions">
             <button id="saveButton" type="button">Save</button>
+            <button id="refreshRoutesButton" class="secondary" type="button">Refresh Routes</button>
             <button id="resetButton" class="danger wide" type="button">Reset Defaults</button>
           </div>
         </section>
@@ -1092,6 +1093,7 @@
       notice: document.querySelector("#notice"),
       protectedRoutes: document.querySelector("#protectedRoutes"),
       routeRows: document.querySelector("#routeRows"),
+      refreshRoutesButton: document.querySelector("#refreshRoutesButton"),
       saveButton: document.querySelector("#saveButton"),
       searchInput: document.querySelector("#searchInput"),
       resetButton: document.querySelector("#resetButton"),
@@ -1173,6 +1175,7 @@
     function setBusy(value) {
       state.busy = value;
       elements.saveButton.disabled = value;
+      elements.refreshRoutesButton.disabled = value;
       elements.resetButton.disabled = value;
       document.querySelectorAll(".route-group-select").forEach((select) => {
         select.disabled = value;
@@ -1267,6 +1270,7 @@
         enabled: elements.accessEnabled.checked,
         allowedEmails: [],
         groups: groupPayload(),
+        discoveredRoutes: state.config.discoveredRoutes || [],
         routes: state.config.routes.map((route) => ({
           id: route.id,
           mode: route.mode,
@@ -1460,6 +1464,7 @@
                 <span class="tag">${escapeHtml(route.kind)}</span>
                 <span class="tag">${escapeHtml(route.group)}</span>
                 <span class="tag">${escapeHtml(selectedGroup?.label || selectedGroupId)}</span>
+                ${route.discovered ? '<span class="tag default">discovered</span>' : ""}
                 ${protectedMode ? `<span class="tag">${escapeHtml((route.effectiveAllowedEmails || []).length ? `${route.effectiveAllowedEmails.length} emails` : "no group emails")}</span>` : ""}
                 ${route.mode !== route.defaultMode ? '<span class="tag default">changed</span>' : ""}
               </div>
@@ -1863,6 +1868,39 @@
       }
     }
 
+    async function refreshRoutesFromAdmin() {
+      clearNotice();
+      setBusy(true);
+      try {
+        showNotice("Checking the Company Hub for new pages...", "");
+        const response = await fetch("/api/access-config", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "refresh-admin-routes",
+            config: currentPayload()
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Routes could not be refreshed.");
+        state.config = payload.config;
+        elements.accessEnabled.checked = state.config.enabled === true;
+        renderAccessGroups();
+        renderFilters();
+        renderRoutes();
+        showNotice(
+          payload.addedCount
+            ? `Added ${payload.addedCount} route${payload.addedCount === 1 ? "" : "s"} from the Company Hub.`
+            : "No new routes found on the Company Hub.",
+          "ok"
+        );
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+
     async function resetConfig() {
       clearNotice();
       setBusy(true);
@@ -1899,6 +1937,7 @@
     });
 
     elements.saveButton.addEventListener("click", saveConfig);
+    elements.refreshRoutesButton.addEventListener("click", refreshRoutesFromAdmin);
     elements.resetButton.addEventListener("click", resetConfig);
     elements.loginForm.addEventListener("submit", login);
     elements.firstOwnerInviteButton.addEventListener("click", createFirstOwnerInvite);

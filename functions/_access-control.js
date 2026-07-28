@@ -355,6 +355,7 @@ export const DEFAULT_ACCESS_CONFIG = {
   updatedBy: "",
   allowedEmails: [],
   groups: DEFAULT_ACCESS_GROUPS,
+  discoveredRoutes: [],
   routes: DEFAULT_ACCESS_RULES.map((rule) => ({
     id: rule.id,
     mode: rule.mode,
@@ -416,6 +417,72 @@ function mustRemainPublicRoute(id) {
   return ["access", "api-auth"].includes(id);
 }
 
+function cleanText(value, max = 240) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, max);
+}
+
+function cleanPath(value) {
+  const path = String(value || "").trim();
+  if (!path.startsWith("/")) return "";
+  if (path === "/") return path;
+  return path.endsWith("/") ? path : `${path}/`;
+}
+
+function cleanRouteId(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+function matchesForPath(path) {
+  const clean = cleanPath(path);
+  if (!clean) return [];
+  if (clean === "/") return [{ exact: "/" }];
+  return [{ exact: clean.replace(/\/$/, "") }, { prefix: clean }];
+}
+
+function domainsForPath(path) {
+  const clean = cleanPath(path);
+  if (!clean) return [];
+  if (clean === "/") return ["mojoaisummits.com"];
+  const withoutLeading = clean.replace(/^\//, "");
+  return [`mojoaisummits.com/${withoutLeading.replace(/\/$/, "")}`, `mojoaisummits.com/${withoutLeading}*`];
+}
+
+function sanitizeDiscoveredRoutes(inputRoutes = []) {
+  const defaultIds = new Set(DEFAULT_ACCESS_RULES.map((route) => route.id));
+  const seenIds = new Set();
+  return (Array.isArray(inputRoutes) ? inputRoutes : [])
+    .filter((route) => route && typeof route === "object")
+    .map((route) => {
+      const path = cleanPath(route.path || route.matches?.[0]?.exact || route.matches?.[0]?.prefix);
+      const id = cleanRouteId(route.id || path);
+      if (!id || defaultIds.has(id) || seenIds.has(id) || !path) return null;
+      seenIds.add(id);
+      const mode = ACCESS_MODES.includes(route.mode) ? route.mode : "allowlist";
+      return {
+        id,
+        kind: route.kind === "api" ? "api" : "page",
+        group: cleanText(route.group || "Discovered", 80),
+        label: cleanText(route.label || route.title || id, 120),
+        summary: cleanText(route.summary || "Discovered from the Company Hub.", 240),
+        mode,
+        defaultGroupIds: sanitizeGroupIds(route.defaultGroupIds || route.allowedGroupIds || ["mojo-team"], new Set(DEFAULT_ACCESS_GROUPS.map((group) => group.id))),
+        matches: matchesForPath(path),
+        domains: domainsForPath(path),
+        discovered: true
+      };
+    })
+    .filter(Boolean);
+}
+
+function accessRuleDefinitions(input = {}) {
+  return [...DEFAULT_ACCESS_RULES, ...sanitizeDiscoveredRoutes(input.discoveredRoutes)];
+}
+
 function sanitizeAccessGroups(inputGroups = []) {
   const incoming = new Map(
     (Array.isArray(inputGroups) ? inputGroups : [])
@@ -446,13 +513,14 @@ export function envAllowedEmails() {
 export function sanitizeAccessConfig(input = {}, actor = "") {
   const groups = sanitizeAccessGroups(input.groups);
   const validGroupIds = new Set(groups.map((group) => group.id));
+  const routeDefinitions = accessRuleDefinitions(input);
   const incomingRoutes = new Map(
     (Array.isArray(input.routes) ? input.routes : [])
       .filter((route) => route && typeof route === "object")
       .map((route) => [String(route.id || ""), route])
   );
 
-  const routes = DEFAULT_ACCESS_RULES.map((definition) => {
+  const routes = routeDefinitions.map((definition) => {
     if (mustRemainPublicRoute(definition.id)) {
       return {
         id: definition.id,
@@ -488,6 +556,7 @@ export function sanitizeAccessConfig(input = {}, actor = "") {
     updatedBy: actor || String(input.updatedBy || ""),
     allowedEmails: parseAllowedEmails(input.allowedEmails),
     groups,
+    discoveredRoutes: sanitizeDiscoveredRoutes(input.discoveredRoutes),
     routes
   };
 }
@@ -514,6 +583,7 @@ export async function writeAccessConfig(env, input, actor = "") {
 }
 
 export function expandAccessConfig(config, env = {}) {
+  const routeDefinitions = accessRuleDefinitions(config);
   const routeSettings = new Map((config.routes || []).map((route) => [route.id, route]));
   const groups = sanitizeAccessGroups(config.groups);
   const allowedEmails = [
@@ -526,7 +596,8 @@ export function expandAccessConfig(config, env = {}) {
     allowedEmails,
     envAllowedEmails: envAllowedEmails(env),
     groups,
-    routes: DEFAULT_ACCESS_RULES.map((definition) => ({
+    discoveredRoutes: sanitizeDiscoveredRoutes(config.discoveredRoutes),
+    routes: routeDefinitions.map((definition) => ({
       ...definition,
       mode: mustRemainPublicRoute(definition.id)
         ? "public"
