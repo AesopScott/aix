@@ -596,11 +596,9 @@
         </a>
       </div>
       <nav aria-label="Company hub shortcuts">
-        <a href="/crm/">CRM</a>
-        <a href="/access/">Access</a>
-        <a href="/setup/">Setup</a>
-        <a href="/storage/">Storage</a>
-        <a href="/budget/">Budget</a>
+        <a href="#public-title">Public</a>
+        <a href="#team-title">Team</a>
+        <a href="#admin-title">Admin</a>
       </nav>
     </div>
   </header>
@@ -609,24 +607,24 @@
     <section class="hero" aria-labelledby="page-title">
       <div class="hero-copy">
         <p class="eyebrow">Company hub</p>
-        <h1 id="page-title">Operating links.</h1>
-        <p>Internal operating pages, protected data tools, and guest-share surfaces for Mojo AI Summits.</p>
+        <h1 id="page-title">Access-based links.</h1>
+        <p>Company routes organized by who should be able to use them: public visitors, Mojo team members, or admins.</p>
         <div class="status-strip" aria-label="Route status">
-          <span class="tag ok">Mojo Auth enforced</span>
-          <span class="tag warning">Do not publish in public nav</span>
-          <span class="tag">mojoaisummits.com</span>
+          <span class="tag ok">Public</span>
+          <span class="tag warning">Team</span>
+          <span class="tag">Admin</span>
         </div>
       </div>
 
       <aside class="control-panel" aria-label="Company hub controls">
         <div class="metric-row">
-          <div class="metric"><strong id="routeCount">0</strong><span>listed internal and controlled routes</span></div>
-          <div class="metric"><strong id="groupCount">0</strong><span>route groups</span></div>
+          <div class="metric"><strong id="routeCount">0</strong><span>listed company routes</span></div>
+          <div class="metric"><strong id="groupCount">0</strong><span>access spaces</span></div>
         </div>
         <div class="filters">
           <label class="field" for="searchInput">
             Search
-            <input id="searchInput" type="search" placeholder="Find CRM, receipts, setup">
+            <input id="searchInput" type="search" placeholder="Find CRM, Dallas, access">
           </label>
           <label class="field" for="groupFilter">
             Group
@@ -648,65 +646,17 @@
   </main>
 
   <script>
+    const accessSpaces = {
+      Public: "No Mojo account required. These pages can be opened by visitors, invitees, and policy reviewers.",
+      Team: "Requires a Mojo team account when access control is enabled.",
+      Admin: "Reserved for owners and admins who manage access or company operations."
+    };
+
+    const accessOrder = ["Public", "Team", "Admin"];
+
     const routes = [
       {
-        group: "Access and Security",
-        title: "Access Console",
-        path: "/access/",
-        summary: "Authentication modes, app users, allowed emails, and route classifications.",
-        status: "Owner/Admin",
-        tags: ["access", "authentication", "allowlist"]
-      },
-      {
-        group: "Operations",
-        title: "Setup Checklist",
-        path: "/setup/",
-        summary: "Master operating checklist, ownership tracker, virtual-event scaffold, and delivery status.",
-        status: "Internal",
-        tags: ["checklist", "owners", "operations"]
-      },
-      {
-        group: "Operations",
-        title: "Event Playbook",
-        path: "/events/",
-        summary: "Per-event playbook builder for agenda, speaker, sponsor, venue, production, and post-event work.",
-        status: "Internal",
-        tags: ["event", "playbook", "run of show"]
-      },
-      {
-        group: "Data Tools",
-        title: "CRM",
-        path: "/crm/",
-        summary: "VIP registrants, invite links, contact details, statuses, notes, and CSV export.",
-        status: "Internal",
-        tags: ["crm", "vip", "registrants"]
-      },
-      {
-        group: "Data Tools",
-        title: "Storage Portal",
-        path: "/storage/",
-        summary: "Cloudflare R2 portal for company records, event assets, receipts, media, and archive files.",
-        status: "Access Protected",
-        tags: ["storage", "r2", "files"]
-      },
-      {
-        group: "Data Tools",
-        title: "Budget and P&L",
-        path: "/budget/",
-        summary: "Receipt costs, tax categories, reimbursement status, event filters, and budget CSV export.",
-        status: "Access Protected",
-        tags: ["budget", "receipts", "reimbursement"]
-      },
-      {
-        group: "Guest Share",
-        title: "VIP Registration",
-        path: "/vip-registration/",
-        summary: "Invite-code registration page for guest previews and direct invite links.",
-        status: "Controlled Share",
-        tags: ["vip", "registration", "guest"]
-      },
-      {
-        group: "Public Site",
+        group: "Public",
         title: "Home",
         path: "/",
         summary: "Public homepage for Mojo AI Summits, including positioning, event cities, and invite request entry points.",
@@ -714,7 +664,7 @@
         tags: ["home", "public"]
       },
       {
-        group: "Public Site",
+        group: "Public",
         title: "Dallas Event Page",
         path: "/dallas/",
         summary: "Public Dallas event page for the first in-person Mojo AI Summit.",
@@ -722,7 +672,7 @@
         tags: ["dallas", "event"]
       },
       {
-        group: "Public Site",
+        group: "Public",
         title: "Virtual Event Series",
         path: "/virtual/",
         summary: "Public page for the Fall 2026 virtual AI event series.",
@@ -730,7 +680,15 @@
         tags: ["virtual", "events"]
       },
       {
-        group: "Policies",
+        group: "Public",
+        title: "VIP Registration",
+        path: "/vip-registration/",
+        summary: "Invite-code registration page for guest previews and direct invite links.",
+        status: "Public",
+        tags: ["vip", "registration", "guest"]
+      },
+      {
+        group: "Public",
         title: "Privacy Policy",
         path: "/privacy/",
         summary: "Public privacy policy and data-use disclosure for site visitors and registrants.",
@@ -738,12 +696,60 @@
         tags: ["privacy", "policy"]
       },
       {
-        group: "Policies",
+        group: "Public",
         title: "SMS Terms",
         path: "/sms-terms/",
         summary: "Public SMS messaging terms for phone verification and event communication consent.",
         status: "Public",
         tags: ["sms", "terms"]
+      },
+      {
+        group: "Team",
+        title: "Setup Checklist",
+        path: "/setup/",
+        summary: "Master operating checklist, ownership tracker, virtual-event scaffold, and delivery status.",
+        status: "Team",
+        tags: ["checklist", "owners", "operations"]
+      },
+      {
+        group: "Team",
+        title: "Event Playbook",
+        path: "/events/",
+        summary: "Per-event playbook builder for agenda, speaker, sponsor, venue, production, and post-event work.",
+        status: "Team",
+        tags: ["event", "playbook", "run of show"]
+      },
+      {
+        group: "Team",
+        title: "CRM",
+        path: "/crm/",
+        summary: "VIP registrants, invite links, contact details, statuses, notes, and CSV export.",
+        status: "Team",
+        tags: ["crm", "vip", "registrants"]
+      },
+      {
+        group: "Team",
+        title: "Storage Portal",
+        path: "/storage/",
+        summary: "Cloudflare R2 portal for company records, event assets, receipts, media, and archive files.",
+        status: "Team",
+        tags: ["storage", "r2", "files"]
+      },
+      {
+        group: "Admin",
+        title: "Access Console",
+        path: "/access/",
+        summary: "Authentication modes, app users, allowed emails, and route classifications.",
+        status: "Admin",
+        tags: ["access", "authentication", "allowlist"]
+      },
+      {
+        group: "Admin",
+        title: "Budget and P&L",
+        path: "/budget/",
+        summary: "Receipt costs, tax categories, reimbursement status, event filters, and budget CSV export.",
+        status: "Admin",
+        tags: ["budget", "receipts", "reimbursement"]
       }
     ];
 
@@ -788,17 +794,21 @@
     }
 
     function tagClass(status) {
-      if (status === "Access Protected") return "ok";
-      if (status === "Controlled Share") return "warning";
+      if (status === "Public") return "ok";
+      if (status === "Team") return "warning";
       return "";
     }
 
     function allRoutes() {
-      return [...routes, ...discoveredRoutes];
+      return routes;
     }
 
     function groupNames() {
-      return [...new Set(allRoutes().map((route) => route.group))];
+      const groups = new Set(allRoutes().map((route) => route.group));
+      return [
+        ...accessOrder.filter((group) => groups.has(group)),
+        ...[...groups].filter((group) => !accessOrder.includes(group))
+      ];
     }
 
     function normalizePath(path) {
@@ -858,7 +868,7 @@
           <div class="group-header">
             <div>
               <h2 id="${entry.group.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-title">${escapeHtml(entry.group)}</h2>
-              <p>${entry.group === "Guest Share" ? "Invite and preview routes that are controlled by context instead of public navigation." : "Company-only routes for the operating team."}</p>
+              <p>${escapeHtml(accessSpaces[entry.group] || "New pages found by scanning available site routes.")}</p>
             </div>
             <span class="count">${entry.routes.length}</span>
           </div>
@@ -950,7 +960,7 @@
 
       const found = (await Promise.all(candidates.map(pageExists))).filter(Boolean);
       discoveredRoutes = found.map((page) => ({
-        group: "Found Pages",
+        group: "Public",
         title: routeTitle(page.path, page.title),
         path: page.path,
         summary: "Discovered by checking available site routes that are not already linked here.",
@@ -959,13 +969,10 @@
       }));
 
       renderFilters();
-      if (discoveredRoutes.length) {
-        groupFilter.value = "Found Pages";
-      }
       renderRoutes();
       renderFoundList();
       refreshNote.textContent = discoveredRoutes.length
-        ? `Found ${discoveredRoutes.length} unlinked page${discoveredRoutes.length === 1 ? "" : "s"}. Listed here and added to the Found Pages space below.`
+        ? `Found ${discoveredRoutes.length} unlinked page${discoveredRoutes.length === 1 ? "" : "s"}. Listed here for review.`
         : "No unlinked pages found.";
       refreshButton.disabled = false;
     }

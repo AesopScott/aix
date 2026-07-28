@@ -16,7 +16,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 
 ## Company Hub
 
-The company hub lives at `/admin/` and lists company-only routes that should not appear in the public site navigation.
+The company hub lives at `/admin/` and organizes site routes by access level: Public, Team, and Admin.
 
 The access console lives at `/access/` and stores the global enforcement switch, route access modes, and email allowlist in `MOJO_SUMMITS_SETUP_STATE` under `access-control:config:v1`. Access control is disabled by default, so all pages and APIs remain freely accessible while accounts and page policies are being defined. The page shell is public so users can sign in; saving configuration and managing users require an owner/admin Mojo Auth session.
 

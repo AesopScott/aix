@@ -91,6 +91,7 @@ export const DEFAULT_ACCESS_RULES = [
     label: "Budget and P&L",
     summary: "Receipts, reimbursement state, and expense reporting.",
     mode: "allowlist",
+    defaultGroupIds: ["admin"],
     matches: [{ exact: "/budget" }, { prefix: "/budget/" }],
     domains: ["mojoaisummits.com/budget", "mojoaisummits.com/budget/*"]
   },
@@ -251,6 +252,7 @@ export const DEFAULT_ACCESS_RULES = [
     label: "Budget API",
     summary: "Budget ledger, receipt review, and exports.",
     mode: "allowlist",
+    defaultGroupIds: ["admin"],
     matches: [{ exact: "/api/budget" }, { prefix: "/api/budget/" }],
     domains: ["mojoaisummits.com/api/budget", "mojoaisummits.com/api/budget/*"]
   },
@@ -343,6 +345,7 @@ function uniqueValues(values) {
 
 function defaultGroupsForRoute(rule) {
   if (rule.mode === "public") return ["public"];
+  if (Array.isArray(rule.defaultGroupIds) && rule.defaultGroupIds.length) return rule.defaultGroupIds;
   if (["admin", "api-access-config", "api-access-users", "api-access-invites"].includes(rule.id)) {
     return ["admin"];
   }
