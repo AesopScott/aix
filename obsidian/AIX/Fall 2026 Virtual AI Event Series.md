@@ -24,7 +24,7 @@ MOJO AI Summits is scaffolding five fall 2026 virtual AI events as a lead-in to 
 
 - Added public route: `/virtual/`
 - The Fall 2026 virtual series should live on its own `/virtual/` page, not as a full home-page section.
-- The home page `2027 engagement opportunities` section should show five total opportunities: one `Virtual 2027` card linking to `/virtual/`, followed by the four state/city opportunities.
+- The home page `2027 engagement opportunities` section should show five separate virtual opportunity cards above the state/city cards. Each virtual card links to `/virtual/`. Do not collapse them into one virtual card in the state row.
 - Added internal `/setup/` checklist scaffold for virtual-event strategy, platform setup, speaker readiness, audience promotion, live delivery, and follow-up
 - Added durable process note: `docs/processes/fall-2026-virtual-ai-event-series.md`
 

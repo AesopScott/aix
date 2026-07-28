@@ -828,7 +828,7 @@
   .path-scene.in .path-line{ transform: scaleX(1); }
   .path-track{
     display:grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 40px;
     position:relative;
     z-index:1;
@@ -919,6 +919,57 @@
     stroke:#04262c;
     stroke-width:.8;
   }
+  .virtual-opportunities{
+    margin: 28px 0 36px;
+    padding-bottom: 34px;
+    border-bottom: 1px solid var(--border);
+  }
+  .virtual-opportunities h3{
+    margin:0 0 22px;
+    font-family:'Fraunces', serif;
+    font-size:clamp(26px, 3vw, 36px);
+    font-weight:500;
+    color:var(--white);
+    text-align:center;
+  }
+  .virtual-opportunity-track{
+    display:grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap:0;
+    text-align:center;
+  }
+  .virtual-opportunity{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 22px 14px 0;
+    color:inherit;
+    border-left:1px solid var(--border);
+  }
+  .virtual-opportunity:first-child{ border-left:0; }
+  .virtual-opportunity .virtual-mark{ margin-bottom:20px; }
+  .virtual-opportunity h4{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:72px;
+    margin:0 0 12px;
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:21px;
+    line-height:1.15;
+    color:var(--white);
+    transition:color .3s;
+  }
+  .virtual-opportunity:hover h4{ color:var(--cyan); }
+  .virtual-opportunity p{
+    min-height:68px;
+    margin:0;
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.55;
+  }
+  .virtual-opportunity .path-tag{ margin-top:auto; }
   .path-step h3{
     font-family:'Fraunces', serif;
     font-size: 32px;
@@ -1508,6 +1559,15 @@
     .virtual-copy{ position:relative; top:auto; }
     .virtual-event{ grid-template-columns: 76px minmax(0, 1fr); }
     .virtual-badge{ grid-column: 2; justify-self:start; }
+    .virtual-opportunity-track{ grid-template-columns: 1fr; }
+    .virtual-opportunity{
+      border-left:0;
+      border-top:1px solid var(--border);
+      padding:28px 12px 0;
+    }
+    .virtual-opportunity:first-child{ border-top:0; }
+    .virtual-opportunity h4{ min-height:0; }
+    .virtual-opportunity p{ min-height:0; }
     .nav-links{ display:none; }
     .format-visual{ grid-template-columns: 1fr; }
     .format-half + .format-half{ border-left:0; border-top:1px solid var(--border); }
@@ -1754,11 +1814,11 @@
       <div class="section-head reveal">
         <span class="eyebrow"><span>2027 engagement opportunities</span></span>
       </div>
-      <div class="path-scene reveal">
-        <div class="path-line"></div>
-        <div class="path-track">
-          <a class="path-step reveal" href="/virtual/" aria-label="Explore the 2027 virtual engagement opportunity">
-            <svg class="virtual-mark" viewBox="0 0 160 110" role="img" aria-label="Virtual engagement opportunity">
+      <div class="virtual-opportunities reveal" aria-label="2027 virtual engagement opportunities">
+        <h3>Virtual engagement opportunities</h3>
+        <div class="virtual-opportunity-track">
+          <a class="virtual-opportunity" href="/virtual/" aria-label="Explore the AI Executive Readiness virtual engagement opportunity">
+            <svg class="virtual-mark" viewBox="0 0 160 110" role="img" aria-label="Virtual event screen">
               <rect class="virtual-screen" x="26" y="18" width="108" height="66" rx="4"></rect>
               <path class="virtual-gridline" d="M42 36h76M42 52h76M42 68h76M64 24v54M96 24v54"></path>
               <ellipse class="virtual-orbit" cx="80" cy="51" rx="48" ry="24"></ellipse>
@@ -1766,9 +1826,67 @@
               <circle class="virtual-dot" cx="116" cy="34" r="4"></circle>
               <path class="virtual-screen" d="M68 84h24l6 12H62z"></path>
             </svg>
-            <p>Online executive rooms for AI conversations beyond the city summits.</p>
-            <span class="path-tag">Virtual 2027</span>
+            <h4>AI Executive Readiness</h4>
+            <p>Set the leadership baseline for value, risk, ownership, and adoption.</p>
+            <span class="path-tag">Virtual 01</span>
           </a>
+          <a class="virtual-opportunity" href="/virtual/" aria-label="Explore the AI Use Cases That Survive Finance virtual engagement opportunity">
+            <svg class="virtual-mark" viewBox="0 0 160 110" role="img" aria-label="Virtual event screen">
+              <rect class="virtual-screen" x="26" y="18" width="108" height="66" rx="4"></rect>
+              <path class="virtual-gridline" d="M42 36h76M42 52h76M42 68h76M64 24v54M96 24v54"></path>
+              <ellipse class="virtual-orbit" cx="80" cy="51" rx="48" ry="24"></ellipse>
+              <path class="virtual-orbit" d="M80 22c13 13 13 45 0 58M80 22c-13 13-13 45 0 58"></path>
+              <circle class="virtual-dot" cx="116" cy="34" r="4"></circle>
+              <path class="virtual-screen" d="M68 84h24l6 12H62z"></path>
+            </svg>
+            <h4>AI Use Cases That Survive Finance</h4>
+            <p>Turn experiments into credible business cases, controls, and decisions.</p>
+            <span class="path-tag">Virtual 02</span>
+          </a>
+          <a class="virtual-opportunity" href="/virtual/" aria-label="Explore the AI Integration and Workflow virtual engagement opportunity">
+            <svg class="virtual-mark" viewBox="0 0 160 110" role="img" aria-label="Virtual event screen">
+              <rect class="virtual-screen" x="26" y="18" width="108" height="66" rx="4"></rect>
+              <path class="virtual-gridline" d="M42 36h76M42 52h76M42 68h76M64 24v54M96 24v54"></path>
+              <ellipse class="virtual-orbit" cx="80" cy="51" rx="48" ry="24"></ellipse>
+              <path class="virtual-orbit" d="M80 22c13 13 13 45 0 58M80 22c-13 13-13 45 0 58"></path>
+              <circle class="virtual-dot" cx="116" cy="34" r="4"></circle>
+              <path class="virtual-screen" d="M68 84h24l6 12H62z"></path>
+            </svg>
+            <h4>AI Integration and Workflow</h4>
+            <p>Connect data, systems, teams, and vendors without creating chaos.</p>
+            <span class="path-tag">Virtual 03</span>
+          </a>
+          <a class="virtual-opportunity" href="/virtual/" aria-label="Explore the AI Security, Governance, and Trust virtual engagement opportunity">
+            <svg class="virtual-mark" viewBox="0 0 160 110" role="img" aria-label="Virtual event screen">
+              <rect class="virtual-screen" x="26" y="18" width="108" height="66" rx="4"></rect>
+              <path class="virtual-gridline" d="M42 36h76M42 52h76M42 68h76M64 24v54M96 24v54"></path>
+              <ellipse class="virtual-orbit" cx="80" cy="51" rx="48" ry="24"></ellipse>
+              <path class="virtual-orbit" d="M80 22c13 13 13 45 0 58M80 22c-13 13-13 45 0 58"></path>
+              <circle class="virtual-dot" cx="116" cy="34" r="4"></circle>
+              <path class="virtual-screen" d="M68 84h24l6 12H62z"></path>
+            </svg>
+            <h4>AI Security, Governance, and Trust</h4>
+            <p>Clarify the controls leaders need before AI spreads further.</p>
+            <span class="path-tag">Virtual 04</span>
+          </a>
+          <a class="virtual-opportunity" href="/virtual/" aria-label="Explore the AI Operating Model for 2027 virtual engagement opportunity">
+            <svg class="virtual-mark" viewBox="0 0 160 110" role="img" aria-label="Virtual event screen">
+              <rect class="virtual-screen" x="26" y="18" width="108" height="66" rx="4"></rect>
+              <path class="virtual-gridline" d="M42 36h76M42 52h76M42 68h76M64 24v54M96 24v54"></path>
+              <ellipse class="virtual-orbit" cx="80" cy="51" rx="48" ry="24"></ellipse>
+              <path class="virtual-orbit" d="M80 22c13 13 13 45 0 58M80 22c-13 13-13 45 0 58"></path>
+              <circle class="virtual-dot" cx="116" cy="34" r="4"></circle>
+              <path class="virtual-screen" d="M68 84h24l6 12H62z"></path>
+            </svg>
+            <h4>AI Operating Model for 2027</h4>
+            <p>Close the sequence with decisions leaders need heading into January.</p>
+            <span class="path-tag">Virtual 05</span>
+          </a>
+        </div>
+      </div>
+      <div class="path-scene reveal">
+        <div class="path-line"></div>
+        <div class="path-track">
           <a class="path-step reveal" href="/dallas/" aria-label="Explore the Dallas 2027 program architecture">
             <span class="map-link-wrap"><svg class="city-map city-map-large" viewBox="0 0 160 110" role="img" aria-label="Texas with Dallas marked"><path class="state-shape" d="M68.0,12.0 80.6,12.0 80.6,27.7 81.1,27.6 82.7,29.2 83.5,28.9 85.7,29.0 86.2,30.5 87.6,30.5 89.1,31.2 90.5,31.1 91.1,31.7 91.9,31.0 93.3,31.3 93.8,32.2 94.8,32.4 95.4,33.5 96.6,32.4 98.2,33.0 98.8,33.7 99.6,33.4 100.2,34.4 101.9,32.6 102.4,33.5 103.9,33.5 105.4,34.1 105.9,34.8 107.3,33.6 108.8,33.2 109.4,33.6 111.1,32.8 111.4,33.3 113.2,33.3 113.7,32.6 115.5,33.4 116.2,34.3 118.8,35.2 119.5,36.0 120.9,35.6 121.9,35.9 121.9,40.2 121.9,48.5 123.4,50.3 123.4,52.1 125.3,55.4 125.5,57.1 124.7,59.2 124.1,60.0 124.3,61.1 123.8,62.0 124.3,63.5 122.7,66.4 123.3,67.2 122.2,67.2 118.5,68.4 117.3,67.7 117.0,66.4 116.1,67.3 115.5,67.1 115.1,68.3 115.9,68.8 116.0,70.3 114.7,71.9 112.6,73.9 108.4,76.0 108.0,75.6 106.7,76.2 106.7,75.7 105.0,76.0 104.2,75.0 103.7,75.2 105.5,77.3 104.2,78.0 102.9,77.6 102.8,79.1 101.2,80.6 99.6,83.4 98.6,86.3 97.8,86.1 97.6,87.1 98.4,86.9 98.0,89.0 97.5,89.1 97.5,90.3 98.1,90.9 98.3,93.4 99.1,94.2 99.3,95.8 99.9,97.2 97.7,98.0 96.9,96.9 95.2,96.5 93.1,96.6 91.2,95.3 89.8,95.2 88.7,94.1 87.3,93.7 86.3,92.7 85.7,90.3 84.4,88.8 84.6,87.6 84.0,86.2 84.2,85.1 83.3,83.8 82.6,83.7 81.4,82.5 81.0,81.0 80.0,79.7 78.5,78.6 77.8,76.2 77.1,75.5 76.2,73.5 75.9,72.0 75.0,70.8 73.6,69.8 73.2,69.1 71.9,68.4 70.8,66.7 67.8,66.3 65.9,66.4 64.4,65.7 64.0,66.6 62.4,66.8 61.1,68.5 60.4,71.2 59.9,71.3 59.0,72.9 57.9,72.9 56.1,71.7 51.9,69.7 51.0,68.6 49.3,67.6 48.2,65.3 48.1,63.2 46.9,61.5 46.7,60.1 45.9,59.1 43.2,57.8 41.8,55.9 40.6,55.2 39.3,53.6 37.6,52.8 36.4,50.7 35.3,50.2 34.5,49.3 34.7,48.5 59.3,48.5 59.3,40.4 59.5,32.1 59.5,12.0 59.8,12.0 68.0,12.0Z"></path><polygon class="city-star" points="102.8,36.2 104.4,40.0 108.5,40.3 105.4,43.0 106.3,47.0 102.8,44.9 99.3,47.0 100.2,43.0 97.1,40.3 101.2,40.0"></polygon></svg><span class="map-live">Live</span></span>
             <p>The first curated executive room for AI leaders.</p>
