@@ -45,7 +45,7 @@ Protected internal routes:
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/partner/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
 
 Mojo Auth endpoints:
 
@@ -120,7 +120,7 @@ The public partner page lives at `/partner/` and positions Mojo AI Summits as an
 
 ## Executive Intelligence Membership
 
-The public membership page lives at `/membership/` and replaces the former home page `Register` navigation action. It presents the Executive Intelligence Network as an invitation-led, year-round executive community with no application form or request submission flow.
+The public membership page lives at `/membership/` and replaces the former home page `Register` navigation action. It presents the Executive Intelligence Network as an invitation-led, year-round executive community with no application form or request submission flow. The public fellowship pathway page lives at `/fellowships/` and explains the five recognition levels from Executive Member to Founding Fellow, contribution badges, private Executive Impact signals, and an annual impact profile concept.
 
 ## Event Playbooks
 

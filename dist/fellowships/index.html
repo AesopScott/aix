@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Executive Fellowship Levels | MOJO AI Summits</title>
+<meta name="description" content="Explore the MOJO AI Summits Executive Intelligence Network fellowship pathway, from Executive Member through Founding Fellow.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mojoaisummits.com/fellowships/">
+<meta property="og:title" content="Executive Fellowship Levels | MOJO AI Summits">
+<meta property="og:description" content="The contribution pathway for MOJO AI Summits members, from Executive Member to Founding Fellow.">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260727b">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MOJO AI Summits executive fellowship pathway">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Executive Fellowship Levels | MOJO AI Summits">
+<meta name="twitter:description" content="The contribution pathway for MOJO AI Summits members, from Executive Member to Founding Fellow.">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260727b">
+<link rel="icon" type="image/png" href="/assets/logo-badge.png">
+<link rel="apple-touch-icon" href="/assets/logo-badge.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
+
+  :root{
+    --navy:#0A0F1E;
+    --slate:#1B2333;
+    --blue:#1666FF;
+    --cyan:#00E6FF;
+    --white:#FFFFFF;
+    --ink:#c8d2e8;
+    --muted:#8791a8;
+    --line:rgba(0,230,255,.24);
+    --line-soft:rgba(150,170,210,.13);
+    --panel:rgba(27,35,51,.52);
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--navy);
+    color:var(--white);
+    font-family:'Inter', sans-serif;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 12% 14%, rgba(22,102,255,.26), transparent 34%),
+      radial-gradient(circle at 84% 10%, rgba(0,230,255,.16), transparent 30%),
+      linear-gradient(115deg, rgba(22,102,255,.10), transparent 46%),
+      repeating-linear-gradient(90deg, rgba(0,230,255,.035) 0 1px, transparent 1px 118px);
+  }
+  a{ color:inherit; text-decoration:none; }
+  p,h1,h2,h3{ margin:0; }
+  ::selection{ background:var(--blue); color:var(--white); }
+
+  .wrap{
+    width:min(1180px, calc(100% - 48px));
+    margin:0 auto;
+  }
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.34em;
+    line-height:1.4;
+    text-transform:uppercase;
+    color:var(--cyan);
+  }
+  .eyebrow::before{
+    content:"";
+    width:34px;
+    height:1px;
+    background:var(--cyan);
+    box-shadow:0 0 14px rgba(0,230,255,.7);
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:48px;
+    padding:14px 22px;
+    border:1px solid var(--cyan);
+    border-radius:2px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease);
+  }
+  .btn.primary{ color:#051019; background:var(--cyan); }
+  .btn.primary:hover{ background:var(--white); border-color:var(--white); }
+  .btn.ghost{ color:var(--cyan); background:transparent; }
+  .btn.ghost:hover{ color:var(--white); border-color:var(--white); }
+
+  header{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:20;
+    background:linear-gradient(to bottom, rgba(10,15,30,.92), rgba(10,15,30,.38), transparent);
+    backdrop-filter:blur(8px);
+  }
+  nav{
+    max-width:1180px;
+    margin:0 auto;
+    padding:20px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+  }
+  .brand-lockup{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand-mark{
+    height:39px;
+    width:auto;
+    display:block;
+    filter:drop-shadow(0 0 18px rgba(0,230,255,.18));
+  }
+  .brand-divider{
+    width:1px;
+    height:35px;
+    background:linear-gradient(to bottom, transparent, rgba(0,230,255,.9), transparent);
+    box-shadow:0 0 14px rgba(0,230,255,.24);
+  }
+  .brand-name{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    line-height:1;
+    text-transform:uppercase;
+  }
+  .brand-primary{
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:.08em;
+    white-space:nowrap;
+    background:linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 0 18px rgba(0,230,255,.16);
+  }
+  .brand-secondary{
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:.38em;
+    color:rgba(222,235,255,.82);
+    padding-left:.38em;
+    white-space:nowrap;
+  }
+  .nav-links{
+    display:flex;
+    align-items:center;
+    gap:26px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .nav-links a:hover{ color:var(--white); }
+
+  main{ position:relative; z-index:1; }
+  .hero{
+    min-height:92vh;
+    display:grid;
+    align-items:end;
+    padding:138px 0 64px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(90deg, rgba(10,15,30,.96) 0%, rgba(10,15,30,.84) 48%, rgba(10,15,30,.42) 100%),
+      url('../assets/boardroom-transparent.png') right 8% bottom 0 / min(780px, 58vw) auto no-repeat;
+    z-index:-2;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    height:34%;
+    background:linear-gradient(to bottom, transparent, var(--navy));
+    z-index:-1;
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) minmax(300px, .56fr);
+    gap:58px;
+    align-items:end;
+  }
+  h1{
+    margin-top:22px;
+    max-width:940px;
+    font-family:'Fraunces', serif;
+    font-size:clamp(45px, 7vw, 92px);
+    line-height:.96;
+    font-weight:600;
+    letter-spacing:0;
+  }
+  .lead{
+    max-width:690px;
+    margin-top:28px;
+    color:var(--ink);
+    font-size:20px;
+    line-height:1.65;
+  }
+  .hero-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-top:36px;
+  }
+  .signal-panel{
+    padding:28px;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line-soft);
+    background:linear-gradient(180deg, rgba(27,35,51,.38), rgba(10,15,30,.14));
+  }
+  .signal-panel span{
+    display:block;
+    color:var(--cyan);
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+  }
+  .signal-panel strong{
+    display:block;
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:34px;
+    font-weight:500;
+    line-height:1.12;
+  }
+  .signal-panel p{
+    margin-top:16px;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.7;
+  }
+
+  section{ padding:90px 0; }
+  .section-head{
+    max-width:780px;
+    margin-bottom:44px;
+  }
+  .section-head.center{
+    margin-left:auto;
+    margin-right:auto;
+    text-align:center;
+  }
+  .section-head.center .eyebrow{ justify-content:center; }
+  .section-head.center .eyebrow::before{ display:none; }
+  h2{
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:clamp(32px, 4vw, 54px);
+    line-height:1.08;
+    font-weight:600;
+    letter-spacing:0;
+  }
+  .section-head p{
+    margin-top:18px;
+    color:var(--ink);
+    font-size:18px;
+    line-height:1.68;
+  }
+  .tier-map{
+    display:grid;
+    gap:18px;
+  }
+  .tier{
+    display:grid;
+    grid-template-columns:180px minmax(0, 1fr);
+    gap:26px;
+    padding:30px;
+    border:1px solid var(--line-soft);
+    border-left:2px solid var(--cyan);
+    border-radius:6px;
+    background:linear-gradient(180deg, rgba(27,35,51,.48), rgba(10,15,30,.25));
+  }
+  .tier.featured{
+    border-color:rgba(0,230,255,.32);
+    box-shadow:0 24px 80px rgba(0,0,0,.28), inset 0 0 44px rgba(0,230,255,.035);
+  }
+  .tier.founding{
+    border-color:rgba(255,255,255,.28);
+    border-left-color:var(--white);
+    background:linear-gradient(180deg, rgba(22,102,255,.18), rgba(27,35,51,.36));
+  }
+  .tier-level{
+    position:relative;
+    padding-top:4px;
+  }
+  .tier-level span{
+    display:block;
+    color:var(--cyan);
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+  }
+  .tier-level strong{
+    display:block;
+    margin-top:14px;
+    font-family:'Fraunces', serif;
+    font-size:30px;
+    font-weight:500;
+    line-height:1.08;
+  }
+  .tier-body h3{
+    font-family:'Fraunces', serif;
+    font-size:clamp(26px, 3vw, 40px);
+    font-weight:500;
+    line-height:1.12;
+  }
+  .tier-body .summary{
+    margin-top:12px;
+    color:var(--ink);
+    font-size:17px;
+    line-height:1.66;
+  }
+  .tier-columns{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:18px;
+    margin-top:24px;
+  }
+  .tier-detail{
+    padding-top:18px;
+    border-top:1px solid var(--line-soft);
+  }
+  .tier-detail h4{
+    margin:0 0 12px;
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  .tier-detail ul{
+    margin:0;
+    padding-left:18px;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.72;
+  }
+  .badge-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:14px;
+  }
+  .badge-card{
+    min-height:168px;
+    padding:22px;
+    border:1px solid var(--line-soft);
+    border-radius:6px;
+    background:linear-gradient(180deg, rgba(27,35,51,.44), rgba(10,15,30,.24));
+  }
+  .badge-card span{
+    display:inline-flex;
+    min-height:28px;
+    align-items:center;
+    padding:6px 9px;
+    border:1px solid rgba(0,230,255,.28);
+    border-radius:999px;
+    color:var(--cyan);
+    font-family:'Orbitron', sans-serif;
+    font-size:9px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  .badge-card h3{
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:26px;
+    font-weight:500;
+    line-height:1.12;
+  }
+  .badge-card p{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.62;
+  }
+  .impact-grid{
+    display:grid;
+    grid-template-columns:.86fr 1.14fr;
+    gap:42px;
+    align-items:start;
+  }
+  .impact-note{
+    position:sticky;
+    top:112px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .impact-note strong{
+    display:block;
+    font-family:'Fraunces', serif;
+    font-size:clamp(30px, 3.4vw, 48px);
+    font-weight:500;
+    line-height:1.1;
+  }
+  .impact-note p{
+    margin-top:18px;
+    color:var(--ink);
+    font-size:17px;
+    line-height:1.7;
+  }
+  .signal-list{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+  }
+  .signal-list span{
+    display:flex;
+    align-items:center;
+    min-height:56px;
+    padding:13px 14px;
+    border:1px solid var(--line-soft);
+    border-radius:4px;
+    background:rgba(5,8,16,.36);
+    color:var(--ink);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.1em;
+    line-height:1.42;
+    text-transform:uppercase;
+  }
+  .profile-card{
+    max-width:860px;
+    margin:0 auto;
+    padding:34px;
+    border:1px solid rgba(0,230,255,.26);
+    border-radius:6px;
+    background:linear-gradient(180deg, rgba(27,35,51,.52), rgba(10,15,30,.32));
+    box-shadow:0 24px 80px rgba(0,0,0,.28), inset 0 0 48px rgba(0,230,255,.035);
+  }
+  .profile-card h3{
+    font-family:'Fraunces', serif;
+    font-size:clamp(32px, 4vw, 54px);
+    font-weight:500;
+    line-height:1.08;
+  }
+  .profile-card p{
+    margin-top:14px;
+    color:var(--ink);
+    font-size:17px;
+    line-height:1.65;
+  }
+  .profile-stats{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:0 22px;
+    margin-top:28px;
+    border-top:1px solid var(--line-soft);
+  }
+  .profile-stat{
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    padding:16px 0;
+    border-bottom:1px solid var(--line-soft);
+    color:var(--muted);
+    font-size:15px;
+  }
+  .profile-stat strong{
+    flex:none;
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:18px;
+  }
+  .band{
+    background:linear-gradient(180deg, rgba(27,35,51,.38), rgba(10,15,30,.34));
+    border-top:1px solid var(--line-soft);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .founder-note{
+    max-width:940px;
+    margin:0 auto;
+    text-align:center;
+  }
+  .founder-note blockquote{
+    margin:0;
+    font-family:'Fraunces', serif;
+    font-size:clamp(34px, 4.6vw, 62px);
+    line-height:1.08;
+    font-weight:500;
+  }
+  .founder-note p{
+    margin-top:22px;
+    color:var(--ink);
+    font-size:18px;
+    line-height:1.68;
+  }
+  footer{
+    padding:46px 0 52px;
+    border-top:1px solid var(--line-soft);
+    text-align:center;
+    color:var(--muted);
+  }
+  footer img{ width:76px; height:auto; opacity:.9; }
+  footer p{
+    margin-top:14px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  footer span{ color:var(--cyan); }
+
+  @media (max-width:960px){
+    .hero{ min-height:auto; padding-top:124px; }
+    .hero::before{
+      background:
+        linear-gradient(180deg, rgba(10,15,30,.96), rgba(10,15,30,.82), rgba(10,15,30,.62)),
+        url('../assets/boardroom-transparent.png') center bottom / 94vw auto no-repeat;
+    }
+    .hero-grid,.tier,.tier-columns,.badge-grid,.impact-grid,.signal-list,.profile-stats{ grid-template-columns:1fr; }
+    .signal-panel{ margin-top:30px; }
+    .impact-note{ position:relative; top:auto; }
+  }
+  @media (max-width:720px){
+    .wrap{ width:min(100% - 36px, 1180px); }
+    nav{ padding:18px; }
+    .nav-links{ display:none; }
+    .brand-mark{ height:34px; }
+    .brand-primary{ font-size:20px; letter-spacing:.03em; }
+    .brand-secondary{ font-size:9.5px; letter-spacing:.32em; }
+    section{ padding:66px 0; }
+    .tier{ padding:24px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <nav aria-label="Fellowship page navigation">
+    <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+      <img class="brand-mark" src="../assets/logo-mark.png" alt="">
+      <span class="brand-divider" aria-hidden="true"></span>
+      <span class="brand-name" aria-hidden="true">
+        <span class="brand-primary">MOJO AI</span>
+        <span class="brand-secondary">Summits</span>
+      </span>
+    </a>
+    <div class="nav-links">
+      <a href="/membership/">Membership</a>
+      <a href="#levels">Levels</a>
+      <a href="#badges">Badges</a>
+      <a href="#impact">Impact</a>
+      <a href="#founding">Founding Fellow</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Fellowship pathway</span>
+        <h1>The contribution ladder for executive intelligence.</h1>
+        <p class="lead">Every member begins with access to the network. Fellowship levels recognize the executives who participate deeply, contribute original insight, help create the institution's intellectual property, and eventually become part of its legacy.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#levels">Explore Levels</a>
+          <a class="btn ghost" href="/membership/">Back to Membership</a>
+        </div>
+      </div>
+      <aside class="signal-panel" aria-label="Fellowship signal">
+        <span>Institutional signal</span>
+        <strong>Founding Fellow should still mean something twenty years from now.</strong>
+        <p>The pathway is designed so recognition is earned through contribution, trust, intellectual leadership, and long-term executive influence.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="levels">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Five levels</span>
+        <h2>From accepted member to permanent institutional title.</h2>
+        <p>The levels create aspiration without turning membership into a transaction. They mark contribution, leadership, and trust inside the Executive Intelligence Network.</p>
+      </div>
+      <div class="tier-map">
+        <article class="tier">
+          <div class="tier-level">
+            <span>Level 01</span>
+            <strong>Executive Member</strong>
+          </div>
+          <div class="tier-body">
+            <h3>Everyone starts here.</h3>
+            <p class="summary">Executive Members have been accepted into the network and are invited into the core rhythm of year-round executive intelligence.</p>
+            <div class="tier-columns">
+              <div class="tier-detail">
+                <h4>Who they are</h4>
+                <ul>
+                  <li>Accepted into the network</li>
+                  <li>Invited to Executive Intelligence Sessions</li>
+                  <li>Receives Quarterly Briefs</li>
+                  <li>Receives the Annual Yearbook</li>
+                  <li>Executive Directory access</li>
+                  <li>Summit invitations</li>
+                </ul>
+              </div>
+              <div class="tier-detail">
+                <h4>Expected contribution</h4>
+                <ul>
+                  <li>Participate</li>
+                  <li>Share perspectives</li>
+                  <li>Complete occasional surveys</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="tier">
+          <div class="tier-level">
+            <span>Level 02</span>
+            <strong>Contributing Member</strong>
+          </div>
+          <div class="tier-body">
+            <h3>These are active participants.</h3>
+            <p class="summary">Contributing Members are visible in the community because they show up, share meaningful experience, and help the network learn faster.</p>
+            <div class="tier-columns">
+              <div class="tier-detail">
+                <h4>They have</h4>
+                <ul>
+                  <li>Attended multiple sessions</li>
+                  <li>Shared meaningful experiences</li>
+                  <li>Participated in research</li>
+                  <li>Engaged with the community</li>
+                </ul>
+              </div>
+              <div class="tier-detail">
+                <h4>Additional benefits</h4>
+                <ul>
+                  <li>Early invitations</li>
+                  <li>Topic voting</li>
+                  <li>Priority roundtables</li>
+                  <li>Invitations to private discussions</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="tier featured">
+          <div class="tier-level">
+            <span>Level 03</span>
+            <strong>Executive Contributor</strong>
+          </div>
+          <div class="tier-body">
+            <h3>They help create the network's intellectual property.</h3>
+            <p class="summary">Executive Contributors move from participation into authorship, facilitation, commentary, and mentorship.</p>
+            <div class="tier-columns">
+              <div class="tier-detail">
+                <h4>They may</h4>
+                <ul>
+                  <li>Lead a discussion</li>
+                  <li>Participate on panels</li>
+                  <li>Write executive commentary</li>
+                  <li>Review quarterly briefs</li>
+                  <li>Mentor newer members</li>
+                  <li>Host a session</li>
+                </ul>
+              </div>
+              <div class="tier-detail">
+                <h4>Benefits</h4>
+                <ul>
+                  <li>Featured profile</li>
+                  <li>Published contributor</li>
+                  <li>Invitation to Leadership Council meetings</li>
+                  <li>Research advisory opportunities</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="tier featured">
+          <div class="tier-level">
+            <span>Level 04</span>
+            <strong>Executive Fellow</strong>
+          </div>
+          <div class="tier-body">
+            <h3>This becomes prestigious.</h3>
+            <p class="summary">Executive Fellows are leaders people know. They have given the network time, credibility, mentorship, and visible executive influence.</p>
+            <div class="tier-columns">
+              <div class="tier-detail">
+                <h4>Requirements might include</h4>
+                <ul>
+                  <li>Multiple years participating</li>
+                  <li>Leading sessions</li>
+                  <li>Published contributions</li>
+                  <li>Mentoring</li>
+                  <li>Significant executive influence</li>
+                </ul>
+              </div>
+              <div class="tier-detail">
+                <h4>Benefits</h4>
+                <ul>
+                  <li>Annual Fellow Dinner</li>
+                  <li>Private strategy sessions</li>
+                  <li>Invite-only leadership retreats</li>
+                  <li>Opportunity to chair research initiatives</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="tier founding" id="founding">
+          <div class="tier-level">
+            <span>Level 05</span>
+            <strong>Founding Fellow</strong>
+          </div>
+          <div class="tier-body">
+            <h3>Reserved for the first generation.</h3>
+            <p class="summary">Founding Fellow is for the executives who helped build the institution. It is permanent, scarce, and meant to remain valuable decades from now.</p>
+            <div class="tier-columns">
+              <div class="tier-detail">
+                <h4>Who they are</h4>
+                <ul>
+                  <li>Executives who helped establish the network</li>
+                  <li>Early builders of the institution's reputation</li>
+                  <li>Leaders who shaped the first body of intelligence</li>
+                  <li>Permanent title holders</li>
+                </ul>
+              </div>
+              <div class="tier-detail">
+                <h4>Why it matters</h4>
+                <ul>
+                  <li>Signals original contribution</li>
+                  <li>Creates historical prestige</li>
+                  <li>Anchors the network's founding generation</li>
+                  <li>Gives future members something real to aspire to</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="badges">
+    <div class="wrap">
+      <div class="section-head center">
+        <span class="eyebrow">Contribution badges</span>
+        <h2>Recognition should show how someone contributes.</h2>
+        <p>Levels describe overall standing. Badges describe the role an executive actually plays in the network, creating a more personal contribution profile.</p>
+      </div>
+      <div class="badge-grid">
+        <article class="badge-card">
+          <span>Research</span>
+          <h3>Research Contributor</h3>
+          <p>Participated in executive research, interviews, surveys, or benchmark conversations.</p>
+        </article>
+        <article class="badge-card">
+          <span>Sessions</span>
+          <h3>Discussion Leader</h3>
+          <p>Moderated, framed, or led Executive Intelligence Sessions and private roundtables.</p>
+        </article>
+        <article class="badge-card">
+          <span>Reports</span>
+          <h3>Publication Contributor</h3>
+          <p>Quoted in reports or contributed field perspective to briefs, yearbooks, and executive commentary.</p>
+        </article>
+        <article class="badge-card">
+          <span>Growth</span>
+          <h3>Mentor</h3>
+          <p>Helped other executives think through AI leadership, organizational change, or implementation decisions.</p>
+        </article>
+        <article class="badge-card">
+          <span>Council</span>
+          <h3>Council Member</h3>
+          <p>Serves on a standing council and helps shape ongoing research, sessions, and community direction.</p>
+        </article>
+        <article class="badge-card">
+          <span>Summit</span>
+          <h3>Summit Faculty</h3>
+          <p>Leads flagship summit sessions, executive roundtables, or high-value member learning experiences.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="impact">
+    <div class="wrap impact-grid">
+      <div class="impact-note">
+        <span class="eyebrow">Executive Impact</span>
+        <strong>Measure contribution without turning it into public points.</strong>
+        <p>MOJO can maintain a private Executive Impact model that informs invitations, recognition, fellowship progression, and leadership opportunities. The exact weighting stays internal so public recognition feels earned, not gamed.</p>
+      </div>
+      <div class="signal-list" aria-label="Private Executive Impact signals">
+        <span>Attended Intelligence Session</span>
+        <span>Participated actively</span>
+        <span>Led discussion</span>
+        <span>Research interview</span>
+        <span>Published quote</span>
+        <span>Authored article</span>
+        <span>Mentored executive</span>
+        <span>Introduced two members</span>
+        <span>Served on council</span>
+        <span>Hosted member session</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap">
+      <div class="profile-card">
+        <span class="eyebrow">Annual profile</span>
+        <h3>2027 Executive Impact</h3>
+        <p>Instead of exposing a score, members can receive an annual contribution profile they can be proud of.</p>
+        <div class="profile-stats" aria-label="Example annual Executive Impact profile">
+          <div class="profile-stat"><span>Intelligence Sessions</span><strong>9</strong></div>
+          <div class="profile-stat"><span>Research Initiatives</span><strong>4</strong></div>
+          <div class="profile-stat"><span>Leadership Councils</span><strong>2</strong></div>
+          <div class="profile-stat"><span>Executive Introductions Facilitated</span><strong>18</strong></div>
+          <div class="profile-stat"><span>Publications Contributed To</span><strong>5</strong></div>
+          <div class="profile-stat"><span>Roundtables Led</span><strong>3</strong></div>
+          <div class="profile-stat"><span>Mentorship Engagements</span><strong>6</strong></div>
+          <div class="profile-stat"><span>Years of Membership</span><strong>4</strong></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap founder-note">
+      <blockquote>Twenty years from now, people should still say "Founding Fellow."</blockquote>
+      <p>That only works if the title is rare, permanent, and attached to executives who genuinely helped build the Executive Intelligence Network.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img src="../assets/logo-badge.png" alt="MOJO AI Summits badge">
+  <p>Powered by <span>MOJO AI Studio</span></p>
+</footer>
+
+</body>
+</html>

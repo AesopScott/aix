@@ -5,7 +5,7 @@
 - Route: `/admin/`
 - Source file: `dist/admin/index.html`
 - Purpose: company hub for Mojo AI Summits routes grouped by access level.
-- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/partner/`, `/vip-registration/`, `/privacy/`, and `/sms-terms/`.
+- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/vip-registration/`, `/privacy/`, and `/sms-terms/`.
 - Team space: `/setup/`, `/events/`, `/crm/`, and `/storage/`.
 - Admin space: `/access/` and `/budget/`.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.
@@ -27,6 +27,14 @@
 - Routing support: `/membership` redirects to `/membership/`; no-cache headers are configured for `/membership` and `/membership/*`.
 - Interaction model: informational/invitation-led page only; no application form or request submission flow.
 - Home page navigation: the former `Register` nav action now links to `/membership/`.
+
+## Executive Fellowship Pathway
+
+- Route: `/fellowships/`
+- Source file: `dist/fellowships/index.html`
+- Purpose: public fellowship pathway page that explains the five recognition levels, contribution badges, private Executive Impact signals, and annual impact profile concept.
+- Routing support: `/fellowships` redirects to `/fellowships/`; no-cache headers are configured for `/fellowships` and `/fellowships/*`.
+- Membership page linking: `/membership/` links to `/fellowships/` from the page navigation, hero actions, and invitation closing section.
 
 ## Internal Event Playbook
 
