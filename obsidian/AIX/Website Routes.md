@@ -22,7 +22,7 @@
 
 - Route: `/membership/`
 - Source file: `dist/membership/index.html`
-- Purpose: public Executive Intelligence Network membership page that positions membership as a curated, invite-only, year-round executive community and intelligence institution rather than event registration. Existing members each have two invitations per month, are expected to make thoughtful invitations, and invitation activity is part of contribution tracking.
+- Purpose: public Executive Intelligence Network membership page that positions membership as a curated, invite-only, year-round executive community and intelligence institution rather than event registration. The hero emphasizes that membership is not pay-to-play but contribute-to-play: money cannot buy entry or continued standing, and membership is earned through contribution to the group, community, and industry. Existing members each have two invitations per month, are expected to make thoughtful invitations, and invitation activity is part of contribution tracking.
 - Routing support: `/membership` redirects to `/membership/`; no-cache headers are configured for `/membership` and `/membership/*`.
 - Interaction model: informational/invitation-led page only; no application form or request submission flow.
 - Home page navigation: the former `Register` nav action now links to `/membership/`.

@@ -983,7 +983,7 @@
       <section class="workspace" aria-label="Route access configuration">
         <section class="user-admin hidden" id="userAdmin" aria-labelledby="users-title">
           <h2 id="users-title">Users</h2>
-          <p class="form-help">Create an account by email, access groups, and password. The site does not send email; give the password to the user yourself. Mojo team membership grants team routes; admin membership grants access management and every protected route.</p>
+          <p class="form-help">Create an account by email, access groups, and password. The site does not send email; give the password to the user yourself. Storage users can use Storage without receiving broader team access; admin membership grants access management and every protected route.</p>
           <form class="user-form" id="userForm" novalidate>
             <label class="field" for="userName">
               Name optional
@@ -999,6 +999,10 @@
                 <label class="user-group-choice">
                   <input class="user-group-checkbox" type="checkbox" value="mojo-team" checked>
                   <span>Mojo team</span>
+                </label>
+                <label class="user-group-choice">
+                  <input class="user-group-checkbox" type="checkbox" value="storage-users">
+                  <span>Storage users</span>
                 </label>
                 <label class="user-group-choice">
                   <input class="user-group-checkbox" type="checkbox" value="admin">

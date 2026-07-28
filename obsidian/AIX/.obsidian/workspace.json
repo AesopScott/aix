@@ -11,10 +11,14 @@
             "id": "366c80eceae1e9f8",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "Dallas Member Attendance Model.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Dallas Member Attendance Model"
             }
           }
         ]
@@ -176,14 +180,18 @@
       "bases:Create new base": false
     }
   },
-  "active": "ae6bbe26ae9282c8",
+  "active": "366c80eceae1e9f8",
   "lastOpenFiles": [
-    "Dallas VIP Attendance Model.md",
-    "Website OG Assets.md",
-    "Zoom Virtual Events.md",
-    "Website Access Control.md",
-    "Website Routes.md",
+    "session2026-07-28/configuration.md",
+    "session2026-07-28",
     "Fall 2026 Virtual AI Event Series.md",
+    "Website Access Control.md",
+    "Website OG Assets.md",
+    "Dallas Member Attendance Model.md",
+    "CRM Member Invite Links.md",
+    "Dallas VIP Attendance Model.md",
+    "Zoom Virtual Events.md",
+    "Website Routes.md",
     "CRM VIP Invite Links.md",
     "Welcome.md"
   ]

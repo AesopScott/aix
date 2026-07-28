@@ -20,6 +20,12 @@ export const DEFAULT_ACCESS_GROUPS = [
     label: "Mojo team",
     summary: "People who work with Mojo AI Summits.",
     emails: []
+  },
+  {
+    id: "storage-users",
+    label: "Storage users",
+    summary: "People who can upload, view, and download Storage files.",
+    emails: []
   }
 ];
 
@@ -81,6 +87,7 @@ export const DEFAULT_ACCESS_RULES = [
     label: "Storage",
     summary: "Private files, event assets, media, and receipts.",
     mode: "allowlist",
+    defaultGroupIds: ["storage-users"],
     matches: [{ exact: "/storage" }, { prefix: "/storage/" }],
     domains: ["mojoaisummits.com/storage", "mojoaisummits.com/storage/*"]
   },
@@ -252,6 +259,7 @@ export const DEFAULT_ACCESS_RULES = [
     label: "Storage API",
     summary: "Private file upload, listing, and download.",
     mode: "allowlist",
+    defaultGroupIds: ["storage-users"],
     matches: [{ exact: "/api/storage" }, { prefix: "/api/storage/" }],
     domains: ["mojoaisummits.com/api/storage", "mojoaisummits.com/api/storage/*"]
   },
