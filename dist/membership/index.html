@@ -180,6 +180,11 @@
     color:var(--muted);
   }
   .nav-links a:hover{ color:var(--white); }
+  .nav-links a.nav-highlight{
+    color:var(--cyan);
+    text-shadow:0 0 18px rgba(0,230,255,.42);
+  }
+  .nav-links a.nav-highlight:hover{ color:var(--white); }
 
   main{ position:relative; z-index:1; }
   .hero{
@@ -601,9 +606,9 @@
       </span>
     </a>
     <div class="nav-links">
+      <a class="nav-highlight" href="/fellowships/">Fellowships</a>
       <a href="#journey">Journey</a>
       <a href="#receive">Receive</a>
-      <a href="/fellowships/">Fellowships</a>
       <a href="#principles">Principles</a>
     </div>
   </nav>
