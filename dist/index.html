@@ -256,6 +256,54 @@
     z-index:-1;
     pointer-events:none;
   }
+  .edge-moments{
+    position:absolute;
+    top:112px;
+    left:0;
+    right:0;
+    height:220px;
+    z-index:1;
+    pointer-events:none;
+  }
+  .edge-moment{
+    position:absolute;
+    max-width:310px;
+    color:rgba(240,248,255,.74);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:600;
+    line-height:1.45;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    text-shadow:0 0 22px rgba(0,230,255,.24);
+    opacity:0;
+    filter:blur(.2px);
+    animation: edgeMomentDrift 48s ease-in-out infinite;
+  }
+  .edge-moment.left{
+    left:clamp(18px, 4vw, 64px);
+    text-align:left;
+    --drift-x: 26px;
+  }
+  .edge-moment.right{
+    right:clamp(18px, 4vw, 64px);
+    text-align:right;
+    --drift-x: -26px;
+  }
+  .edge-moment:nth-child(1){ top:0; animation-delay:1s; }
+  .edge-moment:nth-child(2){ top:38px; animation-delay:7s; }
+  .edge-moment:nth-child(3){ top:108px; animation-delay:13s; }
+  .edge-moment:nth-child(4){ top:146px; animation-delay:19s; }
+  .edge-moment:nth-child(5){ top:0; animation-delay:25s; }
+  .edge-moment:nth-child(6){ top:38px; animation-delay:31s; }
+  .edge-moment:nth-child(7){ top:108px; animation-delay:37s; }
+  .edge-moment:nth-child(8){ top:146px; animation-delay:43s; }
+  @keyframes edgeMomentDrift{
+    0%, 2%{ opacity:0; transform:translate3d(0, 10px, 0); }
+    5%, 10%{ opacity:.82; }
+    16%{ opacity:0; transform:translate3d(var(--drift-x), -12px, 0); }
+    100%{ opacity:0; transform:translate3d(var(--drift-x), -12px, 0); }
+  }
 
   .logo-stage{
     perspective: 1200px;
@@ -1574,6 +1622,7 @@
     .track-strip{ flex-wrap:wrap; }
     .track-door{ flex:1 1 33.33%; border-bottom:1px solid var(--border); }
     .map-live{ right:0; }
+    .edge-moments{ display:none; }
   }
   #topic-cards,
   #experience{ padding-top: 29px; }
@@ -1661,6 +1710,16 @@
 <main>
   <section class="hero">
     <div class="hero-glow"></div>
+    <div class="edge-moments" aria-hidden="true">
+      <span class="edge-moment left">The moment a CIO meets the startup they'll later acquire.</span>
+      <span class="edge-moment right">The moment two healthcare systems decide to collaborate.</span>
+      <span class="edge-moment left">The moment a CEO realizes their AI strategy is wrong.</span>
+      <span class="edge-moment right">The moment someone meets their next board member.</span>
+      <span class="edge-moment left">The moment a CTO finds the partner who can ship it.</span>
+      <span class="edge-moment right">The moment a hospital CFO finally sees the business case.</span>
+      <span class="edge-moment left">The moment two competitors admit they have the same problem.</span>
+      <span class="edge-moment right">The moment an investor spots the company everyone missed.</span>
+    </div>
     <div class="logo-stage" id="logoStage">
       <div class="logo-tilt" id="logoTilt">
         <img src="assets/logo-badge.png" alt="MOJO AI Summits badge">
@@ -1669,7 +1728,7 @@
     <span class="eyebrow"><span>Invitation only</span></span>
     <h1><span class="word" style="animation-delay:.05s">Where</span> <span class="word" style="animation-delay:.11s">executive</span> <span class="word" style="animation-delay:.17s">leaders</span> <span class="word" style="animation-delay:.23s">shape</span><br><span class="word grad ai-shimmer" data-text="the" style="animation-delay:.30s">the</span> <span class="word grad ai-shimmer" data-text="future" style="animation-delay:.37s">future</span> <span class="word grad ai-shimmer" data-text="of AI" style="animation-delay:.44s">of AI</span></h1>
     <div class="hero-boardroom" aria-hidden="true"><img src="assets/boardroom-transparent.png" alt=""></div>
-    <p class="hero-sub">An AI forum for leaders who are already responsible for adoption, integration, security, operations, and measurable business progress. Dallas begins the 2027 season, followed by Denver, Raleigh, and Chicago.</p>
+    <p class="hero-sub">Mojo AI Summits is an executive connection and intelligence company that uses immersive experiences to accelerate decisions, partnerships, and innovation.</p>
     <div class="hero-cta-row">
       <button type="button" class="btn-primary" data-modal-open="inviteCodeModal">Register with Invite Code</button>
       <a href="/virtual/" class="btn-ghost">Explore Virtual Events</a>
@@ -1748,7 +1807,7 @@
     <div class="wrap">
       <div class="section-head reveal" style="margin-left:auto; margin-right:auto; text-align:center;">
         <span class="eyebrow" style="justify-content:center;"><span>A completely memorable experience</span></span>
-        <h2>Boardroom Conversation Format</h2>
+        <h2>Executive Intelligence Platform</h2>
         <svg class="title-flourish" viewBox="0 0 420 28" aria-hidden="true">
           <line x1="0" y1="14" x2="154" y2="14"></line>
           <path d="M154 14c18-13 30-13 48 0 10 7 22 7 32 0 18-13 30-13 48 0"></path>
