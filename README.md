@@ -12,7 +12,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Internal CRM: https://mojoaisummits.com/crm/
 - Setup checklist: https://mojoaisummits.com/setup/
 - Event playbook: https://mojoaisummits.com/events/
-- Internal storage portal: https://mojoaisummits.com/storage/
+- Internal storage portal: https://mojoaisummits.com/files/
 - Internal budget and P&L: https://mojoaisummits.com/budget/
 - Cloudflare Pages project: `mojo-ai-summits`
 
@@ -43,7 +43,7 @@ Protected internal routes:
 - `/crm/` and `/api/crm`
 - `/setup/` and `/api/setup-state`
 - `/events/` and `/api/events`
-- `/storage/` and `/api/storage`
+- `/files/`, `/storage/`, and `/api/storage`
 - `/budget/` and `/api/budget`
 
 Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/guest/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
@@ -72,8 +72,9 @@ The storage portal uses a private Cloudflare R2 bucket bound to Pages Functions 
 
 - Bucket: `mojo-summits-private`
 - API route: `/api/storage`
-- Portal route: `/storage/`
-- Access control: `/storage/*` and `/api/storage*` require a Mojo Auth session only after access control is enabled in `/access`.
+- Portal route: `/files/` (site-managed alias for the Storage portal)
+- Legacy portal route: `/storage/`
+- Access control: `/files/*`, `/storage/*`, and `/api/storage*` require a Mojo Auth session only after access control is enabled in `/access`.
 - Cloudflare prerequisite: R2 must be enabled on the Cloudflare account before the bucket can be created and before this binding can deploy successfully.
 
 ## Deploy
@@ -124,6 +125,12 @@ The internal `/setup/` checklist includes a repeatable virtual event series scaf
 ## Strategic Intelligence Partners
 
 The public partners page lives at `/partners/` and positions Mojo AI Summits as an executive relationship and intelligence network rather than an event sponsorship seller. It explains Strategic Intelligence Partner value, Partner Candidate entry, Council Partner, Intelligence Partner, Summit Partner, Founding Partner, trust rules, and participation model.
+
+## Sponsor Curation Engine
+
+The sponsor curation engine process lives at `docs/processes/sponsor-curation-engine.md`, with a starter machine-readable config at `docs/processes/sponsor-curation-engine.generated.json`, a CSV tracker template at `docs/processes/sponsor-curation-tracker-template.csv`, and a local scoring script at `scripts/score-sponsor-prospects.mjs`.
+
+The engine is designed to identify AI-enabled companies with evidence of event sponsorship, partner-market behavior, or field-marketing activity, then route qualified companies into Strategic Intelligence Partner and sponsor outreach. It uses a 100-point score across AI relevance, event sponsorship behavior, executive audience fit, Mojo model fit, commercial readiness, and contactability. Human review is required before first outreach, proposal, and partner acceptance.
 
 ## Executive Intelligence Membership
 

@@ -88,8 +88,18 @@ export const DEFAULT_ACCESS_RULES = [
     summary: "Private files, event assets, media, and receipts.",
     mode: "allowlist",
     defaultGroupIds: ["storage-users"],
-    matches: [{ exact: "/storage" }, { prefix: "/storage/" }],
-    domains: ["mojoaisummits.com/storage", "mojoaisummits.com/storage/*"]
+    matches: [
+      { exact: "/storage" },
+      { prefix: "/storage/" },
+      { exact: "/files" },
+      { prefix: "/files/" }
+    ],
+    domains: [
+      "mojoaisummits.com/storage",
+      "mojoaisummits.com/storage/*",
+      "mojoaisummits.com/files",
+      "mojoaisummits.com/files/*"
+    ]
   },
   {
     id: "budget",

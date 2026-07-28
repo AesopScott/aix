@@ -10,7 +10,8 @@ Mojo AI Summits needs a controlled place for shared company and event files. The
 
 ## Routes
 
-- Portal: `https://mojoaisummits.com/storage/`
+- Portal: `https://mojoaisummits.com/files/`
+- Legacy portal path: `https://mojoaisummits.com/storage/`
 - API: `https://mojoaisummits.com/api/storage`
 
 The API intentionally rejects requests unless Mojo Auth has authenticated the user. Middleware validates the app-owned HttpOnly session cookie, attaches the user to the request context, and the storage API records that user as the uploader.
@@ -52,8 +53,9 @@ Each upload also includes an event, city, or folder value. Example object keys:
 
 ## Mojo Auth Setup
 
-Before using the storage portal in production, protect both routes through `/access`:
+Before using the storage portal in production, protect these routes through `/access`:
 
+- `/files/`
 - `/storage/`
 - `/api/storage`
 
@@ -117,8 +119,9 @@ Before declaring storage ready:
 
 - Confirm the R2 bucket exists.
 - Confirm `MOJO_SUMMITS_STORAGE` is bound to the Pages project.
-- Before enabling access control, confirm `/storage/` and `/api/storage` remain reachable.
-- After enabling access control, confirm `/storage/` requires Mojo Auth login.
+- Before enabling access control, confirm `/files/`, `/storage/`, and `/api/storage` remain reachable.
+- After enabling access control, confirm `/files/` requires Mojo Auth login.
+- After enabling access control, confirm `/storage/` requires Mojo Auth login when no external Cloudflare Access rule intercepts it.
 - After enabling access control, confirm `/api/storage` requires Mojo Auth login.
 - Confirm an approved user can upload, list, download, and delete a test file.
 - Confirm an unapproved user cannot access either route.

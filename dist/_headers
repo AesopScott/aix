@@ -48,6 +48,16 @@
   Pragma: no-cache
   Expires: 0
 
+/files
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/files/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
 /budget
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache

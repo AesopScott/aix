@@ -2,6 +2,9 @@
 /access /access/ 301
 /setup /setup/ 301
 /storage /storage/ 301
+/files /files/ 301
+/files/ /storage/index.html 200
+/files/* /storage/index.html 200
 /budget /budget/ 301
 /member-registration /member-registration/ 301
 /guest /guest/ 301

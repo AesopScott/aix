@@ -1,0 +1,133 @@
+{
+  "createdAt": "2026-07-28T00:00:00.000-06:00",
+  "engine": "sponsor-curation-engine",
+  "purpose": "Identify AI-enabled companies with evidence of event sponsorship or partner-market behavior, then route qualified prospects into Mojo AI Summits sponsor and Strategic Intelligence Partner outreach.",
+  "scoreComponents": [
+    {
+      "id": "ai_relevance",
+      "label": "AI relevance",
+      "maxPoints": 20,
+      "evidenceRequired": true
+    },
+    {
+      "id": "event_sponsorship_behavior",
+      "label": "Event sponsorship behavior",
+      "maxPoints": 20,
+      "evidenceRequired": true
+    },
+    {
+      "id": "executive_audience_fit",
+      "label": "Executive audience fit",
+      "maxPoints": 20,
+      "evidenceRequired": false
+    },
+    {
+      "id": "mojo_model_fit",
+      "label": "Mojo model fit",
+      "maxPoints": 20,
+      "evidenceRequired": false
+    },
+    {
+      "id": "commercial_readiness",
+      "label": "Commercial readiness",
+      "maxPoints": 10,
+      "evidenceRequired": false
+    },
+    {
+      "id": "contactability",
+      "label": "Contactability",
+      "maxPoints": 10,
+      "evidenceRequired": false
+    }
+  ],
+  "stages": [
+    "research_queue",
+    "researching",
+    "qualified",
+    "priority",
+    "outreach_ready",
+    "contacted",
+    "engaged",
+    "discovery",
+    "proposal",
+    "committed",
+    "won",
+    "nurture",
+    "disqualified"
+  ],
+  "companyFields": [
+    "name",
+    "domain",
+    "headquarters",
+    "regionsServed",
+    "companySize",
+    "ownershipStage",
+    "category",
+    "aiRelevance",
+    "eventBehavior",
+    "buyerFit",
+    "trustFit",
+    "score",
+    "scoreReasons",
+    "contacts",
+    "evidence",
+    "owner",
+    "stage",
+    "nextAction",
+    "nextActionDate",
+    "lastTouch",
+    "outreachAngle",
+    "proposalStatus",
+    "disqualificationReason"
+  ],
+  "evidenceTypes": [
+    "event_sponsor_page",
+    "exhibitor_directory",
+    "conference_agenda",
+    "company_event_page",
+    "webinar_page",
+    "press_release",
+    "job_posting",
+    "partner_page",
+    "crm_referral",
+    "team_network_note",
+    "news_or_funding",
+    "association_partner_page"
+  ],
+  "eventFitTags": [
+    "AI Executive Readiness",
+    "AI Use Cases That Survive Finance",
+    "AI Integration and Workflow",
+    "AI Security, Governance, and Trust",
+    "AI Operating Model for 2027"
+  ],
+  "reviewGates": [
+    {
+      "id": "qualification_review",
+      "requiredBeforeStage": "qualified",
+      "owner": "research_owner",
+      "rule": "Confirm at least one AI relevance signal and one event behavior signal, unless a trusted referral override is documented."
+    },
+    {
+      "id": "outreach_approval",
+      "requiredBeforeStage": "outreach_ready",
+      "owner": "mojo_owner",
+      "rule": "Confirm trust fit, category fit, owner assignment, contact map, and message angle before first outreach."
+    },
+    {
+      "id": "proposal_approval",
+      "requiredBeforeStage": "proposal",
+      "owner": "mojo_owner",
+      "rule": "Confirm proposed partner role, sponsor boundaries, deliverables, pricing, data access rules, and event-fit rationale."
+    }
+  ],
+  "recommendedMvp": {
+    "phase": "spreadsheet_backed_tracker",
+    "seedTargetCompanies": 250,
+    "priorityThreshold": 75,
+    "trackerTemplatePath": "docs/processes/sponsor-curation-tracker-template.csv",
+    "scoringScriptPath": "scripts/score-sponsor-prospects.mjs",
+    "weeklyReviewCadence": "weekly",
+    "humanApprovalRequiredBeforeFirstOutreach": true
+  }
+}
