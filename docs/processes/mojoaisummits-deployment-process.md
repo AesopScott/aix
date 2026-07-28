@@ -89,7 +89,7 @@ After rollback, fix the repo and push a corrected deployment so GitHub `main` an
 After deployment, verify:
 
 - `https://mojoaisummits.com/` loads.
-- Public routes such as `/virtual/` and `/vip-registration/` load without Mojo Auth.
+- Public routes such as `/virtual/` and `/member-registration/` load without Mojo Auth.
 - `/access/` loads without a session so it can show the login screen.
 - Before access control is enabled in `/access/`, internal routes such as `/setup/`, `/events/`, `/crm/`, `/storage/`, `/budget/`, and `/mockups/` remain freely accessible.
 - After access control is enabled in `/access/`, internal routes and APIs follow their configured Mojo Auth route modes.

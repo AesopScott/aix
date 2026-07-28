@@ -88,7 +88,7 @@ export async function onRequestPost({ request, env }) {
 
   if (error) return json({ error }, { status: 400 });
 
-  const crmUrl = new URL("/crm/api/public/vip-registration", request.url);
+  const crmUrl = new URL("/crm/api/public/member-registration", request.url);
   const response = await fetch(crmUrl, {
     method: "POST",
     headers: { "content-type": "application/json" },

@@ -64,7 +64,7 @@ export const VIRTUAL_EVENTS = [
     agenda: [
       "2027 planning discussion",
       "Summit track preview",
-      "VIP and speaker nominations"
+      "Member and speaker nominations"
     ]
   }
 ];

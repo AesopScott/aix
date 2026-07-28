@@ -33,8 +33,8 @@ Each virtual event should have:
 - Speaker briefing notes, discussion prompts, and sponsor boundary notes
 - Recording, transcript, chat, attendee data, and content permission rules
 - Technical rehearsal and backup meeting room process
-- Attendee follow-up, VIP nominations, sponsor lead routing, and next-event invitation
-- Post-event metrics: registrations, qualified attendees, live attendance, discussion quality, sponsor leads, VIP nominations, and follow-up meetings
+- Attendee follow-up, Member nominations, sponsor lead routing, and next-event invitation
+- Post-event metrics: registrations, qualified attendees, live attendance, discussion quality, sponsor leads, Member nominations, and follow-up meetings
 
 ## Site and Operations Touchpoints
 

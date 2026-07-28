@@ -266,7 +266,7 @@
     </div>
     <nav>
       <a href="/">Home</a>
-      <a href="/vip-registration/">VIP Registration</a>
+      <a href="/member-registration/">Member Registration</a>
       <a href="/storage/">Storage</a>
       <a href="/budget/">Budget</a>
       <a href="/setup/">Setup Checklist</a>
@@ -276,9 +276,9 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">VIP registrants</p>
+        <p class="eyebrow">Member registrants</p>
         <h1>Registration data, ready for follow-up.</h1>
-        <p>Every VIP registration is added here with contact details, event roles, phone verification status, and food preferences.</p>
+        <p>Every member registration is added here with contact details, event roles, phone verification status, and food preferences.</p>
       </div>
       <div class="metrics" id="metrics"></div>
     </section>
@@ -320,8 +320,8 @@
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
     </section>
 
-    <section class="panel" id="vip-registrants">
-      <h2>VIP Registrants</h2>
+    <section class="panel" id="member-registrants">
+      <h2>Member Registrants</h2>
       <div id="notice" class="notice">Loading CRM...</div>
       <div class="table-wrap">
         <table>
@@ -440,7 +440,7 @@
     function renderMetrics() {
       const summary = state.summary || {};
       metrics.innerHTML = `
-        <div class="metric"><span>Total VIP registrants</span><strong>${summary.total || 0}</strong></div>
+        <div class="metric"><span>Total Member registrants</span><strong>${summary.total || 0}</strong></div>
         <div class="metric"><span>New</span><strong>${summary.newCount || 0}</strong></div>
         <div class="metric"><span>Presenters</span><strong>${summary.presenterCount || 0}</strong></div>
         <div class="metric"><span>Round table leaders</span><strong>${summary.roundtableLeaderCount || 0}</strong></div>
@@ -451,7 +451,7 @@
     function renderRows() {
       const rows = filteredRows();
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="8">No VIP registrants match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="8">No Member registrants match the current filters.</td></tr>`;
         return;
       }
 
@@ -501,7 +501,7 @@
       setNotice("Loading CRM...");
       try {
         state = await fetch(api).then(readJson);
-        setNotice(`${state.summary.total || 0} VIP registrant${state.summary.total === 1 ? "" : "s"} loaded.`, "ok");
+        setNotice(`${state.summary.total || 0} Member registrant${state.summary.total === 1 ? "" : "s"} loaded.`, "ok");
         render();
       } catch (error) {
         setNotice(error.message, "error");

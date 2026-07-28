@@ -7,7 +7,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
 - Strategic intelligence partners: https://mojoaisummits.com/partner/
-- VIP registration: https://mojoaisummits.com/vip-registration/
+- Member registration: https://mojoaisummits.com/member-registration/
 - Internal CRM: https://mojoaisummits.com/crm/
 - Setup checklist: https://mojoaisummits.com/setup/
 - Event playbook: https://mojoaisummits.com/events/
@@ -45,7 +45,7 @@ Protected internal routes:
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/member-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, and `/crm/api/public/...`.
 
 Mojo Auth endpoints:
 
@@ -84,11 +84,11 @@ Required GitHub secrets:
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
 
-## VIP Registration
+## Member Registration
 
-The VIP registration page asks for an invite code, then sends guests to `/vip-registration/`.
-VIP registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `vip-registration:*`.
-Direct visits to `/vip-registration/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
+The member registration page asks for an invite code, then sends guests to `/member-registration/`.
+Member registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `member-registration:*`.
+Direct visits to `/member-registration/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
 
 ## Fall 2026 Virtual Events
 
@@ -148,5 +148,5 @@ The AWS principal needs permission for `sns:Publish`. If the AWS account is stil
 ## CRM
 
 The internal CRM lives at `/crm/` and reads from `/api/crm`.
-VIP registrations are written to both `vip-registration:*` and `crm:vip-registrant:*` in `MOJO_SUMMITS_SETUP_STATE`.
-The CRM's VIP Registrants section includes contact details, roles, food preferences, phone verification status, CRM status, notes, and CSV export.
+Member registrations are written to both `member-registration:*` and `crm:member-registrant:*` in `MOJO_SUMMITS_SETUP_STATE`.
+The CRM's Member Registrants section includes contact details, roles, food preferences, phone verification status, CRM status, notes, and CSV export.

@@ -61,7 +61,7 @@ The repo-level access configuration protects the storage portal plus the other i
 
 - Founders: Scott, Robert, Jodi, Ron
 - Event Ops: Charlie, The Event Lounge
-- Program/VIP: Angel
+- Program/Member: Angel
 - Marketing: Jodi, Orbit Flow
 - Media: Photography, Sound, and Cinematography Team
 - Finance/Admin: Robert

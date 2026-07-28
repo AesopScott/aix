@@ -1860,7 +1860,7 @@
       <div class="format-visual reveal">
         <div class="format-half present">
           <h4>Stage 1<svg class="label-emblem" aria-hidden="true"><use href="#emblem-ai"></use></svg></h4>
-          <p class="stage-title">Executive VIP Presentation</p>
+          <p class="stage-title">Executive Member Presentation</p>
           <p>Modern problems solved<br>with AI solutions.</p>
         </div>
         <div class="format-half argue">
@@ -2101,16 +2101,16 @@
 <div class="modal-overlay" id="inviteCodeModal" aria-hidden="true">
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="inviteCodeModalTitle">
     <button type="button" class="modal-close" data-modal-close aria-label="Close">&#10005;</button>
-    <span class="eyebrow"><span>VIP access</span></span>
+    <span class="eyebrow"><span>Member access</span></span>
     <h3 id="inviteCodeModalTitle">Enter Your Invite Code</h3>
-    <p class="modal-sub">VIP registration opens after your invite code is submitted.</p>
+    <p class="modal-sub">Member registration opens after your invite code is submitted.</p>
     <form id="inviteCodeForm">
       <div class="field full">
         <label for="inviteCode">Invite code</label>
         <input type="text" id="inviteCode" name="inviteCode" placeholder="Enter code" autocomplete="off" required>
       </div>
       <p class="form-error" id="inviteCodeError">Enter the invite code from your invitation.</p>
-      <button type="submit" class="btn-primary">Continue to VIP Registration</button>
+      <button type="submit" class="btn-primary">Continue to Member Registration</button>
     </form>
   </div>
 </div>
@@ -2377,7 +2377,7 @@
         submit.textContent = 'Checking...';
       }
       try {
-        const response = await fetch(`/crm/api/public/vip-invite-codes/${encodeURIComponent(code)}`);
+        const response = await fetch(`/crm/api/public/member-invite-codes/${encodeURIComponent(code)}`);
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'That invite code is invalid or has already been used.');
       } catch (validationError) {
@@ -2386,17 +2386,17 @@
         input?.focus();
         if (submit) {
           submit.disabled = false;
-          submit.textContent = 'Continue to VIP Registration';
+          submit.textContent = 'Continue to Member Registration';
         }
         return;
       }
       error?.classList.remove('show');
       try {
-        sessionStorage.setItem('mojoVipInviteCode', code);
+        sessionStorage.setItem('mojoMemberInviteCode', code);
       } catch (storageError) {
         // The query string still carries the code if private browsing blocks storage.
       }
-      window.location.href = `/vip-registration/?invite=${encodeURIComponent(code)}`;
+      window.location.href = `/member-registration/?invite=${encodeURIComponent(code)}`;
     });
   }
   document.addEventListener('keydown', (e) => {

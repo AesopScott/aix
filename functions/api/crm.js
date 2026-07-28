@@ -3,8 +3,8 @@ const jsonHeaders = {
   "cache-control": "no-store"
 };
 
-const CRM_PREFIX = "crm:vip-registrant:";
-const LEGACY_VIP_PREFIX = "vip-registration:";
+const CRM_PREFIX = "crm:member-registrant:";
+const LEGACY_MEMBER_PREFIX = "member-registration:";
 const allowedStatuses = new Set(["new", "contacted", "confirmed", "waitlist", "declined"]);
 const maxFieldLength = 2000;
 
@@ -86,12 +86,12 @@ async function readRecords(env, keys) {
   return records.filter(Boolean);
 }
 
-async function vipRegistrants(env) {
+async function memberRegistrants(env) {
   const crmKeys = await listKeys(env, CRM_PREFIX);
   const crmRows = await readRecords(env, crmKeys);
   const ids = new Set(crmRows.map((row) => row.id));
 
-  const legacyKeys = await listKeys(env, LEGACY_VIP_PREFIX);
+  const legacyKeys = await listKeys(env, LEGACY_MEMBER_PREFIX);
   const legacyRows = (await readRecords(env, legacyKeys)).filter((row) => !ids.has(row.id));
 
   return [...crmRows, ...legacyRows].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -123,7 +123,7 @@ async function ensureCrmRecord(env, row) {
 
   const next = {
     ...row,
-    crmType: "vip-registrant"
+    crmType: "member-registrant"
   };
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
   return { key, row: normalizeRecord(key, next) };
@@ -142,7 +142,7 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   const url = new URL(request.url);
-  const rows = await vipRegistrants(env);
+  const rows = await memberRegistrants(env);
 
   if (url.searchParams.get("download") === "csv") {
     const csv = [
@@ -182,14 +182,14 @@ export async function onRequestGet({ request, env, data }) {
       headers: {
         "content-type": "text/csv; charset=utf-8",
         "cache-control": "no-store",
-        "content-disposition": "attachment; filename=\"mojo-ai-summits-vip-registrants.csv\""
+        "content-disposition": "attachment; filename=\"mojo-ai-summits-member-registrants.csv\""
       }
     });
   }
 
   return json({
     ok: true,
-    section: "vip-registrants",
+    section: "member-registrants",
     summary: summarize(rows),
     rows
   });
@@ -205,16 +205,16 @@ export async function onRequestPost({ request, env, data }) {
 
   const payload = await request.json().catch(() => null);
   const key = cleanString(payload?.key);
-  const rows = await vipRegistrants(env);
+  const rows = await memberRegistrants(env);
   const row = rows.find((entry) => entry.key === key || entry.id === key);
-  if (!row) return json({ error: "VIP registrant was not found." }, { status: 404 });
+  if (!row) return json({ error: "Member registrant was not found." }, { status: 404 });
 
   const { key: crmKey, row: crmRow } = await ensureCrmRecord(env, row);
   const crmStatus = allowedStatuses.has(payload?.crmStatus) ? payload.crmStatus : crmRow.crmStatus;
   const next = {
     ...crmRow,
     key: undefined,
-    crmType: "vip-registrant",
+    crmType: "member-registrant",
     crmStatus,
     crmNotes: cleanString(payload?.crmNotes),
     crmUpdatedAt: new Date().toISOString(),
@@ -223,7 +223,7 @@ export async function onRequestPost({ request, env, data }) {
 
   await env.MOJO_SUMMITS_SETUP_STATE.put(crmKey, JSON.stringify(next));
 
-  const nextRows = await vipRegistrants(env);
+  const nextRows = await memberRegistrants(env);
   return json({
     ok: true,
     summary: summarize(nextRows),

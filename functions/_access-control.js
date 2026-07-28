@@ -69,7 +69,7 @@ export const DEFAULT_ACCESS_RULES = [
     kind: "page",
     group: "Data",
     label: "CRM",
-    summary: "VIP registrants, notes, statuses, and exports.",
+    summary: "Member registrants, notes, statuses, and exports.",
     mode: "allowlist",
     matches: [{ exact: "/crm" }, { prefix: "/crm/" }],
     domains: ["mojoaisummits.com/crm", "mojoaisummits.com/crm/*"]
@@ -136,14 +136,14 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/virtual", "mojoaisummits.com/virtual/*"]
   },
   {
-    id: "vip-registration",
+    id: "member-registration",
     kind: "page",
     group: "Guest",
-    label: "VIP Registration",
+    label: "Member Registration",
     summary: "Direct invite registration surface.",
     mode: "public",
-    matches: [{ exact: "/vip-registration" }, { prefix: "/vip-registration/" }],
-    domains: ["mojoaisummits.com/vip-registration", "mojoaisummits.com/vip-registration/*"]
+    matches: [{ exact: "/member-registration" }, { prefix: "/member-registration/" }],
+    domains: ["mojoaisummits.com/member-registration", "mojoaisummits.com/member-registration/*"]
   },
   {
     id: "privacy",
@@ -230,7 +230,7 @@ export const DEFAULT_ACCESS_RULES = [
     kind: "api",
     group: "APIs",
     label: "CRM API",
-    summary: "VIP registrant records and exports.",
+    summary: "Member registrant records and exports.",
     mode: "allowlist",
     matches: [{ exact: "/api/crm" }, { prefix: "/api/crm/" }],
     domains: ["mojoaisummits.com/api/crm", "mojoaisummits.com/api/crm/*"]
@@ -277,14 +277,34 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/phone-verification", "mojoaisummits.com/api/phone-verification/*"]
   },
   {
-    id: "api-vip-registration",
+    id: "api-member-registration",
     kind: "api",
     group: "APIs",
-    label: "VIP Registration API",
-    summary: "Public VIP registration submission endpoint.",
+    label: "Member Registration API",
+    summary: "Public member registration submission endpoint.",
     mode: "public",
-    matches: [{ exact: "/api/vip-registration" }, { prefix: "/api/vip-registration/" }],
-    domains: ["mojoaisummits.com/api/vip-registration", "mojoaisummits.com/api/vip-registration/*"]
+    matches: [{ exact: "/api/member-registration" }, { prefix: "/api/member-registration/" }],
+    domains: ["mojoaisummits.com/api/member-registration", "mojoaisummits.com/api/member-registration/*"]
+  },
+  {
+    id: "crm-api-public-member-registration",
+    kind: "api",
+    group: "APIs",
+    label: "CRM Public Member Registration API",
+    summary: "Public member invite-code validation and registration callback endpoints.",
+    mode: "public",
+    matches: [
+      { exact: "/crm/api/public/member-registration" },
+      { prefix: "/crm/api/public/member-registration/" },
+      { exact: "/crm/api/public/member-invite-codes" },
+      { prefix: "/crm/api/public/member-invite-codes/" }
+    ],
+    domains: [
+      "mojoaisummits.com/crm/api/public/member-registration",
+      "mojoaisummits.com/crm/api/public/member-registration/*",
+      "mojoaisummits.com/crm/api/public/member-invite-codes",
+      "mojoaisummits.com/crm/api/public/member-invite-codes/*"
+    ]
   }
 ];
 
