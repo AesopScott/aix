@@ -18,3 +18,12 @@ The member registration page uses a dedicated OG image that does not expose any 
 - Local file: `C:\Users\scott\Code\aix\dist\assets\og-member-registration.png`
 - Page route: `https://mojoaisummits.com/member-registration/`
 - Current visual message: `Member Registration`
+
+## Guest Registration
+
+The guest registration page uses a dedicated OG image that does not expose any invite code.
+
+- Guest registration meta image: `https://mojoaisummits.com/assets/og-guest-registration.png`
+- Local file: `C:\Users\scott\Code\aix\dist\assets\og-guest-registration.png`
+- Page route: `https://mojoaisummits.com/guest/`
+- Current visual message: `Guest Registration`

@@ -146,6 +146,16 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/member-registration", "mojoaisummits.com/member-registration/*"]
   },
   {
+    id: "guest-registration",
+    kind: "page",
+    group: "Guest",
+    label: "Guest Registration",
+    summary: "Direct guest registration surface.",
+    mode: "public",
+    matches: [{ exact: "/guest" }, { prefix: "/guest/" }],
+    domains: ["mojoaisummits.com/guest", "mojoaisummits.com/guest/*"]
+  },
+  {
     id: "privacy",
     kind: "page",
     group: "Public",
@@ -287,6 +297,16 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/member-registration", "mojoaisummits.com/api/member-registration/*"]
   },
   {
+    id: "api-guest-registration",
+    kind: "api",
+    group: "APIs",
+    label: "Guest Registration API",
+    summary: "Public guest registration submission endpoint.",
+    mode: "public",
+    matches: [{ exact: "/api/guest-registration" }, { prefix: "/api/guest-registration/" }],
+    domains: ["mojoaisummits.com/api/guest-registration", "mojoaisummits.com/api/guest-registration/*"]
+  },
+  {
     id: "crm-api-public-member-registration",
     kind: "api",
     group: "APIs",
@@ -304,6 +324,26 @@ export const DEFAULT_ACCESS_RULES = [
       "mojoaisummits.com/crm/api/public/member-registration/*",
       "mojoaisummits.com/crm/api/public/member-invite-codes",
       "mojoaisummits.com/crm/api/public/member-invite-codes/*"
+    ]
+  },
+  {
+    id: "crm-api-public-guest-registration",
+    kind: "api",
+    group: "APIs",
+    label: "CRM Public Guest Registration API",
+    summary: "Public guest invite-code validation and registration callback endpoints.",
+    mode: "public",
+    matches: [
+      { exact: "/crm/api/public/guest-registration" },
+      { prefix: "/crm/api/public/guest-registration/" },
+      { exact: "/crm/api/public/guest-invite-codes" },
+      { prefix: "/crm/api/public/guest-invite-codes/" }
+    ],
+    domains: [
+      "mojoaisummits.com/crm/api/public/guest-registration",
+      "mojoaisummits.com/crm/api/public/guest-registration/*",
+      "mojoaisummits.com/crm/api/public/guest-invite-codes",
+      "mojoaisummits.com/crm/api/public/guest-invite-codes/*"
     ]
   }
 ];

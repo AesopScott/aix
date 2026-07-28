@@ -5,7 +5,7 @@
 - Route: `/admin/`
 - Source file: `dist/admin/index.html`
 - Purpose: company hub for Mojo AI Summits routes grouped by access level.
-- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/member-registration/`, `/privacy/`, and `/sms-terms/`.
+- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
 - Team space: `/setup/`, `/events/`, `/crm/`, and `/storage/`.
 - Admin space: `/access/` and `/budget/`.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.

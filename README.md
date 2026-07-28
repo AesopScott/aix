@@ -8,6 +8,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
 - Strategic intelligence partners: https://mojoaisummits.com/partner/
 - Member registration: https://mojoaisummits.com/member-registration/
+- Guest registration: https://mojoaisummits.com/guest/
 - Internal CRM: https://mojoaisummits.com/crm/
 - Setup checklist: https://mojoaisummits.com/setup/
 - Event playbook: https://mojoaisummits.com/events/
@@ -45,7 +46,7 @@ Protected internal routes:
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/member-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/member-registration/`, `/guest/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
 
 Mojo Auth endpoints:
 
@@ -89,6 +90,12 @@ Required GitHub secrets:
 The member registration page asks for an invite code, then sends guests to `/member-registration/`.
 Member registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `member-registration:*`.
 Direct visits to `/member-registration/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
+
+## Guest Registration
+
+The guest registration page uses the same form flow as member registration and lives at `/guest/`.
+Guest registration submissions are routed through `/crm/api/public/guest-registration`.
+Direct visits to `/guest/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
 
 ## Fall 2026 Virtual Events
 
