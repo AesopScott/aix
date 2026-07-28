@@ -447,88 +447,6 @@
     letter-spacing:.2em;
     text-transform:uppercase;
   }
-  .form-section{
-    padding-bottom:106px;
-  }
-  .partner-form{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:18px;
-    padding:30px;
-    border:1px solid var(--line);
-    border-radius:6px;
-    background:rgba(27,35,51,.46);
-    box-shadow:0 24px 80px rgba(0,0,0,.32);
-  }
-  .field{ display:flex; flex-direction:column; gap:8px; }
-  .field.full{ grid-column:1 / -1; }
-  label{
-    color:var(--ink);
-    font-family:'Space Grotesk', sans-serif;
-    font-size:12px;
-    font-weight:700;
-    letter-spacing:.12em;
-    text-transform:uppercase;
-  }
-  input,select,textarea{
-    width:100%;
-    border:1px solid rgba(150,170,210,.18);
-    border-radius:2px;
-    background:rgba(5,8,16,.72);
-    color:var(--white);
-    font:inherit;
-    font-size:15px;
-    padding:14px 13px;
-    outline:none;
-  }
-  textarea{ min-height:118px; resize:vertical; }
-  input:focus,select:focus,textarea:focus{ border-color:var(--cyan); }
-  .checkboxes{
-    display:grid;
-    grid-template-columns:repeat(3, minmax(0,1fr));
-    gap:10px;
-  }
-  .checkboxes label{
-    display:flex;
-    align-items:flex-start;
-    gap:10px;
-    min-height:58px;
-    padding:13px;
-    border:1px solid rgba(150,170,210,.14);
-    border-radius:4px;
-    background:rgba(5,8,16,.42);
-    color:var(--ink);
-    letter-spacing:0;
-    line-height:1.35;
-    text-transform:none;
-  }
-  .checkboxes input{ width:auto; margin-top:2px; accent-color:var(--cyan); }
-  .form-actions{
-    grid-column:1 / -1;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:18px;
-    flex-wrap:wrap;
-  }
-  .form-note{
-    max-width:580px;
-    color:var(--muted);
-    font-size:13px;
-    line-height:1.55;
-  }
-  .success{
-    display:none;
-    grid-column:1 / -1;
-    padding:18px;
-    border:1px solid rgba(0,230,255,.32);
-    color:var(--cyan);
-    background:rgba(0,230,255,.06);
-    font-family:'Space Grotesk', sans-serif;
-    font-weight:700;
-    letter-spacing:.04em;
-  }
-  .success.show{ display:block; }
   footer{
     padding:46px 0 52px;
     border-top:1px solid var(--line-soft);
@@ -555,10 +473,9 @@
     .hero-grid,.split{ grid-template-columns:1fr; }
     .partner-proof{ margin-top:30px; }
     .statement{ position:relative; top:auto; }
-    .grid,.principles,.model,.partner-form{ grid-template-columns:1fr; }
+    .grid,.principles,.model{ grid-template-columns:1fr; }
     .principle,.model-step{ border-left:0; border-top:1px solid var(--line-soft); }
     .principle:first-child,.model-step:first-child{ border-top:0; }
-    .checkboxes{ grid-template-columns:1fr; }
   }
   @media (max-width:720px){
     .wrap{ width:min(100% - 36px, 1180px); }
@@ -570,7 +487,6 @@
     .hero{ padding-bottom:42px; }
     .proof-row{ grid-template-columns:1fr; gap:8px; }
     section{ padding:66px 0; }
-    .partner-form{ padding:22px; }
   }
   @media (prefers-reduced-motion:reduce){
     *{ scroll-behavior:auto !important; transition:none !important; }
@@ -591,7 +507,6 @@
     <div class="nav-links">
       <a href="#value">Value</a>
       <a href="#model">Model</a>
-      <a href="#request">Request</a>
     </div>
   </nav>
 </header>
@@ -604,8 +519,8 @@
         <h1>A relationship network for vendor leaders shaping AI progress.</h1>
         <p class="lead">MOJO AI Summits is not an event company selling sponsorships. We invite a limited group of vendor leaders into a trusted executive intelligence network built around contribution, insight, and long-term strategic relationships.</p>
         <div class="hero-actions">
-          <a class="btn primary" href="#request">Request Partner Consideration</a>
-          <a class="btn ghost" href="#value">Understand the Network</a>
+          <a class="btn primary" href="#value">Understand the Network</a>
+          <a class="btn ghost" href="#model">Review the Model</a>
         </div>
       </div>
       <div class="partner-proof" aria-label="Partner value summary">
@@ -721,118 +636,11 @@
       <p>Strategic Intelligence Partner thesis</p>
     </div>
   </section>
-
-  <section class="form-section" id="request">
-    <div class="wrap split">
-      <div class="section-head">
-        <span class="eyebrow">Request consideration</span>
-        <h2>Apply for Strategic Intelligence Partner access.</h2>
-        <p>Tell us who you serve, what market intelligence you can contribute, and how your leadership team wants to participate in the network.</p>
-      </div>
-      <form class="partner-form" id="partnerForm">
-        <div class="field">
-          <label for="name">Full name</label>
-          <input id="name" name="name" autocomplete="name" required>
-        </div>
-        <div class="field">
-          <label for="email">Work email</label>
-          <input id="email" name="email" type="email" autocomplete="email" required>
-        </div>
-        <div class="field">
-          <label for="company">Company</label>
-          <input id="company" name="company" autocomplete="organization" required>
-        </div>
-        <div class="field">
-          <label for="title">Title</label>
-          <input id="title" name="title" autocomplete="organization-title" required>
-        </div>
-        <div class="field">
-          <label for="teamSize">Partner team</label>
-          <select id="teamSize" name="teamSize" required>
-            <option value="" selected disabled>Choose one</option>
-            <option>Founder or CEO</option>
-            <option>Revenue or strategy leadership</option>
-            <option>Product or innovation leadership</option>
-            <option>Cross-functional executive team</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="track">Primary focus</label>
-          <select id="track" name="track" required>
-            <option value="" selected disabled>Choose one</option>
-            <option>Enterprise AI adoption</option>
-            <option>AI governance and risk</option>
-            <option>Data, platforms, and infrastructure</option>
-            <option>Agentic workflow and automation</option>
-            <option>Industry-specific AI transformation</option>
-          </select>
-        </div>
-        <div class="field full">
-          <label>Participation interests</label>
-          <div class="checkboxes">
-            <label><input type="checkbox" name="addon" value="Executive intelligence sessions"> Executive intelligence sessions</label>
-            <label><input type="checkbox" name="addon" value="Private briefs and research"> Private briefs and research</label>
-            <label><input type="checkbox" name="addon" value="Annual summit and yearbook"> Annual summit and yearbook</label>
-          </div>
-        </div>
-        <div class="field full">
-          <label for="goal">Strategic goal</label>
-          <textarea id="goal" name="goal" placeholder="What kind of executive relationships, market intelligence, or industry progress are you trying to build?" required></textarea>
-        </div>
-        <div class="field full">
-          <label for="notes">Contribution notes</label>
-          <textarea id="notes" name="notes" placeholder="What perspective, data, customer learning, or field intelligence could your team contribute?"></textarea>
-        </div>
-        <div class="form-actions">
-          <p class="form-note">Submissions are reviewed for strategic fit. Partner access is limited so the executive environment remains useful, trusted, and contribution-led.</p>
-          <button class="btn primary" type="submit">Request Consideration</button>
-        </div>
-        <p class="success" id="partnerSuccess">Received. We will review the fit and follow up with next steps.</p>
-      </form>
-    </div>
-  </section>
 </main>
 
 <footer>
   <img src="../assets/logo-badge.png" alt="MOJO AI Summits badge">
   <p>Powered by <span>MOJO AI Studio</span></p>
 </footer>
-
-<script>
-  const form = document.getElementById('partnerForm');
-  const success = document.getElementById('partnerSuccess');
-
-  function formToObject(formElement){
-    const data = new FormData(formElement);
-    const payload = Object.fromEntries(data.entries());
-    const addons = Array.from(formElement.querySelectorAll('input[name=addon]:checked')).map((field) => field.value);
-    if (addons.length) payload.addons = addons;
-    return payload;
-  }
-
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const button = form.querySelector('button[type=submit]');
-    const originalText = button.textContent;
-    button.disabled = true;
-    button.textContent = 'Submitting...';
-    try {
-      const response = await fetch('/api/invite-request', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ type: 'partner', ...formToObject(form) })
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Unable to submit request.');
-      form.reset();
-      success.classList.add('show');
-      button.textContent = 'Submitted';
-    } catch (error) {
-      alert(error.message || 'Unable to submit this request. Please try again.');
-      button.disabled = false;
-      button.textContent = originalText;
-    }
-  });
-</script>
 </body>
 </html>

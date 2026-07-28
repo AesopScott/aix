@@ -17,7 +17,6 @@
 - Source file: `dist/partner/index.html`
 - Purpose: public Strategic Intelligence Partner page that explains Mojo as an executive relationship and intelligence network for vendor leaders, not an event sponsorship seller.
 - Routing support: `/partner` redirects to `/partner/`; no-cache headers are configured for `/partner` and `/partner/*`.
-- Submission model: partner consideration form posts to `/api/invite-request` with request type `partner`.
 
 ## Executive Intelligence Membership
 
@@ -32,7 +31,7 @@
 
 - Route: `/fellowships/`
 - Source file: `dist/fellowships/index.html`
-- Purpose: public fellowship pathway page that explains the five recognition levels, contribution badges, private Executive Impact signals, and annual impact profile concept.
+- Purpose: public fellowship pathway page that explains the five recognition levels, contribution badges, private Executive Impact signals, annual impact profile concept, and member voting on tier advancement at quarterly summit events.
 - Routing support: `/fellowships` redirects to `/fellowships/`; no-cache headers are configured for `/fellowships` and `/fellowships/*`.
 - Membership page linking: `/membership/` links to `/fellowships/` from the page navigation, hero actions, and invitation closing section.
 
