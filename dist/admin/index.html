@@ -681,6 +681,30 @@
       },
       {
         group: "Public",
+        title: "Membership",
+        path: "/membership/",
+        summary: "Public Executive Intelligence Network membership page for year-round executive community positioning.",
+        status: "Public",
+        tags: ["membership", "network", "executive"]
+      },
+      {
+        group: "Public",
+        title: "Fellowships",
+        path: "/fellowships/",
+        summary: "Public fellowship pathway page explaining recognition levels, contribution badges, and member advancement.",
+        status: "Public",
+        tags: ["fellowships", "recognition", "members"]
+      },
+      {
+        group: "Public",
+        title: "Strategic Intelligence Partners",
+        path: "/partner/",
+        summary: "Public partner page for vendor leaders and strategic contributors in the Mojo AI Summits network.",
+        status: "Public",
+        tags: ["partner", "sponsors", "public"]
+      },
+      {
+        group: "Public",
         title: "Member Registration",
         path: "/member-registration/",
         summary: "Invite-code registration page for guest previews and direct invite links.",
@@ -765,8 +789,19 @@
       "/",
       "/dallas/",
       "/virtual/",
+      "/membership/",
+      "/fellowships/",
+      "/partner/",
+      "/member-registration/",
+      "/guest/",
       "/privacy/",
-      "/sms-terms/"
+      "/sms-terms/",
+      "/setup/",
+      "/events/",
+      "/crm/",
+      "/storage/",
+      "/access/",
+      "/budget/"
     ];
 
     const groupsElement = document.querySelector("#groups");
@@ -808,7 +843,7 @@
     }
 
     function allRoutes() {
-      return routes;
+      return [...routes, ...discoveredRoutes];
     }
 
     function groupNames() {
@@ -932,9 +967,25 @@
               target: normalizePath(target || "")
             };
           })
-          .filter((route) => route.source && !existingPaths.has(route.target))
+          .filter((route) => route.source && !existingPaths.has(route.source))
           .map((route) => route.source)
           .filter(Boolean);
+      } catch {
+        return [];
+      }
+    }
+
+    async function headerCandidates(existingPaths) {
+      try {
+        const response = await fetch("/_headers", { cache: "no-store" });
+        if (!response.ok) return [];
+        const text = await response.text();
+        return text
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("/") && !line.includes("*") && !line.startsWith("/api/"))
+          .map(normalizePath)
+          .filter((path) => path && !existingPaths.has(path));
       } catch {
         return [];
       }
@@ -956,10 +1007,11 @@
       refreshButton.disabled = true;
       refreshNote.textContent = "Looking for unlinked pages...";
 
-      const existingPaths = new Set(allRoutes().map((route) => normalizePath(route.path)));
+      const existingPaths = new Set(routes.map((route) => normalizePath(route.path)));
       const candidates = [
         ...candidateRoutes,
-        ...(await redirectCandidates(existingPaths))
+        ...(await redirectCandidates(existingPaths)),
+        ...(await headerCandidates(existingPaths))
       ]
         .map(normalizePath)
         .filter((path) => path && path !== "/admin/" && !path.startsWith("/mockups/"))
@@ -980,7 +1032,7 @@
       renderRoutes();
       renderFoundList();
       refreshNote.textContent = discoveredRoutes.length
-        ? `Found ${discoveredRoutes.length} unlinked page${discoveredRoutes.length === 1 ? "" : "s"}. Listed here for review.`
+        ? `Found ${discoveredRoutes.length} unlinked page${discoveredRoutes.length === 1 ? "" : "s"}. Added below as discovered links.`
         : "No unlinked pages found.";
       refreshButton.disabled = false;
     }
