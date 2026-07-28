@@ -368,6 +368,81 @@
     border-top:1px solid var(--line-soft);
     border-bottom:1px solid var(--line-soft);
   }
+  .tier-ladder{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(210px,1fr));
+    gap:14px;
+    align-items:stretch;
+  }
+  .partner-tier{
+    display:flex;
+    flex-direction:column;
+    min-height:326px;
+    padding:24px;
+    border:1px solid var(--line-soft);
+    border-top-color:var(--line);
+    border-radius:6px;
+    background:linear-gradient(180deg, rgba(27,35,51,.58), rgba(10,15,30,.30));
+  }
+  .partner-tier.featured{
+    border-color:rgba(0,230,255,.42);
+    box-shadow:0 0 28px rgba(0,230,255,.08);
+  }
+  .tier-kicker{
+    color:var(--cyan);
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+  }
+  .partner-tier h3{
+    margin-top:16px;
+    font-family:'Fraunces', serif;
+    font-size:27px;
+    font-weight:500;
+    line-height:1.08;
+  }
+  .partner-tier p{
+    margin-top:14px;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.62;
+  }
+  .partner-tier ul{
+    margin:20px 0 0;
+    padding:0;
+    list-style:none;
+    display:grid;
+    gap:10px;
+  }
+  .partner-tier li{
+    position:relative;
+    padding-left:18px;
+    color:var(--ink);
+    font-size:13px;
+    line-height:1.42;
+  }
+  .partner-tier li::before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:.56em;
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 12px rgba(0,230,255,.7);
+  }
+  .tier-note{
+    margin-top:28px;
+    padding:22px 24px;
+    border-left:2px solid var(--cyan);
+    background:rgba(0,230,255,.06);
+    color:var(--ink);
+    font-size:15px;
+    line-height:1.7;
+  }
   .principles{
     display:grid;
     grid-template-columns:repeat(4, minmax(0,1fr));
@@ -473,9 +548,10 @@
     .hero-grid,.split{ grid-template-columns:1fr; }
     .partner-proof{ margin-top:30px; }
     .statement{ position:relative; top:auto; }
-    .grid,.principles,.model{ grid-template-columns:1fr; }
+    .grid,.principles,.model,.tier-ladder{ grid-template-columns:1fr; }
     .principle,.model-step{ border-left:0; border-top:1px solid var(--line-soft); }
     .principle:first-child,.model-step:first-child{ border-top:0; }
+    .partner-tier{ min-height:auto; }
   }
   @media (max-width:720px){
     .wrap{ width:min(100% - 36px, 1180px); }
@@ -506,6 +582,7 @@
     </a>
     <div class="nav-links">
       <a href="#value">Value</a>
+      <a href="#tiers">Tiers</a>
       <a href="#model">Model</a>
     </div>
   </nav>
@@ -520,7 +597,7 @@
         <p class="lead">MOJO AI Summits is not an event company selling sponsorships. We invite a limited group of vendor leaders into a trusted executive intelligence network built around contribution, insight, and long-term strategic relationships.</p>
         <div class="hero-actions">
           <a class="btn primary" href="#value">Understand the Network</a>
-          <a class="btn ghost" href="#model">Review the Model</a>
+          <a class="btn ghost" href="#tiers">Review Partner Tiers</a>
         </div>
       </div>
       <div class="partner-proof" aria-label="Partner value summary">
@@ -572,6 +649,71 @@
           <h3>Shape the questions the industry is asking.</h3>
           <p>Partner perspectives can inform research themes, private briefs, industry outlooks, annual summit conversations, and the yearbook.</p>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="tiers">
+    <div class="wrap">
+      <div class="section-head center">
+        <span class="eyebrow">Partner tiers</span>
+        <h2>A clear path from candidate to founding partner.</h2>
+        <p>Organizations move through the partner model by increasing their contribution to councils, intelligence products, executive problem-solving rooms, and the long-term institution.</p>
+      </div>
+      <div class="tier-ladder">
+        <article class="partner-tier">
+          <span class="tier-kicker">Entry stage</span>
+          <h3>Partner Candidate</h3>
+          <p>An organization exploring fit before formal partnership. Candidates are invited into selected conversations to demonstrate relevance, executive credibility, and contribution posture.</p>
+          <ul>
+            <li>Observe or contribute to selected council discussions</li>
+            <li>Share non-promotional market perspective</li>
+            <li>Prove strategic fit before broader access</li>
+          </ul>
+        </article>
+        <article class="partner-tier">
+          <span class="tier-kicker">Tier 01</span>
+          <h3>Council Partner</h3>
+          <p>A partner aligned to one or more Executive Intelligence Councils where their expertise strengthens the quality of peer discussion and practical decision-making.</p>
+          <ul>
+            <li>Support focused council conversations</li>
+            <li>Contribute executive-level subject matter expertise</li>
+            <li>Respect no-pitch council trust rules</li>
+          </ul>
+        </article>
+        <article class="partner-tier featured">
+          <span class="tier-kicker">Tier 02</span>
+          <h3>Intelligence Partner</h3>
+          <p>A partner contributing to the intelligence layer through research themes, private briefs, benchmark signals, field observations, and useful executive insight.</p>
+          <ul>
+            <li>Inform quarterly intelligence briefs</li>
+            <li>Contribute market signals and adoption patterns</li>
+            <li>Participate in research and editorial synthesis</li>
+          </ul>
+        </article>
+        <article class="partner-tier">
+          <span class="tier-kicker">Tier 03</span>
+          <h3>Summit Partner</h3>
+          <p>A partner with a meaningful role in the annual summit experience, helping shape problem rooms, executive sessions, and the public expression of the year's intelligence.</p>
+          <ul>
+            <li>Support annual summit programming</li>
+            <li>Contribute to problem-solving rooms</li>
+            <li>Participate in summit and yearbook outputs</li>
+          </ul>
+        </article>
+        <article class="partner-tier featured">
+          <span class="tier-kicker">Special category</span>
+          <h3>Founding Partner</h3>
+          <p>A limited early partner designation for organizations that help build the institution, set the trust standard, and shape the long-term partner model.</p>
+          <ul>
+            <li>Make an early institution-building commitment</li>
+            <li>Help define the partner trust model</li>
+            <li>Receive permanent founding recognition</li>
+          </ul>
+        </article>
+      </div>
+      <div class="tier-note">
+        Partnership level does not automatically grant individual fellowship status. People earn recognition through contribution to the network; organizations earn partner standing through strategic fit, useful expertise, and trust-preserving participation.
       </div>
     </div>
   </section>

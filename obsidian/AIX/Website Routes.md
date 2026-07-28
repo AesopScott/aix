@@ -15,7 +15,7 @@
 
 - Route: `/partner/`
 - Source file: `dist/partner/index.html`
-- Purpose: public Strategic Intelligence Partner page that explains Mojo as an executive relationship and intelligence network for vendor leaders, not an event sponsorship seller.
+- Purpose: public Strategic Intelligence Partner page that explains Mojo as an executive relationship and intelligence network for vendor leaders, not an event sponsorship seller, with partner tiers from Partner Candidate through Council Partner, Intelligence Partner, Summit Partner, and Founding Partner.
 - Routing support: `/partner` redirects to `/partner/`; no-cache headers are configured for `/partner` and `/partner/*`.
 
 ## Executive Intelligence Membership

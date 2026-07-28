@@ -8,11 +8,11 @@ Angel Mosley
 
 Dear Angel,
 
-Mojo AI Summits is pleased to offer you a part-time contractor role as **VIP Program Director** beginning **August 1, 2026**. In this role, you will help lead the VIP, speaker, agenda, session, and run-of-show work required to launch and execute Mojo AI Summits, beginning with the planned Dallas event in January 2027.
+Mojo AI Summits is pleased to offer you a part-time contractor role as **VIP Program Director and Program Director for Virtual Events** beginning **August 1, 2026**. In this role, you will help lead the VIP, speaker, agenda, session, virtual event, virtual course, and run-of-show work required to launch and execute Mojo AI Summits, including the upcoming webinar and virtual course programming and the planned Dallas event in January 2027.
 
 ## Role
 
-Your role will focus on VIP program direction, agenda execution, speaker and session operations, room logistics, run of show, and presentation materials. You will be the accountable owner for the work assigned to 'Angel' in the Mojo AI Summits master event execution checklists and will coordinate with Scott, Robert, Jodi, other contractors, and other approved partners as needed.
+Your role will focus on VIP program direction, virtual event and virtual course program direction, agenda execution, speaker and session operations, room logistics, run of show, and presentation materials. You will be the accountable owner for the work assigned to 'Angel' in the Mojo AI Summits master event execution checklists and will coordinate with Scott, Robert, Jodi, other contractors, and other approved partners as needed.
 
 ## Compensation
 
@@ -57,6 +57,18 @@ Your responsibilities will include, but are not limited to, the following:
 - Compile speaker and moderator feedback after the event.
 - Update speaker and programming templates based on lessons learned.
 
+### Virtual Webinars, Courses, and Events
+
+- Serve as Program Director for Mojo AI Summits webinars, virtual courses, and other virtual event programming.
+- Help define each virtual event or course topic, educational arc, executive decision framing, and intended audience outcome.
+- Coordinate featured speakers, moderators, instructors, and optional partner participants for virtual programming.
+- Build the run of show for virtual sessions, including welcome, concise briefing, facilitated exchange, close, and follow-up handoff.
+- Prepare speaker, moderator, and instructor briefing notes, discussion prompts, sponsor boundary notes, and presentation materials.
+- Support registration paths, invite copy, reminder sequences, calendar holds, attendee follow-up, member nominations, and next-event invitations.
+- Coordinate technical rehearsal, platform readiness, backup meeting room process, and day-of virtual session flow with the operating team.
+- Help make sure recordings, transcripts, chat, attendee data, and content permissions are captured and handled under approved rules.
+- Help use webinars and virtual courses to test topic demand, identify speaker and sponsor fit, build executive trust, and warm qualified attendees for Dallas and future city events.
+
 ### Event-Day Program Execution
 
 - Confirm schedule readiness.
@@ -92,7 +104,7 @@ Mojo AI Summits fully anticipates that this role's compensation will increase af
 
 This role is offered as an independent contractor engagement unless a separate written agreement states otherwise. This letter summarizes the intended role and compensation structure and is subject to final administrative, tax, and legal review by Mojo AI Summits.
 
-We are excited about the leadership, organization, and care you can bring to the VIP and programming experience.
+We are excited about the leadership, organization, and care you can bring to the VIP, virtual event, virtual course, and programming experience.
 
 Sincerely,
 

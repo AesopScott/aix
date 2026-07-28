@@ -19,9 +19,12 @@ Do not discard unrelated working-tree changes. Do not deploy ignored local files
 
 ## Obsidian Updates
 
-All Codex sessions working in this repository should update the project Obsidian vault at `C:\Users\scott\Code\aix\obsidian\AIX` when they create durable project knowledge, operational notes, decisions, runbooks, or handoff context that should persist beyond the current chat.
+All Codex sessions working in this repository should update the AIX project Obsidian vault when they create durable project knowledge, operational notes, decisions, runbooks, or handoff context that should persist beyond the current chat.
 
-- Treat `C:\Users\scott\Code\aix\obsidian\AIX` as the repo-local Obsidian knowledge base for AIX.
+- Obsidianify is optional per-developer automation. When it is installed, use the developer's local routing from `~/.obsidianify/config.json`, including `projects.aix.vaultPath` and `projects.aix.writeRoot`.
+- Do not commit developer-specific absolute vault paths into repo instructions or hooks.
+- Developers without Obsidianify should manually write requested Obsidian notes under the repo-relative `obsidian/AIX` vault in this checkout.
+- When a user explicitly calls out an Obsidian write, create or update a concise note in `obsidian/AIX` even if automatic Obsidianify hooks are unavailable.
 - Prefer concise, durable notes over raw transcripts.
 - Do not write secrets, temporary passwords, recovery codes, MFA details, API tokens, or other credentials into Obsidian.
 - Keep notes tied to the work actually performed in the session, including useful outcomes, decisions, and next steps.

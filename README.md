@@ -123,7 +123,7 @@ The internal `/setup/` checklist includes a repeatable virtual event series scaf
 
 ## Strategic Intelligence Partners
 
-The public partner page lives at `/partner/` and positions Mojo AI Summits as an executive relationship and intelligence network rather than an event sponsorship seller. It explains Strategic Intelligence Partner value, trust rules, and participation model.
+The public partner page lives at `/partner/` and positions Mojo AI Summits as an executive relationship and intelligence network rather than an event sponsorship seller. It explains Strategic Intelligence Partner value, Partner Candidate entry, Council Partner, Intelligence Partner, Summit Partner, Founding Partner, trust rules, and participation model.
 
 ## Executive Intelligence Membership
 
