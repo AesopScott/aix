@@ -190,6 +190,11 @@
       gap: 1rem;
       min-width: 0;
       max-width: 330px;
+      max-height: calc(100vh - 104px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding-right: 0.15rem;
+      scrollbar-color: rgba(0, 230, 255, 0.42) rgba(10, 15, 30, 0.44);
     }
 
     .panel,
@@ -345,6 +350,24 @@
 
     .actions .wide {
       grid-column: 1 / -1;
+    }
+
+    .access-panel {
+      padding-bottom: 0;
+    }
+
+    .access-actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 4;
+      margin: 0 -1rem;
+      padding: 0.85rem 1rem 1rem;
+      border-top: 1px solid rgba(0, 230, 255, 0.18);
+      background:
+        linear-gradient(180deg, rgba(27, 35, 51, 0), rgba(10, 15, 30, 0.95) 24%),
+        rgba(10, 15, 30, 0.92);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 -16px 34px rgba(0, 0, 0, 0.22);
     }
 
     button {
@@ -788,6 +811,10 @@
 
       aside {
         position: static;
+        max-width: none;
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
       }
     }
 
@@ -935,7 +962,7 @@
           </div>
         </section>
 
-        <section class="panel" aria-label="Access groups">
+        <section class="panel access-panel" aria-label="Access groups">
           <label class="check-field" for="accessEnabled">
             <input id="accessEnabled" type="checkbox">
             <span>Enable access control</span>
@@ -943,7 +970,7 @@
           <p>Leave this off while accounts and page policies are still being defined. All pages and APIs stay freely accessible until it is enabled.</p>
           <h2>Access Groups</h2>
           <div class="access-groups" id="accessGroups"></div>
-          <div class="actions">
+          <div class="actions access-actions">
             <button id="saveButton" type="button">Save</button>
             <button id="resetButton" class="danger wide" type="button">Reset Defaults</button>
           </div>
