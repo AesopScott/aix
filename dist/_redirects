@@ -11,6 +11,7 @@
 /virtual /virtual/ 301
 /virtual/ /virtual/index.html 200
 /partner /partner/ 301
+/membership /membership/ 301
 /virtual-events /virtual/ 301
 /events /events/ 301
 /events/* /events/index.html 200

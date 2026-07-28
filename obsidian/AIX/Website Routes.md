@@ -5,7 +5,7 @@
 - Route: `/admin/`
 - Source file: `dist/admin/index.html`
 - Purpose: company hub for Mojo AI Summits routes grouped by access level.
-- Public space: `/`, `/dallas/`, `/virtual/`, `/partner/`, `/vip-registration/`, `/privacy/`, and `/sms-terms/`.
+- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/partner/`, `/vip-registration/`, `/privacy/`, and `/sms-terms/`.
 - Team space: `/setup/`, `/events/`, `/crm/`, and `/storage/`.
 - Admin space: `/access/` and `/budget/`.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.
@@ -18,6 +18,15 @@
 - Purpose: public Strategic Intelligence Partner page that explains Mojo as an executive relationship and intelligence network for vendor leaders, not an event sponsorship seller.
 - Routing support: `/partner` redirects to `/partner/`; no-cache headers are configured for `/partner` and `/partner/*`.
 - Submission model: partner consideration form posts to `/api/invite-request` with request type `partner`.
+
+## Executive Intelligence Membership
+
+- Route: `/membership/`
+- Source file: `dist/membership/index.html`
+- Purpose: public Executive Intelligence Network membership page that positions membership as a curated, year-round executive community and intelligence institution rather than event registration.
+- Routing support: `/membership` redirects to `/membership/`; no-cache headers are configured for `/membership` and `/membership/*`.
+- Interaction model: informational/invitation-led page only; no application form or request submission flow.
+- Home page navigation: the former `Register` nav action now links to `/membership/`.
 
 ## Internal Event Playbook
 

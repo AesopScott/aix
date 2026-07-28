@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Executive Intelligence Membership | MOJO AI Summits</title>
+<meta name="description" content="Explore the MOJO AI Summits Executive Intelligence Network, a private community of senior leaders collaborating year-round to shape the future of AI leadership.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mojoaisummits.com/membership/">
+<meta property="og:title" content="Executive Intelligence Membership | MOJO AI Summits">
+<meta property="og:description" content="A private executive intelligence network for senior AI leaders building influence, relationships, original intelligence, and long-term community.">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260727b">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MOJO AI Summits executive intelligence network">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Executive Intelligence Membership | MOJO AI Summits">
+<meta name="twitter:description" content="A private executive intelligence network for senior AI leaders building influence, relationships, original intelligence, and long-term community.">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260727b">
+<link rel="icon" type="image/png" href="/assets/logo-badge.png">
+<link rel="apple-touch-icon" href="/assets/logo-badge.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
+
+  :root{
+    --navy:#0A0F1E;
+    --slate:#1B2333;
+    --blue:#1666FF;
+    --cyan:#00E6FF;
+    --white:#FFFFFF;
+    --ink:#c8d2e8;
+    --muted:#8791a8;
+    --line:rgba(0,230,255,.24);
+    --line-soft:rgba(150,170,210,.13);
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--navy);
+    color:var(--white);
+    font-family:'Inter', sans-serif;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 16% 12%, rgba(22,102,255,.24), transparent 34%),
+      radial-gradient(circle at 82% 18%, rgba(0,230,255,.14), transparent 28%),
+      linear-gradient(115deg, rgba(22,102,255,.10), transparent 46%),
+      repeating-linear-gradient(90deg, rgba(0,230,255,.035) 0 1px, transparent 1px 118px);
+  }
+  a{ color:inherit; text-decoration:none; }
+  p,h1,h2,h3{ margin:0; }
+  ::selection{ background:var(--blue); color:var(--white); }
+
+  .wrap{
+    width:min(1180px, calc(100% - 48px));
+    margin:0 auto;
+  }
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.34em;
+    line-height:1.4;
+    text-transform:uppercase;
+    color:var(--cyan);
+  }
+  .eyebrow::before{
+    content:"";
+    width:34px;
+    height:1px;
+    background:var(--cyan);
+    box-shadow:0 0 14px rgba(0,230,255,.7);
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:48px;
+    padding:14px 22px;
+    border:1px solid var(--cyan);
+    border-radius:2px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease);
+  }
+  .btn.primary{ color:#051019; background:var(--cyan); }
+  .btn.primary:hover{ background:var(--white); border-color:var(--white); }
+  .btn.ghost{ color:var(--cyan); background:transparent; }
+  .btn.ghost:hover{ color:var(--white); border-color:var(--white); }
+
+  header{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:20;
+    background:linear-gradient(to bottom, rgba(10,15,30,.92), rgba(10,15,30,.38), transparent);
+    backdrop-filter:blur(8px);
+  }
+  nav{
+    max-width:1180px;
+    margin:0 auto;
+    padding:20px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+  }
+  .brand-lockup{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand-mark{
+    height:39px;
+    width:auto;
+    display:block;
+    filter:drop-shadow(0 0 18px rgba(0,230,255,.18));
+  }
+  .brand-divider{
+    width:1px;
+    height:35px;
+    background:linear-gradient(to bottom, transparent, rgba(0,230,255,.9), transparent);
+    box-shadow:0 0 14px rgba(0,230,255,.24);
+  }
+  .brand-name{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    line-height:1;
+    text-transform:uppercase;
+  }
+  .brand-primary{
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:.08em;
+    white-space:nowrap;
+    background:linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 0 18px rgba(0,230,255,.16);
+  }
+  .brand-secondary{
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:.38em;
+    color:rgba(222,235,255,.82);
+    padding-left:.38em;
+    white-space:nowrap;
+  }
+  .nav-links{
+    display:flex;
+    align-items:center;
+    gap:26px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .nav-links a:hover{ color:var(--white); }
+
+  main{ position:relative; z-index:1; }
+  .hero{
+    min-height:100vh;
+    display:grid;
+    align-items:end;
+    padding:138px 0 58px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(90deg, rgba(10,15,30,.96) 0%, rgba(10,15,30,.82) 46%, rgba(10,15,30,.34) 100%),
+      url('../assets/boardroom-transparent.png') right 8% bottom 2% / min(780px, 58vw) auto no-repeat;
+    z-index:-2;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    height:34%;
+    background:linear-gradient(to bottom, transparent, var(--navy));
+    z-index:-1;
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns:minmax(0, 1.03fr) minmax(310px, .62fr);
+    gap:58px;
+    align-items:end;
+  }
+  h1{
+    margin-top:22px;
+    max-width:900px;
+    font-family:'Fraunces', serif;
+    font-size:clamp(45px, 7vw, 92px);
+    line-height:.96;
+    font-weight:600;
+    letter-spacing:0;
+  }
+  .lead{
+    max-width:670px;
+    margin-top:28px;
+    color:var(--ink);
+    font-size:20px;
+    line-height:1.65;
+  }
+  .hero-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-top:36px;
+  }
+  .network-card{
+    position:relative;
+    min-height:430px;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line-soft);
+    overflow:hidden;
+  }
+  .network-card::before,
+  .network-card::after{
+    content:"";
+    position:absolute;
+    inset:50% auto auto 50%;
+    width:210px;
+    aspect-ratio:1;
+    border:1px solid rgba(0,230,255,.24);
+    border-radius:50%;
+    transform:translate(-50%, -50%);
+    box-shadow:0 0 70px rgba(0,230,255,.12);
+    animation:pulse 7s ease-in-out infinite;
+  }
+  .network-card::after{
+    width:310px;
+    animation-delay:1.8s;
+    opacity:.58;
+  }
+  .node{
+    position:absolute;
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 22px rgba(0,230,255,.72);
+  }
+  .node.one{ left:16%; top:28%; }
+  .node.two{ right:20%; top:18%; }
+  .node.three{ left:34%; bottom:16%; }
+  .node.four{ right:10%; bottom:28%; }
+  .node.five{ left:52%; top:46%; background:var(--white); }
+  .connection{
+    position:absolute;
+    height:1px;
+    background:linear-gradient(90deg, transparent, rgba(0,230,255,.86), transparent);
+    transform-origin:left center;
+    opacity:.52;
+  }
+  .connection.a{ left:18%; top:30%; width:52%; transform:rotate(-8deg); }
+  .connection.b{ left:36%; top:68%; width:46%; transform:rotate(-28deg); }
+  .connection.c{ left:52%; top:48%; width:34%; transform:rotate(28deg); }
+  .connection.d{ left:34%; top:68%; width:28%; transform:rotate(-72deg); }
+  .network-copy{
+    position:absolute;
+    left:28px;
+    right:28px;
+    bottom:28px;
+    z-index:1;
+  }
+  .network-copy span{
+    color:var(--cyan);
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+  }
+  .network-copy h3{
+    margin-top:14px;
+    font-family:'Fraunces', serif;
+    font-size:30px;
+    font-weight:500;
+    line-height:1.14;
+  }
+  .network-copy p{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.65;
+  }
+  @keyframes pulse{
+    0%,100%{ transform:translate(-50%, -50%) scale(.92); opacity:.45; }
+    50%{ transform:translate(-50%, -50%) scale(1.08); opacity:.9; }
+  }
+
+  section{ padding:90px 0; }
+  .section-head{ max-width:760px; margin-bottom:44px; }
+  .section-head.center{
+    margin-left:auto;
+    margin-right:auto;
+    text-align:center;
+  }
+  .section-head.center .eyebrow{ justify-content:center; }
+  .section-head.center .eyebrow::before{ display:none; }
+  h2{
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:clamp(32px, 4vw, 54px);
+    line-height:1.08;
+    font-weight:600;
+    letter-spacing:0;
+  }
+  .section-head p{
+    margin-top:18px;
+    color:var(--ink);
+    font-size:18px;
+    line-height:1.68;
+  }
+  .split{
+    display:grid;
+    grid-template-columns:.86fr 1.14fr;
+    gap:56px;
+    align-items:start;
+  }
+  .statement{
+    position:sticky;
+    top:112px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .statement strong{
+    display:block;
+    font-family:'Fraunces', serif;
+    font-size:clamp(28px, 3vw, 42px);
+    line-height:1.16;
+    font-weight:500;
+  }
+  .statement p{
+    margin-top:18px;
+    color:var(--muted);
+    font-size:17px;
+    line-height:1.72;
+  }
+  .value-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:18px;
+  }
+  .panel{
+    min-height:214px;
+    padding:28px;
+    border:1px solid var(--line-soft);
+    border-top-color:var(--line);
+    border-radius:6px;
+    background:linear-gradient(180deg, rgba(27,35,51,.50), rgba(10,15,30,.28));
+  }
+  .panel .label{
+    display:block;
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+  }
+  .panel h3{
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:25px;
+    font-weight:500;
+    line-height:1.16;
+  }
+  .panel p{
+    margin-top:14px;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.66;
+  }
+  .band{
+    background:linear-gradient(180deg, rgba(27,35,51,.38), rgba(10,15,30,.34));
+    border-top:1px solid var(--line-soft);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .journey{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    border-top:1px solid var(--line);
+  }
+  .journey-step{
+    padding:30px 22px 0;
+    border-left:1px solid var(--line-soft);
+  }
+  .journey-step:first-child{ border-left:0; }
+  .journey-step span{
+    color:var(--cyan);
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+  }
+  .journey-step h3{
+    margin-top:16px;
+    font-family:'Fraunces', serif;
+    font-size:26px;
+    font-weight:500;
+  }
+  .journey-step p{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.66;
+  }
+  .receive-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:14px;
+  }
+  .receive-item{
+    min-height:118px;
+    padding:20px;
+    border:1px solid var(--line-soft);
+    border-radius:6px;
+    background:rgba(27,35,51,.36);
+  }
+  .receive-item h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+    letter-spacing:.1em;
+    line-height:1.38;
+    text-transform:uppercase;
+  }
+  .receive-item p{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.55;
+  }
+  .principles{
+    display:grid;
+    grid-template-columns:repeat(5, minmax(0,1fr));
+    gap:10px;
+  }
+  .principles span{
+    display:flex;
+    align-items:center;
+    min-height:58px;
+    padding:14px;
+    border:1px solid var(--line-soft);
+    border-radius:4px;
+    color:var(--ink);
+    background:rgba(5,8,16,.36);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+  }
+  .quote-strip{
+    min-height:430px;
+    display:flex;
+    align-items:center;
+    background:
+      linear-gradient(90deg, rgba(10,15,30,.94), rgba(10,15,30,.78) 48%, rgba(10,15,30,.34)),
+      url('../assets/event-photo.webp') center 30% / cover no-repeat;
+  }
+  .quote-strip blockquote{
+    max-width:880px;
+    margin:0;
+    font-family:'Fraunces', serif;
+    font-size:clamp(34px, 4.6vw, 62px);
+    line-height:1.08;
+    font-weight:500;
+  }
+  .quote-strip p{
+    margin-top:24px;
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+  }
+  .closing-panel{
+    padding:34px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:linear-gradient(180deg, rgba(27,35,51,.52), rgba(10,15,30,.32));
+    box-shadow:0 24px 80px rgba(0,0,0,.32);
+  }
+  .closing-panel h3{
+    font-family:'Fraunces', serif;
+    font-size:clamp(28px, 3vw, 42px);
+    font-weight:500;
+    line-height:1.14;
+  }
+  .closing-panel p{
+    margin-top:18px;
+    color:var(--muted);
+    font-size:17px;
+    line-height:1.72;
+  }
+  .closing-list{
+    margin-top:28px;
+    display:grid;
+    gap:14px;
+  }
+  .closing-list span{
+    display:block;
+    padding:14px 0 0;
+    border-top:1px solid var(--line-soft);
+    color:var(--ink);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.12em;
+    line-height:1.45;
+    text-transform:uppercase;
+  }
+  footer{
+    padding:46px 0 52px;
+    border-top:1px solid var(--line-soft);
+    text-align:center;
+    color:var(--muted);
+  }
+  footer img{ width:76px; height:auto; opacity:.9; }
+  footer p{
+    margin-top:14px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  footer span{ color:var(--cyan); }
+
+  @media (max-width:960px){
+    .hero{ min-height:auto; padding-top:124px; }
+    .hero::before{
+      background:
+        linear-gradient(180deg, rgba(10,15,30,.96), rgba(10,15,30,.82), rgba(10,15,30,.62)),
+        url('../assets/boardroom-transparent.png') center bottom / 94vw auto no-repeat;
+    }
+    .hero-grid,.split{ grid-template-columns:1fr; }
+    .network-card{ margin-top:30px; }
+    .statement{ position:relative; top:auto; }
+    .value-grid,.journey,.receive-grid,.principles{ grid-template-columns:1fr; }
+    .journey-step{ border-left:0; border-top:1px solid var(--line-soft); }
+    .journey-step:first-child{ border-top:0; }
+    .checkboxes{ grid-template-columns:1fr; }
+  }
+  @media (max-width:720px){
+    .wrap{ width:min(100% - 36px, 1180px); }
+    nav{ padding:18px; }
+    .nav-links{ display:none; }
+    .brand-mark{ height:34px; }
+    .brand-primary{ font-size:20px; letter-spacing:.03em; }
+    .brand-secondary{ font-size:9.5px; letter-spacing:.32em; }
+    section{ padding:66px 0; }
+    .closing-panel{ padding:24px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <nav aria-label="Membership page navigation">
+    <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+      <img class="brand-mark" src="../assets/logo-mark.png" alt="">
+      <span class="brand-divider" aria-hidden="true"></span>
+      <span class="brand-name" aria-hidden="true">
+        <span class="brand-primary">MOJO AI</span>
+        <span class="brand-secondary">Summits</span>
+      </span>
+    </a>
+    <div class="nav-links">
+      <a href="#journey">Journey</a>
+      <a href="#receive">Receive</a>
+      <a href="#principles">Principles</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Executive Intelligence Network</span>
+        <h1>Join the Executive Intelligence Network</h1>
+        <p class="lead">A private community of senior executives collaborating year-round to shape the future of AI leadership. Participation is by invitation and trusted introduction.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#receive">Explore Member Value</a>
+          <a class="btn ghost" href="#journey">Learn How the Network Works</a>
+        </div>
+      </div>
+      <div class="network-card" aria-label="Executive network visualization">
+        <span class="node one"></span>
+        <span class="node two"></span>
+        <span class="node three"></span>
+        <span class="node four"></span>
+        <span class="node five"></span>
+        <span class="connection a"></span>
+        <span class="connection b"></span>
+        <span class="connection c"></span>
+        <span class="connection d"></span>
+        <div class="network-copy">
+          <span>Knowledge compounds</span>
+          <h3>Every member makes the network stronger.</h3>
+          <p>Experience becomes discussion. Discussion becomes research. Research helps other leaders make better AI decisions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contribution">
+    <div class="wrap split">
+      <div class="statement">
+        <span class="eyebrow">Contribution</span>
+        <strong>Membership is about influence, relationships, knowledge, recognition, and original intelligence.</strong>
+        <p>Members are not passive attendees. They contribute experience, share lessons, challenge assumptions, influence research, and strengthen a trusted executive community.</p>
+      </div>
+      <div class="value-grid">
+        <article class="panel">
+          <span class="label">Influence</span>
+          <h3>Shape the questions leaders are asking.</h3>
+          <p>Members help define the practical AI leadership agenda through confidential dialogue, peer insight, and ongoing research participation.</p>
+        </article>
+        <article class="panel">
+          <span class="label">Relationships</span>
+          <h3>Build trust across repeated interactions.</h3>
+          <p>The network is designed for durable executive relationships, not one-off introductions at a single event.</p>
+        </article>
+        <article class="panel">
+          <span class="label">Recognition</span>
+          <h3>Become known for meaningful contribution.</h3>
+          <p>Members can contribute to briefs, councils, benchmark discussions, summit conversations, and annual intelligence publications.</p>
+        </article>
+        <article class="panel">
+          <span class="label">Growth</span>
+          <h3>Learn beside leaders facing real constraints.</h3>
+          <p>Confidential peer exchange turns lived experience into sharper strategy, clearer decisions, and stronger executive judgment.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="journey">
+    <div class="wrap">
+      <div class="section-head center">
+        <span class="eyebrow">Executive journey</span>
+        <h2>A year-round path from invitation to long-term leadership network.</h2>
+        <p>Relationships strengthen over time through welcome sessions, executive intelligence sessions, quarterly briefs, private introductions, summits, and annual publications.</p>
+      </div>
+      <div class="journey">
+        <article class="journey-step">
+          <span>First 30 days</span>
+          <h3>Immediate value</h3>
+          <p>Meet executive peers, join confidential discussions, access current briefs, and begin building trusted relationships.</p>
+        </article>
+        <article class="journey-step">
+          <span>3-12 months</span>
+          <h3>Visible contribution</h3>
+          <p>Contribute to published intelligence, participate in councils, benchmark against peers, and shape future conversations.</p>
+        </article>
+        <article class="journey-step">
+          <span>1-5 years</span>
+          <h3>Long-term influence</h3>
+          <p>Build professional legacy through community, original intelligence, annual publications, and leadership initiatives.</p>
+        </article>
+        <article class="journey-step">
+          <span>Ongoing</span>
+          <h3>Compounding network</h3>
+          <p>Members, sessions, briefs, summits, relationships, and new leaders create a continuous intelligence flywheel.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="receive">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Member value</span>
+        <h2>What members receive.</h2>
+        <p>The network combines private executive conversation, original intelligence, curated introductions, research participation, and priority summit access.</p>
+      </div>
+      <div class="receive-grid">
+        <article class="receive-item"><h3>Executive Intelligence Sessions</h3><p>Confidential peer sessions for the AI decisions that matter.</p></article>
+        <article class="receive-item"><h3>Quarterly Intelligence Briefs</h3><p>Original synthesis from the network's conversations and research.</p></article>
+        <article class="receive-item"><h3>Annual Intelligence Yearbook</h3><p>A durable record of themes, lessons, benchmarks, and leadership insight.</p></article>
+        <article class="receive-item"><h3>Private Executive Introductions</h3><p>Curated relationships when relevance and mutual value are clear.</p></article>
+        <article class="receive-item"><h3>Leadership Councils</h3><p>Focused communities around governance, security, innovation, operations, and transformation.</p></article>
+        <article class="receive-item"><h3>Priority Summit Access</h3><p>Preferential consideration for invitation-only MOJO AI Summits gatherings.</p></article>
+        <article class="receive-item"><h3>Benchmark Reports</h3><p>Peer-informed perspective on AI readiness, maturity, and operating models.</p></article>
+        <article class="receive-item"><h3>Knowledge Archive</h3><p>A growing body of executive intelligence that gets more valuable over time.</p></article>
+        <article class="receive-item"><h3>Recognition Opportunities</h3><p>Visibility for executives who contribute useful insight and leadership.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="principles">
+    <div class="wrap">
+      <div class="section-head center">
+        <span class="eyebrow">Membership principles</span>
+        <h2>Designed to protect executive trust.</h2>
+      </div>
+      <div class="principles">
+        <span>Confidentiality</span>
+        <span>Mutual respect</span>
+        <span>Executive-level discussion</span>
+        <span>No sales presentations</span>
+        <span>No vendor pitches</span>
+        <span>Constructive debate</span>
+        <span>Knowledge sharing</span>
+        <span>Professional integrity</span>
+        <span>Curated participation</span>
+        <span>Long-term relationships</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="quote-strip" aria-label="Executive intelligence membership thesis">
+    <div class="wrap">
+      <blockquote>This is not a conference community. It is a living executive intelligence network.</blockquote>
+      <p>Built for the long game</p>
+    </div>
+  </section>
+
+  <section id="invitation">
+    <div class="wrap split">
+      <div class="section-head">
+        <span class="eyebrow">By invitation</span>
+        <h2>Help shape the future of executive AI leadership.</h2>
+        <p>The network grows through trust, contribution, and careful curation. Membership conversations begin through direct invitation, existing member relationships, leadership councils, and summit participation.</p>
+      </div>
+      <div class="closing-panel">
+        <h3>A leadership institution, not a transaction.</h3>
+        <p>MOJO AI Summits protects the room by keeping membership relational. The right executives are invited into the network when their experience, integrity, and perspective can strengthen the collective intelligence of the community.</p>
+        <div class="closing-list" aria-label="Membership invitation signals">
+          <span>Trusted executive introductions</span>
+          <span>Leadership council participation</span>
+          <span>Summit relationship development</span>
+          <span>Meaningful contribution to original intelligence</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img src="../assets/logo-badge.png" alt="MOJO AI Summits badge">
+  <p>Powered by <span>MOJO AI Studio</span></p>
+</footer>
+
+</body>
+</html>

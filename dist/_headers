@@ -128,6 +128,16 @@
   Pragma: no-cache
   Expires: 0
 
+/membership
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/membership/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
 /events
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache

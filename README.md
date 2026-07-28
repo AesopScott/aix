@@ -45,7 +45,7 @@ Protected internal routes:
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/partner/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/partner/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
 
 Mojo Auth endpoints:
 
@@ -86,7 +86,7 @@ Required GitHub secrets:
 
 ## VIP Registration
 
-The home page registration action asks for an invite code, then sends guests to `/vip-registration/`.
+The VIP registration page asks for an invite code, then sends guests to `/vip-registration/`.
 VIP registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `vip-registration:*`.
 Direct visits to `/vip-registration/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
 
@@ -117,6 +117,10 @@ The internal `/setup/` checklist includes a repeatable virtual event series scaf
 ## Strategic Intelligence Partners
 
 The public partner page lives at `/partner/` and positions Mojo AI Summits as an executive relationship and intelligence network rather than an event sponsorship seller. It explains Strategic Intelligence Partner value, trust rules, participation model, and includes a partner consideration form wired to `/api/invite-request` with request type `partner`.
+
+## Executive Intelligence Membership
+
+The public membership page lives at `/membership/` and replaces the former home page `Register` navigation action. It presents the Executive Intelligence Network as an invitation-led, year-round executive community with no application form or request submission flow.
 
 ## Event Playbooks
 
