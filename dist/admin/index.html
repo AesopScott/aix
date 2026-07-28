@@ -874,7 +874,7 @@
           </div>
           <div class="link-grid">
             ${entry.routes.map((route) => `
-              <a class="link-card" href="${escapeHtml(route.path)}">
+              <a class="link-card" href="${escapeHtml(route.path)}" target="_blank" rel="noopener noreferrer">
                 <span class="link-top">
                   <span class="link-title">
                     <strong>${escapeHtml(route.title)}</strong>
@@ -899,7 +899,7 @@
       foundPanel.hidden = discoveredRoutes.length === 0;
       foundList.innerHTML = discoveredRoutes.map((route) => `
         <li>
-          <a href="${escapeHtml(route.path)}">
+          <a href="${escapeHtml(route.path)}" target="_blank" rel="noopener noreferrer">
             <span>${escapeHtml(route.title)}</span>
             <code>${escapeHtml(route.path)}</code>
           </a>
