@@ -27,10 +27,16 @@ function wantsHtml(request) {
   return String(request.headers.get("accept") || "").includes("text/html");
 }
 
+function nextPathForLogin(url) {
+  if (url.pathname === "/access" || url.pathname.startsWith("/access/")) return "";
+  return `${url.pathname}${url.search}`;
+}
+
 function loginRedirect(request) {
   const url = new URL(request.url);
   const loginUrl = new URL("/access/", url);
-  loginUrl.searchParams.set("next", `${url.pathname}${url.search}`);
+  const nextPath = nextPathForLogin(url);
+  if (nextPath) loginUrl.searchParams.set("next", nextPath);
   return Response.redirect(loginUrl, 302);
 }
 

@@ -1149,6 +1149,27 @@
       elements.notice.textContent = "";
     }
 
+    function safeNextPath() {
+      const rawNext = new URLSearchParams(location.search).get("next");
+      if (!rawNext) return "";
+      try {
+        const parsed = new URL(rawNext, location.origin);
+        if (parsed.origin !== location.origin) return "";
+        if (parsed.pathname === "/access" || parsed.pathname.startsWith("/access/")) return "";
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      } catch {
+        return "";
+      }
+    }
+
+    function cleanInvalidNextParam() {
+      const params = new URLSearchParams(location.search);
+      if (!params.has("next") || safeNextPath()) return;
+      params.delete("next");
+      const nextSearch = params.toString();
+      history.replaceState({}, "", `${location.pathname}${nextSearch ? `?${nextSearch}` : ""}`);
+    }
+
     function setBusy(value) {
       state.busy = value;
       elements.saveButton.disabled = value;
@@ -1565,6 +1586,11 @@
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Sign in failed.");
         elements.loginPassword.value = "";
+        const nextPath = safeNextPath();
+        if (nextPath) {
+          location.assign(nextPath);
+          return;
+        }
         await loadSession();
       } catch (error) {
         showNotice(error.message, "error");
@@ -1881,6 +1907,7 @@
     elements.generatePasswordButton.addEventListener("click", fillGeneratedPassword);
     elements.userForm.addEventListener("submit", createUserAccount);
 
+    cleanInvalidNextParam();
     loadSession();
   </script>
 </body>

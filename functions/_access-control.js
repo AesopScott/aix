@@ -352,6 +352,10 @@ function defaultGroupsForRoute(rule) {
   return ["mojo-team"];
 }
 
+function mustRemainPublicRoute(id) {
+  return ["access", "api-auth"].includes(id);
+}
+
 function sanitizeAccessGroups(inputGroups = []) {
   const incoming = new Map(
     (Array.isArray(inputGroups) ? inputGroups : [])
@@ -389,6 +393,15 @@ export function sanitizeAccessConfig(input = {}, actor = "") {
   );
 
   const routes = DEFAULT_ACCESS_RULES.map((definition) => {
+    if (mustRemainPublicRoute(definition.id)) {
+      return {
+        id: definition.id,
+        mode: "public",
+        allowedGroupIds: ["public"],
+        allowedEmails: []
+      };
+    }
+
     const incoming = incomingRoutes.get(definition.id) || {};
     const incomingGroupIds = sanitizeGroupIds(incoming.allowedGroupIds, validGroupIds);
     const defaultGroupIds = defaultGroupsForRoute(definition);
@@ -455,11 +468,15 @@ export function expandAccessConfig(config, env = {}) {
     groups,
     routes: DEFAULT_ACCESS_RULES.map((definition) => ({
       ...definition,
-      mode: routeSettings.get(definition.id)?.mode || definition.mode,
-      allowedGroupIds: sanitizeGroupIds(
-        routeSettings.get(definition.id)?.allowedGroupIds || defaultGroupsForRoute(definition),
-        new Set(groups.map((group) => group.id))
-      ),
+      mode: mustRemainPublicRoute(definition.id)
+        ? "public"
+        : routeSettings.get(definition.id)?.mode || definition.mode,
+      allowedGroupIds: mustRemainPublicRoute(definition.id)
+        ? ["public"]
+        : sanitizeGroupIds(
+            routeSettings.get(definition.id)?.allowedGroupIds || defaultGroupsForRoute(definition),
+            new Set(groups.map((group) => group.id))
+          ),
       allowedEmails: parseAllowedEmails(routeSettings.get(definition.id)?.allowedEmails)
     }))
   };

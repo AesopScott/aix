@@ -11,6 +11,7 @@ Current state:
 - The Create Account flow now shows inline validation and submission feedback instead of relying on native browser validation.
 - Access policy now uses three starter groups: `Public`, `Admin`, and `Mojo team`.
 - Routes/pages/APIs are assigned to groups, and group email membership determines which non-admin users can access protected routes.
+- `/access/` and `/api/auth/*` must remain public so unauthenticated users can reach sign-in, accept invites, and avoid nested `next=/access/` redirect loops.
 - `Admin` and `owner` roles can manage the access console and bypass protected-route group lists; `member` accounts depend on group membership.
 - The account creation UI now asks for access groups (`Admin` and/or `Mojo team`) instead of exposing raw `member/admin/owner` role choices.
 - Access group cards show visible membership lists with account status, backed by the editable group email lists.
