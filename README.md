@@ -6,6 +6,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Company hub: https://mojoaisummits.com/admin/
 - Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
+- Strategic intelligence partners: https://mojoaisummits.com/partner/
 - VIP registration: https://mojoaisummits.com/vip-registration/
 - Internal CRM: https://mojoaisummits.com/crm/
 - Setup checklist: https://mojoaisummits.com/setup/
@@ -44,7 +45,7 @@ Protected internal routes:
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/partner/`, `/vip-registration/`, `/api/invite-request`, `/api/phone-verification`, `/api/vip-registration`, and `/crm/api/public/...`.
 
 Mojo Auth endpoints:
 
@@ -112,6 +113,10 @@ Create Zoom meetings locally with `scripts/create-zoom-virtual-events.mjs` after
 - `MOJO_SUMMITS_SETUP_STATE_ID` for writing join URLs into the Cloudflare KV namespace
 
 The internal `/setup/` checklist includes a repeatable virtual event series scaffold for strategy, platform setup, speaker readiness, audience promotion, live delivery, and follow-up.
+
+## Strategic Intelligence Partners
+
+The public partner page lives at `/partner/` and positions Mojo AI Summits as a paid executive relationship and intelligence network rather than an event sponsorship seller. It explains Strategic Intelligence Partner value, trust rules, participation model, and includes a partner consideration form wired to `/api/invite-request` with request type `partner`.
 
 ## Event Playbooks
 

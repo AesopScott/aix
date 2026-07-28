@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strategic Intelligence Partners | MOJO AI Summits</title>
+<meta name="description" content="MOJO AI Summits invites Strategic Intelligence Partners into a paid executive relationship network for vendor leaders committed to practical progress across the AI industry.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mojoaisummits.com/partner/">
+<meta property="og:title" content="Strategic Intelligence Partners | MOJO AI Summits">
+<meta property="og:description" content="A paid executive relationship network for vendor leaders committed to strategic progress across the AI industry.">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260727b">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MOJO AI Summits executive intelligence network">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Strategic Intelligence Partners | MOJO AI Summits">
+<meta name="twitter:description" content="A paid executive relationship network for vendor leaders committed to strategic progress across the AI industry.">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260727b">
+<link rel="icon" type="image/png" href="/assets/logo-badge.png">
+<link rel="apple-touch-icon" href="/assets/logo-badge.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
+
+  :root{
+    --navy:#0A0F1E;
+    --navy-2:#0d1424;
+    --slate:#1B2333;
+    --blue:#1666FF;
+    --cyan:#00E6FF;
+    --white:#FFFFFF;
+    --ink:#c8d2e8;
+    --muted:#858fa5;
+    --dim:#525c72;
+    --line:rgba(0,230,255,.22);
+    --line-soft:rgba(150,170,210,.12);
+    --panel:rgba(27,35,51,.58);
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--navy);
+    color:var(--white);
+    font-family:'Inter', sans-serif;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+    background:
+      linear-gradient(115deg, rgba(22,102,255,.16), transparent 42%),
+      linear-gradient(245deg, rgba(0,230,255,.08), transparent 46%),
+      repeating-linear-gradient(90deg, rgba(0,230,255,.035) 0 1px, transparent 1px 120px);
+    opacity:.9;
+  }
+  a{ color:inherit; text-decoration:none; }
+  p,h1,h2,h3{ margin:0; }
+  ::selection{ background:var(--blue); color:var(--white); }
+
+  .wrap{
+    width:min(1180px, calc(100% - 48px));
+    margin:0 auto;
+  }
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.34em;
+    line-height:1.4;
+    text-transform:uppercase;
+    color:var(--cyan);
+  }
+  .eyebrow::before{
+    content:"";
+    width:34px;
+    height:1px;
+    background:var(--cyan);
+    box-shadow:0 0 14px rgba(0,230,255,.7);
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:48px;
+    padding:14px 22px;
+    border:1px solid var(--cyan);
+    border-radius:2px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease);
+  }
+  .btn.primary{
+    color:#051019;
+    background:var(--cyan);
+  }
+  .btn.primary:hover{ background:var(--white); border-color:var(--white); }
+  .btn.ghost{ color:var(--cyan); background:transparent; }
+  .btn.ghost:hover{ color:var(--white); border-color:var(--white); }
+
+  header{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:20;
+    background:linear-gradient(to bottom, rgba(10,15,30,.92), rgba(10,15,30,.38), transparent);
+    backdrop-filter:blur(8px);
+  }
+  nav{
+    max-width:1180px;
+    margin:0 auto;
+    padding:20px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+  }
+  .brand-lockup{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand-mark{
+    height:39px;
+    width:auto;
+    display:block;
+    filter:drop-shadow(0 0 18px rgba(0,230,255,.18));
+  }
+  .brand-divider{
+    width:1px;
+    height:35px;
+    background:linear-gradient(to bottom, transparent, rgba(0,230,255,.9), transparent);
+    box-shadow:0 0 14px rgba(0,230,255,.24);
+  }
+  .brand-name{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    line-height:1;
+    text-transform:uppercase;
+  }
+  .brand-primary{
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:.08em;
+    white-space:nowrap;
+    background:linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 0 18px rgba(0,230,255,.16);
+  }
+  .brand-secondary{
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:.38em;
+    color:rgba(222,235,255,.82);
+    padding-left:.38em;
+    white-space:nowrap;
+  }
+  .nav-links{
+    display:flex;
+    align-items:center;
+    gap:26px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .nav-links a:hover{ color:var(--white); }
+
+  main{ position:relative; z-index:1; }
+  .hero{
+    min-height:96vh;
+    display:grid;
+    align-items:end;
+    padding:136px 0 56px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(90deg, rgba(10,15,30,.94) 0%, rgba(10,15,30,.80) 44%, rgba(10,15,30,.28) 100%),
+      url('../assets/boardroom-transparent.png') right 14% bottom 4% / min(760px, 58vw) auto no-repeat;
+    z-index:-2;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    height:36%;
+    background:linear-gradient(to bottom, transparent, var(--navy));
+    z-index:-1;
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns:minmax(0, 1.02fr) minmax(300px, .58fr);
+    gap:58px;
+    align-items:end;
+  }
+  h1{
+    margin-top:22px;
+    max-width:860px;
+    font-family:'Fraunces', serif;
+    font-size:clamp(46px, 7vw, 92px);
+    line-height:.96;
+    font-weight:600;
+    letter-spacing:0;
+  }
+  .hero .lead{
+    max-width:650px;
+    margin-top:28px;
+    color:var(--ink);
+    font-size:20px;
+    line-height:1.65;
+  }
+  .hero-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-top:36px;
+  }
+  .partner-proof{
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line-soft);
+    padding:26px 0;
+    display:grid;
+    gap:22px;
+  }
+  .proof-row{
+    display:grid;
+    grid-template-columns:84px minmax(0,1fr);
+    gap:18px;
+    align-items:start;
+  }
+  .proof-num{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:38px;
+    color:var(--cyan);
+    line-height:1;
+  }
+  .proof-row h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .proof-row p{
+    margin-top:8px;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.6;
+  }
+
+  section{ padding:88px 0; }
+  .section-head{
+    max-width:760px;
+    margin-bottom:44px;
+  }
+  .section-head.center{
+    margin-left:auto;
+    margin-right:auto;
+    text-align:center;
+  }
+  .section-head.center .eyebrow{ justify-content:center; }
+  .section-head.center .eyebrow::before{ display:none; }
+  h2{
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:clamp(32px, 4vw, 54px);
+    line-height:1.08;
+    font-weight:600;
+    letter-spacing:0;
+  }
+  .section-head p{
+    margin-top:18px;
+    color:var(--ink);
+    font-size:18px;
+    line-height:1.68;
+  }
+  .split{
+    display:grid;
+    grid-template-columns:.86fr 1.14fr;
+    gap:56px;
+    align-items:start;
+  }
+  .statement{
+    position:sticky;
+    top:112px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .statement strong{
+    display:block;
+    font-family:'Fraunces', serif;
+    font-size:clamp(28px, 3vw, 42px);
+    line-height:1.16;
+    font-weight:500;
+  }
+  .statement p{
+    margin-top:18px;
+    color:var(--muted);
+    font-size:17px;
+    line-height:1.72;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:18px;
+  }
+  .panel{
+    min-height:232px;
+    padding:28px;
+    border:1px solid var(--line-soft);
+    border-top-color:var(--line);
+    border-radius:6px;
+    background:linear-gradient(180deg, rgba(27,35,51,.50), rgba(10,15,30,.28));
+  }
+  .panel .label{
+    display:block;
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+  }
+  .panel h3{
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:25px;
+    font-weight:500;
+    line-height:1.16;
+  }
+  .panel p{
+    margin-top:14px;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.66;
+  }
+  .band{
+    position:relative;
+    background:linear-gradient(180deg, rgba(27,35,51,.38), rgba(10,15,30,.34));
+    border-top:1px solid var(--line-soft);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .principles{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    border-top:1px solid var(--line-soft);
+  }
+  .principle{
+    padding:30px 22px 0;
+    border-left:1px solid var(--line-soft);
+  }
+  .principle:first-child{ border-left:0; }
+  .principle h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    letter-spacing:.1em;
+    line-height:1.35;
+    text-transform:uppercase;
+  }
+  .principle p{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.65;
+  }
+  .model{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:0;
+    border-top:1px solid var(--line);
+  }
+  .model-step{
+    padding:32px 28px 0;
+    border-left:1px solid var(--line-soft);
+  }
+  .model-step:first-child{ border-left:0; }
+  .model-step span{
+    color:var(--cyan);
+    font-family:'Orbitron', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+  }
+  .model-step h3{
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:28px;
+    font-weight:500;
+  }
+  .model-step p{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.66;
+  }
+  .quote-strip{
+    min-height:420px;
+    display:flex;
+    align-items:center;
+    background:
+      linear-gradient(90deg, rgba(10,15,30,.94), rgba(10,15,30,.78) 48%, rgba(10,15,30,.34)),
+      url('../assets/event-photo.webp') center 30% / cover no-repeat;
+  }
+  .quote-strip blockquote{
+    max-width:850px;
+    margin:0;
+    font-family:'Fraunces', serif;
+    font-size:clamp(34px, 4.6vw, 62px);
+    line-height:1.08;
+    font-weight:500;
+  }
+  .quote-strip p{
+    margin-top:24px;
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+  }
+  .form-section{
+    padding-bottom:106px;
+  }
+  .partner-form{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:18px;
+    padding:30px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:rgba(27,35,51,.46);
+    box-shadow:0 24px 80px rgba(0,0,0,.32);
+  }
+  .field{ display:flex; flex-direction:column; gap:8px; }
+  .field.full{ grid-column:1 / -1; }
+  label{
+    color:var(--ink);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  input,select,textarea{
+    width:100%;
+    border:1px solid rgba(150,170,210,.18);
+    border-radius:2px;
+    background:rgba(5,8,16,.72);
+    color:var(--white);
+    font:inherit;
+    font-size:15px;
+    padding:14px 13px;
+    outline:none;
+  }
+  textarea{ min-height:118px; resize:vertical; }
+  input:focus,select:focus,textarea:focus{ border-color:var(--cyan); }
+  .checkboxes{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:10px;
+  }
+  .checkboxes label{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    min-height:58px;
+    padding:13px;
+    border:1px solid rgba(150,170,210,.14);
+    border-radius:4px;
+    background:rgba(5,8,16,.42);
+    color:var(--ink);
+    letter-spacing:0;
+    line-height:1.35;
+    text-transform:none;
+  }
+  .checkboxes input{ width:auto; margin-top:2px; accent-color:var(--cyan); }
+  .form-actions{
+    grid-column:1 / -1;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+  .form-note{
+    max-width:580px;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.55;
+  }
+  .success{
+    display:none;
+    grid-column:1 / -1;
+    padding:18px;
+    border:1px solid rgba(0,230,255,.32);
+    color:var(--cyan);
+    background:rgba(0,230,255,.06);
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    letter-spacing:.04em;
+  }
+  .success.show{ display:block; }
+  footer{
+    padding:46px 0 52px;
+    border-top:1px solid var(--line-soft);
+    text-align:center;
+    color:var(--muted);
+  }
+  footer img{ width:76px; height:auto; opacity:.9; }
+  footer p{
+    margin-top:14px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  footer span{ color:var(--cyan); }
+
+  @media (max-width:920px){
+    .hero{ min-height:auto; padding-top:124px; }
+    .hero::before{
+      background:
+        linear-gradient(180deg, rgba(10,15,30,.96), rgba(10,15,30,.82), rgba(10,15,30,.62)),
+        url('../assets/boardroom-transparent.png') center bottom / 94vw auto no-repeat;
+    }
+    .hero-grid,.split{ grid-template-columns:1fr; }
+    .partner-proof{ margin-top:30px; }
+    .statement{ position:relative; top:auto; }
+    .grid,.principles,.model,.partner-form{ grid-template-columns:1fr; }
+    .principle,.model-step{ border-left:0; border-top:1px solid var(--line-soft); }
+    .principle:first-child,.model-step:first-child{ border-top:0; }
+    .checkboxes{ grid-template-columns:1fr; }
+  }
+  @media (max-width:720px){
+    .wrap{ width:min(100% - 36px, 1180px); }
+    nav{ padding:18px; }
+    .nav-links{ display:none; }
+    .brand-mark{ height:34px; }
+    .brand-primary{ font-size:20px; letter-spacing:.03em; }
+    .brand-secondary{ font-size:9.5px; letter-spacing:.32em; }
+    .hero{ padding-bottom:42px; }
+    .proof-row{ grid-template-columns:1fr; gap:8px; }
+    section{ padding:66px 0; }
+    .partner-form{ padding:22px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{ scroll-behavior:auto !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <nav aria-label="Partner page navigation">
+    <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+      <img class="brand-mark" src="../assets/logo-mark.png" alt="">
+      <span class="brand-divider" aria-hidden="true"></span>
+      <span class="brand-name" aria-hidden="true">
+        <span class="brand-primary">MOJO AI</span>
+        <span class="brand-secondary">Summits</span>
+      </span>
+    </a>
+    <div class="nav-links">
+      <a href="#value">Value</a>
+      <a href="#model">Model</a>
+      <a href="#request">Request</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Strategic Intelligence Partners</span>
+        <h1>A paid relationship network for vendor leaders shaping AI progress.</h1>
+        <p class="lead">MOJO AI Summits is not an event company selling sponsorships. We invite a limited group of vendor leaders into a trusted executive intelligence network built around contribution, insight, and long-term strategic relationships.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#request">Request Partner Consideration</a>
+          <a class="btn ghost" href="#value">Understand the Network</a>
+        </div>
+      </div>
+      <div class="partner-proof" aria-label="Partner value summary">
+        <div class="proof-row">
+          <span class="proof-num">01</span>
+          <div>
+            <h3>Not sponsorship</h3>
+            <p>No booths, badge scans, or generic logo packages. Partners enter through contribution and strategic fit.</p>
+          </div>
+        </div>
+        <div class="proof-row">
+          <span class="proof-num">02</span>
+          <div>
+            <h3>Paid relationship network</h3>
+            <p>Year-round proximity to executive conversations, market intelligence, and curated relationship development.</p>
+          </div>
+        </div>
+        <div class="proof-row">
+          <span class="proof-num">03</span>
+          <div>
+            <h3>Industry progress</h3>
+            <p>Partners help improve AI adoption quality across the market, not simply chase the next lead.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="value">
+    <div class="wrap split">
+      <div class="statement">
+        <span class="eyebrow">The shift</span>
+        <strong>Sponsors buy attention. Strategic Intelligence Partners contribute to the intelligence layer.</strong>
+        <p>The strongest AI vendors do not just want visibility. They want sharper market understanding, serious executive relationships, and a credible role in moving enterprise AI from experimentation to measurable progress.</p>
+      </div>
+      <div class="grid">
+        <article class="panel">
+          <span class="label">Intelligence access</span>
+          <h3>Know what executives are actually debating.</h3>
+          <p>Partners receive private synthesis from executive sessions, emerging themes, adoption friction, buying signals, and governance concerns.</p>
+        </article>
+        <article class="panel">
+          <span class="label">Relationship access</span>
+          <h3>Build trust before a sales cycle begins.</h3>
+          <p>Curated participation creates repeated, high-quality interaction with leaders who value useful expertise over pitch pressure.</p>
+        </article>
+        <article class="panel">
+          <span class="label">Contribution access</span>
+          <h3>Shape the questions the industry is asking.</h3>
+          <p>Partner perspectives can inform research themes, private briefs, industry outlooks, annual summit conversations, and the yearbook.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="model">
+    <div class="wrap">
+      <div class="section-head center">
+        <span class="eyebrow">Partner model</span>
+        <h2>Built for useful proximity, not unchecked access.</h2>
+        <p>The network protects executive trust first. Strategic Intelligence Partners are selected for relevance, credibility, and a willingness to improve the quality of AI decision-making.</p>
+      </div>
+      <div class="model">
+        <article class="model-step">
+          <span>Monthly</span>
+          <h3>Private intelligence sessions</h3>
+          <p>Focused executive conversations around adoption, governance, operating models, use cases, and market readiness.</p>
+        </article>
+        <article class="model-step">
+          <span>Quarterly</span>
+          <h3>Executive intelligence briefs</h3>
+          <p>Structured synthesis of recurring themes, benchmark signals, partner observations, and practical recommendations.</p>
+        </article>
+        <article class="model-step">
+          <span>Annual</span>
+          <h3>Summit and yearbook</h3>
+          <p>The annual gathering and publication turn the network's best insight into durable industry influence.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Trust rules</span>
+        <h2>The partner role is earned by contribution.</h2>
+      </div>
+      <div class="principles">
+        <article class="principle">
+          <h3>No vendor theater</h3>
+          <p>Participation is not a disguised demo slot. The room exists for executive learning and strategic clarity.</p>
+        </article>
+        <article class="principle">
+          <h3>No booth logic</h3>
+          <p>Value is measured through relationships, intelligence, and credibility, not foot traffic or scanned badges.</p>
+        </article>
+        <article class="principle">
+          <h3>Curated introductions</h3>
+          <p>Introductions are made when there is genuine strategic relevance and mutual benefit.</p>
+        </article>
+        <article class="principle">
+          <h3>Industry-first posture</h3>
+          <p>Partners should care about practical AI progress beyond their own quarterly pipeline.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="quote-strip" aria-label="Strategic partner thesis">
+    <div class="wrap">
+      <blockquote>This is for vendor leaders who want to help the AI industry make better decisions.</blockquote>
+      <p>Strategic Intelligence Partner thesis</p>
+    </div>
+  </section>
+
+  <section class="form-section" id="request">
+    <div class="wrap split">
+      <div class="section-head">
+        <span class="eyebrow">Request consideration</span>
+        <h2>Apply for Strategic Intelligence Partner access.</h2>
+        <p>Tell us who you serve, what market intelligence you can contribute, and how your leadership team wants to participate in the network.</p>
+      </div>
+      <form class="partner-form" id="partnerForm">
+        <div class="field">
+          <label for="name">Full name</label>
+          <input id="name" name="name" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="email">Work email</label>
+          <input id="email" name="email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="company">Company</label>
+          <input id="company" name="company" autocomplete="organization" required>
+        </div>
+        <div class="field">
+          <label for="title">Title</label>
+          <input id="title" name="title" autocomplete="organization-title" required>
+        </div>
+        <div class="field">
+          <label for="teamSize">Partner team</label>
+          <select id="teamSize" name="teamSize" required>
+            <option value="" selected disabled>Choose one</option>
+            <option>Founder or CEO</option>
+            <option>Revenue or strategy leadership</option>
+            <option>Product or innovation leadership</option>
+            <option>Cross-functional executive team</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="track">Primary focus</label>
+          <select id="track" name="track" required>
+            <option value="" selected disabled>Choose one</option>
+            <option>Enterprise AI adoption</option>
+            <option>AI governance and risk</option>
+            <option>Data, platforms, and infrastructure</option>
+            <option>Agentic workflow and automation</option>
+            <option>Industry-specific AI transformation</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Participation interests</label>
+          <div class="checkboxes">
+            <label><input type="checkbox" name="addon" value="Executive intelligence sessions"> Executive intelligence sessions</label>
+            <label><input type="checkbox" name="addon" value="Private briefs and research"> Private briefs and research</label>
+            <label><input type="checkbox" name="addon" value="Annual summit and yearbook"> Annual summit and yearbook</label>
+          </div>
+        </div>
+        <div class="field full">
+          <label for="goal">Strategic goal</label>
+          <textarea id="goal" name="goal" placeholder="What kind of executive relationships, market intelligence, or industry progress are you trying to build?" required></textarea>
+        </div>
+        <div class="field full">
+          <label for="notes">Contribution notes</label>
+          <textarea id="notes" name="notes" placeholder="What perspective, data, customer learning, or field intelligence could your team contribute?"></textarea>
+        </div>
+        <div class="form-actions">
+          <p class="form-note">Submissions are reviewed for strategic fit. Partner access is limited so the executive environment remains useful, trusted, and contribution-led.</p>
+          <button class="btn primary" type="submit">Request Consideration</button>
+        </div>
+        <p class="success" id="partnerSuccess">Received. We will review the fit and follow up with next steps.</p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img src="../assets/logo-badge.png" alt="MOJO AI Summits badge">
+  <p>Powered by <span>MOJO AI Studio</span></p>
+</footer>
+
+<script>
+  const form = document.getElementById('partnerForm');
+  const success = document.getElementById('partnerSuccess');
+
+  function formToObject(formElement){
+    const data = new FormData(formElement);
+    const payload = Object.fromEntries(data.entries());
+    const addons = Array.from(formElement.querySelectorAll('input[name=addon]:checked')).map((field) => field.value);
+    if (addons.length) payload.addons = addons;
+    return payload;
+  }
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = form.querySelector('button[type=submit]');
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Submitting...';
+    try {
+      const response = await fetch('/api/invite-request', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ type: 'partner', ...formToObject(form) })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to submit request.');
+      form.reset();
+      success.classList.add('show');
+      button.textContent = 'Submitted';
+    } catch (error) {
+      alert(error.message || 'Unable to submit this request. Please try again.');
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  });
+</script>
+</body>
+</html>
