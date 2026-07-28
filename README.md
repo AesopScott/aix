@@ -6,7 +6,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Company hub: https://mojoaisummits.com/admin/
 - Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
-- Strategic intelligence partners: https://mojoaisummits.com/partner/
+- Strategic intelligence partners: https://mojoaisummits.com/partners/
 - Member registration: https://mojoaisummits.com/member-registration/
 - Guest registration: https://mojoaisummits.com/guest/
 - Internal CRM: https://mojoaisummits.com/crm/
@@ -46,7 +46,7 @@ Protected internal routes:
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/member-registration/`, `/guest/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/guest/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
 
 Mojo Auth endpoints:
 
@@ -123,11 +123,11 @@ The internal `/setup/` checklist includes a repeatable virtual event series scaf
 
 ## Strategic Intelligence Partners
 
-The public partner page lives at `/partner/` and positions Mojo AI Summits as an executive relationship and intelligence network rather than an event sponsorship seller. It explains Strategic Intelligence Partner value, Partner Candidate entry, Council Partner, Intelligence Partner, Summit Partner, Founding Partner, trust rules, and participation model.
+The public partners page lives at `/partners/` and positions Mojo AI Summits as an executive relationship and intelligence network rather than an event sponsorship seller. It explains Strategic Intelligence Partner value, Partner Candidate entry, Council Partner, Intelligence Partner, Summit Partner, Founding Partner, trust rules, and participation model.
 
 ## Executive Intelligence Membership
 
-The public membership page lives at `/membership/` and replaces the former home page `Register` navigation action. It presents the Executive Intelligence Network as an invitation-led, year-round executive community with no application form or request submission flow. The public fellowship pathway page lives at `/fellowships/` and explains the five recognition levels from Executive Member to Founding Fellow, contribution badges, private Executive Impact signals, an annual impact profile concept, and member voting on tier advancement at quarterly summit events.
+The public membership page lives at `/membership/` and replaces the former home page `Register` navigation action. It presents the Executive Intelligence Network as an invitation-only, year-round executive community with no application form or request submission flow. Membership is by invitation from existing members, each member has two invitations per month, members are expected to make those invitations thoughtfully, and invitation activity is part of contribution tracking. The public fellowship pathway page lives at `/fellowships/` and explains the five recognition levels from Executive Member to Founding Fellow, contribution badges, private Executive Impact signals, an annual impact profile concept, and member voting on tier advancement at quarterly summit events.
 
 ## Event Playbooks
 

@@ -5,7 +5,7 @@
 - Route: `/admin/`
 - Source file: `dist/admin/index.html`
 - Purpose: company hub for Mojo AI Summits routes grouped by access level.
-- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partner/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
+- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
 - Team space: `/setup/`, `/events/`, `/crm/`, and `/storage/`.
 - Admin space: `/access/` and `/budget/`.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.
@@ -13,16 +13,16 @@
 
 ## Strategic Intelligence Partners
 
-- Route: `/partner/`
-- Source file: `dist/partner/index.html`
-- Purpose: public Strategic Intelligence Partner page that explains Mojo as an executive relationship and intelligence network for vendor leaders, not an event sponsorship seller, with partner tiers from Partner Candidate through Council Partner, Intelligence Partner, Summit Partner, and Founding Partner.
-- Routing support: `/partner` redirects to `/partner/`; no-cache headers are configured for `/partner` and `/partner/*`.
+- Route: `/partners/`
+- Source file: `dist/partners/index.html`
+- Purpose: public Strategic Intelligence Partners page that explains Mojo as an executive relationship and intelligence network for vendor leaders, not an event sponsorship seller, with partner tiers from Partner Candidate through Council Partner, Intelligence Partner, Summit Partner, and Founding Partner.
+- Routing support: `/partners` redirects to `/partners/`; legacy `/partner`, `/partner/`, and `/partner.html` redirect to `/partners/`; no-cache headers are configured for `/partners` and `/partners/*`.
 
 ## Executive Intelligence Membership
 
 - Route: `/membership/`
 - Source file: `dist/membership/index.html`
-- Purpose: public Executive Intelligence Network membership page that positions membership as a curated, year-round executive community and intelligence institution rather than event registration.
+- Purpose: public Executive Intelligence Network membership page that positions membership as a curated, invite-only, year-round executive community and intelligence institution rather than event registration. Existing members each have two invitations per month, are expected to make thoughtful invitations, and invitation activity is part of contribution tracking.
 - Routing support: `/membership` redirects to `/membership/`; no-cache headers are configured for `/membership` and `/membership/*`.
 - Interaction model: informational/invitation-led page only; no application form or request submission flow.
 - Home page navigation: the former `Register` nav action now links to `/membership/`.
