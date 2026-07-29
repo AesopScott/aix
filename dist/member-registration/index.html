@@ -192,6 +192,30 @@
     letter-spacing:.18em;
     text-transform:uppercase;
   }
+  .access-gate{
+    display:grid;
+    gap:18px;
+    padding:24px;
+    border:1px solid rgba(0,230,255,.24);
+    background:linear-gradient(135deg, rgba(22,102,255,.1), rgba(0,230,255,.05));
+    border-radius:8px;
+  }
+  .access-gate h3{
+    font-family:'Fraunces', serif;
+    font-size:28px;
+    font-weight:600;
+  }
+  .access-gate p{
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.6;
+  }
+  .access-code-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:14px;
+    align-items:end;
+  }
   form{
     display:grid;
     gap:20px;
@@ -354,6 +378,7 @@
     .registration-panel{ padding:26px 20px; }
     .panel-head{ flex-direction:column; gap:14px; }
     .form-grid,
+    .access-code-row,
     .phone-row,
     .verify-code{ grid-template-columns:1fr; }
   }
@@ -391,7 +416,24 @@
           <span class="invite-badge" id="inviteBadge">Invite required</span>
         </div>
 
-        <form id="memberRegistrationForm">
+        <div class="access-gate" id="accessGate">
+          <div>
+            <h3>Enter your member invite code.</h3>
+            <p>This registration page is reserved for people invited by a current MOJO AI Summits member. Your code unlocks the member details form.</p>
+          </div>
+          <form id="accessCodeForm">
+            <div class="access-code-row">
+              <div class="field">
+                <label for="accessCode">Invite code</label>
+                <input type="text" id="accessCode" name="accessCode" inputmode="numeric" autocomplete="off" placeholder="Six-digit code" required>
+              </div>
+              <button type="submit" class="btn-ghost" id="accessCodeButton">Unlock</button>
+            </div>
+            <p class="message" id="accessCodeMessage"></p>
+          </form>
+        </div>
+
+        <form id="memberRegistrationForm" class="hide">
           <div class="form-grid">
             <input type="hidden" id="inviteCode" name="inviteCode" value="">
             <div class="field">
@@ -519,6 +561,11 @@
   const confirmCodeButton = document.getElementById('confirmCodeButton');
   const phoneMessage = document.getElementById('phoneMessage');
   const formError = document.getElementById('formError');
+  const accessGate = document.getElementById('accessGate');
+  const accessCodeForm = document.getElementById('accessCodeForm');
+  const accessCodeInput = document.getElementById('accessCode');
+  const accessCodeButton = document.getElementById('accessCodeButton');
+  const accessCodeMessage = document.getElementById('accessCodeMessage');
   const form = document.getElementById('memberRegistrationForm');
   const success = document.getElementById('registrationSuccess');
   const verificationStatus = document.getElementById('phoneVerificationStatus');
@@ -526,6 +573,10 @@
   function getInviteCode(){
     const params = new URLSearchParams(window.location.search);
     return (params.get('invite') || sessionStorage.getItem('mojoMemberInviteCode') || '').trim();
+  }
+
+  function normalizeCode(code){
+    return String(code || '').replace(/\D/g, '').slice(0, 6);
   }
 
   function setMessage(element, text, type){
@@ -547,12 +598,62 @@
     return String(phone || '').replace(/[^\d+]/g, '');
   }
 
+  async function validateInviteCode(code){
+    const response = await fetch(`/crm/api/public/member-invite-codes/${encodeURIComponent(code)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'That invite code is invalid or has already been used.');
+    return data;
+  }
+
+  function unlockRegistration(code){
+    inviteInput.value = code;
+    inviteBadge.textContent = `Invite ${code}`;
+    accessGate.classList.add('hide');
+    form.classList.remove('hide');
+    clearMessage(accessCodeMessage);
+    try {
+      sessionStorage.setItem('mojoMemberInviteCode', code);
+    } catch (storageError) {
+      // The current URL can still carry the invite code when storage is blocked.
+    }
+  }
+
+  async function checkAndUnlock(code, options = {}){
+    const normalized = normalizeCode(code);
+    if (accessCodeInput) accessCodeInput.value = normalized;
+    if (!/^\d{6}$/.test(normalized)) {
+      if (!options.silent) setMessage(accessCodeMessage, 'Enter the six-digit invite code from your invitation.', 'error');
+      return false;
+    }
+    if (accessCodeButton) {
+      accessCodeButton.disabled = true;
+      accessCodeButton.textContent = 'Checking...';
+    }
+    try {
+      await validateInviteCode(normalized);
+      unlockRegistration(normalized);
+      return true;
+    } catch (error) {
+      if (!options.silent) setMessage(accessCodeMessage, error.message, 'error');
+      return false;
+    } finally {
+      if (accessCodeButton) {
+        accessCodeButton.disabled = false;
+        accessCodeButton.textContent = 'Unlock';
+      }
+    }
+  }
+
+  accessCodeForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearMessage(accessCodeMessage);
+    const unlocked = await checkAndUnlock(accessCodeInput.value);
+    if (!unlocked) accessCodeInput.focus();
+  });
+
   const incomingInviteCode = getInviteCode();
   if (incomingInviteCode) {
-    inviteInput.value = incomingInviteCode;
-    inviteBadge.textContent = `Invite ${incomingInviteCode}`;
-  } else {
-    setMessage(formError, 'Enter your six-digit invite code from the home page before registering.', 'error');
+    checkAndUnlock(incomingInviteCode);
   }
 
   emailInput.addEventListener('input', () => {
@@ -674,7 +775,7 @@
     submitButton.disabled = true;
     submitButton.textContent = 'Submitting...';
     try {
-      await postJson('/crm/api/public/member-registration', payload);
+      await postJson('/api/member-registration', payload);
       form.classList.add('hide');
       success.classList.add('show');
     } catch (error) {

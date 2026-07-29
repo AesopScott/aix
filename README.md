@@ -88,9 +88,9 @@ Required GitHub secrets:
 
 ## Member Registration
 
-The member registration page asks for an invite code, then sends guests to `/member-registration/`.
-Member registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `member-registration:*`.
-Direct visits to `/member-registration/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
+The member registration page lives at `/member-registration/` and hides the registration form behind a six-digit member invite code. Codes can be passed as `/member-registration/?invite=######`, stored in browser session storage by the home page invite-code modal, or entered directly on the page gate.
+Member registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `member-registration:*` and `crm:member-registrant:*`.
+The member profile page generator should write future single-use codes under `member-invite-code:######`, `crm:member-invite-code:######`, or `member-invite:######`; when `MOJO_MEMBER_INVITE_CODES_STRICT=true`, only stored active codes unlock registration.
 Registration records include name, company, title, industry, company email, phone, role selections, food preferences, phone verification status, and separate publication-use opt-ins for name and company.
 
 ## Guest Registration
@@ -136,7 +136,7 @@ The engine is designed to identify AI-enabled companies with evidence of event s
 
 ## Executive Intelligence Membership
 
-The public membership page lives at `/membership/` and replaces the former home page `Register` navigation action. It presents the Executive Intelligence Network as an invitation-only, year-round executive community with no application form or request submission flow. The page emphasizes that membership is not pay-to-play but contribute-to-play: money cannot buy entry or continued standing, and membership is earned through contribution to the group, community, and industry. Membership is by invitation from existing members, each member has two invitations per month, members are expected to make those invitations thoughtfully, and invitation activity is part of contribution tracking. The public fellowship pathway page lives at `/fellowships/` and explains the five recognition levels from Executive Member to Founding Fellow, contribution badges, private Executive Impact signals, an annual impact profile concept, and member voting on tier advancement at quarterly summit events.
+The public membership page lives at `/membership/` and replaces the former home page `Register` navigation action. It presents the Executive Intelligence Network as an invitation-only, year-round executive community with no application form or request submission flow. The page emphasizes that membership is not pay-to-play but contribute-to-play: money cannot buy entry or continued standing, and membership is earned through contribution to the group, community, and industry. Membership is by invitation from existing members, each member has two invitations per month, members are expected to make those invitations thoughtfully, and invitation activity is part of contribution tracking. The public fellowship pathway page lives at `/fellowships/` and explains the four recognition levels from Fellow to Distinguished Fellow, contribution badges, private Executive Impact signals, an annual impact profile concept, and member voting on tier advancement at quarterly summit events.
 
 ## Event Playbooks
 
