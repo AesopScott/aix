@@ -1359,7 +1359,20 @@
       renderNav();
     }
 
+    function openDatePicker(event) {
+      const input = event.target.closest('input[type="date"]');
+      if (!input || typeof input.showPicker !== "function") return;
+      try {
+        input.showPicker();
+      } catch {
+        // Some browsers only allow showPicker during direct pointer gestures.
+      }
+    }
+
     function bindEvents() {
+      document.getElementById("eventForm").addEventListener("click", openDatePicker);
+      document.getElementById("playbook").addEventListener("click", openDatePicker);
+
       document.getElementById("eventForm").addEventListener("click", (event) => {
         const button = event.target.closest("[data-choice]");
         if (!button) return;
