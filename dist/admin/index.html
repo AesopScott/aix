@@ -597,6 +597,7 @@
       </div>
       <nav aria-label="Company hub shortcuts">
         <a href="#public-title">Public</a>
+        <a href="#partner-title">Partner</a>
         <a href="#team-title">Team</a>
         <a href="#admin-title">Admin</a>
       </nav>
@@ -611,6 +612,7 @@
         <p>Company routes organized by who should be able to use them: public visitors, Mojo team members, or admins.</p>
         <div class="status-strip" aria-label="Route status">
           <span class="tag ok">Public</span>
+          <span class="tag warning">Partner</span>
           <span class="tag warning">Team</span>
           <span class="tag">Admin</span>
         </div>
@@ -648,11 +650,12 @@
   <script>
     const accessSpaces = {
       Public: "No Mojo account required. These pages can be opened by visitors, invitees, and policy reviewers.",
+      Partner: "Requires an approved partner account when access control is enabled.",
       Team: "Requires a Mojo team account when access control is enabled.",
       Admin: "Reserved for owners and admins who manage access or company operations."
     };
 
-    const accessOrder = ["Public", "Team", "Admin"];
+    const accessOrder = ["Public", "Partner", "Team", "Admin"];
 
     const routes = [
       {
@@ -702,6 +705,14 @@
         summary: "Public partner page for vendor leaders and strategic contributors in the Mojo AI Summits network.",
         status: "Public",
         tags: ["partner", "sponsors", "public"]
+      },
+      {
+        group: "Partner",
+        title: "Partner Profile",
+        path: "/partner-profile/",
+        summary: "Private partner dashboard for tier, attended events, visible event guests, publication placements, and sponsorship contributions.",
+        status: "Partner",
+        tags: ["partner", "profile", "contributions", "events"]
       },
       {
         group: "Public",
@@ -792,6 +803,7 @@
       "/membership/",
       "/fellowships/",
       "/partners/",
+      "/partner-profile/",
       "/member-registration/",
       "/guest/",
       "/privacy/",
@@ -838,6 +850,7 @@
 
     function tagClass(status) {
       if (status === "Public") return "ok";
+      if (status === "Partner") return "warning";
       if (status === "Team") return "warning";
       return "";
     }

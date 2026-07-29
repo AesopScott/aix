@@ -41,6 +41,7 @@ Protected internal routes:
 - `/admin/`
 - `/api/access-config`, `/api/access-users`, and `/api/access-invites`
 - `/crm/` and `/api/crm`
+- `/partner-profile/` and `/api/partner-profile`
 - `/setup/` and `/api/setup-state`
 - `/events/` and `/api/events`
 - `/storage/` and `/api/storage`
@@ -127,6 +128,8 @@ The internal `/setup/` checklist includes a repeatable virtual event series scaf
 ## Strategic Intelligence Partners
 
 The public partners page lives at `/partners/` and positions Mojo AI Summits as an executive relationship and intelligence network rather than an event sponsorship seller. It explains Strategic Intelligence Partner value, Partner Candidate entry, Council Partner, Intelligence Partner, Summit Partner, Founding Partner, trust rules, and participation model.
+
+The private partner profile page lives at `/partner-profile/` and is backed by `/api/partner-profile`. It shows the signed-in partner account's tier, attended events, guests from those events with name/email/company/title, publication placements once the publication system is linked, and sponsorship contribution totals. Partner profile records are read from `MOJO_SUMMITS_SETUP_STATE` using `partner-profile:{email}` first and `partner:{email}` as a fallback. Event guest matching uses event identifiers stored on guest registration records, so guest rows require matching `eventId`, `eventSlug`, `event`, or `eventName` values.
 
 ## Sponsor Curation Engine
 

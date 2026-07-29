@@ -26,6 +26,12 @@ export const DEFAULT_ACCESS_GROUPS = [
     label: "Storage users",
     summary: "People who can upload, view, and download Storage files.",
     emails: []
+  },
+  {
+    id: "partners",
+    label: "Partners",
+    summary: "Partner contacts who can view their private partner profile.",
+    emails: []
   }
 ];
 
@@ -111,6 +117,17 @@ export const DEFAULT_ACCESS_RULES = [
     mode: "allowlist",
     matches: [{ exact: "/mockups" }, { prefix: "/mockups/" }],
     domains: ["mojoaisummits.com/mockups", "mojoaisummits.com/mockups/*"]
+  },
+  {
+    id: "partner-profile",
+    kind: "page",
+    group: "Partner",
+    label: "Partner Profile",
+    summary: "Private partner status, event, guest, publication, and sponsorship record.",
+    mode: "allowlist",
+    defaultGroupIds: ["partners"],
+    matches: [{ exact: "/partner-profile" }, { prefix: "/partner-profile/" }],
+    domains: ["mojoaisummits.com/partner-profile", "mojoaisummits.com/partner-profile/*"]
   },
   {
     id: "home",
@@ -251,6 +268,17 @@ export const DEFAULT_ACCESS_RULES = [
     mode: "allowlist",
     matches: [{ exact: "/api/crm" }, { prefix: "/api/crm/" }],
     domains: ["mojoaisummits.com/api/crm", "mojoaisummits.com/api/crm/*"]
+  },
+  {
+    id: "api-partner-profile",
+    kind: "api",
+    group: "APIs",
+    label: "Partner Profile API",
+    summary: "Private partner profile, event guest, publication, and sponsorship records.",
+    mode: "allowlist",
+    defaultGroupIds: ["partners"],
+    matches: [{ exact: "/api/partner-profile" }, { prefix: "/api/partner-profile/" }],
+    domains: ["mojoaisummits.com/api/partner-profile", "mojoaisummits.com/api/partner-profile/*"]
   },
   {
     id: "api-storage",

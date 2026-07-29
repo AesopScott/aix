@@ -6,13 +6,14 @@
 - Source file: `dist/admin/index.html`
 - Purpose: company hub for Mojo AI Summits routes grouped by access level.
 - Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
+- Partner space: `/partner-profile/` for approved partner contacts.
 - Team space: `/setup/`, `/events/`, `/crm/`, and `/files/` for the Storage portal. `/storage/` remains the legacy Storage path.
 - Admin space: `/access/` and `/budget/`.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.
 - Guest registration compatibility: legacy `/vip-registration/?invite=######` CRM links redirect to `/guest/?invite=######` so existing invite links continue to work while the public language uses guest registration.
 - Registration access: `/member-registration/` is public to load but hides the registration form behind a six-digit member invite code. The home page modal, `?invite=######`, session storage, or direct code entry can unlock it after `/crm/api/public/member-invite-codes/######` validation. The future membership profile generator should write single-use codes under `member-invite-code:######`, `crm:member-invite-code:######`, or `member-invite:######`; `MOJO_MEMBER_INVITE_CODES_STRICT=true` makes stored active codes mandatory.
 - Registration data model: member and guest registration collect name, company, title, industry, company email, phone, role selections, food preferences, phone verification status, and separate publication-use opt-ins for name and company. Title and industry do not have publication opt-ins.
-- Access guidance: access control is disabled by default while accounts and page policies are being defined. When enabled in `/access/`, protect `/admin/`, `/crm/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, and internal APIs `/api/crm`, `/api/setup-state`, `/api/events`, `/api/storage`, and `/api/budget` with Mojo Auth route modes. `/files/` is the site-managed Storage portal shell and stays reachable so users can get to site sign-in; file data and operations remain protected by `/api/storage`. `/storage/` may still be intercepted by external Cloudflare Access until that rule is removed. `/access/` is the public login/configuration shell; `/api/access-config`, `/api/access-users`, and `/api/access-invites` require an owner/admin Mojo Auth session for mutations, user management, and invite creation. `/api/auth/invite` stays public so invitees can accept single-use links and create separate Mojo passwords. Keep `/crm/api/public/...` public for invite-code lookup and guest registration callbacks.
+- Access guidance: access control is disabled by default while accounts and page policies are being defined. When enabled in `/access/`, protect `/admin/`, `/crm/`, `/partner-profile/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, and internal APIs `/api/crm`, `/api/partner-profile`, `/api/setup-state`, `/api/events`, `/api/storage`, and `/api/budget` with Mojo Auth route modes. `/files/` is the site-managed Storage portal shell and stays reachable so users can get to site sign-in; file data and operations remain protected by `/api/storage`. `/storage/` may still be intercepted by external Cloudflare Access until that rule is removed. `/access/` is the public login/configuration shell; `/api/access-config`, `/api/access-users`, and `/api/access-invites` require an owner/admin Mojo Auth session for mutations, user management, and invite creation. `/api/auth/invite` stays public so invitees can accept single-use links and create separate Mojo passwords. Keep `/crm/api/public/...` public for invite-code lookup and guest registration callbacks.
 
 ## Strategic Intelligence Partners
 
@@ -20,6 +21,16 @@
 - Source file: `dist/partners/index.html`
 - Purpose: public Strategic Intelligence Partners page that explains Mojo as an executive relationship and intelligence network for vendor leaders, not an event sponsorship seller, with partner tiers from Partner Candidate through Council Partner, Intelligence Partner, Summit Partner, and Founding Partner.
 - Routing support: `/partners` redirects to `/partners/`; legacy `/partner`, `/partner/`, and `/partner.html` redirect to `/partners/`; no-cache headers are configured for `/partners` and `/partners/*`.
+
+## Partner Profile
+
+- Route: `/partner-profile/`
+- Source file: `dist/partner-profile/index.html`
+- API route: `/api/partner-profile`
+- Purpose: private partner dashboard showing tier, attended events, guests from those events with name/email/company/title, publication placements once the publication system is linked, and sponsorship contribution totals.
+- Storage model: the API reads `partner-profile:{email}` from `MOJO_SUMMITS_SETUP_STATE`, with `partner:{email}` as a fallback. Profile records can include `events` or `attendedEvents`, `publications`, and `sponsorships`, `contributions`, or `payments`.
+- Guest matching: guest rows are pulled from `crm:guest-registrant:*` and `guest-registration:*` records when their `eventId`, `eventSlug`, `event`, or `eventName` matches a partner event ID, slug, or name.
+- Routing support: `/partner-profile` redirects to `/partner-profile/`; no-cache headers are configured for `/partner-profile` and `/partner-profile/*`.
 
 ## Executive Intelligence Membership
 
