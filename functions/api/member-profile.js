@@ -5,7 +5,46 @@ const MEMBER_PREFIX = "crm:member-registrant:";
 const MEMBER_LEGACY_PREFIX = "member-registration:";
 const GUEST_INVITE_PREFIX = "crm:guest-invite-code:";
 const MEMBER_INVITE_PREFIX = "crm:member-invite-code:";
+const FELLOWSHIP_NOMINATION_PREFIX = "crm:fellowship-nomination:";
 const MONTHLY_MEMBER_INVITE_LIMIT = 2;
+const FELLOWSHIP_LEVELS = [
+  {
+    tier: "Fellow",
+    level: 1,
+    minAttendance: 0,
+    minContributions: 0,
+    minNominations: 0,
+    approvalThreshold: 0,
+    approvalLabel: "Accepted member in good standing"
+  },
+  {
+    tier: "Contributing Fellow",
+    level: 2,
+    minAttendance: 2,
+    minContributions: 2,
+    minNominations: 1,
+    approvalThreshold: 0.5,
+    approvalLabel: "Majority approval"
+  },
+  {
+    tier: "Senior Fellow",
+    level: 3,
+    minAttendance: 4,
+    minContributions: 4,
+    minNominations: 2,
+    approvalThreshold: 2 / 3,
+    approvalLabel: "Two-thirds approval"
+  },
+  {
+    tier: "Distinguished Fellow",
+    level: 4,
+    minAttendance: 6,
+    minContributions: 6,
+    minNominations: 3,
+    approvalThreshold: 3 / 4,
+    approvalLabel: "Three-fourths approval"
+  }
+];
 
 function cleanString(value, max = 1000) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -23,8 +62,45 @@ function monthKey(date = new Date()) {
   return date.toISOString().slice(0, 7);
 }
 
+function dayKey(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
 function randomInviteCode() {
   return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
+}
+
+function randomId() {
+  return typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${randomInviteCode()}`;
+}
+
+function numberValue(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
+function recordCount(record, numericFields = [], arrayFields = []) {
+  const numeric = numericFields.reduce((max, field) => Math.max(max, numberValue(record?.[field])), 0);
+  const arrayCount = arrayFields.reduce((sum, field) => {
+    const value = record?.[field];
+    return sum + (Array.isArray(value) ? value.length : 0);
+  }, 0);
+  return Math.max(numeric, arrayCount);
+}
+
+function normalizeTier(value) {
+  const tier = cleanString(value, 80);
+  if (tier === "Executive Fellow") return "Senior Fellow";
+  return FELLOWSHIP_LEVELS.some((level) => level.tier === tier) ? tier : "Fellow";
+}
+
+function levelForTier(tier) {
+  return FELLOWSHIP_LEVELS.find((level) => level.tier === normalizeTier(tier)) || FELLOWSHIP_LEVELS[0];
+}
+
+function nextLevel(tier) {
+  const current = levelForTier(tier);
+  return FELLOWSHIP_LEVELS.find((level) => level.level === current.level + 1) || null;
 }
 
 async function listKeys(env, prefix) {
@@ -52,6 +128,22 @@ async function recordsForPrefix(env, prefix) {
 function normalizeMember(entry) {
   const record = entry?.record || {};
   const createdAt = cleanString(record.createdAt) || cleanString(entry?.key).split(":").slice(-2, -1)[0] || "";
+  const tier = normalizeTier(record.memberTier || record.tier);
+  const sessionsAttended = recordCount(
+    record,
+    ["sessionsAttended", "intelligenceSessions", "sessionCount"],
+    ["sessionAttendance", "sessions", "attendedSessions"]
+  );
+  const summitsAttended = recordCount(
+    record,
+    ["summitsAttended", "summitCount"],
+    ["summitAttendance", "summits", "attendedSummits"]
+  );
+  const documentedContributions = recordCount(
+    record,
+    ["documentedContributions", "contributionCount"],
+    ["contributions", "contributionRecords", "documentedContributionRecords"]
+  );
   return {
     key: entry.key,
     id: cleanString(record.id) || entry.key,
@@ -61,15 +153,28 @@ function normalizeMember(entry) {
     industry: cleanString(record.industry),
     email: cleanEmail(record.email),
     phone: cleanString(record.phone),
-    tier: cleanString(record.memberTier || record.tier) || "Fellow",
+    tier,
     status: cleanString(record.memberStatus || record.crmStatus || "new"),
     crmStatus: cleanString(record.crmStatus || "new"),
+    goodStanding: record.goodStanding !== false && cleanString(record.memberStanding || "good") !== "not-good",
+    openToFellowshipNomination: Boolean(record.openToFellowshipNomination),
     memberSince: cleanString(record.acceptedAt || record.memberSince || createdAt),
     createdAt,
     eventName: cleanString(record.eventName),
     eventDate: cleanString(record.eventDate),
     isPresenter: Boolean(record.isPresenter),
-    isRoundtableLeader: Boolean(record.isRoundtableLeader)
+    isRoundtableLeader: Boolean(record.isRoundtableLeader),
+    sessionsAttended: sessionsAttended || (record.eventName ? 1 : 0),
+    summitsAttended,
+    documentedContributions,
+    contributionRecords: Array.isArray(record.contributionRecords)
+      ? record.contributionRecords.slice(0, 20).map((item) => ({
+        type: cleanString(item?.type, 120),
+        title: cleanString(item?.title, 240),
+        date: cleanString(item?.date, 80),
+        notes: cleanString(item?.notes, 500)
+      }))
+      : []
   };
 }
 
@@ -140,6 +245,46 @@ function publicInvite(entry, requestUrl) {
   };
 }
 
+function nominationWindow(env, today = new Date()) {
+  const configured = cleanString(env.MOJO_FELLOWSHIP_SUMMIT_DATES, 4000);
+  let configuredValues = configured.split(/[\n,]/);
+  if (configured.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(configured);
+      if (Array.isArray(parsed)) configuredValues = parsed;
+    } catch {
+      configuredValues = configured.split(/[\n,]/);
+    }
+  }
+  const dates = configuredValues
+    .map((value) => cleanString(value, 20))
+    .filter(Boolean)
+    .map((value) => new Date(`${value}T12:00:00Z`))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+  const quarterEndDates = (year) => [2, 5, 8, 11].map((month) => new Date(Date.UTC(year, month + 1, 0, 12)));
+  const fallbackDates = dates.length ? dates : [...quarterEndDates(today.getUTCFullYear()), ...quarterEndDates(today.getUTCFullYear() + 1)];
+  const windows = fallbackDates.map((summitDate) => {
+    const opensAt = new Date(summitDate);
+    opensAt.setUTCDate(opensAt.getUTCDate() - 30);
+    return {
+      summitDate: dayKey(summitDate),
+      opensAt: dayKey(opensAt),
+      closesAt: dayKey(summitDate),
+      open: today >= opensAt && today <= summitDate
+    };
+  });
+  const active = windows.find((window) => window.open);
+  const upcoming = windows.find((window) => new Date(`${window.closesAt}T23:59:59Z`) >= today) || windows[0];
+  return {
+    open: Boolean(active),
+    configured: Boolean(dates.length),
+    active: active || null,
+    next: active || upcoming,
+    policy: "Nominations open 30 days before each quarterly summit."
+  };
+}
+
 async function memberInvites(env, email, requestUrl) {
   const prefixes = [GUEST_INVITE_PREFIX, MEMBER_INVITE_PREFIX];
   const entries = (await Promise.all(prefixes.map((prefix) => recordsForPrefix(env, prefix)))).flat();
@@ -149,13 +294,131 @@ async function memberInvites(env, email, requestUrl) {
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
-function memberImpact(profile, invites) {
+async function fellowshipNominations(env) {
+  const entries = await recordsForPrefix(env, FELLOWSHIP_NOMINATION_PREFIX);
+  return entries.map((entry) => {
+    const record = entry.record || {};
+    const votes = record.votes && typeof record.votes === "object" ? record.votes : {};
+    const voteRows = Object.values(votes);
+    const yesVotes = voteRows.filter((vote) => cleanString(vote?.vote) === "yes").length;
+    const noVotes = voteRows.filter((vote) => cleanString(vote?.vote) === "no").length;
+    const totalVotes = yesVotes + noVotes;
+    const targetTier = normalizeTier(record.targetTier);
+    const level = levelForTier(targetTier);
+    return {
+      key: entry.key,
+      id: cleanString(record.id) || entry.key.split(":").pop(),
+      status: cleanString(record.status || "active"),
+      targetTier,
+      approvalLabel: level.approvalLabel,
+      approvalThreshold: level.approvalThreshold,
+      candidateEmail: cleanEmail(record.candidateEmail),
+      candidateName: cleanString(record.candidateName, 240),
+      nominatorEmail: cleanEmail(record.nominatorEmail),
+      nominatorName: cleanString(record.nominatorName, 240),
+      createdAt: cleanString(record.createdAt),
+      nominationReason: cleanString(record.nominationReason, 1200),
+      levelFourEvidence: {
+        executiveImpact: cleanString(record.levelFourEvidence?.executiveImpact, 1000),
+        networkContribution: cleanString(record.levelFourEvidence?.networkContribution, 1000),
+        memberCase: cleanString(record.levelFourEvidence?.memberCase, 1000)
+      },
+      yesVotes,
+      noVotes,
+      totalVotes,
+      approvalPercent: totalVotes ? yesVotes / totalVotes : 0
+    };
+  });
+}
+
+function profileComplete(profile) {
+  return Boolean(profile.name && profile.company && profile.title && profile.email);
+}
+
+function fellowshipStats(profile, nominations) {
+  const received = nominations.filter((nomination) => nomination.candidateEmail === profile.email);
+  const yesVotes = received.reduce((sum, nomination) => sum + nomination.yesVotes, 0);
+  const noVotes = received.reduce((sum, nomination) => sum + nomination.noVotes, 0);
+  const totalAttendance = (profile.sessionsAttended || 0) + (profile.summitsAttended || 0);
+  return {
+    currentTier: normalizeTier(profile.tier),
+    level: levelForTier(profile.tier).level,
+    goodStanding: Boolean(profile.goodStanding),
+    profileComplete: profileComplete(profile),
+    openToFellowshipNomination: Boolean(profile.openToFellowshipNomination),
+    sessionsAttended: profile.sessionsAttended || 0,
+    summitsAttended: profile.summitsAttended || 0,
+    totalAttendance,
+    documentedContributions: profile.documentedContributions || 0,
+    nominationsReceived: received.length,
+    yesVotes,
+    noVotes,
+    activeNominations: received.filter((nomination) => nomination.status === "active").length
+  };
+}
+
+function eligibilityFor(profile, nominations) {
+  const stats = fellowshipStats(profile, nominations);
+  return FELLOWSHIP_LEVELS.map((level) => {
+    const currentOrPast = level.level <= stats.level;
+    const requirements = [
+      { label: "Good standing", current: stats.goodStanding ? 1 : 0, required: 1, met: stats.goodStanding },
+      { label: "Complete profile", current: stats.profileComplete ? 1 : 0, required: 1, met: stats.profileComplete },
+      { label: "Sessions or summits attended", current: stats.totalAttendance, required: level.minAttendance, met: stats.totalAttendance >= level.minAttendance },
+      { label: "Documented contributions", current: stats.documentedContributions, required: level.minContributions, met: stats.documentedContributions >= level.minContributions },
+      { label: "Peer nominations received", current: stats.nominationsReceived, required: level.minNominations, met: stats.nominationsReceived >= level.minNominations }
+    ];
+    return {
+      ...level,
+      currentOrPast,
+      requirements,
+      technicallyEligible: requirements.filter((item) => item.label !== "Peer nominations received").every((item) => item.met),
+      promotionEligible: requirements.every((item) => item.met)
+    };
+  });
+}
+
+function eligibleNominationTargets(allMembers, currentEmail, nominations, window) {
+  if (!window.open) return [];
+  return allMembers
+    .filter((member) => member.email !== currentEmail)
+    .map((member) => {
+      const next = nextLevel(member.tier);
+      if (!next) return null;
+      const eligibility = eligibilityFor(member, nominations).find((level) => level.tier === next.tier);
+      const existingActive = nominations.some(
+        (nomination) =>
+          nomination.status === "active" &&
+          nomination.candidateEmail === member.email &&
+          nomination.targetTier === next.tier
+      );
+      if (!member.openToFellowshipNomination || !eligibility?.technicallyEligible || existingActive) return null;
+      return {
+        email: member.email,
+        name: member.name,
+        company: member.company,
+        title: member.title,
+        currentTier: member.tier,
+        targetTier: next.tier,
+        requiresLevelFourEvidence: next.level === 4
+      };
+    })
+    .filter(Boolean);
+}
+
+function memberImpact(profile, invites, nominations) {
   const memberCodes = invites.filter((invite) => invite.type === "member");
   const guestCodes = invites.filter((invite) => invite.type === "guest");
+  const stats = fellowshipStats(profile, nominations);
   return {
-    intelligenceSessions: profile.eventName ? 1 : 0,
+    intelligenceSessions: profile.sessionsAttended || 0,
+    summitsAttended: profile.summitsAttended || 0,
+    documentedContributions: profile.documentedContributions || 0,
     guestInviteLinksCreated: guestCodes.length,
     memberNominationsCreated: memberCodes.length,
+    fellowshipNominationsReceived: stats.nominationsReceived,
+    fellowshipYesVotesReceived: stats.yesVotes,
+    fellowshipNoVotesReceived: stats.noVotes,
     memberNominationsThisMonth: memberCodes.filter((invite) => invite.createdAt.startsWith(monthKey())).length,
     roundtablesLed: profile.isRoundtableLeader ? 1 : 0,
     publicationsContributedTo: 0,
@@ -189,32 +452,14 @@ function discordContacts(env) {
 }
 
 function tierGuide() {
-  return [
-    {
-      tier: "Fellow",
-      minimum: "Accepted member in good standing.",
-      commitments: "Attend sessions, share perspective, complete occasional research surveys, and make thoughtful introductions.",
-      contribution: "Baseline participation and two thoughtful member invitations or nominations per month when appropriate."
-    },
-    {
-      tier: "Contributing Fellow",
-      minimum: "Active participation across multiple sessions or research efforts.",
-      commitments: "Vote on topics, join priority roundtables, and contribute useful field experience.",
-      contribution: "Visible participation, research interviews, guest introductions, and private discussion involvement."
-    },
-    {
-      tier: "Executive Fellow",
-      minimum: "Help create the network's intellectual property.",
-      commitments: "Lead discussions, review briefs, mentor newer members, write commentary, or host sessions.",
-      contribution: "Recognized leadership in sessions, publications, mentorship, and research advisory work."
-    },
-    {
-      tier: "Distinguished Fellow",
-      minimum: "Sustained executive influence and multi-year contribution.",
-      commitments: "Chair initiatives, guide strategy, mentor at depth, and help define the community's direction.",
-      contribution: "Quarterly member-voted recognition for executives whose contribution materially strengthens the network."
-    }
-  ];
+  return FELLOWSHIP_LEVELS.map((level) => ({
+    tier: level.tier,
+    minimum: level.level === 1
+      ? "Accepted member in good standing with a complete profile."
+      : `${level.minAttendance} sessions or summits attended, ${level.minContributions} documented contributions, and ${level.minNominations} peer nomination${level.minNominations === 1 ? "" : "s"}.`,
+    approval: level.approvalLabel,
+    contribution: "Only website-trackable counts define technical eligibility. Judgment, influence, and leadership quality are evaluated through nomination evidence and member voting."
+  }));
 }
 
 async function authenticatedMember(request, env) {
@@ -244,12 +489,22 @@ export async function onRequestGet({ request, env }) {
   if (access.response) return access.response;
 
   const invites = await memberInvites(env, access.profile.email, request.url);
+  const nominations = await fellowshipNominations(env);
+  const window = nominationWindow(env);
   return json({
     ok: true,
     profile: access.profile,
     directory: access.allMembers,
     invites,
-    impact: memberImpact(access.profile, invites),
+    impact: memberImpact(access.profile, invites, nominations),
+    fellowship: {
+      stats: fellowshipStats(access.profile, nominations),
+      eligibility: eligibilityFor(access.profile, nominations),
+      nominationWindow: window,
+      nominationTargets: eligibleNominationTargets(access.allMembers, access.profile.email, nominations, window),
+      receivedNominations: nominations.filter((nomination) => nomination.candidateEmail === access.profile.email),
+      openNominations: nominations.filter((nomination) => nomination.status === "active")
+    },
     monthlyMemberInviteLimit: MONTHLY_MEMBER_INVITE_LIMIT,
     tierGuide: tierGuide(),
     discord: discordContacts(env),
@@ -264,19 +519,101 @@ export async function onRequestPost({ request, env }) {
   const payload = await request.json().catch(() => null);
   const action = cleanString(payload?.action);
   const createdAt = new Date().toISOString();
-  const code = await createUniqueCode(env);
-  const base = {
-    code,
-    status: "active",
-    eventName: cleanString(payload?.eventName, 240),
-    eventDate: cleanString(payload?.eventDate, 120),
-    createdAt,
-    createdByMemberEmail: access.profile.email,
-    createdByMemberName: access.profile.name,
-    createdByMemberTier: access.profile.tier
-  };
+
+  if (action === "update-nomination-consent") {
+    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(access.profile.key, "json").catch(() => null);
+    if (!existing) return json({ error: "Member profile record could not be updated." }, { status: 404 });
+    const record = {
+      ...existing,
+      openToFellowshipNomination: Boolean(payload?.openToFellowshipNomination),
+      fellowshipNominationConsentUpdatedAt: createdAt
+    };
+    await env.MOJO_SUMMITS_SETUP_STATE.put(access.profile.key, JSON.stringify(record));
+    return json({ ok: true, openToFellowshipNomination: record.openToFellowshipNomination });
+  }
+
+  if (action === "create-fellowship-nomination") {
+    const window = nominationWindow(env);
+    if (!window.open) {
+      return json({ error: "Fellowship nominations are currently closed." }, { status: 403 });
+    }
+    const nominations = await fellowshipNominations(env);
+    const targets = eligibleNominationTargets(access.allMembers, access.profile.email, nominations, window);
+    const targetEmail = cleanEmail(payload?.candidateEmail);
+    const target = targets.find((candidate) => candidate.email === targetEmail);
+    if (!target) {
+      return json({ error: "This member is not currently eligible for nomination." }, { status: 400 });
+    }
+    const nominationReason = cleanString(payload?.nominationReason, 1200);
+    if (!nominationReason) {
+      return json({ error: "Add a nomination reason before submitting." }, { status: 400 });
+    }
+    const levelFourEvidence = {
+      executiveImpact: cleanString(payload?.executiveImpact, 1000),
+      networkContribution: cleanString(payload?.networkContribution, 1000),
+      memberCase: cleanString(payload?.memberCase, 1000)
+    };
+    if (target.requiresLevelFourEvidence && !Object.values(levelFourEvidence).every(Boolean)) {
+      return json({ error: "Distinguished Fellow nominations require all review evidence fields." }, { status: 400 });
+    }
+    const id = randomId();
+    const record = {
+      id,
+      status: "active",
+      targetTier: target.targetTier,
+      candidateEmail: target.email,
+      candidateName: target.name,
+      candidateCompany: target.company,
+      candidateTitle: target.title,
+      nominatorEmail: access.profile.email,
+      nominatorName: access.profile.name,
+      nominatorTier: access.profile.tier,
+      nominationReason,
+      levelFourEvidence,
+      createdAt,
+      summitDate: window.next?.summitDate || "",
+      votes: {}
+    };
+    const key = `${FELLOWSHIP_NOMINATION_PREFIX}${id}`;
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+    return json({ ok: true, nomination: { ...record, key } }, { status: 201 });
+  }
+
+  if (action === "vote-fellowship-nomination") {
+    const id = cleanString(payload?.nominationId, 160);
+    const vote = cleanString(payload?.vote, 10);
+    if (!["yes", "no"].includes(vote)) return json({ error: "Vote must be yes or no." }, { status: 400 });
+    const key = `${FELLOWSHIP_NOMINATION_PREFIX}${id}`;
+    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    if (!record || cleanString(record.status || "active") !== "active") {
+      return json({ error: "Fellowship nomination is not open for voting." }, { status: 404 });
+    }
+    if (cleanEmail(record.candidateEmail) === access.profile.email) {
+      return json({ error: "Candidates cannot vote on their own promotion." }, { status: 403 });
+    }
+    record.votes = record.votes && typeof record.votes === "object" ? record.votes : {};
+    record.votes[access.profile.email] = {
+      vote,
+      voterName: access.profile.name,
+      voterTier: access.profile.tier,
+      votedAt: createdAt
+    };
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+    return json({ ok: true });
+  }
 
   if (action === "create-guest-invite") {
+    const code = await createUniqueCode(env);
+    const base = {
+      code,
+      status: "active",
+      eventName: cleanString(payload?.eventName, 240),
+      eventDate: cleanString(payload?.eventDate, 120),
+      createdAt,
+      createdByMemberEmail: access.profile.email,
+      createdByMemberName: access.profile.name,
+      createdByMemberTier: access.profile.tier
+    };
     const record = {
       ...base,
       type: "guest",
@@ -289,6 +626,17 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (action === "create-member-nomination") {
+    const code = await createUniqueCode(env);
+    const base = {
+      code,
+      status: "active",
+      eventName: cleanString(payload?.eventName, 240),
+      eventDate: cleanString(payload?.eventDate, 120),
+      createdAt,
+      createdByMemberEmail: access.profile.email,
+      createdByMemberName: access.profile.name,
+      createdByMemberTier: access.profile.tier
+    };
     const existingInvites = await memberInvites(env, access.profile.email, request.url);
     const nominationsThisMonth = existingInvites.filter(
       (invite) => invite.type === "member" && invite.createdAt.startsWith(monthKey())

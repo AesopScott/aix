@@ -754,7 +754,7 @@
           output.classList.add("visible");
         }
         await copyText(data.password);
-        setNotice(`Member password generated for ${data.record.email}. It was copied if clipboard access is available.`, "ok");
+        setNotice(`Member password generated for ${data.record.email}. That CRM registration email is their login name. The password was copied if clipboard access is available.`, "ok");
       } catch (error) {
         setNotice(error.message, "error");
       }

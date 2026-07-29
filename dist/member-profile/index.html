@@ -51,14 +51,14 @@
     }
 
     a { color: inherit; }
-    button, input, textarea {
+    button, input, textarea, select {
       border: 1px solid var(--line);
       border-radius: 6px;
       color: var(--ink);
       background: rgba(10,15,30,.78);
       font: inherit;
     }
-    input, textarea { width: 100%; padding: 12px 13px; }
+    input, textarea, select { width: 100%; padding: 12px 13px; }
     textarea { min-height: 92px; resize: vertical; }
     button {
       cursor: pointer;
@@ -200,6 +200,8 @@
       white-space: nowrap;
     }
     .pill.warn { color: var(--warn); border-color: rgba(255,211,106,.42); background: rgba(255,211,106,.08); }
+    .pill.good { color: var(--good); border-color: rgba(106,240,182,.42); background: rgba(106,240,182,.08); }
+    .pill.danger { color: var(--danger); border-color: rgba(255,99,123,.48); background: rgba(255,99,123,.08); }
     .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .metric {
       min-height: 92px;
@@ -261,6 +263,29 @@
     th, td { padding: 13px 14px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; }
     td { color: var(--ink); font-size: 14px; line-height: 1.45; }
     .muted { color: var(--muted); }
+    .checkbox-row {
+      display: flex;
+      align-items: start;
+      gap: 10px;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.45;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .checkbox-row input { width: auto; margin-top: 3px; }
+    .progress-list { display: grid; gap: 8px; margin-top: 12px; }
+    .progress-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .progress-row strong { color: var(--ink); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 
     @media (max-width: 920px) {
       .topbar, .hero, .section-head, .grid-2, .grid-3 { display: grid; grid-template-columns: 1fr; }
@@ -289,6 +314,7 @@
       </a>
       <nav aria-label="Member profile sections">
         <a href="#invites">Invites</a>
+        <a href="#fellowship">Fellowship</a>
         <a href="#directory">Directory</a>
         <a href="#resources">Contacts</a>
         <a href="#tiers">Tiers</a>
@@ -304,7 +330,7 @@
       <div>
         <span class="eyebrow">Member login</span>
         <h2>Access your member profile.</h2>
-        <p>Use the email and password provided by the Mojo AI Summits team after your membership is accepted.</p>
+        <p>Use the same email address you registered with in the CRM and the password provided by the Mojo AI Summits team after your membership is accepted.</p>
       </div>
       <form id="loginForm">
         <label>Email <input id="loginEmail" name="email" type="email" autocomplete="email" required></label>
@@ -325,18 +351,75 @@
           <h2 id="memberName">Loading profile</h2>
           <p id="memberContact"></p>
           <div class="metric-grid">
-            <div class="metric"><strong id="guestInviteCount">0</strong><span>Guest invite links created</span></div>
-            <div class="metric"><strong id="nominationCount">0</strong><span>Member nominations created</span></div>
-            <div class="metric"><strong id="monthlyNominations">0 / 2</strong><span>Member nominations this month</span></div>
-            <div class="metric"><strong id="yearsMember">0</strong><span>Years of membership</span></div>
+            <div class="metric"><strong id="sessionCount">0</strong><span>Sessions attended</span></div>
+            <div class="metric"><strong id="summitCount">0</strong><span>Summits attended</span></div>
+            <div class="metric"><strong id="documentedContributionCount">0</strong><span>Documented contributions</span></div>
+            <div class="metric"><strong id="fellowshipNominationCount">0</strong><span>Fellowship nominations received</span></div>
           </div>
         </aside>
+      </section>
+
+      <section class="section" id="fellowship">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Fellowship profile</span>
+            <h2>Trackable standing and promotion readiness</h2>
+          </div>
+          <span class="pill" id="nominationWindowStatus">Loading</span>
+        </div>
+        <div class="grid-2">
+          <div class="item">
+            <h3>Your tracked profile items</h3>
+            <div class="metric-grid" style="margin-top:14px;">
+              <div class="metric"><strong id="goodStandingStatus">-</strong><span>Good standing</span></div>
+              <div class="metric"><strong id="profileCompleteStatus">-</strong><span>Profile complete</span></div>
+              <div class="metric"><strong id="fellowshipYesVotes">0</strong><span>Yes votes received</span></div>
+              <div class="metric"><strong id="fellowshipNoVotes">0</strong><span>No votes received</span></div>
+            </div>
+            <form id="nominationConsentForm" style="margin-top:16px;">
+              <label class="checkbox-row">
+                <input id="openToNomination" name="openToFellowshipNomination" type="checkbox">
+                <span>I am open to being nominated for fellowship promotion when the system says I meet the trackable criteria.</span>
+              </label>
+              <button class="secondary" type="submit" style="margin-top:12px;">Save Preference</button>
+            </form>
+          </div>
+          <div class="item">
+            <h3>Promotion nomination</h3>
+            <p id="nominationWindowHelp">Nominations open 30 days before each quarterly summit.</p>
+            <form id="fellowshipNominationForm" class="invite-form" style="margin-top:14px;">
+              <label>Eligible member
+                <select id="fellowshipCandidate" name="candidateEmail"></select>
+              </label>
+              <label>Nomination reason
+                <textarea name="nominationReason" placeholder="Why this member should be considered by peers" required></textarea>
+              </label>
+              <div id="levelFourEvidenceFields">
+                <label>Executive impact evidence <textarea name="executiveImpact" placeholder="Reviewable evidence for Distinguished Fellow consideration"></textarea></label>
+                <label>Network contribution evidence <textarea name="networkContribution" placeholder="Reviewable evidence from the member's contribution record"></textarea></label>
+                <label>Member case <textarea name="memberCase" placeholder="The case members should evaluate before voting"></textarea></label>
+              </div>
+              <button type="submit" id="submitFellowshipNomination">Submit Promotion Nomination</button>
+            </form>
+          </div>
+        </div>
+        <div class="grid-2" id="fellowshipEligibility" style="margin-top:16px;"></div>
+        <div class="section" aria-label="Open fellowship nominations">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Member voting</span>
+              <h2>Open fellowship nominations</h2>
+            </div>
+            <span class="pill" id="openNominationCount">0 open</span>
+          </div>
+          <div id="openFellowshipNominations" class="grid-2"></div>
+        </div>
       </section>
 
       <section class="section" id="invites">
         <div class="section-head">
           <div>
-            <span class="eyebrow">Invites and nominations</span>
+            <span class="eyebrow">Guest and new-member links</span>
             <h2>Generate member-powered links</h2>
           </div>
           <span class="pill warn">Two member nominations per month</span>
@@ -436,7 +519,7 @@
     const loginPanel = document.querySelector("#loginPanel");
     const profileApp = document.querySelector("#profileApp");
     const logoutButton = document.querySelector("#logoutButton");
-    let state = { profile: null, directory: [], invites: [], impact: {}, tierGuide: [], staffContacts: [] };
+    let state = { profile: null, directory: [], invites: [], impact: {}, fellowship: {}, tierGuide: [], staffContacts: [] };
 
     function escapeHtml(value) {
       return String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -498,6 +581,94 @@
       `).join("");
     }
 
+    function renderFellowship() {
+      const fellowship = state.fellowship || {};
+      const stats = fellowship.stats || {};
+      const windowState = fellowship.nominationWindow || {};
+      const nextWindow = windowState.next || {};
+      setText("goodStandingStatus", stats.goodStanding ? "Yes" : "No");
+      setText("profileCompleteStatus", stats.profileComplete ? "Yes" : "No");
+      setText("fellowshipYesVotes", String(stats.yesVotes || 0));
+      setText("fellowshipNoVotes", String(stats.noVotes || 0));
+      document.querySelector("#openToNomination").checked = Boolean(stats.openToFellowshipNomination);
+      const windowLabel = windowState.open ? "Nominations open" : "Nominations closed";
+      const windowClass = windowState.open ? "pill good" : "pill warn";
+      const windowStatus = document.querySelector("#nominationWindowStatus");
+      windowStatus.textContent = windowLabel;
+      windowStatus.className = windowClass;
+      setText(
+        "nominationWindowHelp",
+        windowState.open
+          ? `Current window closes on ${nextWindow.closesAt || "the summit date"}.`
+          : `Next window opens on ${nextWindow.opensAt || "the next quarterly cycle"} for the ${nextWindow.summitDate || "next"} summit.`
+      );
+
+      document.querySelector("#fellowshipEligibility").innerHTML = (fellowship.eligibility || []).map((level) => `
+        <div class="item">
+          <span class="pill ${level.currentOrPast ? "good" : ""}">${escapeHtml(level.tier)}</span>
+          <h3 style="margin-top:12px;">${level.currentOrPast ? "Current or earned" : level.promotionEligible ? "Promotion requirements met" : level.technicallyEligible ? "Technically eligible for nomination" : "Requirements in progress"}</h3>
+          <div class="progress-list">
+            ${(level.requirements || []).map((item) => `
+              <div class="progress-row">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${escapeHtml(item.current)} / ${escapeHtml(item.required)} ${item.met ? "met" : ""}</strong>
+              </div>
+            `).join("")}
+          </div>
+          <p style="margin-top:12px;">${escapeHtml(level.approvalLabel || "")}</p>
+        </div>
+      `).join("");
+
+      const candidateSelect = document.querySelector("#fellowshipCandidate");
+      const targets = fellowship.nominationTargets || [];
+      candidateSelect.innerHTML = targets.length
+        ? targets.map((candidate) => `<option value="${escapeHtml(candidate.email)}" data-level-four="${candidate.requiresLevelFourEvidence ? "true" : "false"}">${escapeHtml(candidate.name)} - ${escapeHtml(candidate.targetTier)}</option>`).join("")
+        : '<option value="">No eligible members right now</option>';
+      const formDisabled = !windowState.open || !targets.length;
+      document.querySelector("#submitFellowshipNomination").disabled = formDisabled;
+      candidateSelect.disabled = formDisabled;
+      renderLevelFourEvidenceFields();
+      renderOpenFellowshipNominations();
+    }
+
+    function renderLevelFourEvidenceFields() {
+      const selected = document.querySelector("#fellowshipCandidate").selectedOptions[0];
+      const required = selected?.dataset.levelFour === "true";
+      const fields = document.querySelector("#levelFourEvidenceFields");
+      fields.classList.toggle("hidden", !required);
+      fields.querySelectorAll("textarea").forEach((field) => {
+        field.required = required;
+      });
+    }
+
+    function renderOpenFellowshipNominations() {
+      const profileEmail = state.profile?.email || "";
+      const nominations = (state.fellowship?.openNominations || []).filter((nomination) => nomination.candidateEmail !== profileEmail);
+      setText("openNominationCount", `${nominations.length} open`);
+      const target = document.querySelector("#openFellowshipNominations");
+      if (!nominations.length) {
+        target.innerHTML = '<p class="muted">No fellowship nominations are open for your vote.</p>';
+        return;
+      }
+      target.innerHTML = nominations.map((nomination) => `
+        <div class="item">
+          <span class="pill">${escapeHtml(nomination.targetTier)}</span>
+          <h3>${escapeHtml(nomination.candidateName)}</h3>
+          <p>${escapeHtml(nomination.nominationReason)}</p>
+          ${nomination.levelFourEvidence?.memberCase ? `<p style="margin-top:10px;">${escapeHtml(nomination.levelFourEvidence.memberCase)}</p>` : ""}
+          <div class="progress-list">
+            <div class="progress-row"><span>Yes votes</span><strong>${escapeHtml(nomination.yesVotes)}</strong></div>
+            <div class="progress-row"><span>No votes</span><strong>${escapeHtml(nomination.noVotes)}</strong></div>
+            <div class="progress-row"><span>Approval threshold</span><strong>${escapeHtml(nomination.approvalLabel)}</strong></div>
+          </div>
+          <div class="actions">
+            <button type="button" data-fellowship-vote="yes" data-nomination-id="${escapeHtml(nomination.id)}">Vote Yes</button>
+            <button class="secondary" type="button" data-fellowship-vote="no" data-nomination-id="${escapeHtml(nomination.id)}">Vote No</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
     function renderDirectory() {
       const profileEmail = state.profile?.email || "";
       const members = (state.directory || []).filter((member) => member.email !== profileEmail);
@@ -538,8 +709,8 @@
           <span class="pill">${escapeHtml(tier.tier)}</span>
           <h3>Minimum</h3>
           <p>${escapeHtml(tier.minimum)}</p>
-          <h3 style="margin-top:12px;">Commitments</h3>
-          <p>${escapeHtml(tier.commitments)}</p>
+          <h3 style="margin-top:12px;">Approval</h3>
+          <p>${escapeHtml(tier.approval)}</p>
           <h3 style="margin-top:12px;">Contribution</h3>
           <p>${escapeHtml(tier.contribution)}</p>
         </div>
@@ -553,10 +724,15 @@
       setText("memberTier", profile.tier || "Fellow");
       setText("memberName", profile.name || "Member profile");
       setText("memberContact", [profile.title, profile.company, profile.email].filter(Boolean).join(" | "));
+      setText("sessionCount", String(impact.intelligenceSessions || 0));
+      setText("summitCount", String(impact.summitsAttended || 0));
+      setText("documentedContributionCount", String(impact.documentedContributions || 0));
+      setText("fellowshipNominationCount", String(impact.fellowshipNominationsReceived || 0));
       setText("guestInviteCount", String(impact.guestInviteLinksCreated || 0));
       setText("nominationCount", String(impact.memberNominationsCreated || 0));
       setText("monthlyNominations", `${impact.memberNominationsThisMonth || 0} / ${state.monthlyMemberInviteLimit || 2}`);
       setText("yearsMember", String(impact.yearsOfMembership || 0));
+      renderFellowship();
       renderInviteList();
       renderDirectory();
       renderResources();
@@ -626,6 +802,60 @@
       try {
         await createInvite(event.currentTarget, "create-member-nomination");
         event.currentTarget.reset();
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    });
+
+    document.querySelector("#nominationConsentForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await fetch("/api/member-profile", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "update-nomination-consent",
+            openToFellowshipNomination: document.querySelector("#openToNomination").checked
+          })
+        }).then(readJson);
+        await loadProfile();
+        showNotice("Fellowship nomination preference saved.", "ok");
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    });
+
+    document.querySelector("#fellowshipCandidate").addEventListener("change", renderLevelFourEvidenceFields);
+
+    document.querySelector("#fellowshipNominationForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+        await fetch("/api/member-profile", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...payload, action: "create-fellowship-nomination" })
+        }).then(readJson);
+        event.currentTarget.reset();
+        await loadProfile();
+        showNotice("Fellowship promotion nomination submitted.", "ok");
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    });
+
+    document.querySelector("#openFellowshipNominations").addEventListener("click", async (event) => {
+      const vote = event.target.dataset.fellowshipVote;
+      const nominationId = event.target.dataset.nominationId;
+      if (!vote || !nominationId) return;
+      try {
+        await fetch("/api/member-profile", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "vote-fellowship-nomination", nominationId, vote })
+        }).then(readJson);
+        await loadProfile();
+        showNotice("Vote recorded.", "ok");
       } catch (error) {
         showNotice(error.message, "error");
       }
