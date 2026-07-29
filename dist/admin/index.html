@@ -1015,6 +1015,7 @@
       ]
         .map(normalizePath)
         .filter((path) => path && path !== "/admin/" && !path.startsWith("/mockups/"))
+        .filter((path) => path !== "/storage/")
         .filter((path, index, list) => list.indexOf(path) === index)
         .filter((path) => !existingPaths.has(path));
 

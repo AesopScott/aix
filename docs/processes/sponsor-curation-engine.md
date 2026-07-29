@@ -214,15 +214,21 @@ The next build decision is whether the MVP should live first as:
 - A Cloudflare-native internal `/sponsors/` tool using the existing Mojo Auth and KV/D1 patterns.
 - A connected external CRM workflow.
 
-Recommended first step: start with a spreadsheet-backed tracker and a small import/scoring script, then promote to an internal `/sponsors/` tool once the team validates fields, stages, and scoring.
+Recommended first step: start with a researched seed prospect file and a small scoring script, then promote to an internal `/sponsors/` tool once the team validates fields, stages, and scoring.
 
 Starter files:
 
 - Tracker template: `docs/processes/sponsor-curation-tracker-template.csv`
+- Researched seed prospects: `docs/processes/sponsor-curation-seed-prospects.csv`
+- Generated seed score report: `docs/processes/sponsor-curation-seed-score-report.generated.json`
 - Scoring script: `scripts/score-sponsor-prospects.mjs`
 
-Run the scorer after exporting the tracker to CSV:
+Run the scorer against the researched seed file:
 
 ```powershell
-node scripts/score-sponsor-prospects.mjs --in docs/processes/sponsor-curation-tracker-template.csv --out output/sponsor-curation-score-report.json
+node scripts/score-sponsor-prospects.mjs --in docs/processes/sponsor-curation-seed-prospects.csv --out docs/processes/sponsor-curation-seed-score-report.generated.json
 ```
+
+The marketing team's job is not to build the universe manually. The research owner should keep expanding the seed file from public sponsor/exhibitor pages, conference agendas, company event pages, partner pages, job postings, CRM referrals, and Mojo network notes. The marketing team should review priority accounts, approve fit, assign owners, and run outreach.
+
+The current seed file is researched from public sponsor and partner sources including The AI Summit London 2026, World Summit AI Amsterdam 2026, AI+ Expo 2026, and AI Infra Summit 2026. The generated report may mark a company as `priority` while still showing missing gates for named contacts or warm paths. That means the account is research-priority, not outreach-ready.

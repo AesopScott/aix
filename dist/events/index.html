@@ -906,8 +906,51 @@
           ["producer", "Stream producer", "text", 2],
           ["moderator", "Chat & Q&A moderator", "text", 2],
           ["rehearsal", "Full tech rehearsal", "text", 2],
+          ["confirmations", "Confirmations, holds, reminders, access links", "area", 3],
+          ["permissions", "Recording, transcript, chat, attendee data, and permissions", "area", 3],
           ["recording", "Recording & captions", "area", 3],
           ["contingency", "If the stream drops", "area", 3]
+        ]
+      },
+      {
+        id: "virtualstrategy",
+        title: "Virtual event strategy",
+        sub: "The event-specific purpose, audience, and relationship path for a focused online executive session.",
+        kind: "fields",
+        fields: [
+          ["series", "Series name", "text", 2],
+          ["topic", "Event-specific topic", "text", 2],
+          ["audience", "Qualified audience segment", "text", 2],
+          ["promise", "Event promise", "area", 3],
+          ["relationship", "Relationship goal", "area", 3],
+          ["routing", "Member, sponsor, and 2027 city-summit routing", "area", 3],
+          ["metrics", "Success metrics", "area", 3]
+        ]
+      },
+      {
+        id: "virtualreadiness",
+        title: "Virtual topic, faculty & sponsor readiness",
+        sub: "A lightweight readiness surface for the topic, speaker/moderator roles, sponsor boundaries, and content shell.",
+        kind: "fields",
+        fields: [
+          ["framing", "Executive decision framing", "area", 3],
+          ["faculty", "Featured speaker, moderator, and partner participant status", "area", 3],
+          ["briefing", "Briefing notes, timing expectations, and discussion prompts", "area", 3],
+          ["sponsors", "Sponsor fit, mention rules, and follow-up rights", "area", 3],
+          ["slides", "Slide shell, intro script, prompts, and closing CTA", "area", 6]
+        ]
+      },
+      {
+        id: "virtualpromotion",
+        title: "Virtual audience & promotion",
+        sub: "Invite targeting, registration path, response tracking, and attendee reminder support.",
+        kind: "fields",
+        fields: [
+          ["inviteList", "Qualified invite list", "area", 3],
+          ["copy", "Invite, reminder, and promo copy", "area", 3],
+          ["landing", "Landing page and registration path", "area", 3],
+          ["tracking", "Registration source, qualification, and invite response tracking", "area", 3],
+          ["reminder", "Day-before reminder and calendar-link support", "area", 6]
         ]
       },
       {
@@ -919,7 +962,21 @@
           "All speakers tech-checked", "Backup stream tested live", "Slides loaded",
           "Lower thirds built", "Holding slide ready", "Captions enabled", "Q&A owner assigned",
           "Poll questions loaded", "Recording confirmed", "Speaker green room link sent",
-          "Attendee join instructions sent", "Replay page ready"
+          "Attendee join instructions sent", "Registration confirmations tested", "Calendar holds tested",
+          "Reminder emails scheduled", "Access links verified", "Permission rules confirmed",
+          "Room opened early", "Moderator, recording, and chat readiness confirmed", "Replay page ready"
+        ]
+      },
+      {
+        id: "virtualfollowup",
+        title: "Virtual live delivery & follow-up",
+        sub: "The handoff after the room closes: questions, nominations, sponsor opportunities, thank-yous, and lessons learned.",
+        kind: "fields",
+        fields: [
+          ["delivery", "Live host, timing protection, and high-signal capture", "area", 3],
+          ["handoff", "Question, Member nomination, sponsor opportunity, and meeting routing", "area", 3],
+          ["thankyou", "Thank-you, recording or recap, and next-event invitation", "area", 3],
+          ["tracker", "Series tracker updates, conversion, insights, and lessons learned", "area", 3]
         ]
       },
       {

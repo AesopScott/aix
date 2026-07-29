@@ -43,7 +43,7 @@ Protected internal routes:
 - `/crm/` and `/api/crm`
 - `/setup/` and `/api/setup-state`
 - `/events/` and `/api/events`
-- `/files/`, `/storage/`, and `/api/storage`
+- `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
 Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/guest/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
@@ -72,9 +72,9 @@ The storage portal uses a private Cloudflare R2 bucket bound to Pages Functions 
 
 - Bucket: `mojo-summits-private`
 - API route: `/api/storage`
-- Portal route: `/files/` (site-managed alias for the Storage portal)
+- Portal route: `/files/` (site-managed public shell for the Storage portal)
 - Legacy portal route: `/storage/`
-- Access control: `/files/*`, `/storage/*`, and `/api/storage*` require a Mojo Auth session only after access control is enabled in `/access`.
+- Access control: `/api/storage*` requires a Mojo Auth session only after access control is enabled in `/access`. `/files/` can load the page shell so users can reach site sign-in; Storage data and file operations remain protected by the API.
 - Cloudflare prerequisite: R2 must be enabled on the Cloudflare account before the bucket can be created and before this binding can deploy successfully.
 
 ## Deploy
@@ -128,9 +128,9 @@ The public partners page lives at `/partners/` and positions Mojo AI Summits as 
 
 ## Sponsor Curation Engine
 
-The sponsor curation engine process lives at `docs/processes/sponsor-curation-engine.md`, with a starter machine-readable config at `docs/processes/sponsor-curation-engine.generated.json`, a CSV tracker template at `docs/processes/sponsor-curation-tracker-template.csv`, and a local scoring script at `scripts/score-sponsor-prospects.mjs`.
+The sponsor curation engine process lives at `docs/processes/sponsor-curation-engine.md`, with a starter machine-readable config at `docs/processes/sponsor-curation-engine.generated.json`, a CSV tracker template at `docs/processes/sponsor-curation-tracker-template.csv`, a researched seed prospect file at `docs/processes/sponsor-curation-seed-prospects.csv`, a generated priority report at `docs/processes/sponsor-curation-seed-score-report.generated.json`, and a local scoring script at `scripts/score-sponsor-prospects.mjs`.
 
-The engine is designed to identify AI-enabled companies with evidence of event sponsorship, partner-market behavior, or field-marketing activity, then route qualified companies into Strategic Intelligence Partner and sponsor outreach. It uses a 100-point score across AI relevance, event sponsorship behavior, executive audience fit, Mojo model fit, commercial readiness, and contactability. Human review is required before first outreach, proposal, and partner acceptance.
+The engine is designed to identify AI-enabled companies with evidence of event sponsorship, partner-market behavior, or field-marketing activity, then route qualified companies into Strategic Intelligence Partner and sponsor outreach. It uses a 100-point score across AI relevance, event sponsorship behavior, executive audience fit, Mojo model fit, commercial readiness, and contactability. Research should expand the prospect universe; the marketing team should review priority accounts, assign owners, and run approved outreach. Human review is required before first outreach, proposal, and partner acceptance.
 
 ## Executive Intelligence Membership
 

@@ -126,6 +126,8 @@
     "seedTargetCompanies": 250,
     "priorityThreshold": 75,
     "trackerTemplatePath": "docs/processes/sponsor-curation-tracker-template.csv",
+    "researchedSeedProspectsPath": "docs/processes/sponsor-curation-seed-prospects.csv",
+    "seedScoreReportPath": "docs/processes/sponsor-curation-seed-score-report.generated.json",
     "scoringScriptPath": "scripts/score-sponsor-prospects.mjs",
     "weeklyReviewCadence": "weekly",
     "humanApprovalRequiredBeforeFirstOutreach": true

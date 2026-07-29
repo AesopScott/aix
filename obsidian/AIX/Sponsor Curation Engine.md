@@ -25,8 +25,10 @@ This should not be a generic sponsor database. The engine should identify compan
 - `docs/processes/sponsor-curation-engine.md`
 - `docs/processes/sponsor-curation-engine.generated.json`
 - `docs/processes/sponsor-curation-tracker-template.csv`
+- `docs/processes/sponsor-curation-seed-prospects.csv`
+- `docs/processes/sponsor-curation-seed-score-report.generated.json`
 - `scripts/score-sponsor-prospects.mjs`
 
 ## Recommended Next Step
 
-Start with a spreadsheet-backed tracker and a small import/scoring script. Promote to an internal `/sponsors/` tool after the team validates fields, stages, scoring, and review gates.
+Start from the researched seed prospects file, not a blank tracker. The research owner should expand the universe; the marketing team should review priority accounts, approve fit, assign owners, and run outreach. Promote to an internal `/sponsors/` tool after the team validates fields, stages, scoring, and review gates.

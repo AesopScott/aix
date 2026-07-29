@@ -32,6 +32,7 @@
       --owner-ron: var(--cyan);
       --owner-charlie: var(--electric-blue);
       --owner-angel: var(--cyan);
+      --owner-reggie: var(--electric-blue);
       --owner-tel: var(--electric-blue);
       --owner-orbit-flow: var(--slate);
       --owner-photo-sound-cinema: var(--cyan);
@@ -319,6 +320,29 @@
       border-top: 1px solid var(--line);
     }
 
+    .sync-state {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--navy);
+      color: var(--white);
+      padding: 9px 10px;
+      font-family: "Space Grotesk", Inter, sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .sync-state.ok {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .sync-state.warn,
+    .sync-state.error {
+      border-color: var(--electric-blue);
+      color: var(--white);
+    }
+
     .action-btn {
       justify-content: center;
       font-weight: 700;
@@ -492,6 +516,10 @@
       border-left-color: var(--owner-angel);
     }
 
+    .owner-select.owner-reggie {
+      border-left-color: var(--owner-reggie);
+    }
+
     .owner-select.owner-tel {
       border-left-color: var(--owner-tel);
     }
@@ -643,6 +671,10 @@
 
     .owner-angel {
       background: var(--owner-angel);
+    }
+
+    .owner-reggie {
+      background: var(--owner-reggie);
     }
 
     .owner-tel {
@@ -862,6 +894,7 @@
         </div>
 
         <div class="actions">
+          <div class="sync-state" id="syncState" role="status">Checking shared sync...</div>
           <button class="action-btn" id="clearStatuses" type="button">Clear Statuses</button>
           <button class="action-btn" id="resetAssignments" type="button">Reset Assignments</button>
           <button class="action-btn" type="button" onclick="window.print()">Print</button>
@@ -1524,6 +1557,7 @@ The following decisions should not be made by one owner alone:
       Ron: "owner-ron",
       Charlie: "owner-charlie",
       Angel: "owner-angel",
+      Reggie: "owner-reggie",
       "The Event Lounge (TEL)": "owner-tel",
       "Orbit Flow": "owner-orbit-flow",
       "Photography, Sound, and Cinematography Team": "owner-photo-sound-cinema",
@@ -1532,7 +1566,7 @@ The following decisions should not be made by one owner alone:
       all: "owner-all"
     };
 
-    const supportOwners = ["Scott", "Robert", "Jodi", "Ron", "Charlie", "Angel", "The Event Lounge (TEL)", "Orbit Flow", "Photography, Sound, and Cinematography Team"];
+    const supportOwners = ["Scott", "Robert", "Jodi", "Ron", "Charlie", "Angel", "Reggie", "The Event Lounge (TEL)", "Orbit Flow", "Photography, Sound, and Cinematography Team"];
     const editableOwners = [...supportOwners, "I don't know"];
     const ownerFilterOptions = ["All", ...editableOwners, "Shared"];
     const ownerAliases = {
@@ -1548,7 +1582,7 @@ The following decisions should not be made by one owner alone:
       "Priority 7 - 1 day out",
       "Priority 8 - Day of"
     ];
-    const deliverableOptions = ["Conversation", "Document", "Contract"];
+    const deliverableOptions = ["Conversation", "Document", "Contract", "Website", "Event tracker"];
     const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered"];
     const assignmentStoragePrefix = "mojo-event-assignment:";
     const sharedStateEndpoint = "/api/setup-state";
@@ -1592,6 +1626,24 @@ The following decisions should not be made by one owner alone:
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+
+    function setSyncState(kind, message) {
+      const el = document.getElementById("syncState");
+      if (!el) return;
+      el.className = `sync-state ${kind || ""}`.trim();
+      el.textContent = message;
+    }
+
+    function describeSharedError(error) {
+      const message = String(error?.message || error || "");
+      if (message.includes("401") || message.includes("403")) {
+        return "Shared sync blocked. Sign in through Access with setup permission.";
+      }
+      if (message.includes("404") || window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+        return "Local preview only. Changes on this page are not shared.";
+      }
+      return "Shared sync offline. Changes are saved in this browser only.";
+    }
 
     function parseOwner(text) {
       const ownerMatch = text.match(/\bOwner:\s*([^.;]+)(?:\.|$)/i);
@@ -1832,6 +1884,7 @@ The following decisions should not be made by one owner alone:
 
     async function saveSharedAssignment(item, fields = assignmentFields) {
       try {
+        setSyncState("warn", "Saving shared change...");
         const response = await fetch(sharedStateEndpoint, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
@@ -1840,13 +1893,16 @@ The following decisions should not be made by one owner alone:
         if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
         const state = await response.json();
         lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
+        setSyncState("ok", "Shared sync live. Change saved.");
       } catch (error) {
+        setSyncState("error", describeSharedError(error));
         console.warn(error);
       }
     }
 
     async function saveAllSharedAssignments() {
       try {
+        setSyncState("warn", "Saving all shared changes...");
         const response = await fetch(sharedStateEndpoint, {
           method: "PUT",
           headers: { "content-type": "application/json" },
@@ -1855,18 +1911,23 @@ The following decisions should not be made by one owner alone:
         if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
         const state = await response.json();
         lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
+        setSyncState("ok", "Shared sync live. All changes saved.");
       } catch (error) {
+        setSyncState("error", describeSharedError(error));
         console.warn(error);
       }
     }
 
     async function clearSharedAssignments() {
       try {
+        setSyncState("warn", "Resetting shared state...");
         const response = await fetch(sharedStateEndpoint, { method: "DELETE" });
         if (!response.ok) throw new Error(`Shared state reset failed: ${response.status}`);
         const state = await response.json();
         lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
+        setSyncState("ok", "Shared sync live. Shared state reset.");
       } catch (error) {
+        setSyncState("error", describeSharedError(error));
         console.warn(error);
       }
     }
@@ -1874,6 +1935,7 @@ The following decisions should not be made by one owner alone:
     async function loadSharedAssignments({ render = false, migrateLocalIfEmpty = false } = {}) {
       try {
         const state = await fetchSharedState();
+        setSyncState("ok", "Shared sync live. Updates refresh every 5 seconds.");
         const assignments = state.assignments || {};
         const hasSharedAssignments = Object.keys(assignments).length > 0;
 
@@ -1913,6 +1975,7 @@ The following decisions should not be made by one owner alone:
 
         lastSharedUpdatedAt = state.updatedAt || "";
       } catch (error) {
+        setSyncState("error", describeSharedError(error));
         console.warn(error);
       }
     }

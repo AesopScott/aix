@@ -53,13 +53,11 @@ Each upload also includes an event, city, or folder value. Example object keys:
 
 ## Mojo Auth Setup
 
-Before using the storage portal in production, protect these routes through `/access`:
+Before using the storage portal in production, protect the Storage API through `/access`:
 
-- `/files/`
-- `/storage/`
 - `/api/storage`
 
-The repo-level access configuration protects the storage portal plus the other internal operating routes: `/admin/`, `/crm/`, `/setup/`, `/events/`, `/budget/`, `/mockups/`, and their internal APIs, including `/api/events`. Recommended account groups:
+The `/files/` page shell stays reachable so users can get to site sign-in and Storage instructions. Storage data and file operations remain protected by `/api/storage`. The repo-level access configuration also protects the other internal operating routes: `/admin/`, `/crm/`, `/setup/`, `/events/`, `/budget/`, `/mockups/`, and their internal APIs, including `/api/events`. Recommended account groups:
 
 - Founders: Scott, Robert, Jodi, Ron
 - Event Ops: Charlie, The Event Lounge
@@ -120,7 +118,7 @@ Before declaring storage ready:
 - Confirm the R2 bucket exists.
 - Confirm `MOJO_SUMMITS_STORAGE` is bound to the Pages project.
 - Before enabling access control, confirm `/files/`, `/storage/`, and `/api/storage` remain reachable.
-- After enabling access control, confirm `/files/` requires Mojo Auth login.
+- After enabling access control, confirm `/files/` loads the Storage page shell and asks unauthenticated users to sign in before file operations.
 - After enabling access control, confirm `/storage/` requires Mojo Auth login when no external Cloudflare Access rule intercepts it.
 - After enabling access control, confirm `/api/storage` requires Mojo Auth login.
 - Confirm an approved user can upload, list, download, and delete a test file.
