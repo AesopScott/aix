@@ -68,6 +68,16 @@
   Pragma: no-cache
   Expires: 0
 
+/vip-registration
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/vip-registration/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
 /member-registration
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache

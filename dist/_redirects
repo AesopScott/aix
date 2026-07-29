@@ -6,6 +6,9 @@
 /files/ /files/index.html 200
 /files/* /files/index.html 200
 /budget /budget/ 301
+/vip-registration /guest/ 301
+/vip-registration/ /guest/ 301
+/vip-registration/* /guest/ 301
 /member-registration /member-registration/ 301
 /guest /guest/ 301
 /crm /crm/ 301

@@ -97,6 +97,7 @@ Direct visits to `/member-registration/` are allowed for previewing and sharing 
 The guest registration page uses the same form flow as member registration and lives at `/guest/`.
 Guest registration submissions are routed through `/crm/api/public/guest-registration`.
 Direct visits to `/guest/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
+Legacy `/vip-registration/?invite=######` CRM links redirect to `/guest/?invite=######` so existing invite links continue to work.
 
 ## Fall 2026 Virtual Events
 
