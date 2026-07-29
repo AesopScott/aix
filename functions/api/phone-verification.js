@@ -126,12 +126,22 @@ function parseXmlTag(xml, tag) {
   return match ? match[1] : "";
 }
 
-async function signedAwsPost({ region, accessKeyId, secretAccessKey, sessionToken }, service, body) {
+function parseAwsErrorMessage(text) {
+  try {
+    const data = JSON.parse(text);
+    return data.message || data.Message || data.__type || "";
+  } catch {
+    return parseXmlTag(text, "Message") || parseXmlTag(text, "Code") || "";
+  }
+}
+
+async function signedAwsPost({ region, accessKeyId, secretAccessKey, sessionToken }, service, body, extraHeaders = {}) {
   const host = `${service}.${region}.amazonaws.com`;
   const endpoint = `https://${host}/`;
   const { amzDate, dateStamp } = utcStamp();
   const headers = {
-    "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+    ...extraHeaders,
+    "content-type": extraHeaders["content-type"] || "application/x-www-form-urlencoded; charset=utf-8",
     host,
     "x-amz-date": amzDate
   };
@@ -174,14 +184,48 @@ async function signedAwsPost({ region, accessKeyId, secretAccessKey, sessionToke
   const text = await response.text();
 
   if (!response.ok) {
-    const message = parseXmlTag(text, "Message") || parseXmlTag(text, "Code") || "AWS SNS rejected the SMS request.";
+    const message = parseAwsErrorMessage(text) || "AWS rejected the SMS request.";
     throw new Error(message);
   }
 
   return text;
 }
 
-async function publishSms(config, phone, message) {
+async function signedAwsJsonPost(config, service, target, payload) {
+  const text = await signedAwsPost(
+    config,
+    service,
+    JSON.stringify(payload),
+    {
+      "content-type": "application/x-amz-json-1.0",
+      "x-amz-target": target
+    }
+  );
+  return JSON.parse(text);
+}
+
+async function sendSmsViaSmsVoiceV2(config, phone, message) {
+  const payload = {
+    DestinationPhoneNumber: phone,
+    MessageBody: message,
+    MessageType: "TRANSACTIONAL",
+    TimeToLive: otpTtlSeconds
+  };
+
+  if (config.originationNumber) {
+    payload.OriginationIdentity = config.originationNumber;
+  }
+
+  const result = await signedAwsJsonPost(
+    config,
+    "sms-voice",
+    "PinpointSMSVoiceV2.SendTextMessage",
+    payload
+  );
+  return result.MessageId || "";
+}
+
+async function publishSmsViaSns(config, phone, message) {
   const params = new URLSearchParams();
   params.set("Action", "Publish");
   params.set("Version", "2010-03-31");
@@ -207,6 +251,15 @@ async function publishSms(config, phone, message) {
 
   const xml = await signedAwsPost(config, "sns", params.toString());
   return parseXmlTag(xml, "MessageId");
+}
+
+async function publishSms(config, phone, message) {
+  try {
+    return await sendSmsViaSmsVoiceV2(config, phone, message);
+  } catch (error) {
+    if (config.originationNumber) throw error;
+    return publishSmsViaSns(config, phone, message);
+  }
 }
 
 async function startVerification(phone, inviteCode, env) {
