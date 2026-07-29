@@ -54,11 +54,16 @@ function cleanPayload(payload) {
   return {
     inviteCode: cleanString(payload?.inviteCode),
     name: cleanString(payload?.name),
+    company: cleanString(payload?.company),
+    title: cleanString(payload?.title),
+    industry: cleanString(payload?.industry),
     email: cleanString(payload?.email).toLowerCase(),
     phone: cleanPhone(payload?.phone),
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
     isPresenter: cleanBoolean(payload?.isPresenter),
     isRoundtableLeader: cleanBoolean(payload?.isRoundtableLeader),
+    publicationUseName: cleanBoolean(payload?.publicationUseName),
+    publicationUseCompany: cleanBoolean(payload?.publicationUseCompany),
     foodPreferences: cleanArray(payload?.foodPreferences),
     foodNotes: cleanString(payload?.foodNotes)
   };
@@ -67,6 +72,9 @@ function cleanPayload(payload) {
 function validateRegistration(registration) {
   if (!/^\d{6}$/.test(registration.inviteCode)) return "Enter a valid six-digit invite code.";
   if (!registration.name) return "Name is required.";
+  if (!registration.company) return "Company is required.";
+  if (!registration.title) return "Title is required.";
+  if (!registration.industry) return "Industry is required.";
   if (!registration.email) return "Company email is required.";
   if (!isValidEmail(registration.email)) return "Enter a valid email address.";
   if (isBlockedEmail(registration.email)) return "Gmail and Googlemail addresses are not accepted.";

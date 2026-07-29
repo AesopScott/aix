@@ -201,7 +201,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1260px;
+      min-width: 1480px;
     }
 
     th, td {
@@ -314,7 +314,7 @@
       </label>
       <label>
         Search
-        <input id="searchInput" placeholder="name, email, phone, food">
+        <input id="searchInput" placeholder="name, company, title, industry, email">
       </label>
       <button id="refreshButton" class="secondary" type="button">Refresh CRM</button>
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
@@ -331,6 +331,7 @@
               <th>Registrant</th>
               <th>Contact</th>
               <th>Roles</th>
+              <th>Publication</th>
               <th>Food</th>
               <th>Phone</th>
               <th>Status</th>
@@ -406,6 +407,14 @@
       return foods.map((food) => `<span class="pill">${escapeHtml(food)}</span>`).join("");
     }
 
+    function publicationBadges(row) {
+      const approvals = [];
+      if (row.publicationUseName) approvals.push("Name");
+      if (row.publicationUseCompany) approvals.push("Company");
+      if (!approvals.length) return '<span class="pill warn">No opt-in</span>';
+      return approvals.map((approval) => `<span class="pill">${escapeHtml(approval)}</span>`).join("");
+    }
+
     function phonePill(row) {
       const pending = row.phoneVerificationStatus !== "verified";
       return `<span class="pill ${pending ? "warn" : ""}">${escapeHtml(statusLabel(row.phoneVerificationStatus || "unverified"))}</span>`;
@@ -427,6 +436,9 @@
         if (!search) return true;
         return [
           row.name,
+          row.company,
+          row.title,
+          row.industry,
           row.email,
           row.phone,
           row.inviteCode,
@@ -451,7 +463,7 @@
     function renderRows() {
       const rows = filteredRows();
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="8">No Member registrants match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="9">No Member registrants match the current filters.</td></tr>`;
         return;
       }
 
@@ -463,13 +475,15 @@
           </td>
           <td>
             <strong>${escapeHtml(row.name)}</strong><br>
-            <span>${escapeHtml(row.id)}</span>
+            <span>${escapeHtml(row.title || "")}</span><br>
+            <span>${escapeHtml(row.company || "")}${row.industry ? ` · ${escapeHtml(row.industry)}` : ""}</span>
           </td>
           <td>
             <strong>${escapeHtml(row.email)}</strong><br>
             <span>${escapeHtml(row.phone)}</span>
           </td>
           <td><div class="role-list">${roleBadges(row)}</div></td>
+          <td><div class="role-list">${publicationBadges(row)}</div></td>
           <td>
             <div class="food-list">${foodBadges(row)}</div>
             ${row.foodNotes ? `<p>${escapeHtml(row.foodNotes)}</p>` : ""}

@@ -91,6 +91,7 @@ Required GitHub secrets:
 The member registration page asks for an invite code, then sends guests to `/member-registration/`.
 Member registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `member-registration:*`.
 Direct visits to `/member-registration/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
+Registration records include name, company, title, industry, company email, phone, role selections, food preferences, phone verification status, and separate publication-use opt-ins for name and company.
 
 ## Guest Registration
 
