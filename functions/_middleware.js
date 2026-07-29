@@ -27,6 +27,29 @@ function wantsHtml(request) {
   return String(request.headers.get("accept") || "").includes("text/html");
 }
 
+function isPartnerRegistrationShell(pathname) {
+  return pathname === "/partner-registration" || pathname === "/partner-registration/";
+}
+
+function inviteCodeFromUrl(url) {
+  return String(url.searchParams.get("invite") || "").replace(/\D/g, "").slice(0, 6);
+}
+
+function isPartnerRegistrationPreview(url) {
+  const previewCode = String(url.searchParams.get("preview") || url.searchParams.get("code") || "").trim();
+  return previewCode === "4321";
+}
+
+function notFound() {
+  return new Response("Not found", {
+    status: 404,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store"
+    }
+  });
+}
+
 function nextPathForLogin(url) {
   if (url.pathname === "/access" || url.pathname.startsWith("/access/")) return "";
   return `${url.pathname}${url.search}`;
@@ -42,6 +65,15 @@ function loginRedirect(request) {
 
 export async function onRequest(context) {
   const url = new URL(context.request.url);
+
+  if (
+    isPartnerRegistrationShell(url.pathname) &&
+    !/^\d{6}$/.test(inviteCodeFromUrl(url)) &&
+    !isPartnerRegistrationPreview(url)
+  ) {
+    return notFound();
+  }
+
   const config = await readAccessConfig(context.env);
   const route = routeForPath(url.pathname, config);
 

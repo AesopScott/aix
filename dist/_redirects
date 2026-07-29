@@ -10,6 +10,8 @@
 /vip-registration/ /guest/ 301
 /vip-registration/* /guest/ 301
 /member-registration /member-registration/ 301
+/member-profile /member-profile/ 301
+/partner-registration /partner-registration/ 301
 /guest /guest/ 301
 /crm /crm/ 301
 /privacy /privacy/ 301

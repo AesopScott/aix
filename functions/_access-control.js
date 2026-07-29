@@ -32,6 +32,12 @@ export const DEFAULT_ACCESS_GROUPS = [
     label: "Partners",
     summary: "Partner contacts who can view their private partner profile.",
     emails: []
+  },
+  {
+    id: "members",
+    label: "Members",
+    summary: "Accepted members who can view their private member profile.",
+    emails: []
   }
 ];
 
@@ -128,6 +134,16 @@ export const DEFAULT_ACCESS_RULES = [
     defaultGroupIds: ["partners"],
     matches: [{ exact: "/partner-profile" }, { prefix: "/partner-profile/" }],
     domains: ["mojoaisummits.com/partner-profile", "mojoaisummits.com/partner-profile/*"]
+  },
+  {
+    id: "member-profile",
+    kind: "page",
+    group: "Member",
+    label: "Member Profile",
+    summary: "Private member tier, invite, directory, Discord, and staff contact profile.",
+    mode: "public",
+    matches: [{ exact: "/member-profile" }, { prefix: "/member-profile/" }],
+    domains: ["mojoaisummits.com/member-profile", "mojoaisummits.com/member-profile/*"]
   },
   {
     id: "home",
@@ -279,6 +295,16 @@ export const DEFAULT_ACCESS_RULES = [
     defaultGroupIds: ["partners"],
     matches: [{ exact: "/api/partner-profile" }, { prefix: "/api/partner-profile/" }],
     domains: ["mojoaisummits.com/api/partner-profile", "mojoaisummits.com/api/partner-profile/*"]
+  },
+  {
+    id: "api-member-profile",
+    kind: "api",
+    group: "APIs",
+    label: "Member Profile API",
+    summary: "Member-authenticated profile, directory, guest invite, and member nomination endpoint.",
+    mode: "public",
+    matches: [{ exact: "/api/member-profile" }, { prefix: "/api/member-profile/" }],
+    domains: ["mojoaisummits.com/api/member-profile", "mojoaisummits.com/api/member-profile/*"]
   },
   {
     id: "api-storage",

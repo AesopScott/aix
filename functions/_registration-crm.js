@@ -23,6 +23,15 @@ const registrationConfig = {
     legacyPrefix: "guest-registration:",
     crmPrefix: "crm:guest-registrant:",
     strictEnv: "MOJO_GUEST_INVITE_CODES_STRICT"
+  },
+  partner: {
+    label: "partner",
+    crmType: "partner-registrant",
+    source: "partner-registration",
+    legacyPrefix: "partner-registration:",
+    crmPrefix: "crm:partner-registrant:",
+    strictEnv: "MOJO_PARTNER_INVITE_CODES_STRICT",
+    strict: true
   }
 };
 
@@ -86,6 +95,19 @@ function cleanPayload(payload) {
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany),
     foodPreferences: cleanArray(payload?.foodPreferences),
     foodNotes: cleanString(payload?.foodNotes)
+  };
+}
+
+function inviteMeta(inviteRecord) {
+  const record = inviteRecord?.record || {};
+  return {
+    eventId: cleanString(record.eventId || record.eventSlug || record.eventName),
+    eventSlug: cleanString(record.eventSlug),
+    eventName: cleanString(record.eventName),
+    eventDate: cleanString(record.eventDate),
+    partnerCompany: cleanString(record.partnerCompany),
+    partnerContactEmail: cleanString(record.partnerContactEmail).toLowerCase(),
+    partnerTier: cleanString(record.partnerTier)
   };
 }
 
@@ -154,7 +176,7 @@ export async function validateInviteCode(env, type, code) {
   const error = inviteCodeError(config, inviteRecord);
   if (error) return { ok: false, status: 409, error };
 
-  const strict = env[config.strictEnv] === "true";
+  const strict = config.strict === true || env[config.strictEnv] === "true";
   if (strict && !inviteRecord) {
     return { ok: false, status: 404, error: "That invite code is invalid or has already been used." };
   }
@@ -162,7 +184,8 @@ export async function validateInviteCode(env, type, code) {
   return {
     ok: true,
     code: inviteCode,
-    mode: inviteRecord ? "stored" : "format-only"
+    mode: inviteRecord ? "stored" : "format-only",
+    invite: inviteMeta(inviteRecord)
   };
 }
 
@@ -191,7 +214,8 @@ export async function handleInviteCodeValidation({ params, env }, type) {
   return json({
     ok: true,
     code: result.code,
-    mode: result.mode
+    mode: result.mode,
+    invite: result.invite
   });
 }
 
@@ -216,6 +240,7 @@ export async function handlePublicRegistration({ request, env }, type) {
   const id = crypto.randomUUID();
   const record = {
     ...registration,
+    ...(inviteValidation.invite || {}),
     id,
     createdAt,
     source: config.source,

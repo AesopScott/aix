@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <title>Member Profile | MOJO AI Summits</title>
+  <style>
+    :root {
+      --navy: #0A0F1E;
+      --blue: #1666FF;
+      --cyan: #00E6FF;
+      --slate: #1B2333;
+      --white: #FFFFFF;
+      --ink: #EAF6FF;
+      --muted: rgba(255,255,255,.68);
+      --line: rgba(0,230,255,.24);
+      --line-soft: rgba(150,170,210,.14);
+      --panel: rgba(27,35,51,.78);
+      --good: #6AF0B6;
+      --warn: #FFD36A;
+      --danger: #ff637b;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 14% 6%, rgba(22,102,255,.25), transparent 30rem),
+        radial-gradient(circle at 88% 4%, rgba(0,230,255,.15), transparent 28rem),
+        linear-gradient(180deg, #050814 0%, var(--navy) 46%, #07101f 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.032) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.032) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,.88), transparent 78%);
+    }
+
+    a { color: inherit; }
+    button, input, textarea {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--ink);
+      background: rgba(10,15,30,.78);
+      font: inherit;
+    }
+    input, textarea { width: 100%; padding: 12px 13px; }
+    textarea { min-height: 92px; resize: vertical; }
+    button {
+      cursor: pointer;
+      min-height: 44px;
+      padding: 11px 14px;
+      border-color: rgba(0,230,255,.58);
+      background: linear-gradient(135deg, rgba(22,102,255,.94), rgba(0,230,255,.28)), var(--blue);
+      color: var(--white);
+      font-weight: 900;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    button.secondary { background: rgba(22,102,255,.12); color: #94C9FF; }
+    button:hover { border-color: var(--white); box-shadow: 0 0 22px rgba(0,230,255,.24); }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: rgba(10,15,30,.91);
+      backdrop-filter: blur(16px);
+    }
+
+    .topbar, main {
+      width: min(1240px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 0;
+    }
+
+    .brand-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .brand-mark { height: 38px; width: auto; display: block; }
+    .brand-divider {
+      width: 1px;
+      height: 34px;
+      background: linear-gradient(to bottom, transparent, rgba(0,230,255,.9), transparent);
+    }
+    .brand-name {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .brand-primary {
+      font-size: 25px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      background: linear-gradient(90deg, #1175d8 0%, var(--cyan) 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .brand-secondary {
+      color: rgba(222,235,255,.82);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .38em;
+      padding-left: .38em;
+    }
+
+    nav { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+    nav a, nav button {
+      color: var(--cyan);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    nav button { width: auto; min-height: 34px; padding: 7px 10px; }
+
+    main { position: relative; z-index: 1; padding: 42px 0 76px; }
+    .hidden { display: none !important; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .panel, .summary, .section, .notice, .login-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(27,35,51,.84), rgba(10,15,30,.72)), var(--slate);
+      box-shadow: 0 24px 70px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+
+    .panel { padding: 32px; }
+    .summary { display: grid; gap: 18px; padding: 26px; }
+    .eyebrow, label, th {
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 {
+      margin: 0;
+      color: var(--white);
+      letter-spacing: 0;
+    }
+    h1 {
+      max-width: 820px;
+      margin-top: 14px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(42px, 7vw, 76px);
+      line-height: .98;
+    }
+    h2 { font-size: 24px; }
+    h3 { font-size: 18px; }
+    p { margin: 0; color: var(--muted); line-height: 1.55; }
+
+    .tier-badge, .pill {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      border: 1px solid var(--cyan);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: var(--cyan);
+      background: rgba(0,230,255,.08);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .pill.warn { color: var(--warn); border-color: rgba(255,211,106,.42); background: rgba(255,211,106,.08); }
+    .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .metric {
+      min-height: 92px;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      padding: 14px;
+      background: rgba(10,15,30,.48);
+    }
+    .metric strong { display: block; color: var(--white); font-size: 24px; }
+    .metric span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .notice { display: none; margin-bottom: 18px; padding: 16px 18px; color: var(--warn); }
+    .notice.visible { display: block; }
+    .notice.error { color: #ffc7d0; border-color: rgba(255,99,123,.48); }
+    .notice.ok { color: var(--good); border-color: rgba(106,240,182,.42); }
+
+    .login-panel {
+      width: min(560px, 100%);
+      margin: 46px auto 0;
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+    }
+    .login-panel form, .invite-form { display: grid; gap: 14px; }
+    label { display: grid; gap: 7px; color: #94C9FF; }
+
+    .section { margin-top: 18px; padding: 24px; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .item {
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(10,15,30,.45);
+    }
+    .item h3 { margin-bottom: 8px; }
+    .copy-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+    .copy-row code {
+      display: block;
+      padding: 11px;
+      border: 1px solid var(--line-soft);
+      border-radius: 6px;
+      color: var(--good);
+      overflow-wrap: anywhere;
+      background: rgba(10,15,30,.64);
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+    .table-wrap { width: 100%; overflow-x: auto; }
+    table { width: 100%; min-width: 760px; border-collapse: collapse; }
+    th, td { padding: 13px 14px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; }
+    td { color: var(--ink); font-size: 14px; line-height: 1.45; }
+    .muted { color: var(--muted); }
+
+    @media (max-width: 920px) {
+      .topbar, .hero, .section-head, .grid-2, .grid-3 { display: grid; grid-template-columns: 1fr; }
+      nav { justify-content: start; }
+    }
+    @media (max-width: 620px) {
+      .topbar, main { width: min(100% - 28px, 1240px); }
+      .panel, .summary, .section, .login-panel { padding: 20px; }
+      .metric-grid { grid-template-columns: 1fr; }
+      .copy-row { grid-template-columns: 1fr; }
+      .brand-primary { font-size: 20px; }
+      .brand-secondary { font-size: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+        <img class="brand-mark" src="/assets/logo-mark.png" alt="">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-name" aria-hidden="true">
+          <span class="brand-primary">MOJO AI</span>
+          <span class="brand-secondary">Summits</span>
+        </span>
+      </a>
+      <nav aria-label="Member profile sections">
+        <a href="#invites">Invites</a>
+        <a href="#directory">Directory</a>
+        <a href="#resources">Contacts</a>
+        <a href="#tiers">Tiers</a>
+        <button class="secondary hidden" id="logoutButton" type="button">Sign Out</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="notice" id="notice"></div>
+
+    <section class="login-panel" id="loginPanel">
+      <div>
+        <span class="eyebrow">Member login</span>
+        <h2>Access your member profile.</h2>
+        <p>Use the email and password provided by the Mojo AI Summits team after your membership is accepted.</p>
+      </div>
+      <form id="loginForm">
+        <label>Email <input id="loginEmail" name="email" type="email" autocomplete="email" required></label>
+        <label>Password <input id="loginPassword" name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Sign In</button>
+      </form>
+    </section>
+
+    <div id="profileApp" class="hidden">
+      <section class="hero">
+        <div class="panel">
+          <span class="eyebrow">Executive Intelligence Network</span>
+          <h1 id="profileTitle">Member profile.</h1>
+          <p class="muted" id="profileLead">Your private operating page for tier status, contribution activity, invite links, nominations, and member contacts.</p>
+        </div>
+        <aside class="summary">
+          <span class="tier-badge" id="memberTier">Loading</span>
+          <h2 id="memberName">Loading profile</h2>
+          <p id="memberContact"></p>
+          <div class="metric-grid">
+            <div class="metric"><strong id="guestInviteCount">0</strong><span>Guest invite links created</span></div>
+            <div class="metric"><strong id="nominationCount">0</strong><span>Member nominations created</span></div>
+            <div class="metric"><strong id="monthlyNominations">0 / 2</strong><span>Member nominations this month</span></div>
+            <div class="metric"><strong id="yearsMember">0</strong><span>Years of membership</span></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section" id="invites">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Invites and nominations</span>
+            <h2>Generate member-powered links</h2>
+          </div>
+          <span class="pill warn">Two member nominations per month</span>
+        </div>
+        <div class="grid-2">
+          <form class="item invite-form" id="guestInviteForm">
+            <div>
+              <h3>Guest show invite</h3>
+              <p>Create a guest registration URL for someone you want to bring to a show.</p>
+            </div>
+            <label>Show or event <input name="eventName" placeholder="Dallas Executive AI Summit"></label>
+            <label>Event date <input name="eventDate" placeholder="January 2027"></label>
+            <label>Guest name <input name="guestName" placeholder="Guest name"></label>
+            <label>Guest email <input name="guestEmail" type="email" placeholder="guest@company.com"></label>
+            <button type="submit">Create Guest Link</button>
+          </form>
+
+          <form class="item invite-form" id="nominationForm">
+            <div>
+              <h3>Member nomination</h3>
+              <p>After a guest attends a show, nominate them and generate a member registration URL.</p>
+            </div>
+            <label>Show attended <input name="eventName" placeholder="Event they attended"></label>
+            <label>Nominee name <input name="nomineeName" placeholder="Executive name" required></label>
+            <label>Nominee email <input name="nomineeEmail" type="email" placeholder="executive@company.com"></label>
+            <label>Company <input name="nomineeCompany" placeholder="Company"></label>
+            <label>Title <input name="nomineeTitle" placeholder="Title"></label>
+            <label>Nomination note <textarea name="nominationNote" placeholder="Why this executive should be part of the network"></textarea></label>
+            <button type="submit">Create Member Link</button>
+          </form>
+        </div>
+
+        <div class="section" aria-label="Generated links">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Your generated links</span>
+              <h2>Invite history</h2>
+            </div>
+            <span class="pill" id="inviteHistoryCount">0 links</span>
+          </div>
+          <div id="inviteList" class="grid-2"></div>
+        </div>
+      </section>
+
+      <section class="section" id="directory">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Member directory</span>
+            <h2>Accepted member contacts</h2>
+          </div>
+          <span class="pill" id="directoryCount">0 members</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Company</th><th>Title</th><th>Tier</th><th>Email</th><th>Phone</th></tr></thead>
+            <tbody id="directoryRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="resources">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Contacts</span>
+            <h2>Discord, member channels, and Mojo staff</h2>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="item">
+            <h3>Discord access</h3>
+            <p id="discordServer"></p>
+            <div id="discordChannels" class="grid-2" style="margin-top:14px;"></div>
+          </div>
+          <div class="item">
+            <h3>Mojo staff</h3>
+            <div id="staffContacts" class="grid-2" style="margin-top:14px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="tiers">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Tier commitments</span>
+            <h2>Minimum levels, commitments, and contributions</h2>
+          </div>
+          <span class="pill warn">Formal minimums are member-voted quarterly</span>
+        </div>
+        <p>These thresholds are operating guidance while the network formalizes the minimum levels by member vote at quarterly summit events.</p>
+        <div class="grid-2" id="tierGuide" style="margin-top:16px;"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const notice = document.querySelector("#notice");
+    const loginPanel = document.querySelector("#loginPanel");
+    const profileApp = document.querySelector("#profileApp");
+    const logoutButton = document.querySelector("#logoutButton");
+    let state = { profile: null, directory: [], invites: [], impact: {}, tierGuide: [], staffContacts: [] };
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function showNotice(message, type = "") {
+      notice.textContent = message;
+      notice.className = `notice visible ${type}`.trim();
+    }
+
+    function clearNotice() {
+      notice.textContent = "";
+      notice.className = "notice";
+    }
+
+    function setText(id, value) {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value;
+    }
+
+    async function readJson(response) {
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Request failed.");
+      return payload;
+    }
+
+    async function copyText(value) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+      return false;
+    }
+
+    function renderInviteList() {
+      const invites = state.invites || [];
+      setText("inviteHistoryCount", `${invites.length} ${invites.length === 1 ? "link" : "links"}`);
+      const target = document.querySelector("#inviteList");
+      if (!invites.length) {
+        target.innerHTML = '<p class="muted">No member-generated invite links yet.</p>';
+        return;
+      }
+      target.innerHTML = invites.map((invite) => `
+        <div class="item">
+          <span class="pill">${escapeHtml(invite.type === "member" ? "Member nomination" : "Guest show invite")}</span>
+          <h3>${escapeHtml(invite.eventName || invite.nomineeName || "Generated link")}</h3>
+          <p>${escapeHtml([invite.eventDate, invite.status, invite.usedBy ? `used by ${invite.usedBy}` : ""].filter(Boolean).join(" | "))}</p>
+          <div class="copy-row" style="margin-top:12px;">
+            <code>${escapeHtml(invite.url)}</code>
+            <button class="secondary" type="button" data-copy-url="${escapeHtml(invite.url)}">Copy</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderDirectory() {
+      const profileEmail = state.profile?.email || "";
+      const members = (state.directory || []).filter((member) => member.email !== profileEmail);
+      setText("directoryCount", `${members.length} ${members.length === 1 ? "member" : "members"}`);
+      document.querySelector("#directoryRows").innerHTML = members.length
+        ? members.map((member) => `
+          <tr>
+            <td><strong>${escapeHtml(member.name)}</strong></td>
+            <td>${escapeHtml(member.company)}</td>
+            <td>${escapeHtml(member.title)}</td>
+            <td>${escapeHtml(member.tier)}</td>
+            <td><a href="mailto:${escapeHtml(member.email)}">${escapeHtml(member.email)}</a></td>
+            <td>${escapeHtml(member.phone)}</td>
+          </tr>
+        `).join("")
+        : '<tr><td colspan="6">No other accepted members are visible yet.</td></tr>';
+    }
+
+    function renderResources() {
+      const discord = state.discord || {};
+      const server = discord.server || "";
+      setText("discordServer", server.startsWith("http") ? `Server invite: ${server}` : server);
+      document.querySelector("#discordChannels").innerHTML = (discord.channels || []).map((channel) => `
+        <div class="item"><h3>${escapeHtml(channel.name)}</h3><p>${escapeHtml(channel.purpose)}</p></div>
+      `).join("");
+      document.querySelector("#staffContacts").innerHTML = (state.staffContacts || []).map((contact) => `
+        <div class="item">
+          <h3>${escapeHtml(contact.name)}</h3>
+          <p>${escapeHtml(contact.role)}</p>
+          <p><a href="mailto:${escapeHtml(contact.email)}">${escapeHtml(contact.email)}</a></p>
+        </div>
+      `).join("");
+    }
+
+    function renderTierGuide() {
+      document.querySelector("#tierGuide").innerHTML = (state.tierGuide || []).map((tier) => `
+        <div class="item">
+          <span class="pill">${escapeHtml(tier.tier)}</span>
+          <h3>Minimum</h3>
+          <p>${escapeHtml(tier.minimum)}</p>
+          <h3 style="margin-top:12px;">Commitments</h3>
+          <p>${escapeHtml(tier.commitments)}</p>
+          <h3 style="margin-top:12px;">Contribution</h3>
+          <p>${escapeHtml(tier.contribution)}</p>
+        </div>
+      `).join("");
+    }
+
+    function renderProfile() {
+      const profile = state.profile || {};
+      const impact = state.impact || {};
+      setText("profileTitle", `${profile.name || "Member"} profile.`);
+      setText("memberTier", profile.tier || "Fellow");
+      setText("memberName", profile.name || "Member profile");
+      setText("memberContact", [profile.title, profile.company, profile.email].filter(Boolean).join(" | "));
+      setText("guestInviteCount", String(impact.guestInviteLinksCreated || 0));
+      setText("nominationCount", String(impact.memberNominationsCreated || 0));
+      setText("monthlyNominations", `${impact.memberNominationsThisMonth || 0} / ${state.monthlyMemberInviteLimit || 2}`);
+      setText("yearsMember", String(impact.yearsOfMembership || 0));
+      renderInviteList();
+      renderDirectory();
+      renderResources();
+      renderTierGuide();
+    }
+
+    async function loadProfile() {
+      clearNotice();
+      try {
+        state = await fetch("/api/member-profile", { cache: "no-store" }).then(readJson);
+        loginPanel.classList.add("hidden");
+        profileApp.classList.remove("hidden");
+        logoutButton.classList.remove("hidden");
+        renderProfile();
+      } catch (error) {
+        profileApp.classList.add("hidden");
+        loginPanel.classList.remove("hidden");
+        logoutButton.classList.add("hidden");
+        showNotice(error.message, error.message.includes("Sign in") ? "" : "error");
+      }
+    }
+
+    document.querySelector("#loginForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearNotice();
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email: document.querySelector("#loginEmail").value,
+            password: document.querySelector("#loginPassword").value
+          })
+        });
+        await readJson(response);
+        document.querySelector("#loginPassword").value = "";
+        await loadProfile();
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    });
+
+    async function createInvite(form, action) {
+      const payload = Object.fromEntries(new FormData(form).entries());
+      const data = await fetch("/api/member-profile", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...payload, action })
+      }).then(readJson);
+      await copyText(data.invite.url);
+      await loadProfile();
+      showNotice("Invite link created and copied if clipboard access is available.", "ok");
+    }
+
+    document.querySelector("#guestInviteForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await createInvite(event.currentTarget, "create-guest-invite");
+        event.currentTarget.reset();
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    });
+
+    document.querySelector("#nominationForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await createInvite(event.currentTarget, "create-member-nomination");
+        event.currentTarget.reset();
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    });
+
+    document.querySelector("#inviteList").addEventListener("click", async (event) => {
+      const url = event.target.dataset.copyUrl;
+      if (!url) return;
+      await copyText(url);
+      showNotice("Invite link copied.", "ok");
+    });
+
+    logoutButton.addEventListener("click", async () => {
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+      state = { profile: null, directory: [], invites: [], impact: {}, tierGuide: [], staffContacts: [] };
+      await loadProfile();
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>

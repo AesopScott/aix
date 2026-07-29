@@ -5,15 +5,26 @@
 - Route: `/admin/`
 - Source file: `dist/admin/index.html`
 - Purpose: company hub for Mojo AI Summits routes grouped by access level.
-- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
+- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/member-profile/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
+- Hidden invite-only space: `/partner-registration/` exists only for CRM-generated partner invite links and should not be added to public navigation or site route listings.
 - Partner space: `/partner-profile/` for approved partner contacts.
 - Team space: `/setup/`, `/events/`, `/crm/`, and `/files/` for the Storage portal. `/storage/` remains the legacy Storage path.
 - Admin space: `/access/` and `/budget/`.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.
 - Guest registration compatibility: legacy `/vip-registration/?invite=######` CRM links redirect to `/guest/?invite=######` so existing invite links continue to work while the public language uses guest registration.
-- Registration access: `/member-registration/` is public to load but hides the registration form behind a six-digit member invite code. The home page modal, `?invite=######`, session storage, or direct code entry can unlock it after `/crm/api/public/member-invite-codes/######` validation. The future membership profile generator should write single-use codes under `member-invite-code:######`, `crm:member-invite-code:######`, or `member-invite:######`; `MOJO_MEMBER_INVITE_CODES_STRICT=true` makes stored active codes mandatory.
+- Registration access: `/member-registration/` is public to load but hides the registration form behind a six-digit member invite code. The home page modal, `?invite=######`, session storage, or direct code entry can unlock it after `/crm/api/public/member-invite-codes/######` validation. The member profile generator writes single-use nomination codes under `crm:member-invite-code:######`; `MOJO_MEMBER_INVITE_CODES_STRICT=true` makes stored active codes mandatory. `/partner-registration/` is stricter: it unlocks only from a CRM-generated `?invite=######` link backed by a stored `crm:partner-invite-code:######` record. `/partner-registration/?preview=4321` is the administrative non-submitting preview link.
 - Registration data model: member and guest registration collect name, company, title, industry, company email, phone, role selections, food preferences, phone verification status, and separate publication-use opt-ins for name and company. Title and industry do not have publication opt-ins.
-- Access guidance: access control is disabled by default while accounts and page policies are being defined. When enabled in `/access/`, protect `/admin/`, `/crm/`, `/partner-profile/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, and internal APIs `/api/crm`, `/api/partner-profile`, `/api/setup-state`, `/api/events`, `/api/storage`, and `/api/budget` with Mojo Auth route modes. `/files/` is the site-managed Storage portal shell and stays reachable so users can get to site sign-in; file data and operations remain protected by `/api/storage`. `/storage/` may still be intercepted by external Cloudflare Access until that rule is removed. `/access/` is the public login/configuration shell; `/api/access-config`, `/api/access-users`, and `/api/access-invites` require an owner/admin Mojo Auth session for mutations, user management, and invite creation. `/api/auth/invite` stays public so invitees can accept single-use links and create separate Mojo passwords. Keep `/crm/api/public/...` public for invite-code lookup and guest registration callbacks.
+- Access guidance: access control is disabled by default while accounts and page policies are being defined. When enabled in `/access/`, protect `/admin/`, `/crm/`, `/partner-profile/`, `/setup/`, `/events/`, `/storage/`, `/budget/`, and internal APIs `/api/crm`, `/api/partner-profile`, `/api/setup-state`, `/api/events`, `/api/storage`, and `/api/budget` with Mojo Auth route modes. `/member-profile/` and `/api/member-profile` remain public at the route-control layer so members see the member login page, but `/api/member-profile` requires an accepted Mojo Auth member session before returning directory or invite data. `/files/` is the site-managed Storage portal shell and stays reachable so users can get to site sign-in; file data and operations remain protected by `/api/storage`. `/storage/` may still be intercepted by external Cloudflare Access until that rule is removed. `/access/` is the public login/configuration shell; `/api/access-config`, `/api/access-users`, and `/api/access-invites` require an owner/admin Mojo Auth session for mutations, user management, and invite creation. `/api/auth/invite` stays public so invitees can accept single-use links and create separate Mojo passwords. Keep `/crm/api/public/...` public for invite-code lookup and guest registration callbacks.
+
+## Member Profile
+
+- Route: `/member-profile/`
+- Source file: `dist/member-profile/index.html`
+- API route: `/api/member-profile`
+- Purpose: private accepted-member dashboard showing tier, contribution/invite counters, guest show invite generation, member nomination generation, accepted member directory, Discord/member-channel contacts, Mojo staff contacts, and provisional tier contribution guidance.
+- CRM workflow: from `/crm/`, staff can mark a member registrant accepted, generate or reset the member password, and manually provide that password to the member. The password is stored on the CRM member record for handoff and is also installed into Mojo Auth for `/member-profile/` login.
+- Storage model: accepted member records are read from `crm:member-registrant:*` with `member-registration:*` fallback. Guest invite links are stored as `crm:guest-invite-code:######` and open `/guest/?invite=######`. Member nomination links are stored as `crm:member-invite-code:######` and open `/member-registration/?invite=######`.
+- Nomination policy: the profile API allows two member nomination links per accepted member per month and tracks generated invite activity as part of the member contribution profile.
 
 ## Strategic Intelligence Partners
 
@@ -31,6 +42,16 @@
 - Storage model: the API reads `partner-profile:{email}` from `MOJO_SUMMITS_SETUP_STATE`, with `partner:{email}` as a fallback. Profile records can include `events` or `attendedEvents`, `publications`, and `sponsorships`, `contributions`, or `payments`.
 - Guest matching: guest rows are pulled from `crm:guest-registrant:*` and `guest-registration:*` records when their `eventId`, `eventSlug`, `event`, or `eventName` matches a partner event ID, slug, or name.
 - Routing support: `/partner-profile` redirects to `/partner-profile/`; no-cache headers are configured for `/partner-profile` and `/partner-profile/*`.
+
+## Hidden Partner Registration
+
+- Route: `/partner-registration/`
+- Source file: `dist/partner-registration/index.html`
+- API routes: `/api/partner-registration`, `/crm/api/public/partner-registration`, and `/crm/api/public/partner-invite-codes/[code]`
+- Purpose: hidden event registration flow for partner contacts. The page should not appear in public navigation, the company hub, or public route lists; CRM-generated invite links are the entry point.
+- Storage model: CRM creates single-use codes under `crm:partner-invite-code:######`. Successful registrations are stored under `partner-registration:*` and `crm:partner-registrant:*`, with event metadata copied from the invite code.
+- Admin preview: `/partner-registration/?preview=4321` opens the form for visual review and page editing checks, but the submit handler blocks registration in preview mode.
+- Routing support: `/partner-registration` redirects to `/partner-registration/`; no-cache headers are configured for `/partner-registration` and `/partner-registration/*`.
 
 ## Executive Intelligence Membership
 

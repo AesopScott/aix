@@ -20,6 +20,7 @@
       --warning: #ffd36a;
       --danger: #ff637b;
       --ok: #00E6FF;
+      --good: #6AF0B6;
     }
 
     * { box-sizing: border-box; }
@@ -140,7 +141,7 @@
     .metric.warn strong { color: var(--warning); }
 
     .toolbar {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       align-items: end;
       margin-bottom: 1rem;
       padding: 1.25rem;
@@ -253,8 +254,66 @@
       min-width: 15rem;
     }
 
+    .member-access-cell {
+      display: grid;
+      gap: 0.55rem;
+      min-width: 14rem;
+    }
+
+    .member-access-cell code,
+    .password-output {
+      padding: 0.58rem 0.65rem;
+      border: 1px solid rgba(106, 240, 182, 0.42);
+      border-radius: 6px;
+      color: var(--good);
+      background: rgba(106, 240, 182, 0.08);
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-weight: 800;
+      word-break: break-all;
+    }
+
+    .password-output { display: none; }
+    .password-output.visible { display: block; }
+
+    .invite-panel {
+      display: grid;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding: 1.25rem;
+    }
+
+    .invite-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+
+    .invite-list {
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .invite-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.8rem;
+      border: 1px solid rgba(0, 230, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.56);
+    }
+
+    .invite-row strong { color: var(--white); }
+    .invite-row code {
+      color: var(--cyan);
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-weight: 800;
+    }
+
     @media (max-width: 980px) {
-      header, .hero, .toolbar { grid-template-columns: 1fr; }
+      header, .hero, .toolbar, .invite-grid, .invite-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -276,14 +335,21 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">Member registrants</p>
+        <p class="eyebrow">Registrant CRM</p>
         <h1>Registration data, ready for follow-up.</h1>
-        <p>Every member registration is added here with contact details, event roles, phone verification status, and food preferences.</p>
+        <p>Member and partner registrations are added here with contact details, event roles, phone verification status, and food preferences.</p>
       </div>
       <div class="metrics" id="metrics"></div>
     </section>
 
     <section class="toolbar">
+      <label>
+        Registration
+        <select id="typeFilter">
+          <option value="member">Members</option>
+          <option value="partner">Partners</option>
+        </select>
+      </label>
       <label>
         Status
         <select id="statusFilter">
@@ -291,6 +357,7 @@
           <option value="new">New</option>
           <option value="contacted">Contacted</option>
           <option value="confirmed">Confirmed</option>
+          <option value="accepted">Accepted</option>
           <option value="waitlist">Waitlist</option>
           <option value="declined">Declined</option>
         </select>
@@ -320,8 +387,47 @@
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
     </section>
 
+    <section class="invite-panel" id="partnerInvitePanel">
+      <div>
+        <p class="eyebrow">Partner event invites</p>
+        <h2>Create hidden partner registration links</h2>
+        <p>Generate a single-use partner invite code tied to an event. The registration page is not linked from the public website.</p>
+      </div>
+      <form class="invite-grid" id="partnerInviteForm">
+        <label>
+          Event name
+          <input id="partnerInviteEventName" name="eventName" placeholder="Dallas Executive AI Summit" required>
+        </label>
+        <label>
+          Event date
+          <input id="partnerInviteEventDate" name="eventDate" placeholder="January 2027">
+        </label>
+        <label>
+          Partner company
+          <input id="partnerInviteCompany" name="partnerCompany" placeholder="Partner company">
+        </label>
+        <label>
+          Partner email
+          <input id="partnerInviteEmail" name="partnerContactEmail" type="email" placeholder="partner@company.com">
+        </label>
+        <label>
+          Tier
+          <select id="partnerInviteTier" name="partnerTier">
+            <option value="">Not assigned</option>
+            <option value="Partner Candidate">Partner Candidate</option>
+            <option value="Council Partner">Council Partner</option>
+            <option value="Intelligence Partner">Intelligence Partner</option>
+            <option value="Summit Partner">Summit Partner</option>
+            <option value="Founding Partner">Founding Partner</option>
+          </select>
+        </label>
+        <button type="submit">Generate Invite</button>
+      </form>
+      <div class="invite-list" id="partnerInviteList"></div>
+    </section>
+
     <section class="panel" id="member-registrants">
-      <h2>Member Registrants</h2>
+      <h2 id="registrantsTitle">Member Registrants</h2>
       <div id="notice" class="notice">Loading CRM...</div>
       <div class="table-wrap">
         <table>
@@ -335,6 +441,7 @@
               <th>Food</th>
               <th>Phone</th>
               <th>Status</th>
+              <th>Member Access</th>
               <th>CRM Notes</th>
             </tr>
           </thead>
@@ -349,13 +456,17 @@
     const rowsElement = document.querySelector("#rows");
     const notice = document.querySelector("#notice");
     const metrics = document.querySelector("#metrics");
+    const typeFilter = document.querySelector("#typeFilter");
     const statusFilter = document.querySelector("#statusFilter");
     const roleFilter = document.querySelector("#roleFilter");
     const phoneFilter = document.querySelector("#phoneFilter");
     const searchInput = document.querySelector("#searchInput");
     const refreshButton = document.querySelector("#refreshButton");
     const downloadButton = document.querySelector("#downloadButton");
-    let state = { rows: [], summary: {} };
+    const registrantsTitle = document.querySelector("#registrantsTitle");
+    const partnerInviteForm = document.querySelector("#partnerInviteForm");
+    const partnerInviteList = document.querySelector("#partnerInviteList");
+    let state = { type: "member", label: "Member", rows: [], summary: {}, partnerInviteCodes: [] };
 
     function escapeHtml(value) {
       return String(value || "")
@@ -420,6 +531,69 @@
       return `<span class="pill ${pending ? "warn" : ""}">${escapeHtml(statusLabel(row.phoneVerificationStatus || "unverified"))}</span>`;
     }
 
+    function memberTierSelect(row) {
+      if (state.type !== "member") return "";
+      const tiers = ["Fellow", "Contributing Fellow", "Executive Fellow", "Distinguished Fellow"];
+      const current = row.memberTier || "Fellow";
+      return `
+        <select class="inline-select" data-tier-key="${escapeHtml(row.key)}" aria-label="Member tier">
+          ${tiers.map((tier) => `<option value="${tier}" ${current === tier ? "selected" : ""}>${tier}</option>`).join("")}
+        </select>
+      `;
+    }
+
+    function memberAccessCell(row) {
+      if (state.type !== "member") return '<span>Partner access is managed separately.</span>';
+      const hasPassword = Boolean(row.memberPassword);
+      return `
+        <div class="member-access-cell">
+          ${memberTierSelect(row)}
+          <span class="pill ${hasPassword ? "" : "warn"}">${hasPassword ? "Password generated" : "No member password"}</span>
+          ${hasPassword ? `<code>${escapeHtml(row.memberPassword)}</code>` : ""}
+          <button class="compact secondary" type="button" data-password-key="${escapeHtml(row.key)}">${hasPassword ? "Reset Password" : "Generate Password"}</button>
+          <button class="compact secondary" type="button" data-profile-copy="${escapeHtml(row.email || "")}">Copy Profile Link</button>
+          <span class="password-output" data-password-output="${escapeHtml(row.key)}"></span>
+        </div>
+      `;
+    }
+
+    function activeLabel() {
+      return state.label || (state.type === "partner" ? "Partner" : "Member");
+    }
+
+    function partnerRegistrationUrl(invite) {
+      return `${window.location.origin}/partner-registration/?invite=${encodeURIComponent(invite.code || "")}`;
+    }
+
+    async function copyText(value) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+      return false;
+    }
+
+    function renderPartnerInvites() {
+      const invites = state.partnerInviteCodes || [];
+      if (!invites.length) {
+        partnerInviteList.innerHTML = '<p>No partner invite codes created yet.</p>';
+        return;
+      }
+      partnerInviteList.innerHTML = invites.slice(0, 12).map((invite) => {
+        const url = partnerRegistrationUrl(invite);
+        return `
+          <div class="invite-row">
+            <div>
+              <strong>${escapeHtml(invite.eventName || "Partner event invite")}</strong>
+              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(statusLabel(invite.status))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}${invite.eventDate ? ` | ${escapeHtml(invite.eventDate)}` : ""}</p>
+              <p>${escapeHtml(url)}</p>
+            </div>
+            <button class="compact secondary" type="button" data-copy-url="${escapeHtml(url)}">Copy Link</button>
+          </div>
+        `;
+      }).join("");
+    }
+
     function filteredRows() {
       const status = statusFilter.value;
       const role = roleFilter.value;
@@ -442,6 +616,9 @@
           row.email,
           row.phone,
           row.inviteCode,
+          row.eventName,
+          row.eventDate,
+          row.partnerTier,
           row.foodNotes,
           row.crmNotes,
           ...(row.foodPreferences || [])
@@ -451,8 +628,9 @@
 
     function renderMetrics() {
       const summary = state.summary || {};
+      const label = activeLabel();
       metrics.innerHTML = `
-        <div class="metric"><span>Total Member registrants</span><strong>${summary.total || 0}</strong></div>
+        <div class="metric"><span>Total ${label} registrants</span><strong>${summary.total || 0}</strong></div>
         <div class="metric"><span>New</span><strong>${summary.newCount || 0}</strong></div>
         <div class="metric"><span>Presenters</span><strong>${summary.presenterCount || 0}</strong></div>
         <div class="metric"><span>Round table leaders</span><strong>${summary.roundtableLeaderCount || 0}</strong></div>
@@ -462,8 +640,10 @@
 
     function renderRows() {
       const rows = filteredRows();
+      const label = activeLabel();
+      registrantsTitle.textContent = `${label} Registrants`;
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="9">No Member registrants match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="10">No ${label} registrants match the current filters.</td></tr>`;
         return;
       }
 
@@ -472,11 +652,14 @@
           <td>
             <strong>${escapeHtml(formatDate(row.createdAt))}</strong><br>
             <span>${escapeHtml(row.inviteCode || "")}</span>
+            ${row.eventName ? `<br><span>${escapeHtml(row.eventName)}</span>` : ""}
+            ${row.eventDate ? `<br><span>${escapeHtml(row.eventDate)}</span>` : ""}
           </td>
           <td>
             <strong>${escapeHtml(row.name)}</strong><br>
             <span>${escapeHtml(row.title || "")}</span><br>
-            <span>${escapeHtml(row.company || "")}${row.industry ? ` · ${escapeHtml(row.industry)}` : ""}</span>
+            <span>${escapeHtml(row.company || "")}${row.industry ? ` | ${escapeHtml(row.industry)}` : ""}</span>
+            ${row.partnerTier ? `<br><span>${escapeHtml(row.partnerTier)}</span>` : ""}
           </td>
           <td>
             <strong>${escapeHtml(row.email)}</strong><br>
@@ -491,11 +674,12 @@
           <td>${phonePill(row)}</td>
           <td>
             <select class="inline-select" data-status-key="${escapeHtml(row.key)}">
-              ${["new", "contacted", "confirmed", "waitlist", "declined"].map((status) => `
+              ${["new", "contacted", "confirmed", "accepted", "waitlist", "declined"].map((status) => `
                 <option value="${status}" ${row.crmStatus === status ? "selected" : ""}>${statusLabel(status)}</option>
               `).join("")}
             </select>
           </td>
+          <td>${memberAccessCell(row)}</td>
           <td>
             <div class="notes-cell">
               <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Follow-up notes">${escapeHtml(row.crmNotes || "")}</textarea>
@@ -508,14 +692,17 @@
 
     function render() {
       renderMetrics();
+      renderPartnerInvites();
       renderRows();
     }
 
     async function loadCrm() {
       setNotice("Loading CRM...");
       try {
-        state = await fetch(api).then(readJson);
-        setNotice(`${state.summary.total || 0} Member registrant${state.summary.total === 1 ? "" : "s"} loaded.`, "ok");
+        const type = typeFilter.value || "member";
+        state = await fetch(`${api}?type=${encodeURIComponent(type)}`).then(readJson);
+        typeFilter.value = state.type || type;
+        setNotice(`${state.summary.total || 0} ${activeLabel()} registrant${state.summary.total === 1 ? "" : "s"} loaded.`, "ok");
         render();
       } catch (error) {
         setNotice(error.message, "error");
@@ -531,8 +718,10 @@
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
+            type: state.type || "member",
             key,
             crmStatus: changes.crmStatus ?? existing.crmStatus,
+            memberTier: changes.memberTier ?? existing.memberTier ?? "Fellow",
             crmNotes: changes.crmNotes ?? existing.crmNotes ?? ""
           })
         }).then(readJson);
@@ -543,18 +732,61 @@
       }
     }
 
+    async function generateMemberPassword(key) {
+      const existing = state.rows.find((row) => row.key === key);
+      if (!existing) return;
+      setNotice("Generating member password...");
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "generate-member-password",
+            key,
+            memberTier: existing.memberTier || "Fellow"
+          })
+        }).then(readJson);
+        state = data;
+        render();
+        const output = rowsElement.querySelector(`[data-password-output="${CSS.escape(data.record.key)}"]`);
+        if (output) {
+          output.textContent = data.password;
+          output.classList.add("visible");
+        }
+        await copyText(data.password);
+        setNotice(`Member password generated for ${data.record.email}. It was copied if clipboard access is available.`, "ok");
+      } catch (error) {
+        setNotice(error.message, "error");
+      }
+    }
+
     rowsElement.addEventListener("change", (event) => {
       const key = event.target.dataset.statusKey;
-      if (!key) return;
-      const noteField = rowsElement.querySelector(`[data-notes-key="${CSS.escape(key)}"]`);
-      saveRegistrant(key, {
-        crmStatus: event.target.value,
-        crmNotes: noteField ? noteField.value : ""
+      const tierKey = event.target.dataset.tierKey;
+      if (!key && !tierKey) return;
+      const activeKey = key || tierKey;
+      const existing = state.rows.find((row) => row.key === activeKey);
+      const noteField = rowsElement.querySelector(`[data-notes-key="${CSS.escape(activeKey)}"]`);
+      saveRegistrant(activeKey, {
+        crmStatus: key ? event.target.value : existing?.crmStatus,
+        memberTier: tierKey ? event.target.value : existing?.memberTier,
+        crmNotes: noteField ? noteField.value : existing?.crmNotes || ""
       });
     });
 
-    rowsElement.addEventListener("click", (event) => {
+    rowsElement.addEventListener("click", async (event) => {
       const key = event.target.dataset.saveKey;
+      const passwordKey = event.target.dataset.passwordKey;
+      const profileEmail = event.target.dataset.profileCopy;
+      if (profileEmail) {
+        await copyText(`${window.location.origin}/member-profile/`);
+        setNotice("Member profile login link copied.", "ok");
+        return;
+      }
+      if (passwordKey) {
+        await generateMemberPassword(passwordKey);
+        return;
+      }
       if (!key) return;
       const noteField = rowsElement.querySelector(`[data-notes-key="${CSS.escape(key)}"]`);
       saveRegistrant(key, {
@@ -567,9 +799,43 @@
       input.addEventListener("change", renderRows);
     });
 
+    typeFilter.addEventListener("change", loadCrm);
+
     refreshButton.addEventListener("click", loadCrm);
     downloadButton.addEventListener("click", () => {
-      window.location.href = `${api}?download=csv`;
+      window.location.href = `${api}?type=${encodeURIComponent(typeFilter.value || "member")}&download=csv`;
+    });
+
+    partnerInviteForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(partnerInviteForm);
+      const payload = Object.fromEntries(formData.entries());
+      if (!String(payload.eventName || "").trim()) {
+        setNotice("Enter an event name before generating a partner invite.", "error");
+        return;
+      }
+      setNotice("Generating partner invite...");
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...payload, action: "create-partner-invite" })
+        }).then(readJson);
+        state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
+        renderPartnerInvites();
+        const url = partnerRegistrationUrl(data.invite || {});
+        await copyText(url);
+        setNotice("Partner invite link generated and copied if clipboard access is available.", "ok");
+      } catch (error) {
+        setNotice(error.message, "error");
+      }
+    });
+
+    partnerInviteList.addEventListener("click", async (event) => {
+      const url = event.target.dataset.copyUrl;
+      if (!url) return;
+      await copyText(url);
+      setNotice("Partner invite link copied.", "ok");
     });
 
     loadCrm();

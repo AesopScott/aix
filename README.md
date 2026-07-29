@@ -41,13 +41,14 @@ Protected internal routes:
 - `/admin/`
 - `/api/access-config`, `/api/access-users`, and `/api/access-invites`
 - `/crm/` and `/api/crm`
+- `/member-profile/` and `/api/member-profile`
 - `/partner-profile/` and `/api/partner-profile`
 - `/setup/` and `/api/setup-state`
 - `/events/` and `/api/events`
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/guest/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/member-profile/`, `/partner-registration/`, `/guest/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/member-profile`, `/api/partner-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
 
 Mojo Auth endpoints:
 
@@ -91,7 +92,8 @@ Required GitHub secrets:
 
 The member registration page lives at `/member-registration/` and hides the registration form behind a six-digit member invite code. Codes can be passed as `/member-registration/?invite=######`, stored in browser session storage by the home page invite-code modal, or entered directly on the page gate.
 Member registrations are stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `member-registration:*` and `crm:member-registrant:*`.
-The member profile page generator should write future single-use codes under `member-invite-code:######`, `crm:member-invite-code:######`, or `member-invite:######`; when `MOJO_MEMBER_INVITE_CODES_STRICT=true`, only stored active codes unlock registration.
+The member profile page lives at `/member-profile/` and uses Mojo Auth login credentials created from the CRM when a member is accepted. In `/crm/`, use Generate Password on an accepted member registrant to create or reset the Mojo Auth member account, store the current handoff password on the CRM record, and mark the member accepted. The profile API shows the member tier, accepted member directory, Discord/member-channel contacts, Mojo staff contacts, provisional tier commitments, member-generated guest show links, and member nomination links.
+Member-generated guest codes are stored under `crm:guest-invite-code:######` and open `/guest/?invite=######`. Member nomination codes are stored under `crm:member-invite-code:######` and open `/member-registration/?invite=######`. Member nomination links are limited to two per member per month in the profile API; when `MOJO_MEMBER_INVITE_CODES_STRICT=true`, only stored active member codes unlock registration.
 Registration records include name, company, title, industry, company email, phone, role selections, food preferences, phone verification status, and separate publication-use opt-ins for name and company.
 
 ## Guest Registration
@@ -100,6 +102,11 @@ The guest registration page uses the same form flow as member registration and l
 Guest registration submissions are routed through `/crm/api/public/guest-registration`.
 Direct visits to `/guest/` are allowed for previewing and sharing the registration page without exposing an invite code in the browser.
 Legacy `/vip-registration/?invite=######` CRM links redirect to `/guest/?invite=######` so existing invite links continue to work.
+
+## Partner Registration
+
+The partner registration page lives at `/partner-registration/`, but it is intentionally hidden from public navigation and site route listings. It should only be opened from CRM-generated links using `/partner-registration/?invite=######`. For administrative page review only, `/partner-registration/?preview=4321` opens the form in non-submitting preview mode.
+Partner invite codes are generated inside the protected CRM and stored under `crm:partner-invite-code:######` with event metadata such as event name, event date, partner company, partner contact email, and partner tier. Partner registration submissions are routed through `/crm/api/public/partner-registration`, stored under `partner-registration:*` and `crm:partner-registrant:*`, and marked against the single-use partner invite code.
 
 ## Fall 2026 Virtual Events
 

@@ -88,6 +88,26 @@
   Pragma: no-cache
   Expires: 0
 
+/member-profile
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/member-profile/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/partner-registration
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/partner-registration/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
 /guest
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
