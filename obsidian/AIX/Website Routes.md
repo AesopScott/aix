@@ -38,9 +38,9 @@
 - Route: `/partner-profile/`
 - Source file: `dist/partner-profile/index.html`
 - API route: `/api/partner-profile`
-- Purpose: private partner dashboard showing tier, attended events, guests from those events with name/email/company/title, publication placements once the publication system is linked, and sponsorship contribution totals.
-- Storage model: the API reads `partner-profile:{email}` from `MOJO_SUMMITS_SETUP_STATE`, with `partner:{email}` as a fallback. Profile records can include `events` or `attendedEvents`, `publications`, and `sponsorships`, `contributions`, or `payments`.
-- Guest matching: guest rows are pulled from `crm:guest-registrant:*` and `guest-registration:*` records when their `eventId`, `eventSlug`, `event`, or `eventName` matches a partner event ID, slug, or name.
+- Purpose: private company-level partner dashboard showing tier, company contacts, events attended by any known contact for that company, attendee relationships from those events, publication placements once the publication system is linked, and sponsorship contribution totals.
+- Storage model: partner profiles are company-based, not individual-user-based. Preferred records use `partner-company:{company-slug}` or `partner-profile-company:{company-slug}` in `MOJO_SUMMITS_SETUP_STATE`; contact mapping can use `partner-contact:{email}` or `partner-profile-contact:{email}`. Legacy `partner-profile:{email}` and `partner:{email}` records are still read as fallbacks. Profile records can include `contacts`, `events` or `attendedEvents`, `publications`, and `sponsorships`, `contributions`, or `payments`.
+- Event and attendee matching: the API finds all known company contacts from profile contacts plus partner/member/guest registration rows with the same company. Events attended by any of those contacts are shown, and each event lists every known member, guest, or partner attendee whose `eventId`, `eventSlug`, `event`, or `eventName` matches the event.
 - Routing support: `/partner-profile` redirects to `/partner-profile/`; no-cache headers are configured for `/partner-profile` and `/partner-profile/*`.
 
 ## Hidden Partner Registration

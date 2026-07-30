@@ -370,6 +370,7 @@
       </a>
       <nav aria-label="Partner profile sections">
         <a href="/partners/">Partners</a>
+        <a href="#contacts">Contacts</a>
         <a href="#events">Events</a>
         <a href="#publications">Publications</a>
         <a href="#contributions">Contributions</a>
@@ -384,26 +385,38 @@
       <div class="hero-panel">
         <span class="eyebrow">Partner profile</span>
         <h1 id="profileTitle">Partner intelligence record.</h1>
-        <p class="lead">A private operating view of partner status, event participation, guest relationships, publication involvement, and sponsorship contributions.</p>
+        <p class="lead">A private company-level view of partner status, company contacts, event participation, attendee relationships, publication involvement, and sponsorship contributions.</p>
       </div>
       <aside class="summary-card" aria-label="Partner summary">
         <span class="tier" id="partnerTier">Loading</span>
         <h2 id="partnerName">Loading profile</h2>
         <p class="muted" id="partnerContact"></p>
         <div class="metric-grid">
+          <div class="metric"><strong id="contactCount">0</strong><span>Company contacts</span></div>
           <div class="metric"><strong id="eventCount">0</strong><span>Events attended</span></div>
-          <div class="metric"><strong id="guestCount">0</strong><span>Guests visible from those events</span></div>
+          <div class="metric"><strong id="attendeeCount">0</strong><span>People visible from those events</span></div>
           <div class="metric"><strong id="publicationCount">0</strong><span>Publication placements</span></div>
           <div class="metric"><strong id="totalContributed">$0</strong><span>Sponsorship contributions</span></div>
         </div>
       </aside>
     </section>
 
+    <section class="section" id="contacts">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Company contacts</span>
+          <h2>Partner contacts tied to this company</h2>
+        </div>
+        <span class="count-pill" id="contactsPill">0 contacts</span>
+      </div>
+      <div class="table-wrap" id="contactsTable"></div>
+    </section>
+
     <section class="section" id="events">
       <div class="section-head">
         <div>
           <span class="eyebrow">Event attendance</span>
-          <h2>Events and guest relationships</h2>
+          <h2>Events and attendee relationships</h2>
         </div>
         <span class="count-pill" id="eventsPill">0 events</span>
       </div>
@@ -461,19 +474,45 @@
       else notice.textContent = message;
     }
 
-    function guestTable(guests = []) {
-      if (!guests.length) return empty("No guest records are connected to this event yet.");
+    function renderContacts(contacts = []) {
+      const target = document.getElementById("contactsTable");
+      setText("contactsPill", `${contacts.length} ${contacts.length === 1 ? "contact" : "contacts"}`);
+      if (!contacts.length) {
+        target.innerHTML = empty("No company contacts are connected to this partner profile yet.");
+        return;
+      }
+      target.innerHTML = `
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Title</th><th>Source</th></tr></thead>
+          <tbody>
+            ${contacts.map((contact) => `
+              <tr>
+                <td>${escapeHtml(contact.name)}</td>
+                <td>${escapeHtml(contact.email)}</td>
+                <td>${escapeHtml(contact.company)}</td>
+                <td>${escapeHtml(contact.title)}</td>
+                <td>${escapeHtml(contact.source)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function attendeeTable(attendees = []) {
+      if (!attendees.length) return empty("No attendee records are connected to this event yet.");
       return `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Title</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Title</th><th>Type</th></tr></thead>
             <tbody>
-              ${guests.map((guest) => `
+              ${attendees.map((attendee) => `
                 <tr>
-                  <td>${escapeHtml(guest.name)}</td>
-                  <td>${escapeHtml(guest.email)}</td>
-                  <td>${escapeHtml(guest.company)}</td>
-                  <td>${escapeHtml(guest.title)}</td>
+                  <td>${escapeHtml(attendee.name)}</td>
+                  <td>${escapeHtml(attendee.email)}</td>
+                  <td>${escapeHtml(attendee.company)}</td>
+                  <td>${escapeHtml(attendee.title)}</td>
+                  <td>${escapeHtml(attendee.type)}</td>
                 </tr>
               `).join("")}
             </tbody>
@@ -486,7 +525,7 @@
       const target = document.getElementById("eventsList");
       setText("eventsPill", `${events.length} ${events.length === 1 ? "event" : "events"}`);
       if (!events.length) {
-        target.innerHTML = empty("No attended events are connected to this partner profile yet.");
+        target.innerHTML = empty("No attended events are connected to this company partner profile yet.");
         return;
       }
       target.innerHTML = events.map((event) => `
@@ -496,9 +535,9 @@
               <h3>${escapeHtml(event.name)}</h3>
               <div class="event-meta">${escapeHtml([event.date, event.location, event.role].filter(Boolean).join(" | "))}</div>
             </div>
-            <span class="count-pill">${(event.guests || []).length} guests</span>
+            <span class="count-pill">${(event.attendees || []).length} people</span>
           </header>
-          ${guestTable(event.guests)}
+          ${attendeeTable(event.attendees)}
         </article>
       `).join("");
     }
@@ -564,6 +603,7 @@
         }
         setText("partnerTier", "Protected");
         setText("partnerName", "Partner profile");
+        renderContacts([]);
         document.getElementById("eventsList").innerHTML = empty("Profile data is protected.");
         renderPublications([]);
         renderContributions([]);
@@ -571,25 +611,28 @@
       }
 
       const profile = payload.profile || {};
+      const contacts = profile.contacts || [];
       const events = profile.events || [];
       const publications = profile.publications || [];
       const contributions = profile.contributions || [];
-      const guestCount = events.reduce((sum, event) => sum + (event.guests || []).length, 0);
+      const attendeeCount = events.reduce((sum, event) => sum + (event.attendees || []).length, 0);
       const total = Number(profile.totalContributed || 0);
 
       if (!payload.configured) {
-        showNotice("This partner profile route is ready, but no partner profile record has been configured for this signed-in account yet.");
+        showNotice("This company partner profile is inferred from registration records. Add a company profile record to enrich contacts, publications, and sponsorship contributions.");
       }
 
       setText("profileTitle", `${profile.organizationName || "Partner"} intelligence record.`);
       setText("partnerTier", profile.tier || "Not assigned");
       setText("partnerName", profile.organizationName || "Partner profile");
-      setText("partnerContact", [profile.primaryContactName, profile.primaryContactEmail].filter(Boolean).join(" | "));
+      setText("partnerContact", `${contacts.length} company contact${contacts.length === 1 ? "" : "s"} connected`);
+      setText("contactCount", String(contacts.length));
       setText("eventCount", String(events.length));
-      setText("guestCount", String(guestCount));
+      setText("attendeeCount", String(attendeeCount));
       setText("publicationCount", String(publications.length));
       setText("totalContributed", currency.format(total));
 
+      renderContacts(contacts);
       renderEvents(events);
       renderPublications(publications);
       renderContributions(contributions);

@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <title>Book Mojo AI Summits</title>
+  <style>
+    :root {
+      --deep-navy: #0A0F1E;
+      --electric-blue: #1666FF;
+      --cyan: #00E6FF;
+      --slate: #1B2333;
+      --white: #FFFFFF;
+      --text: #F3FAFF;
+      --muted: rgba(255, 255, 255, 0.68);
+      --line: rgba(0, 230, 255, 0.24);
+      --panel: rgba(27, 35, 51, 0.86);
+      --danger: #FF6F87;
+      --ok: #6AF0B6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        linear-gradient(135deg, rgba(22, 102, 255, 0.22), transparent 30rem),
+        linear-gradient(180deg, #050814 0%, var(--deep-navy) 48%, #07101F 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 15, 30, 0.88);
+      backdrop-filter: blur(16px);
+    }
+
+    .topbar,
+    main {
+      width: min(1180px, calc(100% - 2rem));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 0;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--white);
+      text-decoration: none;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand img {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    nav a {
+      color: var(--cyan);
+      font-weight: 800;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+      gap: 1rem;
+      padding: 2rem 0 4rem;
+    }
+
+    section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(27, 35, 51, 0.94), rgba(10, 15, 30, 0.82)),
+        var(--slate);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .panel {
+      padding: clamp(1rem, 3vw, 1.35rem);
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: clamp(2.1rem, 7vw, 4.6rem);
+      line-height: 0.94;
+      margin-bottom: 1rem;
+    }
+
+    h2 { font-size: 1.35rem; }
+    h3 { font-size: 1.05rem; }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    label {
+      display: grid;
+      gap: 0.45rem;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.8rem 0.9rem;
+      color: var(--text);
+      background: rgba(10, 15, 30, 0.78);
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    textarea {
+      min-height: 96px;
+      resize: vertical;
+    }
+
+    button {
+      cursor: pointer;
+      color: var(--deep-navy);
+      border-color: transparent;
+      background: linear-gradient(90deg, var(--cyan), #7AF4FF);
+      font-size: 0.82rem;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    button.secondary {
+      color: var(--cyan);
+      border-color: var(--line);
+      background: rgba(10, 15, 30, 0.78);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .stack { display: grid; gap: 1rem; }
+    .compact { display: grid; gap: 0.7rem; }
+
+    .team-list,
+    .slots {
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .person,
+    .slot {
+      border: 1px solid rgba(0, 230, 255, 0.18);
+      border-radius: 8px;
+      padding: 0.85rem;
+      background: rgba(10, 15, 30, 0.54);
+      text-align: left;
+    }
+
+    .person {
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .person.active,
+    .slot.active {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 1px rgba(0, 230, 255, 0.2);
+    }
+
+    .person strong,
+    .slot strong {
+      color: var(--white);
+      font-size: 1rem;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .booking-form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .booking-form .wide,
+    .booking-form button,
+    .notice,
+    .status {
+      grid-column: 1 / -1;
+    }
+
+    .notice,
+    .status {
+      border: 1px solid rgba(0, 230, 255, 0.18);
+      border-radius: 8px;
+      padding: 0.85rem;
+      color: var(--muted);
+      background: rgba(10, 15, 30, 0.48);
+    }
+
+    .status.error {
+      border-color: rgba(255, 111, 135, 0.42);
+      color: var(--danger);
+    }
+
+    .status.ok {
+      border-color: rgba(106, 240, 182, 0.42);
+      color: var(--ok);
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 820px) {
+      main,
+      .booking-form,
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <a class="brand" href="/">
+        <img src="/assets/logo-badge.png" alt="">
+        <span>Mojo AI Summits</span>
+      </a>
+      <nav>
+        <a href="/schedule-admin/">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel stack">
+      <div>
+        <h1>Book time</h1>
+        <p>Choose a Mojo team member and a confirmed opening.</p>
+      </div>
+      <div class="team-list" id="team"></div>
+    </section>
+
+    <section class="panel stack">
+      <div class="controls">
+        <label>
+          Meeting
+          <select id="meetingType"></select>
+        </label>
+        <label>
+          Date
+          <input id="date" type="date">
+        </label>
+      </div>
+
+      <div class="notice hidden" id="warning"></div>
+      <div class="slots" id="slots"></div>
+
+      <form class="booking-form hidden" id="bookingForm">
+        <label class="hidden" aria-hidden="true">
+          Website
+          <input name="website" tabindex="-1" autocomplete="off">
+        </label>
+        <label>
+          Name
+          <input name="guestName" autocomplete="name" required>
+        </label>
+        <label>
+          Email
+          <input name="guestEmail" type="email" autocomplete="email" required>
+        </label>
+        <label class="wide">
+          Company
+          <input name="company" autocomplete="organization">
+        </label>
+        <label class="wide">
+          Notes
+          <textarea name="notes"></textarea>
+        </label>
+        <button type="submit">Confirm Booking</button>
+      </form>
+
+      <div class="status hidden" id="status"></div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      employees: [],
+      employee: null,
+      meetingType: null,
+      slot: null
+    };
+
+    const teamEl = document.querySelector("#team");
+    const meetingTypeEl = document.querySelector("#meetingType");
+    const dateEl = document.querySelector("#date");
+    const slotsEl = document.querySelector("#slots");
+    const warningEl = document.querySelector("#warning");
+    const statusEl = document.querySelector("#status");
+    const bookingForm = document.querySelector("#bookingForm");
+
+    function setStatus(message, kind = "") {
+      statusEl.textContent = message;
+      statusEl.className = `status ${kind}`.trim();
+      statusEl.classList.toggle("hidden", !message);
+    }
+
+    function todayValue() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function renderTeam() {
+      teamEl.innerHTML = "";
+      if (!state.employees.length) {
+        teamEl.innerHTML = '<div class="notice">No bookable team profiles yet.</div>';
+        return;
+      }
+
+      state.employees.forEach((employee) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `person secondary ${state.employee?.slug === employee.slug ? "active" : ""}`;
+        button.innerHTML = `<strong>${employee.name}</strong><span class="meta">${employee.title || ""}</span>`;
+        button.addEventListener("click", () => selectEmployee(employee.slug));
+        teamEl.append(button);
+      });
+    }
+
+    function renderMeetingTypes() {
+      meetingTypeEl.innerHTML = "";
+      const types = state.employee?.meetingTypes || [];
+      types.forEach((type) => {
+        const option = document.createElement("option");
+        option.value = type.id;
+        option.textContent = `${type.label} (${type.durationMinutes} min)`;
+        meetingTypeEl.append(option);
+      });
+      state.meetingType = types[0] || null;
+    }
+
+    function selectEmployee(slug) {
+      state.employee = state.employees.find((employee) => employee.slug === slug) || null;
+      state.slot = null;
+      renderTeam();
+      renderMeetingTypes();
+      loadAvailability();
+    }
+
+    function renderSlots(slots) {
+      slotsEl.innerHTML = "";
+      bookingForm.classList.add("hidden");
+      if (!slots.length) {
+        slotsEl.innerHTML = '<div class="notice">No openings for this date.</div>';
+        return;
+      }
+
+      slots.forEach((slot) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `slot secondary ${state.slot?.start === slot.start ? "active" : ""}`;
+        button.innerHTML = `<strong>${slot.label}</strong>`;
+        button.addEventListener("click", () => {
+          state.slot = slot;
+          renderSlots(slots);
+          bookingForm.classList.remove("hidden");
+          setStatus("");
+        });
+        slotsEl.append(button);
+      });
+    }
+
+    async function loadTeam() {
+      setStatus("");
+      const response = await fetch("/api/scheduling/team", { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to load team.");
+      state.employees = payload.employees || [];
+      state.employee = state.employees[0] || null;
+      renderTeam();
+      renderMeetingTypes();
+      if (state.employee) await loadAvailability();
+    }
+
+    async function loadAvailability() {
+      state.slot = null;
+      setStatus("");
+      warningEl.classList.add("hidden");
+      bookingForm.classList.add("hidden");
+      slotsEl.innerHTML = '<div class="notice">Checking availability...</div>';
+
+      if (!state.employee || !state.meetingType || !dateEl.value) {
+        slotsEl.innerHTML = "";
+        return;
+      }
+
+      const params = new URLSearchParams({
+        host: state.employee.slug,
+        type: meetingTypeEl.value,
+        date: dateEl.value
+      });
+      const response = await fetch(`/api/scheduling/availability?${params}`, { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) {
+        slotsEl.innerHTML = "";
+        throw new Error(payload.error || "Unable to load availability.");
+      }
+
+      if (payload.warning) {
+        warningEl.textContent = payload.warning;
+        warningEl.classList.remove("hidden");
+      }
+      renderSlots(payload.slots || []);
+    }
+
+    meetingTypeEl.addEventListener("change", () => {
+      state.meetingType = state.employee?.meetingTypes?.find((type) => type.id === meetingTypeEl.value) || null;
+      loadAvailability().catch((error) => setStatus(error.message, "error"));
+    });
+
+    dateEl.addEventListener("change", () => {
+      loadAvailability().catch((error) => setStatus(error.message, "error"));
+    });
+
+    bookingForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!state.employee || !state.meetingType || !state.slot) return;
+
+      const button = bookingForm.querySelector("button");
+      button.disabled = true;
+      setStatus("Confirming booking...");
+
+      const form = new FormData(bookingForm);
+      const response = await fetch("/api/scheduling/book", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          host: state.employee.slug,
+          type: state.meetingType.id,
+          start: state.slot.start,
+          guestName: form.get("guestName"),
+          guestEmail: form.get("guestEmail"),
+          company: form.get("company"),
+          notes: form.get("notes"),
+          website: form.get("website")
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      button.disabled = false;
+
+      if (!response.ok) {
+        setStatus(payload.error || "Unable to confirm booking.", "error");
+        await loadAvailability().catch(() => null);
+        return;
+      }
+
+      bookingForm.reset();
+      bookingForm.classList.add("hidden");
+      setStatus("Booked. The calendar invitation is on its way.", "ok");
+      await loadAvailability().catch(() => null);
+    });
+
+    dateEl.value = todayValue();
+    dateEl.min = todayValue();
+    loadTeam().catch((error) => setStatus(error.message, "error"));
+  </script>
+</body>
+</html>

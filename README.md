@@ -7,12 +7,14 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
 - Strategic intelligence partners: https://mojoaisummits.com/partners/
+- Public booking: https://mojoaisummits.com/book/
 - Member registration: https://mojoaisummits.com/member-registration/
 - Guest registration: https://mojoaisummits.com/guest/
 - Internal CRM: https://mojoaisummits.com/crm/
 - Setup checklist: https://mojoaisummits.com/setup/
 - Event playbook: https://mojoaisummits.com/events/
 - Internal storage portal: https://mojoaisummits.com/files/
+- Scheduling admin: https://mojoaisummits.com/schedule-admin/
 - Internal budget and P&L: https://mojoaisummits.com/budget/
 - Cloudflare Pages project: `mojo-ai-summits`
 
@@ -39,7 +41,9 @@ These modes are staged until `Enable access control` is turned on in `/access/`.
 Protected internal routes:
 
 - `/admin/`
+- `/schedule-admin/`
 - `/api/access-config`, `/api/access-users`, and `/api/access-invites`
+- `/api/scheduling/admin`
 - `/crm/` and `/api/crm`
 - `/member-profile/` and `/api/member-profile`
 - `/partner-profile/` and `/api/partner-profile`
@@ -48,7 +52,7 @@ Protected internal routes:
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/member-profile/`, `/partner-registration/`, `/guest/`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/member-profile`, `/api/partner-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/book/`, `/member-registration/`, `/member-profile/`, `/partner-registration/`, `/guest/`, `/api/scheduling/team`, `/api/scheduling/availability`, `/api/scheduling/book`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/member-profile`, `/api/partner-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
 
 Mojo Auth endpoints:
 
@@ -137,7 +141,7 @@ The internal `/setup/` checklist includes a repeatable virtual event series scaf
 
 The public partners page lives at `/partners/` and positions Mojo AI Summits as an executive relationship and intelligence network rather than an event sponsorship seller. It explains Strategic Intelligence Partner value, Partner Candidate entry, Council Partner, Intelligence Partner, Summit Partner, Founding Partner, trust rules, and participation model.
 
-The private partner profile page lives at `/partner-profile/` and is backed by `/api/partner-profile`. It shows the signed-in partner account's tier, attended events, guests from those events with name/email/company/title, publication placements once the publication system is linked, and sponsorship contribution totals. Partner profile records are read from `MOJO_SUMMITS_SETUP_STATE` using `partner-profile:{email}` first and `partner:{email}` as a fallback. Event guest matching uses event identifiers stored on guest registration records, so guest rows require matching `eventId`, `eventSlug`, `event`, or `eventName` values.
+The private partner profile page lives at `/partner-profile/` and is backed by `/api/partner-profile`. Partner profiles are company-based, not individual-user-based. A signed-in partner contact resolves to a company profile through `partner-contact:{email}`, contacts listed on a company profile record, legacy email profile records, or company inference from registration records. The page shows the company tier, all known contacts for that company, events attended by any known contact from that company, every known member/guest/partner attendee from those events with name/email/company/title, publication placements once the publication system is linked, and sponsorship contribution totals. Preferred company profile records use `partner-company:{company-slug}` or `partner-profile-company:{company-slug}` in `MOJO_SUMMITS_SETUP_STATE`; profile records can include `contacts`, `events` or `attendedEvents`, `publications`, and `sponsorships`, `contributions`, or `payments`.
 
 ## Sponsor Curation Engine
 

@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <title>Mojo Scheduling Admin</title>
+  <style>
+    :root {
+      --deep-navy: #0A0F1E;
+      --electric-blue: #1666FF;
+      --cyan: #00E6FF;
+      --slate: #1B2333;
+      --white: #FFFFFF;
+      --text: #F3FAFF;
+      --muted: rgba(255, 255, 255, 0.68);
+      --line: rgba(0, 230, 255, 0.24);
+      --danger: #FF6F87;
+      --ok: #6AF0B6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        linear-gradient(135deg, rgba(22, 102, 255, 0.22), transparent 30rem),
+        linear-gradient(180deg, #050814 0%, var(--deep-navy) 48%, #07101F 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 15, 30, 0.88);
+      backdrop-filter: blur(16px);
+    }
+
+    .topbar,
+    main {
+      width: min(1180px, calc(100% - 2rem));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 0;
+    }
+
+    .brand,
+    nav a {
+      color: var(--cyan);
+      font-weight: 800;
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
+      gap: 1rem;
+      padding: 2rem 0 4rem;
+    }
+
+    section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(27, 35, 51, 0.94), rgba(10, 15, 30, 0.82)),
+        var(--slate);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .panel {
+      padding: clamp(1rem, 3vw, 1.35rem);
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 4.2rem);
+      line-height: 0.96;
+      margin-bottom: 1rem;
+    }
+
+    h2 { font-size: 1.35rem; }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    label {
+      display: grid;
+      gap: 0.45rem;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.8rem 0.9rem;
+      color: var(--text);
+      background: rgba(10, 15, 30, 0.78);
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+    }
+
+    button {
+      cursor: pointer;
+      color: var(--deep-navy);
+      border-color: transparent;
+      background: linear-gradient(90deg, var(--cyan), #7AF4FF);
+      font-size: 0.82rem;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    button.secondary {
+      color: var(--cyan);
+      border-color: var(--line);
+      background: rgba(10, 15, 30, 0.78);
+    }
+
+    .stack { display: grid; gap: 1rem; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .wide,
+    .status {
+      grid-column: 1 / -1;
+    }
+
+    .employee-list {
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .employee {
+      border: 1px solid rgba(0, 230, 255, 0.18);
+      border-radius: 8px;
+      padding: 0.85rem;
+      background: rgba(10, 15, 30, 0.54);
+      text-align: left;
+    }
+
+    .employee.active {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 1px rgba(0, 230, 255, 0.2);
+    }
+
+    .status {
+      border: 1px solid rgba(0, 230, 255, 0.18);
+      border-radius: 8px;
+      padding: 0.85rem;
+      color: var(--muted);
+      background: rgba(10, 15, 30, 0.48);
+    }
+
+    .status.error {
+      border-color: rgba(255, 111, 135, 0.42);
+      color: var(--danger);
+    }
+
+    .status.ok {
+      border-color: rgba(106, 240, 182, 0.42);
+      color: var(--ok);
+    }
+
+    @media (max-width: 860px) {
+      main,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <a class="brand" href="/">Mojo AI Summits</a>
+      <nav><a href="/book/">Booking</a></nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel stack">
+      <div>
+        <h1>Scheduling</h1>
+        <p id="graphStatus">Checking calendar connection...</p>
+      </div>
+      <div class="employee-list" id="employees"></div>
+      <button type="button" class="secondary" id="newEmployee">New Profile</button>
+    </section>
+
+    <section class="panel stack">
+      <h2>Employee Profile</h2>
+      <form class="grid" id="profileForm">
+        <label>
+          Slug
+          <input name="slug" placeholder="gina">
+        </label>
+        <label>
+          Active
+          <select name="active">
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+        </label>
+        <label>
+          Name
+          <input name="name" required>
+        </label>
+        <label>
+          Calendar Email
+          <input name="email" type="email" required>
+        </label>
+        <label>
+          Title
+          <input name="title">
+        </label>
+        <label>
+          Timezone
+          <input name="timezone" value="America/Denver">
+        </label>
+        <label>
+          Day Start
+          <input name="dayStart" type="time" value="09:00">
+        </label>
+        <label>
+          Day End
+          <input name="dayEnd" type="time" value="17:00">
+        </label>
+        <label>
+          Slot Step
+          <input name="slotStepMinutes" type="number" min="5" max="120" value="30">
+        </label>
+        <label>
+          Buffer After
+          <input name="bufferAfterMinutes" type="number" min="0" max="240" value="15">
+        </label>
+        <label>
+          Min Notice Hours
+          <input name="minNoticeHours" type="number" min="0" max="720" value="4">
+        </label>
+        <label>
+          Max Days Ahead
+          <input name="maxDaysAhead" type="number" min="1" max="365" value="45">
+        </label>
+        <label>
+          Meeting Label
+          <input name="meetingLabel" value="Intro call">
+        </label>
+        <label>
+          Duration
+          <input name="durationMinutes" type="number" min="15" max="240" value="30">
+        </label>
+        <label class="wide">
+          Bio
+          <textarea name="bio"></textarea>
+        </label>
+        <label class="wide">
+          Meeting Description
+          <textarea name="meetingDescription">A focused conversation with the Mojo team.</textarea>
+        </label>
+        <button type="submit">Save Profile</button>
+        <div class="status" id="status"></div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const employeesEl = document.querySelector("#employees");
+    const graphStatusEl = document.querySelector("#graphStatus");
+    const form = document.querySelector("#profileForm");
+    const statusEl = document.querySelector("#status");
+    const newEmployeeButton = document.querySelector("#newEmployee");
+    let employees = [];
+    let selectedSlug = "";
+
+    function setStatus(message, kind = "") {
+      statusEl.textContent = message;
+      statusEl.className = `status ${kind}`.trim();
+    }
+
+    function field(name) {
+      return form.elements[name];
+    }
+
+    function renderEmployees() {
+      employeesEl.innerHTML = "";
+      if (!employees.length) {
+        employeesEl.innerHTML = '<p>No profiles saved.</p>';
+        return;
+      }
+
+      employees.forEach((employee) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `employee secondary ${employee.slug === selectedSlug ? "active" : ""}`;
+        button.textContent = `${employee.name} · ${employee.email}`;
+        button.addEventListener("click", () => loadEmployee(employee.slug));
+        employeesEl.append(button);
+      });
+    }
+
+    function resetForm() {
+      selectedSlug = "";
+      form.reset();
+      field("active").value = "true";
+      field("timezone").value = "America/Denver";
+      field("dayStart").value = "09:00";
+      field("dayEnd").value = "17:00";
+      field("slotStepMinutes").value = "30";
+      field("bufferAfterMinutes").value = "15";
+      field("minNoticeHours").value = "4";
+      field("maxDaysAhead").value = "45";
+      field("meetingLabel").value = "Intro call";
+      field("durationMinutes").value = "30";
+      field("meetingDescription").value = "A focused conversation with the Mojo team.";
+      renderEmployees();
+      setStatus("");
+    }
+
+    function loadEmployee(slug) {
+      const employee = employees.find((item) => item.slug === slug);
+      if (!employee) return;
+      selectedSlug = employee.slug;
+      field("slug").value = employee.slug;
+      field("active").value = employee.active === false ? "false" : "true";
+      field("name").value = employee.name || "";
+      field("email").value = employee.email || "";
+      field("title").value = employee.title || "";
+      field("timezone").value = employee.timezone || "America/Denver";
+      field("dayStart").value = employee.dayStart || "09:00";
+      field("dayEnd").value = employee.dayEnd || "17:00";
+      field("slotStepMinutes").value = employee.slotStepMinutes || 30;
+      field("bufferAfterMinutes").value = employee.bufferAfterMinutes || 15;
+      field("minNoticeHours").value = employee.minNoticeHours || 4;
+      field("maxDaysAhead").value = employee.maxDaysAhead || 45;
+      field("bio").value = employee.bio || "";
+      const type = employee.meetingTypes?.[0] || {};
+      field("meetingLabel").value = type.label || "Intro call";
+      field("durationMinutes").value = type.durationMinutes || 30;
+      field("meetingDescription").value = type.description || "A focused conversation with the Mojo team.";
+      renderEmployees();
+      setStatus("");
+    }
+
+    async function loadAdmin() {
+      const response = await fetch("/api/scheduling/admin", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Unable to load scheduling admin.");
+      employees = payload.employees || [];
+      graphStatusEl.textContent = payload.graphConfigured
+        ? "Microsoft Graph is configured."
+        : "Microsoft Graph credentials are not configured yet.";
+      renderEmployees();
+      if (employees[0]) loadEmployee(employees[0].slug);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setStatus("Saving...");
+
+      const body = {
+        slug: field("slug").value,
+        active: field("active").value === "true",
+        name: field("name").value,
+        email: field("email").value,
+        title: field("title").value,
+        timezone: field("timezone").value,
+        dayStart: field("dayStart").value,
+        dayEnd: field("dayEnd").value,
+        slotStepMinutes: Number(field("slotStepMinutes").value),
+        bufferAfterMinutes: Number(field("bufferAfterMinutes").value),
+        minNoticeHours: Number(field("minNoticeHours").value),
+        maxDaysAhead: Number(field("maxDaysAhead").value),
+        bio: field("bio").value,
+        meetingTypes: [{
+          id: "intro",
+          label: field("meetingLabel").value,
+          durationMinutes: Number(field("durationMinutes").value),
+          description: field("meetingDescription").value,
+          location: "Microsoft Teams"
+        }]
+      };
+
+      const response = await fetch("/api/scheduling/admin", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStatus(payload.error || "Unable to save profile.", "error");
+        return;
+      }
+
+      setStatus("Saved.", "ok");
+      await loadAdmin();
+      loadEmployee(payload.employee.slug);
+    });
+
+    newEmployeeButton.addEventListener("click", resetForm);
+
+    loadAdmin().catch((error) => {
+      graphStatusEl.textContent = error.message;
+      setStatus(error.message, "error");
+    });
+  </script>
+</body>
+</html>

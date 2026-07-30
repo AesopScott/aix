@@ -83,6 +83,27 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/events", "mojoaisummits.com/events/*"]
   },
   {
+    id: "book",
+    kind: "page",
+    group: "Public",
+    label: "Booking",
+    summary: "Public employee booking surface.",
+    mode: "public",
+    matches: [{ exact: "/book" }, { prefix: "/book/" }],
+    domains: ["mojoaisummits.com/book", "mojoaisummits.com/book/*"]
+  },
+  {
+    id: "schedule-admin",
+    kind: "page",
+    group: "Operations",
+    label: "Scheduling Admin",
+    summary: "Employee booking profile and availability configuration.",
+    mode: "allowlist",
+    defaultGroupIds: ["admin"],
+    matches: [{ exact: "/schedule-admin" }, { prefix: "/schedule-admin/" }],
+    domains: ["mojoaisummits.com/schedule-admin", "mojoaisummits.com/schedule-admin/*"]
+  },
+  {
     id: "crm",
     kind: "page",
     group: "Data",
@@ -274,6 +295,27 @@ export const DEFAULT_ACCESS_RULES = [
     mode: "allowlist",
     matches: [{ exact: "/api/events" }, { prefix: "/api/events/" }],
     domains: ["mojoaisummits.com/api/events", "mojoaisummits.com/api/events/*"]
+  },
+  {
+    id: "api-scheduling-admin",
+    kind: "api",
+    group: "APIs",
+    label: "Scheduling Admin API",
+    summary: "Protected employee booking profile configuration.",
+    mode: "allowlist",
+    defaultGroupIds: ["admin"],
+    matches: [{ exact: "/api/scheduling/admin" }, { prefix: "/api/scheduling/admin/" }],
+    domains: ["mojoaisummits.com/api/scheduling/admin", "mojoaisummits.com/api/scheduling/admin/*"]
+  },
+  {
+    id: "api-scheduling-public",
+    kind: "api",
+    group: "APIs",
+    label: "Scheduling Public API",
+    summary: "Public employee booking, availability, and confirmation endpoints.",
+    mode: "public",
+    matches: [{ exact: "/api/scheduling" }, { prefix: "/api/scheduling/" }],
+    domains: ["mojoaisummits.com/api/scheduling", "mojoaisummits.com/api/scheduling/*"]
   },
   {
     id: "api-crm",

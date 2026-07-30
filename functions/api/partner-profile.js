@@ -5,12 +5,13 @@ const jsonHeaders = {
   "cache-control": "no-store"
 };
 
-const profileKeys = (email) => [
-  `partner-profile:${email}`,
-  `partner:${email}`
+const profilePrefixes = ["partner-company:", "partner-profile-company:", "partner-profile:", "partner:"];
+const contactPrefixes = ["partner-contact:", "partner-profile-contact:"];
+const registrationSources = [
+  { type: "partner", label: "Partner", prefixes: ["crm:partner-registrant:", "partner-registration:"] },
+  { type: "member", label: "Member", prefixes: ["crm:member-registrant:", "member-registration:"] },
+  { type: "guest", label: "Guest", prefixes: ["crm:guest-registrant:", "guest-registration:"] }
 ];
-
-const guestPrefixes = ["crm:guest-registrant:", "guest-registration:"];
 const tierLabels = new Set([
   "Partner Candidate",
   "Council Partner",
@@ -46,6 +47,32 @@ function cleanArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function companySlug(value) {
+  return cleanText(value, 180)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
+function sameCompany(left, right) {
+  const leftSlug = companySlug(left);
+  const rightSlug = companySlug(right);
+  return Boolean(leftSlug && rightSlug && leftSlug === rightSlug);
+}
+
+function companyFromRecord(record = {}) {
+  return cleanText(
+    record.organizationName ||
+      record.partnerCompany ||
+      record.company ||
+      record.companyName ||
+      record.name,
+    180
+  );
+}
+
 async function listKeys(env, prefix) {
   const keys = [];
   let cursor;
@@ -63,24 +90,42 @@ async function listKeys(env, prefix) {
   return keys;
 }
 
-async function readProfile(env, email) {
-  for (const key of profileKeys(email)) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
-    if (record) return { key, record };
-  }
-  return null;
+async function getJson(env, key) {
+  return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+}
+
+async function recordsForPrefixes(env, prefixes) {
+  const keys = [...new Set((await Promise.all(prefixes.map((prefix) => listKeys(env, prefix)))).flat())];
+  const records = await Promise.all(
+    keys.map(async (key) => {
+      const record = await getJson(env, key);
+      return record ? { key, record } : null;
+    })
+  );
+  return records.filter(Boolean);
 }
 
 function normalizeEvent(event) {
-  const id = cleanText(event?.id || event?.slug || event?.name, 120);
+  const name = cleanText(event?.name || event?.title || event?.eventName || event?.event, 180);
+  const id = cleanText(event?.id || event?.eventId || event?.slug || event?.eventSlug || name, 140);
   return {
     id,
-    slug: cleanText(event?.slug || id, 120),
-    name: cleanText(event?.name || event?.title || "Untitled event", 160),
-    date: cleanText(event?.date || event?.startAt || event?.dateLabel, 80),
+    slug: cleanText(event?.slug || event?.eventSlug || id, 140),
+    name: name || "Untitled event",
+    date: cleanText(event?.date || event?.eventDate || event?.startAt || event?.dateLabel, 80),
     location: cleanText(event?.location || event?.city || event?.format, 120),
-    role: cleanText(event?.role || event?.participation || "Partner participant", 120)
+    role: cleanText(event?.role || event?.participation || event?.attendanceRole || "Company participant", 120)
   };
+}
+
+function eventFromRegistration(registration) {
+  return normalizeEvent({
+    id: registration.eventId,
+    slug: registration.eventSlug,
+    name: registration.eventName,
+    date: registration.eventDate,
+    role: registration.typeLabel
+  });
 }
 
 function normalizePublication(publication) {
@@ -105,69 +150,231 @@ function normalizeContribution(contribution) {
   };
 }
 
-function normalizeProfile(record, email) {
-  const tier = cleanText(record?.tier || record?.partnerTier || "Not assigned", 80);
-  const events = cleanArray(record?.events || record?.attendedEvents).map(normalizeEvent).filter((event) => event.id);
-  const publications = cleanArray(record?.publications).map(normalizePublication).filter((publication) => publication.title);
-  const contributions = cleanArray(record?.sponsorships || record?.contributions || record?.payments)
-    .map(normalizeContribution)
-    .filter((contribution) => contribution.amount || contribution.event);
+function normalizeContact(contact = {}) {
+  const email = normalizeEmail(contact.email || contact.primaryContactEmail || contact.contactEmail);
+  const name = cleanText(contact.name || contact.primaryContactName || contact.contactName, 160);
+  return {
+    id: email || `${name}:${cleanText(contact.company || contact.partnerCompany, 120)}`,
+    name,
+    email,
+    company: companyFromRecord(contact),
+    title: cleanText(contact.title || contact.role || contact.jobTitle, 160),
+    source: cleanText(contact.source, 80)
+  };
+}
+
+function normalizeProfile(record = {}, fallbackCompany = "", fallbackEmail = "") {
+  const tier = cleanText(record.tier || record.partnerTier || "Not assigned", 80);
+  const contacts = [
+    ...cleanArray(record.contacts),
+    ...cleanArray(record.partnerContacts),
+    ...cleanArray(record.contactEmails).map((email) => ({ email })),
+    {
+      name: record.primaryContactName || record.contactName,
+      email: record.primaryContactEmail || record.email || fallbackEmail,
+      company: companyFromRecord(record) || fallbackCompany,
+      title: record.primaryContactTitle || record.contactTitle
+    }
+  ]
+    .map(normalizeContact)
+    .filter((contact) => contact.email || contact.name);
 
   return {
-    organizationName: cleanText(record?.organizationName || record?.company || record?.name || "Partner profile"),
-    primaryContactName: cleanText(record?.primaryContactName || record?.contactName || ""),
-    primaryContactEmail: normalizeEmail(record?.primaryContactEmail || record?.email || email),
+    organizationName: companyFromRecord(record) || fallbackCompany || "Partner profile",
     tier: tierLabels.has(tier) ? tier : tier,
-    status: cleanText(record?.status || "Profile active", 80),
-    events,
-    publications,
-    contributions
+    status: cleanText(record.status || "Profile active", 80),
+    contacts,
+    events: cleanArray(record.events || record.attendedEvents).map(normalizeEvent).filter((event) => event.id || event.name),
+    publications: cleanArray(record.publications).map(normalizePublication).filter((publication) => publication.title),
+    contributions: cleanArray(record.sponsorships || record.contributions || record.payments)
+      .map(normalizeContribution)
+      .filter((contribution) => contribution.amount || contribution.event)
   };
 }
 
-function normalizeGuest(key, record) {
+function normalizeRegistration(entry, source) {
+  const record = entry.record || {};
   return {
-    key,
-    id: cleanText(record?.id || key, 160),
-    eventId: cleanText(record?.eventId || record?.eventSlug || record?.event || record?.eventName, 160),
-    eventName: cleanText(record?.eventName || record?.event || "", 160),
-    name: cleanText(record?.name, 160),
-    email: normalizeEmail(record?.email),
-    company: cleanText(record?.company, 160),
-    title: cleanText(record?.title, 160)
+    key: entry.key,
+    type: source.type,
+    typeLabel: source.label,
+    id: cleanText(record.id || entry.key, 180),
+    name: cleanText(record.name, 160),
+    email: normalizeEmail(record.email),
+    company: companyFromRecord(record),
+    title: cleanText(record.title, 160),
+    eventId: cleanText(record.eventId || record.eventSlug || record.event || record.eventName, 180),
+    eventSlug: cleanText(record.eventSlug, 180),
+    eventName: cleanText(record.eventName || record.event, 180),
+    eventDate: cleanText(record.eventDate || record.date || record.startAt, 80),
+    role: cleanText(record.role || record.participation || source.label, 120),
+    createdAt: cleanText(record.createdAt, 80)
   };
 }
 
-async function guestRegistrants(env) {
-  const keyLists = await Promise.all(guestPrefixes.map((prefix) => listKeys(env, prefix)));
-  const keys = [...new Set(keyLists.flat())];
-  const rows = await Promise.all(
-    keys.map(async (key) => {
-      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
-      return record ? normalizeGuest(key, record) : null;
+async function allRegistrations(env) {
+  const grouped = await Promise.all(
+    registrationSources.map(async (source) => {
+      const entries = await recordsForPrefixes(env, source.prefixes);
+      return entries.map((entry) => normalizeRegistration(entry, source));
     })
   );
-  return rows.filter(Boolean);
+  return grouped.flat();
+}
+
+async function explicitContactCompany(env, email) {
+  for (const prefix of contactPrefixes) {
+    const record = await getJson(env, `${prefix}${email}`);
+    if (!record) continue;
+    const profileKey = cleanText(record.profileKey || record.companyProfileKey, 240);
+    const company = cleanText(record.company || record.companyName || record.organizationName || record.partnerCompany, 180);
+    const slug = cleanText(record.companySlug || record.slug || companySlug(company), 140);
+    return { profileKey, company, slug, record };
+  }
+  return null;
+}
+
+async function profileByKey(env, key) {
+  if (!key) return null;
+  const record = await getJson(env, key);
+  return record ? { key, record } : null;
+}
+
+async function profileByCompany(env, company) {
+  const slug = companySlug(company);
+  if (!slug) return null;
+  for (const prefix of profilePrefixes) {
+    const key = `${prefix}${slug}`;
+    const record = await getJson(env, key);
+    if (record) return { key, record };
+  }
+  return null;
+}
+
+async function profileByContactScan(env, email) {
+  const entries = await recordsForPrefixes(env, profilePrefixes);
+  return entries.find(({ record }) => {
+    const profile = normalizeProfile(record, "", email);
+    return profile.contacts.some((contact) => contact.email === email);
+  }) || null;
+}
+
+async function legacyEmailProfile(env, email) {
+  for (const prefix of ["partner-profile:", "partner:"]) {
+    const key = `${prefix}${email}`;
+    const record = await getJson(env, key);
+    if (record) return { key, record };
+  }
+  return null;
+}
+
+async function resolveCompanyProfile(env, email, registrations) {
+  const explicit = await explicitContactCompany(env, email);
+  if (explicit?.profileKey) {
+    const stored = await profileByKey(env, explicit.profileKey);
+    if (stored) return { ...stored, company: explicit.company };
+  }
+  if (explicit?.company || explicit?.slug) {
+    const stored = await profileByCompany(env, explicit.company || explicit.slug);
+    if (stored) return { ...stored, company: explicit.company };
+  }
+
+  const scanned = await profileByContactScan(env, email);
+  if (scanned) return { ...scanned, company: companyFromRecord(scanned.record) };
+
+  const legacy = await legacyEmailProfile(env, email);
+  if (legacy) return { ...legacy, company: companyFromRecord(legacy.record) };
+
+  const ownRows = registrations.filter((row) => row.email === email);
+  const company = companyFromRecord(ownRows[0] || {});
+  if (company) {
+    const stored = await profileByCompany(env, company);
+    if (stored) return { ...stored, company };
+    return { key: "", record: { organizationName: company, contacts: [{ email, company }] }, company };
+  }
+
+  return null;
+}
+
+function dedupeContacts(contacts) {
+  const map = new Map();
+  for (const contact of contacts.map(normalizeContact).filter((entry) => entry.email || entry.name)) {
+    const key = contact.email || contact.id;
+    const existing = map.get(key) || {};
+    map.set(key, {
+      ...existing,
+      ...contact,
+      name: contact.name || existing.name || "",
+      email: contact.email || existing.email || "",
+      company: contact.company || existing.company || "",
+      title: contact.title || existing.title || "",
+      source: contact.source || existing.source || ""
+    });
+  }
+  return [...map.values()].sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+}
+
+function eventKey(event) {
+  return cleanText(event.id || event.slug || event.name, 180).toLowerCase();
+}
+
+function dedupeEvents(events) {
+  const map = new Map();
+  for (const event of events.map(normalizeEvent).filter((entry) => entry.id || entry.name)) {
+    const key = eventKey(event);
+    const existing = map.get(key) || {};
+    map.set(key, {
+      ...existing,
+      ...event,
+      name: event.name || existing.name || "Untitled event",
+      date: event.date || existing.date || "",
+      location: event.location || existing.location || "",
+      role: event.role || existing.role || "Company participant"
+    });
+  }
+  return [...map.values()].sort((a, b) => String(b.date || b.name).localeCompare(String(a.date || a.name)));
 }
 
 function eventMatchers(event) {
-  return [event.id, event.slug, event.name].map(cleanText).filter(Boolean);
+  return [event.id, event.slug, event.name].map((value) => cleanText(value, 180).toLowerCase()).filter(Boolean);
 }
 
-function guestsForEvent(event, guests) {
+function registrationEventValues(row) {
+  return [row.eventId, row.eventSlug, row.eventName].map((value) => cleanText(value, 180).toLowerCase()).filter(Boolean);
+}
+
+function attendedByCompany(profile, registrations) {
+  const company = profile.organizationName;
+  const knownEmails = new Set(profile.contacts.map((contact) => contact.email).filter(Boolean));
+  return registrations.filter((row) => {
+    if (knownEmails.has(row.email)) return true;
+    return sameCompany(row.company, company);
+  });
+}
+
+function attendeesForEvent(event, registrations) {
   const matchers = eventMatchers(event);
-  return guests
-    .filter((guest) => {
-      const values = [guest.eventId, guest.eventName].map(cleanText).filter(Boolean);
+  const seen = new Set();
+  return registrations
+    .filter((row) => {
+      const values = registrationEventValues(row);
       return values.some((value) => matchers.includes(value));
     })
-    .map((guest) => ({
-      name: guest.name,
-      email: guest.email,
-      company: guest.company,
-      title: guest.title
+    .map((row) => ({
+      id: row.email || row.id,
+      name: row.name,
+      email: row.email,
+      company: row.company,
+      title: row.title,
+      type: row.typeLabel
     }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .filter((row) => {
+      const key = row.email || `${row.name}:${row.company}:${row.type}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
 }
 
 export async function onRequestOptions() {
@@ -177,7 +384,7 @@ export async function onRequestOptions() {
 export async function onRequestGet({ request, env, data }) {
   const user = data?.auth?.email ? data.auth : await getSessionUser(request, env);
   if (!user?.email) {
-    return json({ error: "Sign in with a Mojo AI Summits partner account to view this profile." }, { status: 401 });
+    return json({ error: "Sign in with a Mojo AI Summits partner account to view this company profile." }, { status: 401 });
   }
 
   if (!env.MOJO_SUMMITS_SETUP_STATE) {
@@ -185,26 +392,43 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   const email = normalizeEmail(user.email);
-  const storedProfile = await readProfile(env, email);
-  const profile = normalizeProfile(storedProfile?.record || {}, email);
-  const guests = await guestRegistrants(env);
-  const events = profile.events.map((event) => ({
+  const registrations = await allRegistrations(env);
+  const storedProfile = await resolveCompanyProfile(env, email, registrations);
+  const profile = normalizeProfile(storedProfile?.record || {}, storedProfile?.company || "", email);
+  const companyRows = attendedByCompany(profile, registrations);
+  const contacts = dedupeContacts([
+    ...profile.contacts,
+    ...companyRows.map((row) => ({
+      name: row.name,
+      email: row.email,
+      company: row.company || profile.organizationName,
+      title: row.title,
+      source: row.typeLabel
+    }))
+  ]);
+  const companyEvents = dedupeEvents([
+    ...profile.events,
+    ...companyRows.map(eventFromRegistration)
+  ]);
+  const events = companyEvents.map((event) => ({
     ...event,
-    guests: guestsForEvent(event, guests)
+    attendees: attendeesForEvent(event, registrations)
   }));
   const totalContributed = profile.contributions.reduce((sum, contribution) => sum + contribution.amount, 0);
 
   return json({
     ok: true,
-    configured: Boolean(storedProfile),
+    configured: Boolean(storedProfile?.key),
     profile: {
       ...profile,
+      contacts,
       events,
       totalContributed
     },
     schema: {
-      profileKey: `partner-profile:${email}`,
-      note: "Add events, publications, and sponsorships to the partner profile record to populate this page."
+      profileKey: storedProfile?.key || `partner-company:${companySlug(profile.organizationName)}`,
+      contactKeys: contactPrefixes.map((prefix) => `${prefix}${email}`),
+      note: "Partner profiles are company-based. Map contacts to a company profile with partner-contact:{email}, or store contacts on partner-company:{company-slug}."
     }
   });
 }
