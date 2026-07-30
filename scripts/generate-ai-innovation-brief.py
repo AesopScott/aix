@@ -579,7 +579,7 @@ def write_html():
     )
 
     sponsor_html = "\n".join(
-        f"""<article class="sponsor"><div class="sponsor-head"><img src="{h(asset_path(SPONSOR_ASSET_DIR / sponsor["logo"]))}" alt="{h(sponsor["name"])} logo"><div><h3>{h(sponsor["name"])}</h3><p>{h(sponsor["tagline"])}</p></div></div><p>{h(sponsor["description"])}</p><p class="sponsor-invited"><strong>Why invited:</strong> {h(sponsor["invited"])}</p><div class="sponsor-use-cases"><h3>Example Use Cases For This Topic</h3><ul>{list_items(sponsor["use_cases"])}</ul></div></article>"""
+        f"""<article class="sponsor"><div class="sponsor-head"><img src="{h(asset_path(SPONSOR_ASSET_DIR / sponsor["logo"]) + "?v=20260730")}" alt="{h(sponsor["name"])} logo"><div><h3>{h(sponsor["name"])}</h3><p>{h(sponsor["tagline"])}</p></div></div><p>{h(sponsor["description"])}</p><p class="sponsor-invited"><strong>Why invited:</strong> {h(sponsor["invited"])}</p><div class="sponsor-use-cases"><h3>Example Use Cases For This Topic</h3><ul>{list_items(sponsor["use_cases"])}</ul></div></article>"""
         for sponsor in SPONSORS
     )
 
