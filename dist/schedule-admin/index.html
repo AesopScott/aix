@@ -41,7 +41,7 @@
 
     .topbar,
     main {
-      width: min(1180px, calc(100% - 2rem));
+      width: min(1040px, calc(100% - 1.5rem));
       margin: 0 auto;
     }
 
@@ -64,9 +64,10 @@
 
     main {
       display: grid;
-      grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
-      gap: 1rem;
-      padding: 2rem 0 4rem;
+      grid-template-columns: minmax(220px, 0.55fr) minmax(0, 1.45fr);
+      align-items: start;
+      gap: 0.75rem;
+      padding: 1rem 0 2rem;
     }
 
     section {
@@ -79,7 +80,7 @@
     }
 
     .panel {
-      padding: clamp(1rem, 3vw, 1.35rem);
+      padding: 1rem;
     }
 
     h1,
@@ -91,12 +92,12 @@
     }
 
     h1 {
-      font-size: clamp(2rem, 6vw, 4.2rem);
-      line-height: 0.96;
-      margin-bottom: 1rem;
+      font-size: clamp(1.8rem, 4vw, 2.7rem);
+      line-height: 1;
+      margin-bottom: 0.45rem;
     }
 
-    h2 { font-size: 1.35rem; }
+    h2 { font-size: 1.15rem; }
 
     p {
       margin: 0;
@@ -114,6 +115,14 @@
       text-transform: uppercase;
     }
 
+    .field-label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
     input,
     select,
     textarea,
@@ -121,15 +130,19 @@
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 6px;
-      padding: 0.8rem 0.9rem;
+      padding: 0.62rem 0.72rem;
       color: var(--text);
       background: rgba(10, 15, 30, 0.78);
       font: inherit;
       letter-spacing: 0;
     }
 
+    .hidden-field {
+      display: none;
+    }
+
     textarea {
-      min-height: 88px;
+      min-height: 72px;
       resize: vertical;
     }
 
@@ -150,12 +163,12 @@
       background: rgba(10, 15, 30, 0.78);
     }
 
-    .stack { display: grid; gap: 1rem; }
+    .stack { display: grid; gap: 0.75rem; }
 
     .grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.75rem;
+      gap: 0.6rem;
     }
 
     .wide,
@@ -165,13 +178,13 @@
 
     .employee-list {
       display: grid;
-      gap: 0.6rem;
+      gap: 0.5rem;
     }
 
     .employee {
       border: 1px solid rgba(0, 230, 255, 0.18);
       border-radius: 8px;
-      padding: 0.85rem;
+      padding: 0.62rem 0.72rem;
       background: rgba(10, 15, 30, 0.54);
       text-align: left;
     }
@@ -181,10 +194,59 @@
       box-shadow: 0 0 0 1px rgba(0, 230, 255, 0.2);
     }
 
+    .connection-list {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .build-stamp,
+    .connection-heading {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .connection {
+      border: 1px solid rgba(0, 230, 255, 0.18);
+      border-radius: 8px;
+      padding: 0.62rem 0.72rem;
+      color: var(--muted);
+      background: rgba(10, 15, 30, 0.48);
+      font-size: 0.9rem;
+    }
+
+    .connection-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 0.9fr) minmax(180px, 1.2fr) minmax(100px, 0.55fr);
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .connection-heading {
+      padding: 0 0.72rem;
+    }
+
+    .connection-row input {
+      min-width: 0;
+    }
+
+    .connection-row code {
+      color: var(--cyan);
+      font-size: 0.78rem;
+      overflow-wrap: anywhere;
+    }
+
+    .connection-row button {
+      padding: 0.48rem 0.55rem;
+      font-size: 0.72rem;
+    }
+
     .status {
       border: 1px solid rgba(0, 230, 255, 0.18);
       border-radius: 8px;
-      padding: 0.85rem;
+      padding: 0.7rem;
       color: var(--muted);
       background: rgba(10, 15, 30, 0.48);
     }
@@ -204,6 +266,10 @@
       .grid {
         grid-template-columns: 1fr;
       }
+
+      .connection-row {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -220,6 +286,7 @@
       <div>
         <h1>Scheduling</h1>
         <p id="graphStatus">Checking calendar connection...</p>
+        <p class="build-stamp" id="buildStamp">Build 2026.07.30.5-auth-row-editor</p>
       </div>
       <div class="employee-list" id="employees"></div>
       <button type="button" class="secondary" id="newEmployee">New Profile</button>
@@ -246,6 +313,24 @@
         <label>
           Calendar Email
           <input name="email" type="email" required>
+        </label>
+        <label>
+          Profile Photo URL
+          <input name="photoUrl" placeholder="/assets/scott-pro3-6.png">
+        </label>
+        <label class="wide">
+          Same-Tenant Busy Emails
+          <input name="busyCalendarEmails" placeholder="other@mojoaisummits.com, second@mojoaisummits.com">
+        </label>
+        <div class="wide stack">
+          <div class="field-label">Authenticated Calendar Emails</div>
+          <textarea class="hidden-field" name="authenticatedCalendarEmails"></textarea>
+          <div class="connection-list" id="connectedCalendars"></div>
+          <button type="button" class="secondary" id="addAuthenticatedCalendarEmail">Add Email</button>
+        </div>
+        <label class="wide">
+          Busy Calendar URLs
+          <textarea name="busyCalendarUrls" placeholder="https://.../calendar.ics"></textarea>
         </label>
         <label>
           Title
@@ -302,13 +387,22 @@
   </main>
 
   <script>
+    const SCHEDULING_ADMIN_BUILD = "2026.07.30.5-auth-row-editor";
     const employeesEl = document.querySelector("#employees");
     const graphStatusEl = document.querySelector("#graphStatus");
+    const buildStampEl = document.querySelector("#buildStamp");
     const form = document.querySelector("#profileForm");
     const statusEl = document.querySelector("#status");
     const newEmployeeButton = document.querySelector("#newEmployee");
+    const addAuthenticatedCalendarEmailButton = document.querySelector("#addAuthenticatedCalendarEmail");
+    const connectedCalendarsEl = document.querySelector("#connectedCalendars");
     let employees = [];
     let selectedSlug = "";
+    let authEmailDrafts = [""];
+
+    if (buildStampEl) {
+      buildStampEl.textContent = `Build ${SCHEDULING_ADMIN_BUILD} · JS ready`;
+    }
 
     function setStatus(message, kind = "") {
       statusEl.textContent = message;
@@ -317,6 +411,29 @@
 
     function field(name) {
       return form.elements[name];
+    }
+
+    function selectedEmployee() {
+      return employees.find((item) => item.slug === selectedSlug) || null;
+    }
+
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+    }
+
+    function emailListFromText(value) {
+      return [...new Set(String(value || "")
+        .split(/[\s,;]+/)
+        .map((email) => email.trim().toLowerCase())
+        .filter(isValidEmail))];
+    }
+
+    function authUrlFor(slug, email) {
+      return new URL(`/api/scheduling/oauth/start?slug=${encodeURIComponent(slug)}&email=${encodeURIComponent(email)}`, window.location.origin).toString();
+    }
+
+    function syncAuthenticatedCalendarField() {
+      field("authenticatedCalendarEmails").value = emailListFromText(authEmailDrafts.join("\n")).join("\n");
     }
 
     function renderEmployees() {
@@ -336,6 +453,76 @@
       });
     }
 
+    function renderConnections(employee = selectedEmployee()) {
+      connectedCalendarsEl.innerHTML = "";
+      const connections = new Map((employee?.connectedCalendars || []).map((connection) => [
+        String(connection.expectedEmail || connection.email || "").toLowerCase(),
+        connection
+      ]));
+      const rowEmails = authEmailDrafts.map((email) => String(email || "").trim().toLowerCase());
+      const seenEmails = new Set(rowEmails.filter(Boolean));
+      [...(employee?.authenticatedCalendarEmails || []), ...connections.keys()].forEach((email) => {
+        const normalizedEmail = String(email || "").trim().toLowerCase();
+        if (normalizedEmail && !seenEmails.has(normalizedEmail)) {
+          rowEmails.push(normalizedEmail);
+          seenEmails.add(normalizedEmail);
+        }
+      });
+      authEmailDrafts = rowEmails.length ? rowEmails : [""];
+      syncAuthenticatedCalendarField();
+
+      const header = document.createElement("div");
+      header.className = "connection-row connection-heading";
+      ["Email", "Authentication URL", "Action"].forEach((label) => {
+        const item = document.createElement("span");
+        item.textContent = label;
+        header.append(item);
+      });
+      connectedCalendarsEl.append(header);
+
+      authEmailDrafts.forEach((email, index) => {
+        const slug = field("slug").value || employee?.slug || selectedSlug;
+        const item = document.createElement("div");
+        item.className = "connection connection-row";
+        const emailEl = document.createElement("input");
+        emailEl.type = "email";
+        emailEl.placeholder = "email@domain.com";
+        emailEl.value = email;
+        const urlEl = document.createElement("code");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "secondary";
+
+        const updateRow = () => {
+          const normalizedEmail = emailEl.value.trim().toLowerCase();
+          authEmailDrafts[index] = normalizedEmail;
+          syncAuthenticatedCalendarField();
+          const valid = isValidEmail(normalizedEmail);
+          const authUrl = valid && slug ? authUrlFor(slug, normalizedEmail) : "";
+          urlEl.textContent = authUrl || "Enter an email to generate the authentication URL.";
+          button.textContent = connections.has(normalizedEmail) ? "Reconnect" : "Connect";
+          button.disabled = !slug || !valid;
+        };
+
+        emailEl.addEventListener("input", updateRow);
+        button.addEventListener("click", () => {
+          const normalizedEmail = emailEl.value.trim().toLowerCase();
+          if (!slug) {
+            setStatus("Save or select a profile before connecting a calendar.", "error");
+            return;
+          }
+          if (!isValidEmail(normalizedEmail)) {
+            setStatus("Enter a valid calendar email before connecting.", "error");
+            return;
+          }
+          window.location.href = authUrlFor(slug, normalizedEmail);
+        });
+        updateRow();
+        item.append(emailEl, urlEl, button);
+        connectedCalendarsEl.append(item);
+      });
+    }
+
     function resetForm() {
       selectedSlug = "";
       form.reset();
@@ -347,9 +534,15 @@
       field("bufferAfterMinutes").value = "15";
       field("minNoticeHours").value = "4";
       field("maxDaysAhead").value = "45";
+      field("photoUrl").value = "";
+      field("busyCalendarEmails").value = "";
+      authEmailDrafts = [""];
+      syncAuthenticatedCalendarField();
+      field("busyCalendarUrls").value = "";
       field("meetingLabel").value = "Intro call";
       field("durationMinutes").value = "30";
       field("meetingDescription").value = "A focused conversation with the Mojo team.";
+      renderConnections(null);
       renderEmployees();
       setStatus("");
     }
@@ -362,6 +555,15 @@
       field("active").value = employee.active === false ? "false" : "true";
       field("name").value = employee.name || "";
       field("email").value = employee.email || "";
+      field("photoUrl").value = employee.photoUrl || "";
+      field("busyCalendarEmails").value = (employee.busyCalendarEmails || []).join(", ");
+      authEmailDrafts = [...new Set([
+        ...(employee.authenticatedCalendarEmails || []),
+        ...(employee.connectedCalendars || []).map((connection) => connection.expectedEmail || connection.email).filter(Boolean)
+      ].map((email) => String(email).toLowerCase()))];
+      if (!authEmailDrafts.length) authEmailDrafts = [""];
+      syncAuthenticatedCalendarField();
+      field("busyCalendarUrls").value = (employee.busyCalendarUrls || []).join("\n");
       field("title").value = employee.title || "";
       field("timezone").value = employee.timezone || "America/Denver";
       field("dayStart").value = employee.dayStart || "09:00";
@@ -375,6 +577,7 @@
       field("meetingLabel").value = type.label || "Intro call";
       field("durationMinutes").value = type.durationMinutes || 30;
       field("meetingDescription").value = type.description || "A focused conversation with the Mojo team.";
+      renderConnections(employee);
       renderEmployees();
       setStatus("");
     }
@@ -394,12 +597,17 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       setStatus("Saving...");
+      syncAuthenticatedCalendarField();
 
       const body = {
         slug: field("slug").value,
         active: field("active").value === "true",
         name: field("name").value,
         email: field("email").value,
+        photoUrl: field("photoUrl").value,
+        busyCalendarEmails: field("busyCalendarEmails").value,
+        authenticatedCalendarEmails: field("authenticatedCalendarEmails").value,
+        busyCalendarUrls: field("busyCalendarUrls").value,
         title: field("title").value,
         timezone: field("timezone").value,
         dayStart: field("dayStart").value,
@@ -435,11 +643,26 @@
     });
 
     newEmployeeButton.addEventListener("click", resetForm);
-
-    loadAdmin().catch((error) => {
-      graphStatusEl.textContent = error.message;
-      setStatus(error.message, "error");
+    addAuthenticatedCalendarEmailButton.addEventListener("click", () => {
+      authEmailDrafts.push("");
+      renderConnections(selectedEmployee());
     });
+
+    const calendarStatus = new URLSearchParams(window.location.search).get("calendar");
+    const expectedCalendar = new URLSearchParams(window.location.search).get("expected");
+    const actualCalendar = new URLSearchParams(window.location.search).get("actual");
+
+    loadAdmin()
+      .then(() => {
+        if (calendarStatus === "connected") setStatus("Authenticated calendar connected.", "ok");
+        if (calendarStatus === "expired") setStatus("Calendar connection expired before Microsoft returned. Try again.", "error");
+        if (calendarStatus === "denied") setStatus("Calendar connection was cancelled.", "error");
+        if (calendarStatus === "mismatch") setStatus(`Microsoft returned ${actualCalendar || "a different account"} instead of ${expectedCalendar || "the requested account"}.`, "error");
+      })
+      .catch((error) => {
+        graphStatusEl.textContent = error.message;
+        setStatus(error.message, "error");
+      });
   </script>
 </body>
 </html>

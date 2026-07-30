@@ -750,10 +750,13 @@
         <div class="item">
           <span class="pill">${escapeHtml(invite.type === "member" ? "Member nomination" : "Guest show invite")}</span>
           <h3>${escapeHtml(invite.eventName || invite.nomineeName || "Generated link")}</h3>
-          <p>${escapeHtml([invite.eventDate, invite.status, invite.usedBy ? `used by ${invite.usedBy}` : ""].filter(Boolean).join(" | "))}</p>
+          <p>${escapeHtml(invite.status === "used" ? "Registered" : invite.status || "active")}</p>
+          <p>Used by: ${escapeHtml(invite.usedByName || invite.usedByEmail || invite.usedBy || "Not registered yet")}</p>
+          <p>Used for: ${escapeHtml([invite.usedFor || invite.eventName || "No event assigned", invite.usedForDate || invite.eventDate].filter(Boolean).join(" | "))}</p>
           <div class="copy-row" style="margin-top:12px;">
             <code>${escapeHtml(invite.url)}</code>
             <button class="secondary" type="button" data-copy-url="${escapeHtml(invite.url)}">Copy</button>
+            <button class="secondary" type="button" data-delete-invite-key="${escapeHtml(invite.key)}" data-delete-invite-type="${escapeHtml(invite.type || "guest")}">Delete</button>
           </div>
         </div>
       `).join("");
@@ -1065,7 +1068,29 @@
     });
 
     document.querySelector("#inviteList").addEventListener("click", async (event) => {
-      const url = event.target.dataset.copyUrl;
+      const button = event.target.closest("button");
+      if (!button) return;
+      const deleteKey = button.dataset.deleteInviteKey;
+      if (deleteKey) {
+        try {
+          const data = await fetch("/api/member-profile", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "delete-invite",
+              key: deleteKey,
+              type: button.dataset.deleteInviteType || "guest"
+            })
+          }).then(readJson);
+          state.invites = data.invites || [];
+          renderInviteList();
+          showNotice("Invite link deleted.", "ok");
+        } catch (error) {
+          showNotice(error.message, "error");
+        }
+        return;
+      }
+      const url = button.dataset.copyUrl;
       if (!url) return;
       await copyText(url);
       showNotice("Invite link copied.", "ok");

@@ -241,7 +241,11 @@ function publicInvite(entry, requestUrl) {
     nomineeEmail: cleanEmail(record.nomineeEmail),
     createdAt: cleanString(record.createdAt),
     usedAt: cleanString(record.usedAt),
-    usedBy: cleanEmail(record.usedBy)
+    usedBy: cleanString(record.usedBy),
+    usedByName: cleanString(record.usedByName),
+    usedByEmail: cleanEmail(record.usedByEmail || record.usedBy),
+    usedFor: cleanString(record.usedFor || record.eventName),
+    usedForDate: cleanString(record.usedForDate || record.eventDate)
   };
 }
 
@@ -292,6 +296,24 @@ async function memberInvites(env, email, requestUrl) {
     .filter((entry) => cleanEmail(entry.record?.createdByMemberEmail) === email)
     .map((entry) => publicInvite(entry, requestUrl))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+async function deleteMemberOwnedInvite(env, email, payload = {}) {
+  const key = cleanString(payload?.key, 300);
+  const code = cleanCode(payload?.code);
+  const type = cleanString(payload?.type) === "member" ? "member" : "guest";
+  const prefix = type === "member" ? MEMBER_INVITE_PREFIX : GUEST_INVITE_PREFIX;
+  const candidate = key || (code ? `${prefix}${code}` : "");
+  if (!candidate || !candidate.startsWith(prefix)) {
+    throw new Error("Invite link was not found.");
+  }
+
+  const record = await env.MOJO_SUMMITS_SETUP_STATE.get(candidate, "json").catch(() => null);
+  if (!record || cleanEmail(record.createdByMemberEmail) !== email) {
+    throw new Error("Invite link was not found.");
+  }
+
+  await env.MOJO_SUMMITS_SETUP_STATE.delete(candidate);
 }
 
 async function fellowshipNominations(env) {
@@ -659,6 +681,18 @@ export async function onRequestPost({ request, env }) {
     const key = `${MEMBER_INVITE_PREFIX}${code}`;
     await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
     return json({ ok: true, invite: publicInvite({ key, record }, request.url) }, { status: 201 });
+  }
+
+  if (action === "delete-invite") {
+    try {
+      await deleteMemberOwnedInvite(env, access.profile.email, payload);
+      return json({
+        ok: true,
+        invites: await memberInvites(env, access.profile.email, request.url)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Invite link could not be deleted." }, { status: 404 });
+    }
   }
 
   return json({ error: "Unknown member profile action." }, { status: 400 });

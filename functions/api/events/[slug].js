@@ -78,6 +78,23 @@ function summaryFor(event) {
   };
 }
 
+async function listKeys(env, prefix) {
+  const keys = [];
+  let cursor;
+
+  do {
+    const result = await env.MOJO_SUMMITS_SETUP_STATE.list({
+      prefix,
+      cursor,
+      limit: 1000
+    });
+    keys.push(...result.keys.map((entry) => entry.name));
+    cursor = result.list_complete ? undefined : result.cursor;
+  } while (cursor);
+
+  return keys;
+}
+
 async function readIndex(env) {
   const stored = await env.MOJO_SUMMITS_SETUP_STATE.get(INDEX_KEY, "json");
   return Array.isArray(stored) ? stored : [];
@@ -91,10 +108,69 @@ async function writeIndex(env, event) {
   return index;
 }
 
+function registrantMatchesEvent(registrant, event) {
+  const eventKeys = [event.slug, event.title, event.date]
+    .map((value) => cleanString(value, 240).toLowerCase())
+    .filter(Boolean);
+  const registrantKeys = [
+    registrant?.eventSlug,
+    registrant?.eventId,
+    registrant?.eventName,
+    registrant?.eventDate
+  ]
+    .map((value) => cleanString(value, 240).toLowerCase())
+    .filter(Boolean);
+
+  return eventKeys.some((eventKey) => registrantKeys.includes(eventKey));
+}
+
+function publicRegistrant(record, type) {
+  return {
+    type,
+    name: cleanString(record?.name, 240),
+    company: cleanString(record?.company, 240),
+    title: cleanString(record?.title, 240),
+    industry: cleanString(record?.industry, 240),
+    email: cleanString(record?.email, 240).toLowerCase(),
+    phone: cleanString(record?.phone, 80),
+    inviteCode: cleanString(record?.inviteCode, 40),
+    status: cleanString(record?.crmStatus || "new", 80),
+    phoneVerificationStatus: cleanString(record?.phoneVerificationStatus || "unverified", 80),
+    isPresenter: Boolean(record?.isPresenter),
+    isRoundtableLeader: Boolean(record?.isRoundtableLeader),
+    publicationUseName: Boolean(record?.publicationUseName),
+    publicationUseCompany: Boolean(record?.publicationUseCompany),
+    createdAt: cleanString(record?.createdAt, 80)
+  };
+}
+
+async function registrantsForEvent(env, event) {
+  const prefixes = [
+    ["member", "crm:member-registrant:"],
+    ["guest", "crm:guest-registrant:"],
+    ["partner", "crm:partner-registrant:"]
+  ];
+  const grouped = await Promise.all(
+    prefixes.map(async ([type, prefix]) => {
+      const keys = await listKeys(env, prefix);
+      const rows = await Promise.all(
+        keys.map(async (key) => {
+          const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+          return record && registrantMatchesEvent(record, event) ? publicRegistrant(record, type) : null;
+        })
+      );
+      return rows.filter(Boolean);
+    })
+  );
+
+  return grouped.flat().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
 export async function onRequestGet({ env, params }) {
   const slug = slugify(params.slug);
   const event = await env.MOJO_SUMMITS_SETUP_STATE.get(`${EVENT_PREFIX}${slug}`, "json");
   if (!event) return json({ error: "Event playbook not found." }, { status: 404 });
+  event.registrants = await registrantsForEvent(env, event);
   return json({ event });
 }
 

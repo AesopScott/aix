@@ -4,7 +4,11 @@ const TEAM_INDEX_KEY = "scheduling:employees:index:v1";
 const EMPLOYEE_PREFIX = "scheduling:employee:";
 const BOOKING_PREFIX = "scheduling:booking:";
 const HOLD_PREFIX = "scheduling:hold:";
+const CONNECTION_INDEX_PREFIX = "scheduling:calendar-connections:";
+const CONNECTION_PREFIX = "scheduling:calendar-connection:";
+const OAUTH_STATE_PREFIX = "scheduling:oauth-state:";
 const HOLD_TTL_SECONDS = 10 * 60;
+const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 
 const DEFAULT_TIMEZONE = "America/Denver";
 const DEFAULT_WORKING_DAYS = [1, 2, 3, 4, 5];
@@ -14,6 +18,9 @@ const DEFAULT_MEETING_TYPE = {
   durationMinutes: 30,
   description: "A focused conversation with the Mojo team.",
   location: "Microsoft Teams"
+};
+const DEFAULT_PHOTOS = {
+  scott: "/assets/scott-pro3-6.png"
 };
 
 function cleanText(value, max = 240) {
@@ -30,6 +37,47 @@ function cleanEmail(value) {
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail(value));
+}
+
+function emailTokens(value) {
+  const items = Array.isArray(value) ? value : String(value || "").split(/[\s,;]+/);
+  return items.map(cleanEmail).filter(Boolean);
+}
+
+function cleanEmailList(value) {
+  return [...new Set(emailTokens(value).filter(isValidEmail))];
+}
+
+function textTokens(value) {
+  const items = Array.isArray(value) ? value : String(value || "").split(/[\s,]+/);
+  return items.map((item) => String(item || "").trim()).filter(Boolean);
+}
+
+function cleanPhotoUrl(value) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  if (/^\/[a-z0-9/_.,%+-]+\.(png|jpe?g|webp|gif)$/i.test(url)) return url.slice(0, 500);
+  try {
+    const parsed = new URL(url);
+    return ["https:", "http:"].includes(parsed.protocol) ? parsed.toString().slice(0, 500) : "";
+  } catch {
+    return "";
+  }
+}
+
+function cleanCalendarUrl(value) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  try {
+    const parsed = new URL(url.replace(/^webcal:/i, "https:"));
+    return ["https:", "http:"].includes(parsed.protocol) ? parsed.toString().slice(0, 900) : "";
+  } catch {
+    return "";
+  }
+}
+
+function cleanCalendarUrlList(value) {
+  return [...new Set(textTokens(value).map(cleanCalendarUrl).filter(Boolean))].slice(0, 8);
 }
 
 function cleanSlug(value) {
@@ -63,11 +111,61 @@ function cleanPositiveInteger(value, fallback, min, max) {
   return Math.min(Math.max(Math.round(number), min), max);
 }
 
+function bytesToBase64(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
+async function encryptionKey(env) {
+  const secret = tokenEncryptionSecret(env);
+  if (!secret) throw new Error("Calendar token encryption secret is not configured.");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
+  return crypto.subtle.importKey("raw", digest, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+
+async function encryptText(env, value) {
+  const iv = new Uint8Array(12);
+  crypto.getRandomValues(iv);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    await encryptionKey(env),
+    new TextEncoder().encode(String(value || ""))
+  );
+  return `${bytesToBase64(iv)}.${bytesToBase64(new Uint8Array(encrypted))}`;
+}
+
+async function decryptText(env, value) {
+  const [iv, encrypted] = String(value || "").split(".");
+  if (!iv || !encrypted) throw new Error("Stored calendar token is invalid.");
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: base64ToBytes(iv) },
+    await encryptionKey(env),
+    base64ToBytes(encrypted)
+  );
+  return new TextDecoder().decode(decrypted);
+}
+
 function requireStore(env) {
   if (!env.MOJO_SUMMITS_SETUP_STATE) {
     return json({ error: "Scheduling storage is not configured." }, { status: 500 });
   }
   return null;
+}
+
+function requestOrigin(request) {
+  const url = new URL(request.url);
+  return `${url.protocol}//${url.host}`;
+}
+
+function oauthRedirectUri(request) {
+  return `${requestOrigin(request)}/api/scheduling/oauth/callback`;
 }
 
 function graphConfig(env) {
@@ -82,12 +180,27 @@ function graphConfig(env) {
   };
 }
 
+function delegatedGraphConfig(env) {
+  const base = graphConfig(env);
+  return {
+    tenantId: cleanText(env.MOJO_MS_DELEGATED_TENANT_ID || env.MICROSOFT_DELEGATED_TENANT_ID || "organizations", 160),
+    clientId: cleanText(env.MOJO_MS_DELEGATED_CLIENT_ID || env.MICROSOFT_DELEGATED_CLIENT_ID || base.clientId, 160),
+    clientSecret: String(env.MOJO_MS_DELEGATED_CLIENT_SECRET || env.MICROSOFT_DELEGATED_CLIENT_SECRET || base.clientSecret || ""),
+    configured: Boolean((env.MOJO_MS_DELEGATED_CLIENT_ID || base.clientId) && (env.MOJO_MS_DELEGATED_CLIENT_SECRET || base.clientSecret))
+  };
+}
+
+function tokenEncryptionSecret(env) {
+  return String(env.MOJO_CALENDAR_TOKEN_KEY || env.MOJO_AUTH_SECRET || "");
+}
+
 function publicEmployee(employee) {
   return {
     slug: employee.slug,
     name: employee.name,
     title: employee.title,
     bio: employee.bio,
+    photoUrl: employee.photoUrl || DEFAULT_PHOTOS[employee.slug] || "",
     timezone: employee.timezone,
     active: employee.active,
     meetingTypes: employee.meetingTypes
@@ -108,6 +221,9 @@ function sanitizeMeetingType(input = {}) {
 export function sanitizeEmployee(input = {}) {
   const email = cleanEmail(input.email);
   const slug = cleanSlug(input.slug || input.name || email);
+  const busyCalendarEmails = cleanEmailList(input.busyCalendarEmails).filter((address) => address !== email);
+  const authenticatedCalendarEmails = cleanEmailList(input.authenticatedCalendarEmails).filter((address) => address !== email);
+  const busyCalendarUrls = cleanCalendarUrlList(input.busyCalendarUrls);
   const meetingTypes = Array.isArray(input.meetingTypes) && input.meetingTypes.length
     ? input.meetingTypes.map(sanitizeMeetingType)
     : [DEFAULT_MEETING_TYPE];
@@ -115,9 +231,13 @@ export function sanitizeEmployee(input = {}) {
   return {
     slug,
     email,
+    busyCalendarEmails,
+    authenticatedCalendarEmails,
+    busyCalendarUrls,
     name: cleanText(input.name || email, 120),
     title: cleanText(input.title || "Mojo AI Summits", 160),
     bio: cleanText(input.bio || "", 320),
+    photoUrl: cleanPhotoUrl(input.photoUrl) || DEFAULT_PHOTOS[slug] || "",
     timezone: cleanText(input.timezone || DEFAULT_TIMEZONE, 80),
     active: input.active !== false,
     workingDays: Array.isArray(input.workingDays)
@@ -153,10 +273,69 @@ export async function getEmployee(env, slug) {
   return env.MOJO_SUMMITS_SETUP_STATE.get(`${EMPLOYEE_PREFIX}${clean}`, "json").catch(() => null);
 }
 
+async function connectionIds(env, employeeSlug) {
+  const ids = await env.MOJO_SUMMITS_SETUP_STATE
+    .get(`${CONNECTION_INDEX_PREFIX}${cleanSlug(employeeSlug)}`, "json")
+    .catch(() => null);
+  return Array.isArray(ids) ? ids.map(cleanSlug).filter(Boolean) : [];
+}
+
+function publicConnection(connection) {
+  return {
+    id: connection.id,
+    provider: connection.provider,
+    email: connection.email,
+    expectedEmail: connection.expectedEmail || connection.email,
+    displayName: connection.displayName || "",
+    status: connection.status || "connected",
+    connectedAt: connection.connectedAt || "",
+    updatedAt: connection.updatedAt || ""
+  };
+}
+
+export async function listCalendarConnections(env, employeeSlug) {
+  const slug = cleanSlug(employeeSlug);
+  const ids = await connectionIds(env, slug);
+  const records = await Promise.all(ids.map((id) =>
+    env.MOJO_SUMMITS_SETUP_STATE.get(`${CONNECTION_PREFIX}${slug}:${id}`, "json").catch(() => null)
+  ));
+  return records.filter(Boolean);
+}
+
+export async function listPublicCalendarConnections(env, employeeSlug) {
+  const records = await listCalendarConnections(env, employeeSlug);
+  return records.map(publicConnection);
+}
+
+async function saveCalendarConnection(env, employeeSlug, connection) {
+  const slug = cleanSlug(employeeSlug);
+  const id = cleanSlug(connection.id || connection.email || crypto.randomUUID());
+  const ids = [...new Set([...(await connectionIds(env, slug)), id])].sort();
+  const now = new Date().toISOString();
+  await env.MOJO_SUMMITS_SETUP_STATE.put(`${CONNECTION_PREFIX}${slug}:${id}`, JSON.stringify({
+    ...connection,
+    id,
+    employeeSlug: slug,
+    provider: connection.provider || "microsoft",
+    status: "connected",
+    connectedAt: connection.connectedAt || now,
+    updatedAt: now
+  }));
+  await env.MOJO_SUMMITS_SETUP_STATE.put(`${CONNECTION_INDEX_PREFIX}${slug}`, JSON.stringify(ids));
+  return id;
+}
+
 export async function saveEmployee(env, input, actor = "") {
   const employee = sanitizeEmployee(input);
   if (!employee.slug) throw new Error("Enter an employee slug or name.");
   if (!isValidEmail(employee.email)) throw new Error("Enter a valid employee calendar email.");
+  const invalidBusyEmail = emailTokens(input.busyCalendarEmails).find((address) => !isValidEmail(address));
+  if (invalidBusyEmail) throw new Error(`Fix the busy calendar email: ${invalidBusyEmail}`);
+  const invalidAuthenticatedEmail = emailTokens(input.authenticatedCalendarEmails).find((address) => !isValidEmail(address));
+  if (invalidAuthenticatedEmail) throw new Error(`Fix the authenticated calendar email: ${invalidAuthenticatedEmail}`);
+  const invalidBusyUrl = textTokens(input.busyCalendarUrls).find((url) => !cleanCalendarUrl(url));
+  if (invalidBusyUrl) throw new Error(`Fix the busy calendar URL: ${invalidBusyUrl}`);
+  if (input.photoUrl && !cleanPhotoUrl(input.photoUrl)) throw new Error("Enter a valid profile photo URL.");
   if (minutesFromTime(employee.dayEnd) <= minutesFromTime(employee.dayStart)) {
     throw new Error("Working day end time must be later than the start time.");
   }
@@ -267,8 +446,127 @@ async function graphAccessToken(env) {
   return payload.access_token;
 }
 
+async function exchangeDelegatedToken(env, request, params) {
+  const config = delegatedGraphConfig(env);
+  if (!config.configured) throw new Error("Microsoft delegated calendar OAuth is not configured.");
+  const body = new URLSearchParams({
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    grant_type: params.grantType
+  });
+  if (request) body.set("redirect_uri", oauthRedirectUri(request));
+  if (params.code) body.set("code", params.code);
+  if (params.refreshToken) body.set("refresh_token", params.refreshToken);
+  if (params.scope) body.set("scope", params.scope);
+
+  const response = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(config.tenantId)}/oauth2/v2.0/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error_description || payload.error || "Microsoft delegated token request failed.");
+  }
+  return payload;
+}
+
+async function delegatedGraphGet(accessToken, path) {
+  const response = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
+    headers: { authorization: `Bearer ${accessToken}` }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error?.message || "Microsoft delegated Graph request failed.");
+  return payload;
+}
+
+async function delegatedAccessToken(env, request, connection) {
+  const refreshToken = await decryptText(env, connection.refreshToken);
+  const payload = await exchangeDelegatedToken(env, request, {
+    grantType: "refresh_token",
+    refreshToken,
+    scope: "offline_access https://graph.microsoft.com/User.Read https://graph.microsoft.com/Calendars.Read"
+  });
+  if (payload.refresh_token && payload.refresh_token !== refreshToken) {
+    await saveCalendarConnection(env, connection.employeeSlug, {
+      ...connection,
+      refreshToken: await encryptText(env, payload.refresh_token)
+    });
+  }
+  return payload.access_token;
+}
+
+export async function beginMicrosoftCalendarOAuth(env, request, { slug, email = "", actor = "" } = {}) {
+  const employee = await getEmployee(env, slug);
+  if (!employee) return { response: json({ error: "Choose a saved employee profile first." }, { status: 404 }) };
+  const expectedEmail = cleanEmail(email);
+  if (expectedEmail && !isValidEmail(expectedEmail)) {
+    return { response: json({ error: "Choose a valid calendar email to connect." }, { status: 400 }) };
+  }
+  const config = delegatedGraphConfig(env);
+  if (!config.configured) {
+    return { response: json({ error: "Microsoft delegated calendar OAuth is not configured." }, { status: 503 }) };
+  }
+
+  const state = crypto.randomUUID();
+  await env.MOJO_SUMMITS_SETUP_STATE.put(`${OAUTH_STATE_PREFIX}${state}`, JSON.stringify({
+    slug: employee.slug,
+    expectedEmail,
+    actor: cleanEmail(actor),
+    createdAt: new Date().toISOString()
+  }), { expirationTtl: OAUTH_STATE_TTL_SECONDS });
+
+  const authorize = new URL(`https://login.microsoftonline.com/${encodeURIComponent(config.tenantId)}/oauth2/v2.0/authorize`);
+  authorize.searchParams.set("client_id", config.clientId);
+  authorize.searchParams.set("response_type", "code");
+  authorize.searchParams.set("redirect_uri", oauthRedirectUri(request));
+  authorize.searchParams.set("response_mode", "query");
+  authorize.searchParams.set("scope", "offline_access https://graph.microsoft.com/User.Read https://graph.microsoft.com/Calendars.Read");
+  authorize.searchParams.set("state", state);
+  if (expectedEmail) authorize.searchParams.set("login_hint", expectedEmail);
+  authorize.searchParams.set("prompt", "select_account");
+  return Response.redirect(authorize.toString(), 302);
+}
+
+export async function finishMicrosoftCalendarOAuth(env, request, query) {
+  const state = cleanText(query.state, 120);
+  const code = String(query.code || "");
+  if (!state || !code) return Response.redirect(`${requestOrigin(request)}/schedule-admin/?calendar=missing-code`, 302);
+
+  const stateKey = `${OAUTH_STATE_PREFIX}${state}`;
+  const stateRecord = await env.MOJO_SUMMITS_SETUP_STATE.get(stateKey, "json").catch(() => null);
+  await env.MOJO_SUMMITS_SETUP_STATE.delete(stateKey).catch(() => null);
+  if (!stateRecord?.slug) return Response.redirect(`${requestOrigin(request)}/schedule-admin/?calendar=expired`, 302);
+
+  const tokenPayload = await exchangeDelegatedToken(env, request, {
+    grantType: "authorization_code",
+    code,
+    scope: "offline_access https://graph.microsoft.com/User.Read https://graph.microsoft.com/Calendars.Read"
+  });
+  if (!tokenPayload.refresh_token) throw new Error("Microsoft did not return an offline calendar token.");
+
+  const me = await delegatedGraphGet(tokenPayload.access_token, "/me?$select=displayName,mail,userPrincipalName");
+  const email = cleanEmail(me.mail || me.userPrincipalName);
+  if (!isValidEmail(email)) throw new Error("Microsoft did not return a usable calendar account email.");
+  if (stateRecord.expectedEmail && email !== stateRecord.expectedEmail) {
+    return Response.redirect(`${requestOrigin(request)}/schedule-admin/?calendar=mismatch&expected=${encodeURIComponent(stateRecord.expectedEmail)}&actual=${encodeURIComponent(email)}`, 302);
+  }
+
+  await saveCalendarConnection(env, stateRecord.slug, {
+    id: stateRecord.expectedEmail || email,
+    provider: "microsoft",
+    email,
+    expectedEmail: stateRecord.expectedEmail || email,
+    displayName: cleanText(me.displayName || email, 160),
+    refreshToken: await encryptText(env, tokenPayload.refresh_token),
+    connectedBy: stateRecord.actor || ""
+  });
+  return Response.redirect(`${requestOrigin(request)}/schedule-admin/?calendar=connected`, 302);
+}
+
 async function graphSchedule(env, employee, start, end, durationMinutes) {
   const token = await graphAccessToken(env);
+  const schedules = [...new Set([employee.email, ...(employee.busyCalendarEmails || [])])];
   const response = await fetch(
     `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(employee.email)}/calendar/getSchedule`,
     {
@@ -278,7 +576,7 @@ async function graphSchedule(env, employee, start, end, durationMinutes) {
         "content-type": "application/json"
       },
       body: JSON.stringify({
-        schedules: [employee.email],
+        schedules,
         startTime: { dateTime: start.toISOString(), timeZone: "UTC" },
         endTime: { dateTime: end.toISOString(), timeZone: "UTC" },
         availabilityViewInterval: durationMinutes
@@ -289,7 +587,178 @@ async function graphSchedule(env, employee, start, end, durationMinutes) {
   if (!response.ok) {
     throw new Error(payload.error?.message || "Microsoft Graph availability lookup failed.");
   }
-  return payload.value?.[0]?.scheduleItems || [];
+  const scheduleError = (payload.value || []).find((schedule) => schedule.error);
+  if (scheduleError) {
+    throw new Error(`Microsoft Graph could not read availability for ${scheduleError.scheduleId || "one calendar"}.`);
+  }
+  return (payload.value || []).flatMap((schedule) => schedule.scheduleItems || []);
+}
+
+function parseIcalProperty(line) {
+  const index = line.indexOf(":");
+  if (index < 0) return null;
+  const keyPart = line.slice(0, index);
+  const value = line.slice(index + 1);
+  const [name, ...paramParts] = keyPart.split(";");
+  const params = {};
+  paramParts.forEach((part) => {
+    const [key, ...rest] = part.split("=");
+    if (!key || !rest.length) return;
+    params[key.toUpperCase()] = rest.join("=").replace(/^"|"$/g, "");
+  });
+  return { name: name.toUpperCase(), params, value };
+}
+
+function parseIcalDate(value, params = {}, fallbackTimeZone = DEFAULT_TIMEZONE) {
+  const raw = String(value || "").trim();
+  if (/^\d{8}$/.test(raw)) {
+    return zonedTimeToUtc(`${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`, "00:00", params.TZID || fallbackTimeZone);
+  }
+  const match = raw.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?(Z)?$/);
+  if (!match) return null;
+  const [, year, month, day, hour, minute, second = "00", utc] = match;
+  if (utc) return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)));
+  return zonedTimeToUtc(`${year}-${month}-${day}`, `${hour}:${minute}`, params.TZID || fallbackTimeZone);
+}
+
+function parseRrule(value) {
+  return Object.fromEntries(String(value || "").split(";").map((part) => {
+    const [key, ...rest] = part.split("=");
+    return [key?.toUpperCase(), rest.join("=")];
+  }).filter(([key, valuePart]) => key && valuePart));
+}
+
+function expandIcalEvent(event, rangeStart, rangeEnd) {
+  const duration = event.end.getTime() - event.start.getTime();
+  if (duration <= 0) return [];
+  const blocked = [];
+  const addOccurrence = (occurrenceStart) => {
+    const occurrenceEnd = new Date(occurrenceStart.getTime() + duration);
+    if (event.exdates.has(occurrenceStart.toISOString())) return;
+    if (overlaps(occurrenceStart, occurrenceEnd, rangeStart, rangeEnd)) {
+      blocked.push({ start: occurrenceStart, end: occurrenceEnd });
+    }
+  };
+
+  if (!event.rrule) {
+    addOccurrence(event.start);
+    return blocked;
+  }
+
+  const rule = parseRrule(event.rrule);
+  const freq = rule.FREQ;
+  const interval = cleanPositiveInteger(rule.INTERVAL, 1, 1, 365);
+  const count = rule.COUNT ? cleanPositiveInteger(rule.COUNT, 1, 1, 2000) : 2000;
+  const until = rule.UNTIL ? parseIcalDate(rule.UNTIL, {}, event.timezone) : null;
+  const byDayMap = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+  const byDays = rule.BYDAY
+    ? rule.BYDAY.split(",").map((day) => byDayMap[day.slice(-2)]).filter((day) => Number.isInteger(day))
+    : [event.start.getUTCDay()];
+
+  let emitted = 0;
+  for (let dayOffset = 0; emitted < count && dayOffset < 1460; dayOffset += 1) {
+    const occurrenceStart = new Date(event.start.getTime() + dayOffset * 86400000);
+    if (occurrenceStart > rangeEnd) break;
+    if (until && occurrenceStart > until) break;
+
+    let matches = false;
+    if (freq === "DAILY") {
+      matches = dayOffset % interval === 0;
+    } else if (freq === "WEEKLY") {
+      matches = Math.floor(dayOffset / 7) % interval === 0 && byDays.includes(occurrenceStart.getUTCDay());
+    } else {
+      matches = dayOffset === 0;
+    }
+
+    if (!matches) continue;
+    emitted += 1;
+    addOccurrence(occurrenceStart);
+  }
+
+  return blocked;
+}
+
+function busyIntervalsFromIcal(text, employee, rangeStart, rangeEnd) {
+  const lines = String(text || "").replace(/\r?\n[ \t]/g, "").split(/\r?\n/);
+  const intervals = [];
+  let current = null;
+
+  lines.forEach((line) => {
+    if (line === "BEGIN:VEVENT") {
+      current = { exdates: new Set(), timezone: employee.timezone };
+      return;
+    }
+    if (line === "END:VEVENT") {
+      if (current?.start && current?.end && current.status !== "CANCELLED" && current.transp !== "TRANSPARENT") {
+        expandIcalEvent(current, rangeStart, rangeEnd).forEach((interval) => {
+          intervals.push({
+            start: new Date(interval.start.getTime() - employee.bufferBeforeMinutes * 60000),
+            end: new Date(interval.end.getTime() + employee.bufferAfterMinutes * 60000)
+          });
+        });
+      }
+      current = null;
+      return;
+    }
+    if (!current) return;
+
+    const property = parseIcalProperty(line);
+    if (!property) return;
+    if (property.name === "DTSTART") current.start = parseIcalDate(property.value, property.params, employee.timezone);
+    if (property.name === "DTEND") current.end = parseIcalDate(property.value, property.params, employee.timezone);
+    if (property.name === "STATUS") current.status = property.value.toUpperCase();
+    if (property.name === "TRANSP") current.transp = property.value.toUpperCase();
+    if (property.name === "RRULE") current.rrule = property.value;
+    if (property.name === "EXDATE") {
+      property.value.split(",").forEach((value) => {
+        const exdate = parseIcalDate(value, property.params, employee.timezone);
+        if (exdate) current.exdates.add(exdate.toISOString());
+      });
+    }
+  });
+
+  return intervals;
+}
+
+async function calendarFeedBusyIntervals(employee, start, end) {
+  const urls = employee.busyCalendarUrls || [];
+  if (!urls.length) return [];
+
+  const calendars = await Promise.all(urls.map(async (url) => {
+    const response = await fetch(url, {
+      headers: { accept: "text/calendar,text/plain,*/*" }
+    });
+    if (!response.ok) throw new Error(`Calendar feed could not be read: ${url}`);
+    const text = await response.text();
+    if (text.length > 2000000) throw new Error(`Calendar feed is too large: ${url}`);
+    return busyIntervalsFromIcal(text, employee, start, end);
+  }));
+
+  return calendars.flat();
+}
+
+async function connectedCalendarBusyIntervals(env, employee, start, end) {
+  const connections = await listCalendarConnections(env, employee.slug);
+  if (!connections.length) return [];
+
+  const calendars = await Promise.all(connections.map(async (connection) => {
+    if (connection.provider !== "microsoft" || connection.status === "disabled") return [];
+    const accessToken = await delegatedAccessToken(env, null, connection);
+    const params = new URLSearchParams({
+      startDateTime: start.toISOString(),
+      endDateTime: end.toISOString(),
+      "$select": "start,end,showAs,isCancelled"
+    });
+    const payload = await delegatedGraphGet(accessToken, `/me/calendarView?${params.toString()}`);
+    return (payload.value || [])
+      .filter((event) => event && event.isCancelled !== true && event.showAs !== "free")
+      .map((event) => ({
+        start: event.start,
+        end: event.end
+      }));
+  }));
+
+  return busyIntervalsFromSchedule(calendars.flat(), employee);
 }
 
 function buildCandidateSlots(employee, dateValue, meetingType, busyIntervals = []) {
@@ -346,6 +815,19 @@ export async function availability(env, query) {
     busyIntervals = busyIntervalsFromSchedule(scheduleItems, employee);
     source = "microsoft-graph";
     warning = "";
+  }
+
+  if ((employee.busyCalendarUrls || []).length) {
+    const feedIntervals = await calendarFeedBusyIntervals(employee, dayStart, dayEnd);
+    busyIntervals = [...busyIntervals, ...feedIntervals];
+    source = graph.configured ? "microsoft-graph+calendar-feeds" : "calendar-feeds";
+    warning = graph.configured ? "" : "Microsoft Graph is not configured, so slots only reflect saved working hours and calendar feeds.";
+  }
+
+  const connectionIntervals = await connectedCalendarBusyIntervals(env, employee, dayStart, dayEnd);
+  if (connectionIntervals.length) {
+    busyIntervals = [...busyIntervals, ...connectionIntervals];
+    source = `${source}+connected-calendars`;
   }
 
   return {

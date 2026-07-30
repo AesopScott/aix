@@ -312,6 +312,12 @@
       font-weight: 800;
     }
 
+    .invite-actions {
+      display: grid;
+      gap: 0.45rem;
+      min-width: 8.5rem;
+    }
+
     @media (max-width: 980px) {
       header, .hero, .toolbar, .invite-grid, .invite-row { grid-template-columns: 1fr; }
     }
@@ -337,7 +343,7 @@
       <div class="hero-copy">
         <p class="eyebrow">Registrant CRM</p>
         <h1>Registration data, ready for follow-up.</h1>
-        <p>Member and partner registrations are added here with contact details, event roles, phone verification status, and food preferences.</p>
+        <p>Member, guest, and partner registrations are added here with contact details, event roles, phone verification status, and food preferences.</p>
       </div>
       <div class="metrics" id="metrics"></div>
     </section>
@@ -347,6 +353,7 @@
         Registration
         <select id="typeFilter">
           <option value="member">Members</option>
+          <option value="guest">Guests</option>
           <option value="partner">Partners</option>
         </select>
       </label>
@@ -387,6 +394,31 @@
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
     </section>
 
+    <section class="invite-panel" id="registrationInvitePanel">
+      <div>
+        <p class="eyebrow">Event registration links</p>
+        <h2>Create event-tied registration codes</h2>
+        <p>Select one of the upcoming event pages, choose guest or member registration, and generate the link to send.</p>
+      </div>
+      <form class="invite-grid" id="registrationInviteForm">
+        <label>
+          Registration type
+          <select id="registrationInviteType" name="type">
+            <option value="guest">Guest</option>
+            <option value="member">Member</option>
+          </select>
+        </label>
+        <label>
+          Event
+          <select id="registrationInviteEvent" name="eventSlug" required>
+            <option value="">Loading events...</option>
+          </select>
+        </label>
+        <button type="submit">Generate Code</button>
+      </form>
+      <div class="invite-list" id="registrationInviteList"></div>
+    </section>
+
     <section class="invite-panel" id="partnerInvitePanel">
       <div>
         <p class="eyebrow">Partner event invites</p>
@@ -395,12 +427,10 @@
       </div>
       <form class="invite-grid" id="partnerInviteForm">
         <label>
-          Event name
-          <input id="partnerInviteEventName" name="eventName" placeholder="Dallas Executive AI Summit" required>
-        </label>
-        <label>
-          Event date
-          <input id="partnerInviteEventDate" name="eventDate" placeholder="January 2027">
+          Event
+          <select id="partnerInviteEvent" name="eventSlug" required>
+            <option value="">Loading events...</option>
+          </select>
         </label>
         <label>
           Partner company
@@ -464,9 +494,21 @@
     const refreshButton = document.querySelector("#refreshButton");
     const downloadButton = document.querySelector("#downloadButton");
     const registrantsTitle = document.querySelector("#registrantsTitle");
+    const registrationInviteForm = document.querySelector("#registrationInviteForm");
+    const registrationInviteEvent = document.querySelector("#registrationInviteEvent");
+    const registrationInviteList = document.querySelector("#registrationInviteList");
     const partnerInviteForm = document.querySelector("#partnerInviteForm");
+    const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
     const partnerInviteList = document.querySelector("#partnerInviteList");
-    let state = { type: "member", label: "Member", rows: [], summary: {}, partnerInviteCodes: [] };
+    let state = {
+      type: "member",
+      label: "Member",
+      rows: [],
+      summary: {},
+      partnerInviteCodes: [],
+      registrationInviteCodes: [],
+      upcomingEvents: []
+    };
 
     function escapeHtml(value) {
       return String(value || "")
@@ -543,6 +585,9 @@
     }
 
     function memberAccessCell(row) {
+      if (state.type === "guest") {
+        return '<span class="pill">Guest registration</span>';
+      }
       const isPartner = state.type === "partner";
       const password = isPartner ? row.partnerPassword : row.memberPassword;
       const hasPassword = Boolean(password);
@@ -568,6 +613,46 @@
       return `${window.location.origin}/partner-registration/?invite=${encodeURIComponent(invite.code || "")}`;
     }
 
+    function registrationInviteUrl(invite) {
+      const path = invite.type === "member" ? "/member-registration/" : "/guest/";
+      return `${window.location.origin}${path}?invite=${encodeURIComponent(invite.code || "")}`;
+    }
+
+    function inviteStatusText(invite) {
+      return invite.status === "used" ? "Registered" : statusLabel(invite.status);
+    }
+
+    function inviteUsedByText(invite) {
+      return invite.usedByName || invite.usedByEmail || invite.usedBy || "Not registered yet";
+    }
+
+    function inviteUsedForText(invite) {
+      const event = invite.usedFor || invite.eventName || "No event assigned";
+      const date = invite.usedForDate || invite.eventDate || "";
+      return date ? `${event} | ${date}` : event;
+    }
+
+    function eventOptionMarkup() {
+      const events = state.upcomingEvents || [];
+      if (!events.length) {
+        return '<option value="">No upcoming event pages found</option>';
+      }
+      return [
+        '<option value="">Select an event</option>',
+        ...events.map((event) => `
+          <option value="${escapeHtml(event.slug)}" data-event-name="${escapeHtml(event.title)}" data-event-date="${escapeHtml(event.date || "")}">
+            ${escapeHtml(event.title)}${event.date ? ` | ${escapeHtml(event.date)}` : ""}
+          </option>
+        `)
+      ].join("");
+    }
+
+    function renderEventOptions() {
+      const markup = eventOptionMarkup();
+      registrationInviteEvent.innerHTML = markup;
+      partnerInviteEvent.innerHTML = markup;
+    }
+
     async function copyText(value) {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(value);
@@ -588,10 +673,41 @@
           <div class="invite-row">
             <div>
               <strong>${escapeHtml(invite.eventName || "Partner event invite")}</strong>
-              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(statusLabel(invite.status))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}${invite.eventDate ? ` | ${escapeHtml(invite.eventDate)}` : ""}</p>
+              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(inviteStatusText(invite))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}</p>
+              <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
+              <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
               <p>${escapeHtml(url)}</p>
             </div>
-            <button class="compact secondary" type="button" data-copy-url="${escapeHtml(url)}">Copy Link</button>
+            <div class="invite-actions">
+              <button class="compact secondary" type="button" data-copy-url="${escapeHtml(url)}">Copy Link</button>
+              <button class="compact secondary" type="button" data-delete-invite-key="${escapeHtml(invite.key)}" data-delete-invite-type="partner">Delete Link</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderRegistrationInvites() {
+      const invites = state.registrationInviteCodes || [];
+      if (!invites.length) {
+        registrationInviteList.innerHTML = '<p>No guest or member invite codes created yet.</p>';
+        return;
+      }
+      registrationInviteList.innerHTML = invites.slice(0, 16).map((invite) => {
+        const url = registrationInviteUrl(invite);
+        return `
+          <div class="invite-row">
+            <div>
+              <strong>${escapeHtml(invite.eventName || "Event registration invite")}</strong>
+              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(invite.type || "guest")} | ${escapeHtml(inviteStatusText(invite))}</p>
+              <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
+              <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
+              <p>${escapeHtml(url)}</p>
+            </div>
+            <div class="invite-actions">
+              <button class="compact secondary" type="button" data-copy-url="${escapeHtml(url)}">Copy Link</button>
+              <button class="compact secondary" type="button" data-delete-invite-key="${escapeHtml(invite.key)}" data-delete-invite-type="${escapeHtml(invite.type || "guest")}">Delete Link</button>
+            </div>
           </div>
         `;
       }).join("");
@@ -695,6 +811,8 @@
 
     function render() {
       renderMetrics();
+      renderEventOptions();
+      renderRegistrationInvites();
       renderPartnerInvites();
       renderRows();
     }
@@ -730,6 +848,30 @@
         }).then(readJson);
         setNotice("CRM update saved.", "ok");
         render();
+      } catch (error) {
+        setNotice(error.message, "error");
+      }
+    }
+
+    async function deleteInviteLink(key, type) {
+      if (!key) return;
+      setNotice("Deleting registration link...");
+      try {
+        const isPartner = type === "partner";
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: isPartner ? "delete-partner-invite" : "delete-registration-invite",
+            key,
+            type
+          })
+        }).then(readJson);
+        state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
+        state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        renderRegistrationInvites();
+        renderPartnerInvites();
+        setNotice("Registration link deleted.", "ok");
       } catch (error) {
         setNotice(error.message, "error");
       }
@@ -840,9 +982,14 @@
     partnerInviteForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(partnerInviteForm);
-      const payload = Object.fromEntries(formData.entries());
-      if (!String(payload.eventName || "").trim()) {
-        setNotice("Enter an event name before generating a partner invite.", "error");
+      const selected = partnerInviteEvent.selectedOptions[0];
+      const payload = {
+        ...Object.fromEntries(formData.entries()),
+        eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
+        eventDate: selected?.dataset.eventDate || ""
+      };
+      if (!String(payload.eventSlug || "").trim()) {
+        setNotice("Select an event before generating a partner invite.", "error");
         return;
       }
       setNotice("Generating partner invite...");
@@ -862,8 +1009,63 @@
       }
     });
 
+    registrationInviteForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(registrationInviteForm);
+      const selected = registrationInviteEvent.selectedOptions[0];
+      const payload = {
+        action: "create-registration-invite",
+        type: formData.get("type") || "guest",
+        eventSlug: formData.get("eventSlug") || "",
+        eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
+        eventDate: selected?.dataset.eventDate || ""
+      };
+      if (!payload.eventSlug) {
+        setNotice("Select an event before generating a registration code.", "error");
+        return;
+      }
+      setNotice("Generating registration invite...");
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(readJson);
+        state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
+        renderEventOptions();
+        renderRegistrationInvites();
+        const url = registrationInviteUrl(data.invite || {});
+        await copyText(url);
+        setNotice("Registration invite link generated and copied if clipboard access is available.", "ok");
+      } catch (error) {
+        setNotice(error.message, "error");
+      }
+    });
+
+    registrationInviteList.addEventListener("click", async (event) => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      const url = button.dataset.copyUrl;
+      const deleteKey = button.dataset.deleteInviteKey;
+      if (deleteKey) {
+        await deleteInviteLink(deleteKey, button.dataset.deleteInviteType || "guest");
+        return;
+      }
+      if (!url) return;
+      await copyText(url);
+      setNotice("Registration invite link copied.", "ok");
+    });
+
     partnerInviteList.addEventListener("click", async (event) => {
-      const url = event.target.dataset.copyUrl;
+      const button = event.target.closest("button");
+      if (!button) return;
+      const url = button.dataset.copyUrl;
+      const deleteKey = button.dataset.deleteInviteKey;
+      if (deleteKey) {
+        await deleteInviteLink(deleteKey, "partner");
+        return;
+      }
       if (!url) return;
       await copyText(url);
       setNotice("Partner invite link copied.", "ok");

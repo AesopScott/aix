@@ -108,7 +108,7 @@ export const DEFAULT_ACCESS_RULES = [
     kind: "page",
     group: "Data",
     label: "CRM",
-    summary: "Member registrants, notes, statuses, and exports.",
+    summary: "Member, guest, and partner registrants, invite codes, notes, statuses, and exports.",
     mode: "allowlist",
     matches: [{ exact: "/crm" }, { prefix: "/crm/" }],
     domains: ["mojoaisummits.com/crm", "mojoaisummits.com/crm/*"]
@@ -367,6 +367,17 @@ export const DEFAULT_ACCESS_RULES = [
     defaultGroupIds: ["admin"],
     matches: [{ exact: "/api/scheduling/admin" }, { prefix: "/api/scheduling/admin/" }],
     domains: ["mojoaisummits.com/api/scheduling/admin", "mojoaisummits.com/api/scheduling/admin/*"]
+  },
+  {
+    id: "api-scheduling-oauth",
+    kind: "api",
+    group: "APIs",
+    label: "Scheduling Calendar OAuth API",
+    summary: "Protected authenticated calendar connection endpoints.",
+    mode: "allowlist",
+    defaultGroupIds: ["admin"],
+    matches: [{ exact: "/api/scheduling/oauth" }, { prefix: "/api/scheduling/oauth/" }],
+    domains: ["mojoaisummits.com/api/scheduling/oauth", "mojoaisummits.com/api/scheduling/oauth/*"]
   },
   {
     id: "api-scheduling-public",

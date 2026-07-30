@@ -2,6 +2,7 @@ import { json } from "../../_access-control.js";
 import { canManageAccess, getSessionUser } from "../../_auth.js";
 import {
   graphConfig,
+  listPublicCalendarConnections,
   listEmployees,
   publicEmployee,
   requireStore,
@@ -24,21 +25,27 @@ export async function onRequestGet({ request, env, data }) {
 
   const employees = await listEmployees(env, { includeInactive: true });
   const graph = graphConfig(env);
+  const employeePayloads = await Promise.all(employees.map(async (employee) => ({
+      ...publicEmployee(employee),
+      email: employee.email,
+      busyCalendarEmails: employee.busyCalendarEmails || [],
+      authenticatedCalendarEmails: employee.authenticatedCalendarEmails || [],
+      busyCalendarUrls: employee.busyCalendarUrls || [],
+    connectedCalendars: await listPublicCalendarConnections(env, employee.slug),
+    workingDays: employee.workingDays,
+    dayStart: employee.dayStart,
+    dayEnd: employee.dayEnd,
+    slotStepMinutes: employee.slotStepMinutes,
+    bufferBeforeMinutes: employee.bufferBeforeMinutes,
+    bufferAfterMinutes: employee.bufferAfterMinutes,
+    minNoticeHours: employee.minNoticeHours,
+    maxDaysAhead: employee.maxDaysAhead
+  })));
+
   return json({
     ok: true,
     graphConfigured: graph.configured,
-    employees: employees.map((employee) => ({
-      ...publicEmployee(employee),
-      email: employee.email,
-      workingDays: employee.workingDays,
-      dayStart: employee.dayStart,
-      dayEnd: employee.dayEnd,
-      slotStepMinutes: employee.slotStepMinutes,
-      bufferBeforeMinutes: employee.bufferBeforeMinutes,
-      bufferAfterMinutes: employee.bufferAfterMinutes,
-      minNoticeHours: employee.minNoticeHours,
-      maxDaysAhead: employee.maxDaysAhead
-    }))
+    employees: employeePayloads
   });
 }
 

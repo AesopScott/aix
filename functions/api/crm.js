@@ -22,6 +22,14 @@ const registrantTypes = {
     legacyPrefix: "member-registration:",
     csvFilename: "mojo-ai-summits-member-registrants.csv"
   },
+  guest: {
+    label: "Guest",
+    section: "guest-registrants",
+    crmType: "guest-registrant",
+    crmPrefix: "crm:guest-registrant:",
+    legacyPrefix: "guest-registration:",
+    csvFilename: "mojo-ai-summits-guest-registrants.csv"
+  },
   partner: {
     label: "Partner",
     section: "partner-registrants",
@@ -32,6 +40,11 @@ const registrantTypes = {
   }
 };
 
+const EVENT_INDEX_KEY = "event-playbooks:index";
+const REGISTRATION_INVITE_PREFIXES = {
+  member: "crm:member-invite-code:",
+  guest: "crm:guest-invite-code:"
+};
 const PARTNER_INVITE_PREFIX = "crm:partner-invite-code:";
 const allowedStatuses = new Set(["new", "contacted", "confirmed", "accepted", "waitlist", "declined"]);
 const maxFieldLength = 2000;
@@ -67,6 +80,10 @@ function cleanType(value) {
 
 function cleanCode(value) {
   return cleanString(value).replace(/\D/g, "").slice(0, 6);
+}
+
+function cleanInviteType(value) {
+  return value === "member" ? "member" : "guest";
 }
 
 function randomInviteCode() {
@@ -216,8 +233,30 @@ function normalizeInviteCode(key, record) {
     createdBy: cleanString(record?.createdBy),
     usedAt: cleanString(record?.usedAt),
     usedBy: cleanString(record?.usedBy),
+    usedByName: cleanString(record?.usedByName),
+    usedByEmail: cleanString(record?.usedByEmail || record?.usedBy).toLowerCase(),
+    usedFor: cleanString(record?.usedFor || record?.eventName),
+    usedForDate: cleanString(record?.usedForDate || record?.eventDate),
     registrationId: cleanString(record?.registrationId)
   };
+}
+
+async function enrichInviteUsage(env, invites, types = ["member", "guest", "partner"]) {
+  const rows = (await Promise.all(types.map((type) => registrants(env, type)))).flat();
+  return invites.map((invite) => {
+    const usedEmail = cleanString(invite.usedByEmail || invite.usedBy).toLowerCase();
+    const row = rows.find((entry) =>
+      (invite.registrationId && entry.id === invite.registrationId) ||
+      (invite.code && entry.inviteCode === invite.code && (!usedEmail || entry.email === usedEmail))
+    );
+    return {
+      ...invite,
+      usedByName: cleanString(invite.usedByName || row?.name),
+      usedByEmail: cleanString(invite.usedByEmail || row?.email || invite.usedBy).toLowerCase(),
+      usedFor: cleanString(row?.eventName || invite.usedFor || invite.eventName),
+      usedForDate: cleanString(row?.eventDate || invite.usedForDate || invite.eventDate)
+    };
+  });
 }
 
 async function partnerInviteCodes(env) {
@@ -228,20 +267,101 @@ async function partnerInviteCodes(env) {
       return record ? normalizeInviteCode(key, record) : null;
     })
   );
-  return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const invites = rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return enrichInviteUsage(env, invites, ["partner"]);
+}
+
+async function registrationInviteCodes(env) {
+  const entries = await Promise.all(
+    Object.entries(REGISTRATION_INVITE_PREFIXES).map(async ([type, prefix]) => {
+      const keys = await listKeys(env, prefix);
+      return Promise.all(
+        keys.map(async (key) => {
+          const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+          return record ? normalizeInviteCode(key, { ...record, type: record.type || type }) : null;
+        })
+      );
+    })
+  );
+  const invites = entries.flat().filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return enrichInviteUsage(env, invites, ["member", "guest"]);
+}
+
+function eventTime(value) {
+  if (!value) return Number.POSITIVE_INFINITY;
+  const time = new Date(`${value}T12:00:00`).getTime();
+  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+}
+
+async function upcomingEvents(env) {
+  const stored = await env.MOJO_SUMMITS_SETUP_STATE.get(EVENT_INDEX_KEY, "json").catch(() => []);
+  const rows = Array.isArray(stored) ? stored : [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return rows
+    .map((event) => ({
+      slug: cleanString(event?.slug, 200),
+      title: cleanString(event?.title, 240),
+      date: cleanString(event?.date, 80),
+      format: cleanString(event?.format, 80),
+      updatedAt: cleanString(event?.updatedAt, 80)
+    }))
+    .filter((event) => event.slug && event.title)
+    .filter((event) => !event.date || eventTime(event.date) >= today.getTime())
+    .sort((a, b) => eventTime(a.date) - eventTime(b.date) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
 }
 
 async function codeExists(env, code) {
   const keys = [
     `${PARTNER_INVITE_PREFIX}${code}`,
+    `${REGISTRATION_INVITE_PREFIXES.guest}${code}`,
+    `${REGISTRATION_INVITE_PREFIXES.member}${code}`,
     `partner-invite-code:${code}`,
-    `partner-invite:${code}`
+    `guest-invite-code:${code}`,
+    `member-invite-code:${code}`,
+    `partner-invite:${code}`,
+    `guest-invite:${code}`,
+    `member-invite:${code}`
   ];
   for (const key of keys) {
     const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
     if (record) return true;
   }
   return false;
+}
+
+async function createRegistrationInviteCode(env, payload = {}, actor = "") {
+  const type = cleanInviteType(payload.type);
+  let code = "";
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const candidate = randomInviteCode();
+    if (!(await codeExists(env, candidate))) {
+      code = candidate;
+      break;
+    }
+  }
+  if (!code) throw new Error("Could not generate a unique registration invite code.");
+
+  const eventSlug = cleanString(payload.eventSlug, 200);
+  const eventName = cleanString(payload.eventName, 240);
+  if (!eventSlug && !eventName) throw new Error("Select an event before generating an invite code.");
+
+  const createdAt = new Date().toISOString();
+  const record = {
+    type,
+    code,
+    status: "active",
+    eventId: cleanString(payload.eventId || eventSlug || eventName, 200),
+    eventSlug,
+    eventName,
+    eventDate: cleanString(payload.eventDate, 120),
+    createdAt,
+    createdBy: actor
+  };
+
+  const key = `${REGISTRATION_INVITE_PREFIXES[type]}${code}`;
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  return normalizeInviteCode(key, record);
 }
 
 async function createPartnerInviteCode(env, payload = {}, actor = "") {
@@ -273,6 +393,32 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
 
   await env.MOJO_SUMMITS_SETUP_STATE.put(`${PARTNER_INVITE_PREFIX}${code}`, JSON.stringify(record));
   return normalizeInviteCode(`${PARTNER_INVITE_PREFIX}${code}`, record);
+}
+
+async function deleteInviteCode(env, payload = {}) {
+  const type = cleanString(payload.type);
+  const key = cleanString(payload.key, 300);
+  const code = cleanCode(payload.code);
+  const prefixes = type === "partner"
+    ? [PARTNER_INVITE_PREFIX]
+    : type === "member" || type === "guest"
+      ? [REGISTRATION_INVITE_PREFIXES[type]]
+      : [REGISTRATION_INVITE_PREFIXES.guest, REGISTRATION_INVITE_PREFIXES.member, PARTNER_INVITE_PREFIX];
+
+  const candidates = [
+    key,
+    ...prefixes.map((prefix) => code ? `${prefix}${code}` : "")
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(candidate, "json").catch(() => null);
+    if (record) {
+      await env.MOJO_SUMMITS_SETUP_STATE.delete(candidate);
+      return { deleted: candidate };
+    }
+  }
+
+  throw new Error("Invite link was not found.");
 }
 
 function companySlug(value) {
@@ -435,7 +581,9 @@ export async function onRequestGet({ request, env, data }) {
     section: config.section,
     summary: summarize(rows),
     rows,
-    partnerInviteCodes: await partnerInviteCodes(env)
+    partnerInviteCodes: await partnerInviteCodes(env),
+    registrationInviteCodes: await registrationInviteCodes(env),
+    upcomingEvents: await upcomingEvents(env)
   });
 }
 
@@ -559,7 +707,9 @@ export async function onRequestPost({ request, env, data }) {
         rows,
         password: result.password,
         record: result.record,
-        partnerInviteCodes: await partnerInviteCodes(env)
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
       return json({ error: error.message || "Member password could not be generated." }, { status: 500 });
@@ -578,7 +728,9 @@ export async function onRequestPost({ request, env, data }) {
         rows,
         password: result.password,
         record: result.record,
-        partnerInviteCodes: await partnerInviteCodes(env)
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
       return json({ error: error.message || "Partner password could not be generated." }, { status: 500 });
@@ -592,10 +744,41 @@ export async function onRequestPost({ request, env, data }) {
       return json({
         ok: true,
         invite,
-        partnerInviteCodes: invites
+        partnerInviteCodes: invites,
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
       return json({ error: error.message || "Partner invite code could not be created." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "create-registration-invite") {
+    try {
+      const invite = await createRegistrationInviteCode(env, payload, access.email);
+      return json({
+        ok: true,
+        invite,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      }, { status: 201 });
+    } catch (error) {
+      return json({ error: error.message || "Registration invite code could not be created." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "delete-registration-invite" || payload?.action === "delete-partner-invite") {
+    try {
+      await deleteInviteCode(env, payload);
+      return json({
+        ok: true,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Invite link could not be deleted." }, { status: 404 });
     }
   }
 
@@ -627,6 +810,8 @@ export async function onRequestPost({ request, env, data }) {
     label: registrantTypes[type].label,
     summary: summarize(nextRows),
     rows: nextRows,
-    partnerInviteCodes: await partnerInviteCodes(env)
+    partnerInviteCodes: await partnerInviteCodes(env),
+    registrationInviteCodes: await registrationInviteCodes(env),
+    upcomingEvents: await upcomingEvents(env)
   });
 }

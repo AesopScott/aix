@@ -34,21 +34,33 @@ Core routes:
 
 Core records:
 
-- `scheduling:employee:{slug}`: employee profile, email, active status, working hours, buffers, timezone, and meeting types.
+- `scheduling:employee:{slug}`: employee profile, profile photo URL, primary calendar email, private busy-calendar emails, private busy-calendar feed URLs, active status, working hours, buffers, timezone, and meeting types.
 - `scheduling:booking:{date}:{id}`: booking request and confirmed Microsoft event IDs.
 - `scheduling:hold:{slot}:{id}`: short TTL temporary holds to prevent double booking during form submission.
 - `scheduling:audit:{date}:{id}`: admin actions and Graph operation summaries without secrets.
 
 Microsoft Graph integration:
 
-- Use `getSchedule` to read free/busy for a selected employee.
+- Use `getSchedule` to read free/busy for the selected employee's primary calendar plus any additional Microsoft 365 calendars listed as busy calendars on the profile.
+- Use private read-only iCalendar feed URLs to remove additional busy times for alternate calendars that are not directly available through Microsoft Graph.
+- Use the scheduling OAuth connection flow for alternate Microsoft calendars that require sign-in; store refresh tokens encrypted and refresh them server-side.
+- Configure authenticated calendar accounts one email per line. The admin page generates a separate authentication URL for each email so each account can be connected in turn.
 - Use `POST /users/{employeeEmail}/calendar/events` to create the event.
 - Request only the calendar permissions needed for booking.
 - Scope app access to approved Mojo booking mailboxes using Exchange Online RBAC for Applications.
 
+Authenticated external Microsoft calendar requirements:
+
+- The Entra app used for scheduling must allow organizational accounts outside the Mojo tenant if external Microsoft 365 calendars need to connect.
+- Add the web redirect URI `https://mojoaisummits.com/api/scheduling/oauth/callback`.
+- Add Microsoft Graph delegated permissions for `User.Read`, `Calendars.Read`, and `offline_access`.
+- The OAuth start URL includes a target email as `login_hint`; the callback rejects the connection if Microsoft returns a different account.
+- Some external tenants disable user consent; in that case the external tenant admin must approve the app before the calendar owner can connect.
+
 ## Anti-Timeout Rules
 
 - Do not use the Mojo Auth cookie as the calendar credential.
+- Do not use authenticated Outlook web calendar URLs as calendar credentials; connect those accounts through OAuth with offline access.
 - Do not require an employee to be online for a visitor to book them.
 - Do not store raw delegated refresh tokens unless app-only access is unavailable.
 - If delegated OAuth is ever needed, request `offline_access`, store refresh tokens encrypted, rotate refresh tokens when Microsoft returns new ones, and treat token loss as a reconnect state, not a public booking failure.

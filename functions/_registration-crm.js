@@ -201,7 +201,9 @@ async function markInviteCodeUsed(env, type, code, registration) {
       code,
       status: "used",
       usedAt: registration.createdAt,
-      usedBy: registration.email,
+      usedBy: registration.name || registration.email,
+      usedByName: registration.name,
+      usedByEmail: registration.email,
       registrationId: registration.id
     })
   );

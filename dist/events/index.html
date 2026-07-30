@@ -553,6 +553,33 @@
       padding: 14px;
       margin-top: 14px;
     }
+    .roster-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px;
+    }
+    .roster-card {
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--panel-2);
+      padding: 13px 14px;
+    }
+    .roster-card strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    .roster-card p {
+      margin: 4px 0 0;
+      color: var(--dim);
+      font-size: 13px;
+    }
+    .roster-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
     .toast {
       position: fixed;
       right: 18px;
@@ -1130,12 +1157,12 @@
 
     async function loadPlaybook(slug) {
       const local = readLocalPlaybook(slug);
-      if (local) return normalizeRecord(local);
       try {
         const remote = await api(`/api/events/${encodeURIComponent(slug)}`);
-        return normalizeRecord(remote.event);
+        const base = local ? { ...remote.event, ...local } : remote.event;
+        return normalizeRecord({ ...base, registrants: remote.event?.registrants || [] });
       } catch {
-        return null;
+        return local ? normalizeRecord(local) : null;
       }
     }
 
@@ -1303,6 +1330,40 @@
       </section>`;
     }
 
+    function registrantTypeLabel(type) {
+      const value = String(type || "").toLowerCase();
+      if (value === "guest") return "Guest";
+      if (value === "partner") return "Partner";
+      return "Member";
+    }
+
+    function renderRegistrantRoster() {
+      const registrants = Array.isArray(app.current?.registrants) ? app.current.registrants : [];
+      const body = registrants.length
+        ? `<div class="roster-grid">${registrants.map((row) => `
+            <div class="roster-card">
+              <strong>${escapeHtml(row.name || row.email || "Registrant")}</strong>
+              <p>${escapeHtml([row.title, row.company].filter(Boolean).join(", "))}</p>
+              <p>${escapeHtml(row.email || "")}${row.phone ? ` | ${escapeHtml(row.phone)}` : ""}</p>
+              <div class="roster-tags">
+                <span class="tag">${escapeHtml(registrantTypeLabel(row.type))}</span>
+                ${row.isPresenter ? '<span class="tag">Presenter</span>' : ""}
+                ${row.isRoundtableLeader ? '<span class="tag">Round table</span>' : ""}
+                ${row.publicationUseName || row.publicationUseCompany ? '<span class="tag">Publication opt-in</span>' : ""}
+              </div>
+            </div>
+          `).join("")}</div>`
+        : '<div class="empty">No registrations are tied to this event yet.</div>';
+
+      return `<section class="section" id="registrants">
+        <div class="section-head">
+          <div><h2>Event registrants</h2><p>Registrations appear here when invite codes generated for this event are used.</p></div>
+          <span class="tag">${registrants.length} registered</span>
+        </div>
+        ${body}
+      </section>`;
+    }
+
     function renderPlaybook() {
       const profile = app.current?.playbook?.profile || {};
       document.getElementById("appShell").classList.toggle("generator-mode", !app.current);
@@ -1324,7 +1385,7 @@
         return;
       }
 
-      document.getElementById("playbook").innerHTML = sections.map(renderSection).join("");
+      document.getElementById("playbook").innerHTML = sections.map(renderSection).join("") + renderRegistrantRoster();
       renderNav();
     }
 
