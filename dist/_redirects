@@ -26,6 +26,10 @@
 /partner-profile /partner-profile/ 301
 /membership /membership/ 301
 /fellowships /fellowships/ 301
+/briefs /briefs/ 301
+/briefs/ /briefs/index.html 200
+/briefs/ai-innovation-at-operating-scale /briefs/ai-innovation-at-operating-scale/index.html 200
+/briefs/ai-innovation-at-operating-scale/ /briefs/ai-innovation-at-operating-scale/index.html 200
 /virtual-events /virtual/ 301
 /events /events/ 301
 /events/* /events/index.html 200
