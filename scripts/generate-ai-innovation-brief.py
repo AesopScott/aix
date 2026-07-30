@@ -3,7 +3,9 @@ from textwrap import wrap
 from html import escape
 import shutil
 
+from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import letter
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 
@@ -14,6 +16,7 @@ OUT_DIR = ROOT / "output" / "pdf"
 PDF_NAME = "ai-innovation-at-operating-scale.pdf"
 PDF_PATH = PDF_DIR / PDF_NAME
 OUT_PDF_PATH = OUT_DIR / PDF_NAME
+SPONSOR_ASSET_DIR = DIST / "assets" / "sponsors"
 
 NAVY = "#0A0F1E"
 NAVY_2 = "#10192C"
@@ -175,6 +178,64 @@ sections = [
 ]
 
 
+SPONSORS = [
+    {
+        "name": "NexusForge AI",
+        "logo": "nexusforge-ai.png",
+        "tagline": "Enterprise AI workflow orchestration",
+        "description": "NexusForge AI provides orchestration software for AI-enabled workflows across service delivery, finance operations, revenue teams, and shared-services groups. The company was invited because its executive team works with organizations converting scattered AI usage into governed, measurable operating systems.",
+        "invited": "Invited for operating intelligence on moving AI from department-level experiments into owned workflows with adoption metrics, cost visibility, and human approval paths.",
+        "use_cases": [
+            "Claims intake orchestration: reads claim files, checks policy terms, flags missing evidence, and routes work to the right reviewer.",
+            "Finance close support: drafts variance narratives from ledger movement, pipeline changes, headcount plans, and vendor spend.",
+            "Service operations queues: prioritizes requests by SLA risk, customer tier, missing data, and available specialist capacity.",
+            "AI operating dashboard: shows adoption by role, packet cost, escalation rate, reviewer edits, and cycle-time movement.",
+        ],
+    },
+    {
+        "name": "VantageGuard Systems",
+        "logo": "vantageguard-systems.png",
+        "tagline": "AI governance, evaluation, and control monitoring",
+        "description": "VantageGuard Systems provides AI governance, evaluation, policy automation, and control monitoring for regulated organizations. The company was invited because it helps executives put risk controls around live AI workflows without forcing innovation teams into slow manual review.",
+        "invited": "Invited for field intelligence on governing agents like privileged users, including permission boundaries, audit trails, risk tiers, and rollback paths.",
+        "use_cases": [
+            "Agent permission review: maps which systems an agent can read, where it can write, and which actions require human approval.",
+            "Board cyber reporting: tracks shadow AI, prompt-injection tests, vendor retention terms, and agent access exceptions.",
+            "Regulated workflow tiering: separates low-risk drafting from employment, eligibility, claims, and customer-impacting recommendations.",
+            "Evidence logs: captures source links, timestamps, reviewer edits, owner names, and reversal paths for AI-assisted decisions.",
+        ],
+    },
+]
+
+
+def asset_path(path):
+    return "/" + str(path.relative_to(DIST)).replace("\\", "/")
+
+
+def make_sponsor_logos():
+    SPONSOR_ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    font_bold = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 38)
+    font_regular = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 16)
+    for sponsor in SPONSORS:
+        path = SPONSOR_ASSET_DIR / sponsor["logo"]
+        img = Image.new("RGBA", (760, 180), (10, 15, 30, 0))
+        draw = ImageDraw.Draw(img)
+        draw.rounded_rectangle((8, 8, 752, 172), radius=18, fill=(10, 15, 30, 255), outline=(0, 230, 255, 110), width=2)
+        draw.rounded_rectangle((24, 24, 136, 136), radius=18, fill=(22, 102, 255, 50), outline=(0, 230, 255, 150), width=2)
+        if sponsor["name"] == "NexusForge AI":
+            draw.line((52, 96, 78, 56, 104, 96, 78, 120, 52, 96), fill=(0, 230, 255, 255), width=8, joint="curve")
+            draw.ellipse((70, 48, 86, 64), fill=(255, 255, 255, 255))
+            draw.ellipse((96, 88, 112, 104), fill=(255, 255, 255, 255))
+            draw.ellipse((44, 88, 60, 104), fill=(255, 255, 255, 255))
+        else:
+            draw.rounded_rectangle((54, 44, 106, 118), radius=12, outline=(0, 230, 255, 255), width=6)
+            draw.line((66, 84, 80, 100, 100, 66), fill=(255, 255, 255, 255), width=7)
+            draw.arc((45, 34, 115, 130), 205, 335, fill=(22, 102, 255, 255), width=5)
+        draw.text((160, 48), sponsor["name"], font=font_bold, fill=(255, 255, 255, 255))
+        draw.text((162, 106), sponsor["tagline"].upper(), font=font_regular, fill=(0, 230, 255, 220))
+        img.save(path)
+
+
 def hex_to_rgb(color):
     color = color.lstrip("#")
     return tuple(int(color[i : i + 2], 16) / 255 for i in (0, 2, 4))
@@ -287,6 +348,7 @@ class BriefPDF:
 
 
 def create_pdf():
+    make_sponsor_logos()
     PDF_DIR.mkdir(parents=True, exist_ok=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     pdf = BriefPDF(PDF_PATH)
@@ -424,19 +486,39 @@ def create_pdf():
     pdf.new_page("Sponsor Partners")
     y = pdf.heading(54, 704, "Sponsor partners and participation model", 24)
     pdf.para(54, y - 8, "Executive Research Council partners are invited because their executive leaders can contribute useful field intelligence to the conversation. Participation is limited to executive voices with operating knowledge. Sales and marketing teams do not sit in the council session.", 82, 10.5, 15)
-    sponsor_cards = [
-        ("NexusForge AI", "NexusForge AI provides enterprise orchestration software for AI-enabled workflows across revenue operations, service delivery, finance operations, and knowledge work. The company was invited because its executive team works directly with organizations converting scattered AI usage into governed, measurable operating systems."),
-        ("VantageGuard Systems", "VantageGuard Systems provides AI governance, evaluation, policy automation, and control monitoring for regulated organizations. The company was invited because it helps executives operationalize risk controls without forcing innovation teams into a slow, manual review cycle."),
-    ]
     y = 514
-    for name, desc in sponsor_cards:
+    for sponsor in SPONSORS:
+        desc_lines = wrap(sponsor["description"], 78)
+        invited_lines = wrap("Why invited: " + sponsor["invited"], 78)
+        use_case_lines = []
+        for item in sponsor["use_cases"]:
+            use_case_lines.extend(wrap("- " + item, 78))
+            use_case_lines.append("")
+        card_height = 122 + (len(desc_lines) * 12) + (len(invited_lines) * 12) + (len(use_case_lines) * 10)
+        if y - card_height < 104:
+            pdf.new_page("Sponsor Partners Continued")
+            y = 704
         set_fill(pdf.c, SLATE)
-        pdf.c.roundRect(54, y - 132, 504, 118, 5, fill=1, stroke=0)
-        pdf.text(76, y - 44, name, 17, CYAN, "Helvetica-Bold")
-        pdf.para(76, y - 66, desc, 72, 9.4, 13)
-        y -= 154
-    pdf.text(54, 176, "Call to action", 14, WHITE, "Helvetica-Bold")
-    pdf.para(54, 154, "To become part of the Mojo AI Summits Executive AI Intelligence Network, executives must be invited by an existing member or selected for a specific council contribution. Quarterly Mojo AI Summits around the United States bring council intelligence, member discussion, and partner insight into live executive rooms.", 82, 10.5, 15, WHITE)
+        pdf.c.roundRect(54, y - card_height, 504, card_height - 10, 5, fill=1, stroke=0)
+        pdf.c.drawImage(ImageReader(str(SPONSOR_ASSET_DIR / sponsor["logo"])), 72, y - 72, width=210, height=68, mask="auto")
+        y -= 88
+        y, _ = pdf.para(76, y, sponsor["description"], 76, 9.1, 12)
+        y -= 8
+        y, _ = pdf.para(76, y, "Why invited: " + sponsor["invited"], 76, 8.7, 12, CYAN, "Helvetica-Bold")
+        y -= 8
+        pdf.text(76, y, "Example use cases", 8.2, CYAN, "Helvetica-Bold", tracking=0.5)
+        y -= 14
+        for item in sponsor["use_cases"]:
+            for line in wrap("- " + item, 76):
+                pdf.text(88, y, line, 8, MUTED, "Helvetica")
+                y -= 10
+            y -= 3
+        y -= 22
+    if y < 200:
+        pdf.new_page("Sponsor Partners Continued")
+        y = 704
+    pdf.text(54, y, "Call to action", 14, WHITE, "Helvetica-Bold")
+    pdf.para(54, y - 22, "To become part of the Mojo AI Summits Executive AI Intelligence Network, executives must be invited by an existing member or selected for a specific council contribution. Quarterly Mojo AI Summits around the United States bring council intelligence, member discussion, and partner insight into live executive rooms.", 82, 10.5, 15, WHITE)
     pdf.text(54, 82, "Legal, privacy, and redistribution", 10, CYAN, "Helvetica-Bold")
     pdf.para(54, 66, "This sample brief is for informational purposes only and is not legal, financial, technical, security, or investment advice. Do not redistribute without written permission. Copyright 2026 Mojo AI Summits. All rights reserved.", 95, 7.8, 10, DIM)
 
@@ -445,15 +527,11 @@ def create_pdf():
 
 
 def write_html():
+    make_sponsor_logos()
     brief_dir = DIST / "briefs"
     detail_dir = brief_dir / "ai-innovation-at-operating-scale"
     brief_dir.mkdir(parents=True, exist_ok=True)
     detail_dir.mkdir(parents=True, exist_ok=True)
-
-    sponsor_cards = [
-        ("NexusForge AI", "NexusForge AI provides enterprise orchestration software for AI-enabled workflows across revenue operations, service delivery, finance operations, and knowledge work. The company was invited because its executive team works directly with organizations converting scattered AI usage into governed, measurable operating systems."),
-        ("VantageGuard Systems", "VantageGuard Systems provides AI governance, evaluation, policy automation, and control monitoring for regulated organizations. The company was invited because it helps executives operationalize risk controls without forcing innovation teams into a slow, manual review cycle."),
-    ]
 
     def h(text):
         return escape(str(text), quote=True)
@@ -501,8 +579,8 @@ def write_html():
     )
 
     sponsor_html = "\n".join(
-        f"""<article class="sponsor"><h3>{h(name)}</h3><p>{h(desc)}</p></article>"""
-        for name, desc in sponsor_cards
+        f"""<article class="sponsor"><div class="sponsor-head"><img src="{h(asset_path(SPONSOR_ASSET_DIR / sponsor["logo"]))}" alt="{h(sponsor["name"])} logo"><div><h3>{h(sponsor["name"])}</h3><p>{h(sponsor["tagline"])}</p></div></div><p>{h(sponsor["description"])}</p><p class="sponsor-invited"><strong>Why invited:</strong> {h(sponsor["invited"])}</p><div class="sponsor-use-cases"><h3>Example Use Cases For This Topic</h3><ul>{list_items(sponsor["use_cases"])}</ul></div></article>"""
+        for sponsor in SPONSORS
     )
 
     shared_css = """
@@ -514,8 +592,8 @@ def write_html():
     .hero{padding:78px 0 46px}.eyebrow{font:700 10px/1 Space Grotesk;letter-spacing:.34em;text-transform:uppercase;color:var(--cyan)}h1{font-family:Fraunces,serif;font-size:clamp(42px,7vw,86px);line-height:.98;margin:22px 0 20px;max-width:970px}p{color:var(--muted);line-height:1.7}.lead{font-size:19px;max-width:720px}.actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:34px}.btn{border:1px solid var(--cyan);padding:14px 19px;font:700 11px/1 Space Grotesk;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan)}.btn.primary{background:var(--cyan);color:#04101b}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin:54px 0;background:rgba(255,255,255,.09)}.meta div{background:rgba(10,15,30,.76);padding:22px}.meta span{display:block;font:700 10px/1 Space Grotesk;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}.meta strong{font-size:18px}
     .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;padding:24px 0 80px}.panel{border:1px solid var(--border);background:rgba(27,35,51,.58);padding:28px;border-radius:6px}.panel h2,.panel h3{font-family:Fraunces,serif;margin:0 0 16px}.panel li{color:var(--muted);line-height:1.6;margin:10px 0}.brief-card{display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center;border-top:1px solid var(--border);padding:28px 0}.brief-card h2{font-family:Fraunces,serif;margin:0 0 10px}
     .download-dock{position:sticky;top:0;z-index:20;border-block:1px solid rgba(0,230,255,.16);background:rgba(10,15,30,.92);backdrop-filter:blur(14px)}.download-dock .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-block:13px}.download-dock p{font:700 11px/1.3 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}.download-dock .actions{margin:0}
-    .report-pages{width:min(1480px,calc(100% - 32px));padding:14px 0 64px}.report-page{position:relative;min-height:680px;margin:0 auto 22px;padding:40px;border:1px solid rgba(0,230,255,.16);background:linear-gradient(145deg,rgba(10,15,30,.96),rgba(16,25,44,.94));box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}.report-page.question-page{border:1px solid rgba(0,230,255,.34);box-shadow:0 28px 90px rgba(0,0,0,.28),0 0 0 1px rgba(22,102,255,.14) inset,0 0 34px rgba(0,230,255,.08)}.report-page.question-page::before{content:"";position:absolute;inset:12px;border:1px solid rgba(22,102,255,.22);pointer-events:none;z-index:1}.report-page::after{content:"";position:absolute;right:-120px;top:-130px;width:340px;height:340px;border-radius:50%;background:rgba(27,35,51,.72);z-index:0}.report-page>*{position:relative;z-index:2}.report-page.cover{display:flex;flex-direction:column;justify-content:center}.page-kicker{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px solid rgba(0,230,255,.28);font:700 10px/1 Space Grotesk;letter-spacing:.28em;text-transform:uppercase;color:var(--cyan)}.report-page h2{font-family:Fraunces,serif;font-size:clamp(30px,4.2vw,52px);line-height:1.02;margin:0 0 18px}.report-page h3{font:700 12px/1.2 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin:0 0 10px}.summary-band{border-left:2px solid var(--cyan);padding:12px 0 12px 18px;margin:16px 0 20px}.summary-band strong{display:block;margin-bottom:7px;color:var(--white)}.moderator{font-weight:700;color:var(--white)}.quote-stack{display:grid;gap:12px;margin:18px 0}.quote-stack blockquote{margin:0;padding:18px;border:1px solid rgba(255,255,255,.08);background:rgba(27,35,51,.54)}.quote-stack blockquote p{color:var(--white);font-size:16px}.quote-stack cite{display:block;margin-bottom:12px;color:var(--cyan);font:700 13.2px/1.4 Space Grotesk;text-transform:uppercase;letter-spacing:.08em}.use-case-panel{margin:18px 0;padding:18px 20px;border:1px solid rgba(0,230,255,.22);background:rgba(0,230,255,.06)}.use-case-panel h3{margin-bottom:12px}.use-case-panel li{color:rgba(222,235,255,.82)}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.action-strip{margin-top:18px;padding:18px;background:rgba(0,230,255,.07);border:1px solid rgba(0,230,255,.18)}ul{margin:0;padding-left:18px;color:var(--muted)}li{line-height:1.55;margin:6px 0}.contributor-table{width:100%;border-collapse:collapse;margin-top:18px}.contributor-table th,.contributor-table td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;color:var(--muted);font-size:13px;vertical-align:top}.contributor-table th{color:var(--cyan);font:700 10px/1 Space Grotesk;letter-spacing:.16em;text-transform:uppercase}.toc{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:22px}.toc a{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:12px;border:1px solid rgba(255,255,255,.08);color:var(--muted)}.toc span{color:var(--cyan);font-weight:700}.framework{display:grid;gap:10px}.framework div{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:12px;border-bottom:1px solid rgba(255,255,255,.08)}.framework strong{color:var(--cyan)}.visual-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:end;height:220px;margin:24px 0}.visual-bars div{display:flex;align-items:end;justify-content:center;background:linear-gradient(180deg,var(--cyan),var(--blue));color:#06101c;font-weight:800;padding:10px;min-height:70px}.visual-bars div:nth-child(1){height:34%}.visual-bars div:nth-child(2){height:52%}.visual-bars div:nth-child(3){height:68%}.visual-bars div:nth-child(4){height:58%}.visual-bars div:nth-child(5){height:82%}.matrix{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid rgba(255,255,255,.14)}.matrix div{min-height:96px;padding:16px;border:1px solid rgba(255,255,255,.08)}.sources-list{padding:0;list-style:none}.sources-list li{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}.sources-list a{display:block;color:var(--cyan);font-size:12px;word-break:break-word}.sponsor{padding:20px;margin:14px 0;background:rgba(27,35,51,.72);border:1px solid rgba(0,230,255,.16)}.legal{font-size:13px;color:var(--dim)}footer{padding:42px 0;color:var(--dim);text-align:center;border-top:1px solid rgba(255,255,255,.08)}footer a{color:var(--cyan)}
-    @media(max-width:780px){.grid,.meta,.brief-card,.two-col,.toc,.matrix{grid-template-columns:1fr}.top{align-items:flex-start;gap:22px;flex-direction:column}.nav{display:none}.brand-lockup{gap:10px}.brand-mark{height:42px}.brand-divider{height:36px}.brand-primary{font-size:23px;letter-spacing:.05em}.brand-secondary{font-size:10px;letter-spacing:.32em;padding-left:.32em}.download-dock .wrap{align-items:flex-start;flex-direction:column}.report-page{min-height:auto;padding:30px}.contributor-table{display:block;overflow-x:auto}.framework div{grid-template-columns:1fr}.visual-bars{height:190px}}
+    .report-pages{width:min(1480px,calc(100% - 32px));padding:14px 0 64px}.report-page{position:relative;min-height:680px;margin:0 auto 22px;padding:40px;border:1px solid rgba(0,230,255,.16);background:linear-gradient(145deg,rgba(10,15,30,.96),rgba(16,25,44,.94));box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}.report-page.question-page{border:1px solid rgba(0,230,255,.34);box-shadow:0 28px 90px rgba(0,0,0,.28),0 0 0 1px rgba(22,102,255,.14) inset,0 0 34px rgba(0,230,255,.08)}.report-page.question-page::before{content:"";position:absolute;inset:12px;border:1px solid rgba(22,102,255,.22);pointer-events:none;z-index:1}.report-page::after{content:"";position:absolute;right:-120px;top:-130px;width:340px;height:340px;border-radius:50%;background:rgba(27,35,51,.72);z-index:0}.report-page>*{position:relative;z-index:2}.report-page.cover{display:flex;flex-direction:column;justify-content:center}.page-kicker{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px solid rgba(0,230,255,.28);font:700 10px/1 Space Grotesk;letter-spacing:.28em;text-transform:uppercase;color:var(--cyan)}.report-page h2{font-family:Fraunces,serif;font-size:clamp(30px,4.2vw,52px);line-height:1.02;margin:0 0 18px}.report-page h3{font:700 12px/1.2 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin:0 0 10px}.summary-band{border-left:2px solid var(--cyan);padding:12px 0 12px 18px;margin:16px 0 20px}.summary-band strong{display:block;margin-bottom:7px;color:var(--white)}.moderator{font-weight:700;color:var(--white)}.quote-stack{display:grid;gap:12px;margin:18px 0}.quote-stack blockquote{margin:0;padding:18px;border:1px solid rgba(255,255,255,.08);background:rgba(27,35,51,.54)}.quote-stack blockquote p{color:var(--white);font-size:16px}.quote-stack cite{display:block;margin-bottom:12px;color:var(--cyan);font:700 13.2px/1.4 Space Grotesk;text-transform:uppercase;letter-spacing:.08em}.use-case-panel{margin:18px 0;padding:18px 20px;border:1px solid rgba(0,230,255,.22);background:rgba(0,230,255,.06)}.use-case-panel h3{margin-bottom:12px}.use-case-panel li{color:rgba(222,235,255,.82)}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.action-strip{margin-top:18px;padding:18px;background:rgba(0,230,255,.07);border:1px solid rgba(0,230,255,.18)}ul{margin:0;padding-left:18px;color:var(--muted)}li{line-height:1.55;margin:6px 0}.contributor-table{width:100%;border-collapse:collapse;margin-top:18px}.contributor-table th,.contributor-table td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;color:var(--muted);font-size:13px;vertical-align:top}.contributor-table th{color:var(--cyan);font:700 10px/1 Space Grotesk;letter-spacing:.16em;text-transform:uppercase}.toc{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:22px}.toc a{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:12px;border:1px solid rgba(255,255,255,.08);color:var(--muted)}.toc span{color:var(--cyan);font-weight:700}.framework{display:grid;gap:10px}.framework div{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:12px;border-bottom:1px solid rgba(255,255,255,.08)}.framework strong{color:var(--cyan)}.visual-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:end;height:220px;margin:24px 0}.visual-bars div{display:flex;align-items:end;justify-content:center;background:linear-gradient(180deg,var(--cyan),var(--blue));color:#06101c;font-weight:800;padding:10px;min-height:70px}.visual-bars div:nth-child(1){height:34%}.visual-bars div:nth-child(2){height:52%}.visual-bars div:nth-child(3){height:68%}.visual-bars div:nth-child(4){height:58%}.visual-bars div:nth-child(5){height:82%}.matrix{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid rgba(255,255,255,.14)}.matrix div{min-height:96px;padding:16px;border:1px solid rgba(255,255,255,.08)}.sources-list{padding:0;list-style:none}.sources-list li{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}.sources-list a{display:block;color:var(--cyan);font-size:12px;word-break:break-word}.sponsor{padding:20px;margin:14px 0;background:rgba(27,35,51,.72);border:1px solid rgba(0,230,255,.16)}.sponsor-head{display:flex;align-items:center;gap:18px;margin-bottom:16px}.sponsor-head img{width:220px;max-width:42%;height:auto;display:block}.sponsor-head h3{margin:0 0 6px}.sponsor-head p{margin:0;color:var(--cyan);font:700 11px/1.35 Space Grotesk;text-transform:uppercase;letter-spacing:.14em}.sponsor-invited{border-left:2px solid rgba(0,230,255,.45);padding-left:14px}.sponsor-use-cases{margin-top:14px;padding:16px;border:1px solid rgba(255,255,255,.08);background:rgba(10,15,30,.42)}.sponsor-use-cases li{color:rgba(222,235,255,.82)}.legal{font-size:13px;color:var(--dim)}footer{padding:42px 0;color:var(--dim);text-align:center;border-top:1px solid rgba(255,255,255,.08)}footer a{color:var(--cyan)}
+    @media(max-width:780px){.grid,.meta,.brief-card,.two-col,.toc,.matrix{grid-template-columns:1fr}.top{align-items:flex-start;gap:22px;flex-direction:column}.nav{display:none}.brand-lockup{gap:10px}.brand-mark{height:42px}.brand-divider{height:36px}.brand-primary{font-size:23px;letter-spacing:.05em}.brand-secondary{font-size:10px;letter-spacing:.32em;padding-left:.32em}.download-dock .wrap{align-items:flex-start;flex-direction:column}.report-page{min-height:auto;padding:30px}.contributor-table{display:block;overflow-x:auto}.framework div{grid-template-columns:1fr}.visual-bars{height:190px}.sponsor-head{align-items:flex-start;flex-direction:column}.sponsor-head img{max-width:100%;width:240px}}
     """
 
     archive = f"""<!doctype html>
