@@ -77,7 +77,7 @@
 - Local review copy: `output/pdf/ai-innovation-at-operating-scale.pdf`
 - Generator: `scripts/generate-ai-innovation-brief.py`
 - Purpose: public archive doorway for Executive AI Intelligence Briefs and a dedicated sample route for the Mojo AI Summits Executive Research Council on AI Innovation brief titled `AI Innovation at Operating Scale`.
-- Content model: PDF-first premium intelligence product with opening council page, fictional executive contributors, six question-led council sections, citations, visual intelligence, sources reviewed, legal/privacy language, and sponsor back page.
+- Content model: full multipage HTML report with PDF download/open actions, opening council page, fictional executive contributors, six question-led council sections, citations, visual intelligence, sources reviewed, legal/privacy language, and sponsor back page.
 - Footer linking: main public site footers link to `/briefs/`.
 
 ## Executive Fellowship Pathway

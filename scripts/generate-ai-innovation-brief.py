@@ -1,5 +1,6 @@
 from pathlib import Path
 from textwrap import wrap
+from html import escape
 import shutil
 
 from reportlab.lib.pagesizes import letter
@@ -400,6 +401,59 @@ def write_html():
     brief_dir.mkdir(parents=True, exist_ok=True)
     detail_dir.mkdir(parents=True, exist_ok=True)
 
+    sponsor_cards = [
+        ("NexusForge AI", "NexusForge AI provides enterprise orchestration software for AI-enabled workflows across revenue operations, service delivery, finance operations, and knowledge work. The company was invited because its executive team works directly with organizations converting scattered AI usage into governed, measurable operating systems."),
+        ("VantageGuard Systems", "VantageGuard Systems provides AI governance, evaluation, policy automation, and control monitoring for regulated organizations. The company was invited because it helps executives operationalize risk controls without forcing innovation teams into a slow, manual review cycle."),
+    ]
+
+    def h(text):
+        return escape(str(text), quote=True)
+
+    def list_items(items):
+        return "".join(f"<li>{h(item)}</li>" for item in items)
+
+    contributor_rows = "\n".join(
+        f"""<tr><td><strong>{h(name)}</strong></td><td>{h(title)}</td><td>{h(company)}</td><td>{h(sector)}</td><td>{h(geo)}</td></tr>"""
+        for name, title, company, sector, geo in contributors
+    )
+
+    toc_items = "\n".join(
+        f"""<a href="#page-{idx + 4}"><span>{idx + 4:02d}</span>{h(section["title"])}</a>"""
+        for idx, section in enumerate(sections)
+    )
+
+    section_pages = []
+    for idx, section in enumerate(sections, start=4):
+        quotes = "\n".join(
+            f"""<blockquote><p>{h(quote)}</p><cite>{h(name)}</cite></blockquote>"""
+            for name, quote in section["quotes"]
+        )
+        section_pages.append(
+            f"""<section class="report-page" id="page-{idx}">
+  <div class="page-kicker">{h(section["kicker"])} <span>Page {idx:02d}</span></div>
+  <h2>{h(section["title"])}</h2>
+  <div class="summary-band"><strong>Executive summary</strong><p>{h(section["summary"])}</p></div>
+  <p class="moderator">{h(section["prompt"])}</p>
+  <div class="quote-stack">{quotes}</div>
+  <div class="two-col">
+    <div><h3>Strategic Implication</h3><p>{h(section["what_changed"])}</p></div>
+    <div><h3>Signals To Watch</h3><ul>{list_items(section["signals"])}</ul></div>
+  </div>
+  <div class="action-strip"><h3>Recommended 30 / 60 / 90 Day Actions</h3><ul>{list_items(section["actions"])}</ul></div>
+</section>"""
+        )
+    section_pages_html = "\n".join(section_pages)
+
+    source_items = "\n".join(
+        f"""<li><strong>[{idx}] {h(name)}</strong><a href="{h(url)}">{h(url)}</a></li>"""
+        for idx, (name, url) in enumerate(sources, start=1)
+    )
+
+    sponsor_html = "\n".join(
+        f"""<article class="sponsor"><h3>{h(name)}</h3><p>{h(desc)}</p></article>"""
+        for name, desc in sponsor_cards
+    )
+
     shared_css = """
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
     :root{--navy:#0A0F1E;--slate:#1B2333;--blue:#1666FF;--cyan:#00E6FF;--white:#FFFFFF;--muted:#aab6cb;--dim:#6e7890;--border:rgba(0,230,255,.18)}
@@ -407,8 +461,10 @@ def write_html():
     .shell{min-height:100vh;background:radial-gradient(circle at 80% 10%,rgba(22,102,255,.24),transparent 34%),linear-gradient(180deg,#0A0F1E,#10192c 52%,#0A0F1E)}
     .wrap{width:min(1120px,calc(100% - 48px));margin:0 auto}.top{display:flex;align-items:center;justify-content:space-between;padding:26px 0}.brand{display:flex;align-items:center;gap:12px;font:700 12px/1 Space Grotesk;letter-spacing:.28em;text-transform:uppercase;color:var(--cyan)}.brand img{height:42px}.nav{display:flex;gap:20px;flex-wrap:wrap;font:700 11px/1 Space Grotesk;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
     .hero{padding:78px 0 46px}.eyebrow{font:700 10px/1 Space Grotesk;letter-spacing:.34em;text-transform:uppercase;color:var(--cyan)}h1{font-family:Fraunces,serif;font-size:clamp(42px,7vw,86px);line-height:.98;margin:22px 0 20px;max-width:970px}p{color:var(--muted);line-height:1.7}.lead{font-size:19px;max-width:720px}.actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:34px}.btn{border:1px solid var(--cyan);padding:14px 19px;font:700 11px/1 Space Grotesk;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan)}.btn.primary{background:var(--cyan);color:#04101b}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin:54px 0;background:rgba(255,255,255,.09)}.meta div{background:rgba(10,15,30,.76);padding:22px}.meta span{display:block;font:700 10px/1 Space Grotesk;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}.meta strong{font-size:18px}
-    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;padding:24px 0 80px}.panel{border:1px solid var(--border);background:rgba(27,35,51,.58);padding:28px;border-radius:6px}.panel h2,.panel h3{font-family:Fraunces,serif;margin:0 0 16px}.panel li{color:var(--muted);line-height:1.6;margin:10px 0}.brief-card{display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center;border-top:1px solid var(--border);padding:28px 0}.brief-card h2{font-family:Fraunces,serif;margin:0 0 10px}.pdf-frame{width:100%;height:76vh;border:1px solid var(--border);background:#07101f;margin-bottom:60px}footer{padding:42px 0;color:var(--dim);text-align:center;border-top:1px solid rgba(255,255,255,.08)}footer a{color:var(--cyan)}
-    @media(max-width:780px){.grid,.meta,.brief-card{grid-template-columns:1fr}.nav{display:none}.pdf-frame{height:62vh}}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;padding:24px 0 80px}.panel{border:1px solid var(--border);background:rgba(27,35,51,.58);padding:28px;border-radius:6px}.panel h2,.panel h3{font-family:Fraunces,serif;margin:0 0 16px}.panel li{color:var(--muted);line-height:1.6;margin:10px 0}.brief-card{display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center;border-top:1px solid var(--border);padding:28px 0}.brief-card h2{font-family:Fraunces,serif;margin:0 0 10px}
+    .download-dock{position:sticky;top:0;z-index:20;border-block:1px solid rgba(0,230,255,.16);background:rgba(10,15,30,.92);backdrop-filter:blur(14px)}.download-dock .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-block:13px}.download-dock p{font:700 11px/1.3 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}.download-dock .actions{margin:0}
+    .report-pages{padding:20px 0 86px}.report-page{position:relative;min-height:820px;margin:0 auto 28px;padding:54px;border:1px solid rgba(0,230,255,.16);background:linear-gradient(145deg,rgba(10,15,30,.96),rgba(16,25,44,.94));box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}.report-page::after{content:"";position:absolute;right:-120px;top:-130px;width:340px;height:340px;border-radius:50%;background:rgba(27,35,51,.72);z-index:0}.report-page>*{position:relative;z-index:1}.report-page.cover{display:flex;flex-direction:column;justify-content:center}.page-kicker{display:flex;justify-content:space-between;gap:24px;margin-bottom:28px;padding-bottom:12px;border-bottom:1px solid rgba(0,230,255,.28);font:700 10px/1 Space Grotesk;letter-spacing:.28em;text-transform:uppercase;color:var(--cyan)}.report-page h2{font-family:Fraunces,serif;font-size:clamp(30px,4.2vw,52px);line-height:1.02;margin:0 0 24px}.report-page h3{font:700 12px/1.2 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin:0 0 12px}.summary-band{border-left:2px solid var(--cyan);padding:16px 0 16px 20px;margin:20px 0 24px}.summary-band strong{display:block;margin-bottom:9px;color:var(--white)}.moderator{font-weight:700;color:var(--white)}.quote-stack{display:grid;gap:16px;margin:24px 0}.quote-stack blockquote{margin:0;padding:22px;border:1px solid rgba(255,255,255,.08);background:rgba(27,35,51,.54)}.quote-stack blockquote p{color:var(--white);font-size:16px}.quote-stack cite{display:block;margin-top:14px;color:var(--cyan);font:700 11px/1.4 Space Grotesk;text-transform:uppercase;letter-spacing:.08em}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:22px}.action-strip{margin-top:22px;padding:22px;background:rgba(0,230,255,.07);border:1px solid rgba(0,230,255,.18)}ul{margin:0;padding-left:18px;color:var(--muted)}li{line-height:1.6;margin:7px 0}.contributor-table{width:100%;border-collapse:collapse;margin-top:22px}.contributor-table th,.contributor-table td{padding:11px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;color:var(--muted);font-size:13px;vertical-align:top}.contributor-table th{color:var(--cyan);font:700 10px/1 Space Grotesk;letter-spacing:.16em;text-transform:uppercase}.toc{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:26px}.toc a{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:13px;border:1px solid rgba(255,255,255,.08);color:var(--muted)}.toc span{color:var(--cyan);font-weight:700}.framework{display:grid;gap:12px}.framework div{display:grid;grid-template-columns:110px 1fr;gap:18px;padding:14px;border-bottom:1px solid rgba(255,255,255,.08)}.framework strong{color:var(--cyan)}.visual-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;align-items:end;height:260px;margin:34px 0}.visual-bars div{display:flex;align-items:end;justify-content:center;background:linear-gradient(180deg,var(--cyan),var(--blue));color:#06101c;font-weight:800;padding:10px;min-height:70px}.visual-bars div:nth-child(1){height:34%}.visual-bars div:nth-child(2){height:52%}.visual-bars div:nth-child(3){height:68%}.visual-bars div:nth-child(4){height:58%}.visual-bars div:nth-child(5){height:82%}.matrix{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid rgba(255,255,255,.14)}.matrix div{min-height:112px;padding:18px;border:1px solid rgba(255,255,255,.08)}.sources-list{padding:0;list-style:none}.sources-list li{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}.sources-list a{display:block;color:var(--cyan);font-size:12px;word-break:break-word}.sponsor{padding:24px;margin:18px 0;background:rgba(27,35,51,.72);border:1px solid rgba(0,230,255,.16)}.legal{font-size:13px;color:var(--dim)}footer{padding:42px 0;color:var(--dim);text-align:center;border-top:1px solid rgba(255,255,255,.08)}footer a{color:var(--cyan)}
+    @media(max-width:780px){.grid,.meta,.brief-card,.two-col,.toc,.matrix{grid-template-columns:1fr}.nav{display:none}.download-dock .wrap{align-items:flex-start;flex-direction:column}.report-page{min-height:auto;padding:30px}.contributor-table{display:block;overflow-x:auto}.framework div{grid-template-columns:1fr}.visual-bars{height:190px}}
     """
 
     archive = f"""<!doctype html>
@@ -423,7 +479,7 @@ def write_html():
 <body><main class="shell"><div class="wrap">
 <header class="top"><a class="brand" href="/"><img src="/assets/logo-badge.png" alt="">MOJO AI Summits</a><nav class="nav"><a href="/">Home</a><a href="/membership/">Membership</a><a href="/partners/">Partners</a></nav></header>
 <section class="hero"><span class="eyebrow">Executive AI Intelligence Briefs</span><h1>Signal from the rooms where AI strategy becomes operating reality.</h1><p class="lead">Each brief is synthesized from an invitation-only Executive Research Council conversation and augmented with public sources, frameworks, visuals, and practical actions for senior leaders.</p></section>
-<section class="brief-card"><div><span class="eyebrow">Sample brief | Innovation cohort</span><h2>AI Innovation at Operating Scale</h2><p>How executive leaders are converting AI adoption into measurable organizational output across strategy, automation, enterprise adoption, workforce impact, and market intelligence.</p></div><a class="btn primary" href="/briefs/ai-innovation-at-operating-scale/">Open Brief</a></section>
+<section class="brief-card"><div><span class="eyebrow">Sample brief | Innovation cohort</span><h2>AI Innovation at Operating Scale</h2><p>How executive leaders are converting AI adoption into measurable organizational output across strategy, automation, enterprise adoption, workforce impact, and market intelligence.</p></div><div class="actions"><a class="btn primary" href="/briefs/ai-innovation-at-operating-scale/">Read HTML Brief</a><a class="btn" href="/assets/briefs/{PDF_NAME}" download>Download PDF</a></div></section>
 </div><footer><div class="wrap">&copy; 2026 MOJO AI Summits. <a href="/briefs/">Executive AI Intelligence Briefs</a></div></footer></main></body></html>"""
 
     detail = f"""<!doctype html>
@@ -437,11 +493,58 @@ def write_html():
 </head>
 <body><main class="shell"><div class="wrap">
 <header class="top"><a class="brand" href="/"><img src="/assets/logo-badge.png" alt="">MOJO AI Summits</a><nav class="nav"><a href="/briefs/">Briefs</a><a href="/membership/">Membership</a><a href="/partners/">Partners</a></nav></header>
-<section class="hero"><span class="eyebrow">Mojo AI Summits Executive Research Council on AI Innovation</span><h1>AI Innovation at Operating Scale</h1><p class="lead">A sample 10- to 15-minute executive intelligence brief from the Innovation cohort, prepared from a moderated council conversation and augmented with research citations, visuals, recommendations, and sponsor context.</p><div class="actions"><a class="btn primary" href="/assets/briefs/{PDF_NAME}">Open PDF</a><a class="btn" href="/briefs/">Back to Briefs</a></div></section>
-<section class="meta"><div><span>Published</span><strong>August 6, 2026</strong></div><div><span>Version</span><strong>1.0</strong></div><div><span>Council</span><strong>AI Innovation</strong></div><div><span>Format</span><strong>PDF brief</strong></div></section>
-<section class="grid"><article class="panel"><h2>Inside the sample</h2><p>The brief opens with the council model, participating executives, and contributor framing. Six question-led sections then capture representative council responses across healthcare, finance, government, manufacturing, legal, logistics, and vendor executive perspectives.</p><ul><li>Executive summaries and council synthesis by section</li><li>Quoted contributor perspectives with fictional names and companies</li><li>Strategic implications, risks, opportunities, signals to watch, and 30/60/90-day actions</li><li>Inline citations, footnotes, sources reviewed, legal language, and sponsor back page</li></ul></article><aside class="panel"><h3>Invitation-only network</h3><p>The Executive AI Intelligence Network brings six Executive Research Councils together with quarterly Mojo AI Summits around the United States. Members receive deeper access to council conversations, extended notes, and peer follow-up.</p></aside></section>
-<object class="pdf-frame" data="/assets/briefs/{PDF_NAME}" type="application/pdf"><p><a class="btn primary" href="/assets/briefs/{PDF_NAME}">Open the PDF brief</a></p></object>
-</div><footer><div class="wrap">&copy; 2026 MOJO AI Summits. <a href="/briefs/">Executive AI Intelligence Briefs</a></div></footer></main></body></html>"""
+<section class="hero"><span class="eyebrow">Mojo AI Summits Executive Research Council on AI Innovation</span><h1>AI Innovation at Operating Scale</h1><p class="lead">A sample 10- to 15-minute executive intelligence brief from the Innovation cohort, prepared from a moderated council conversation and augmented with research citations, visuals, recommendations, and sponsor context.</p><div class="actions"><a class="btn primary" href="#page-1">Read HTML Brief</a><a class="btn" href="/assets/briefs/{PDF_NAME}" download>Download PDF</a><a class="btn" href="/briefs/">Back to Briefs</a></div></section>
+<section class="meta"><div><span>Published</span><strong>August 6, 2026</strong></div><div><span>Version</span><strong>1.0</strong></div><div><span>Council</span><strong>AI Innovation</strong></div><div><span>Format</span><strong>HTML + PDF</strong></div></section>
+</div>
+<div class="download-dock"><div class="wrap"><p>Full HTML intelligence brief</p><div class="actions"><a class="btn primary" href="/assets/briefs/{PDF_NAME}" download>Download PDF</a><a class="btn" href="/assets/briefs/{PDF_NAME}">Open PDF</a></div></div></div>
+<section class="report-pages wrap" aria-label="AI Innovation at Operating Scale full brief">
+  <section class="report-page cover" id="page-1">
+    <div class="page-kicker">Mojo AI Summits <span>Page 01</span></div>
+    <span class="eyebrow">Executive Research Council on AI Innovation</span>
+    <h2>AI Innovation at Operating Scale</h2>
+    <p class="lead">How executive leaders are converting AI adoption into measurable organizational output across strategy, automation, enterprise adoption, workforce impact, and market intelligence.</p>
+    <div class="summary-band"><strong>Innovation Cohort Brief</strong><p>Publication date: August 6, 2026 | Version 1.0. Prepared from a two-hour moderated Executive Research Council discussion.</p></div>
+    <div class="toc"><a href="#page-2"><span>02</span>Executive Research Council</a><a href="#page-3"><span>03</span>Executive Summary</a>{toc_items}<a href="#page-10"><span>10</span>Visual Intelligence</a><a href="#page-11"><span>11</span>Sources Reviewed</a><a href="#page-12"><span>12</span>Sponsor Partners</a></div>
+  </section>
+  <section class="report-page" id="page-2">
+    <div class="page-kicker">Opening Page <span>Page 02</span></div>
+    <h2>What the Executive Research Council is</h2>
+    <p>The Mojo AI Summits Executive Research Council is an invitation-only forum where senior executives, selected vendor executives, and occasional policy leaders compare real implementation experience. The council is built for executives accountable for AI outcomes, not sales teams or general marketing audiences.</p>
+    <p>The AI Innovation cohort focuses on where AI is becoming an operating capability: the places where models, agents, governance, data, and people combine to change organizational output. Members contribute observations from their own work, review market signals, and help turn private council discussion into executive intelligence briefs.</p>
+    <p>Council members receive deeper access than public readers: the full discussion transcript, extended contributor remarks, working frameworks, and private peer follow-up opportunities. Public briefs summarize the major patterns without exposing proprietary operating detail.</p>
+    <table class="contributor-table"><thead><tr><th>Name</th><th>Title</th><th>Organization</th><th>Role</th><th>Lens</th></tr></thead><tbody>{contributor_rows}</tbody></table>
+  </section>
+  <section class="report-page" id="page-3">
+    <div class="page-kicker">Executive Summary <span>Page 03</span></div>
+    <h2>Council Consensus</h2>
+    <div class="summary-band"><strong>Core finding</strong><p>AI became a real driver of organizational productivity when it entered operating systems, not when individual employees adopted better assistants. The decisive shift is from prompting to managed workflow: assigned owners, defined permissions, evaluation, cost controls, and reviewable results.</p></div>
+    <div class="two-col"><div><h3>Key Findings</h3><ul><li>AI productivity is increasingly institutional.</li><li>Agentic automation is valuable first as workflow compression.</li><li>Governance accelerates adoption when it is embedded and risk-tiered.</li><li>Workforce impact is a role-design and management issue.</li></ul></div><div><h3>Board Takeaways</h3><ul><li>Watch vendor dependency, cyber exposure, and transparency obligations.</li><li>Scale workflows with clear accountability before chasing full autonomy.</li><li>Require productivity evidence that survives audit and operational stress.</li><li>Use quarterly summits to convert brief intelligence into peer exchange.</li></ul></div></div>
+    <h3>Decision Framework</h3><div class="framework"><div><strong>Value</strong><span>Does the workflow move cycle time, quality, revenue, risk, or capacity?</span></div><div><strong>Authority</strong><span>Who owns the outcome and where does human approval sit?</span></div><div><strong>Evidence</strong><span>Can the organization inspect inputs, outputs, actions, and exceptions?</span></div><div><strong>Scale</strong><span>Can the pattern repeat across units without custom heroics?</span></div><div><strong>Resilience</strong><span>Can the organization reverse, pause, or audit the workflow under stress?</span></div></div>
+  </section>
+  {section_pages_html}
+  <section class="report-page" id="page-10">
+    <div class="page-kicker">Visual Intelligence <span>Page 10</span></div>
+    <h2>Operating signals added after the council session</h2>
+    <p>The following visuals were added by the brief team after the discussion to organize the patterns that surfaced across contributor comments.</p>
+    <h3>Figure 1: AI Operating Maturity</h3><div class="visual-bars"><div>Assist</div><div>Automate</div><div>Orchestrate</div><div>Govern</div><div>Scale</div></div>
+    <h3>Figure 2: Productivity Decision Matrix</h3><div class="matrix"><div><h3>Low risk / high repeatability</h3><p>Scale with lightweight controls: service tickets, summaries, knowledge workflows.</p></div><div><h3>High risk / high repeatability</h3><p>Scale slowly with evidence: regulated workflows, citizen-facing decisions, finance controls.</p></div><div><h3>Low risk / low repeatability</h3><p>Keep experimental: local analyst support, research, meeting prep.</p></div><div><h3>High risk / low repeatability</h3><p>Avoid or isolate: unclear authority, sensitive data, weak reversibility.</p></div></div>
+  </section>
+  <section class="report-page" id="page-11">
+    <div class="page-kicker">Sources Reviewed <span>Page 11</span></div>
+    <h2>Sources reviewed</h2>
+    <p>Citations were added after the moderated council conversation to ground market references, governance frameworks, and current enterprise AI signals in public sources. No paywalled sources are required to follow the brief.</p>
+    <ol class="sources-list">{source_items}</ol>
+  </section>
+  <section class="report-page" id="page-12">
+    <div class="page-kicker">Sponsor Partners <span>Page 12</span></div>
+    <h2>Sponsor partners and participation model</h2>
+    <p>Executive Research Council partners are invited because their executive leaders can contribute useful field intelligence to the conversation. Participation is limited to executive voices with operating knowledge. Sales and marketing teams do not sit in the council session.</p>
+    {sponsor_html}
+    <div class="summary-band"><strong>Call to action</strong><p>To become part of the Mojo AI Summits Executive AI Intelligence Network, executives must be invited by an existing member or selected for a specific council contribution. Quarterly Mojo AI Summits around the United States bring council intelligence, member discussion, and partner insight into live executive rooms.</p></div>
+    <p class="legal">This sample brief is for informational purposes only and is not legal, financial, technical, security, or investment advice. Do not redistribute without written permission. Copyright 2026 Mojo AI Summits. All rights reserved.</p>
+  </section>
+</section>
+</main><footer><div class="wrap">&copy; 2026 MOJO AI Summits. <a href="/briefs/">Executive AI Intelligence Briefs</a></div></footer></body></html>"""
 
     (brief_dir / "index.html").write_text(archive, encoding="utf-8")
     (detail_dir / "index.html").write_text(detail, encoding="utf-8")

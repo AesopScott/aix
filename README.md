@@ -158,7 +158,7 @@ The public membership page lives at `/membership/` and replaces the former home 
 
 ## Executive AI Intelligence Briefs
 
-The public briefs archive lives at `/briefs/`. The first sample brief, `/briefs/ai-innovation-at-operating-scale/`, presents the Mojo AI Summits Executive Research Council on AI Innovation sample and embeds the PDF at `/assets/briefs/ai-innovation-at-operating-scale.pdf`. The generator script `scripts/generate-ai-innovation-brief.py` writes the PDF to both `dist/assets/briefs/` for the site and `output/pdf/` for local artifact review. Public footers on the main site pages link to `/briefs/`.
+The public briefs archive lives at `/briefs/`. The first sample brief, `/briefs/ai-innovation-at-operating-scale/`, presents the Mojo AI Summits Executive Research Council on AI Innovation as a full multipage HTML report with PDF download/open actions for `/assets/briefs/ai-innovation-at-operating-scale.pdf`. The generator script `scripts/generate-ai-innovation-brief.py` writes the HTML routes and the PDF to both `dist/assets/briefs/` for the site and `output/pdf/` for local artifact review. Public footers on the main site pages link to `/briefs/`.
 
 ## Event Playbooks
 
