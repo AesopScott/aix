@@ -7,6 +7,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
 - Strategic intelligence partners: https://mojoaisummits.com/partners/
+- Executive AI intelligence briefs: https://mojoaisummits.com/briefs/
 - Public booking: https://mojoaisummits.com/book/
 - Member registration: https://mojoaisummits.com/member-registration/
 - Guest registration: https://mojoaisummits.com/guest/
@@ -52,7 +53,7 @@ Protected internal routes:
 - `/storage/` and `/api/storage`
 - `/budget/` and `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/book/`, `/member-registration/`, `/member-profile/`, `/partner-registration/`, `/guest/`, `/api/scheduling/team`, `/api/scheduling/availability`, `/api/scheduling/book`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/member-profile`, `/api/partner-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/briefs/`, `/book/`, `/member-registration/`, `/member-profile/`, `/partner-registration/`, `/guest/`, `/api/scheduling/team`, `/api/scheduling/availability`, `/api/scheduling/book`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/member-profile`, `/api/partner-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
 
 Mojo Auth endpoints:
 
@@ -154,6 +155,10 @@ The engine is designed to identify AI-enabled companies with evidence of event s
 ## Executive Intelligence Membership
 
 The public membership page lives at `/membership/` and replaces the former home page `Register` navigation action. It presents the Executive Intelligence Network as an invitation-only, year-round executive community with no application form or request submission flow. The page emphasizes that membership is not pay-to-play but contribute-to-connect: money cannot buy entry or continued standing, and membership is earned through contribution to the group, community, and industry. Membership is by invitation from existing members, each member has two invitations per month, members are expected to make those invitations thoughtfully, and invitation activity is part of contribution tracking. The public fellowship pathway page lives at `/fellowships/` and explains the four recognition levels from Fellow to Distinguished Fellow, contribution badges, private Executive Impact signals, an annual impact profile concept, and member voting on tier advancement at quarterly summit events.
+
+## Executive AI Intelligence Briefs
+
+The public briefs archive lives at `/briefs/`. The first sample brief, `/briefs/ai-innovation-at-operating-scale/`, presents the Mojo AI Summits Executive Research Council on AI Innovation sample and embeds the PDF at `/assets/briefs/ai-innovation-at-operating-scale.pdf`. The generator script `scripts/generate-ai-innovation-brief.py` writes the PDF to both `dist/assets/briefs/` for the site and `output/pdf/` for local artifact review. Public footers on the main site pages link to `/briefs/`.
 
 ## Event Playbooks
 

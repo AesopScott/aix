@@ -5,7 +5,7 @@
 - Route: `/admin/`
 - Source file: `dist/admin/index.html`
 - Purpose: company hub for Mojo AI Summits routes grouped by access level.
-- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/book/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
+- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/briefs/`, `/book/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
 - Member space: `/member-profile/?preview=4321` for administrative review of the member profile experience.
 - Partner space: `/partner-registration/?preview=4321` for administrative review of hidden partner registration, plus `/partner-profile/` for approved partner contacts.
 - Team space: `/setup/`, `/events/`, `/crm/`, `/files/` for the Storage portal, and `/storage/` as the legacy Storage route.
@@ -66,6 +66,19 @@
 - Routing support: `/membership` redirects to `/membership/`; no-cache headers are configured for `/membership` and `/membership/*`.
 - Interaction model: informational/invitation-led page only; no application form or request submission flow.
 - Home page navigation: the former `Register` nav action now links to `/membership/`.
+
+## Executive AI Intelligence Briefs
+
+- Route: `/briefs/`
+- Source file: `dist/briefs/index.html`
+- Individual sample route: `/briefs/ai-innovation-at-operating-scale/`
+- Individual sample source file: `dist/briefs/ai-innovation-at-operating-scale/index.html`
+- PDF asset: `dist/assets/briefs/ai-innovation-at-operating-scale.pdf`
+- Local review copy: `output/pdf/ai-innovation-at-operating-scale.pdf`
+- Generator: `scripts/generate-ai-innovation-brief.py`
+- Purpose: public archive doorway for Executive AI Intelligence Briefs and a dedicated sample route for the Mojo AI Summits Executive Research Council on AI Innovation brief titled `AI Innovation at Operating Scale`.
+- Content model: PDF-first premium intelligence product with opening council page, fictional executive contributors, six question-led council sections, citations, visual intelligence, sources reviewed, legal/privacy language, and sponsor back page.
+- Footer linking: main public site footers link to `/briefs/`.
 
 ## Executive Fellowship Pathway
 
