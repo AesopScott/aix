@@ -575,7 +575,7 @@
 
     function memberTierSelect(row) {
       if (state.type !== "member") return "";
-      const tiers = ["Fellow", "Contributing Fellow", "Executive Fellow", "Distinguished Fellow"];
+      const tiers = ["Fellow", "Contributing Fellow", "Senior Fellow", "Distinguished Fellow"];
       const current = row.memberTier || "Fellow";
       return `
         <select class="inline-select" data-tier-key="${escapeHtml(row.key)}" aria-label="Member tier">

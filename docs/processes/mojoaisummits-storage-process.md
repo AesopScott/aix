@@ -41,6 +41,9 @@ The portal organizes uploads into these top-level areas:
 - `event-assets/`: speaker files, sponsor files, city event assets.
 - `media/`: photography, sound, cinematography, raw captures, edited assets.
 - `public-assets/`: files intended for public use or eventual website publication.
+- `partners/`: partner and sponsor packages, shared deliverables, and relationship materials.
+- `membership/`: member program files, fellowship materials, and member-facing assets.
+- `marketing/`: campaigns, messaging, creative, social, and outbound marketing assets.
 - `receipts/`: receipt uploads grouped by person.
 - `archive/`: completed event records and long-term retention.
 

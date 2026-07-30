@@ -8,6 +8,9 @@ const folderLabels = {
   "event-assets": "Event assets",
   media: "Media",
   "public-assets": "Public assets",
+  partners: "Partners",
+  membership: "Membership",
+  marketing: "Marketing",
   receipts: "Receipts",
   archive: "Archive"
 };

@@ -480,7 +480,11 @@ function tierGuide() {
       ? "Accepted member in good standing with a complete profile."
       : `${level.minAttendance} sessions or summits attended, ${level.minContributions} documented contributions, and ${level.minNominations} peer nomination${level.minNominations === 1 ? "" : "s"}.`,
     approval: level.approvalLabel,
-    contribution: "Only website-trackable counts define technical eligibility. Judgment, influence, and leadership quality are evaluated through nomination evidence and member voting."
+    contribution: level.level === 3
+      ? "Only website-trackable counts define technical eligibility. Senior Fellows are eligible for paid speaking opportunities after member approval."
+      : level.level === 4
+        ? "Only website-trackable counts define technical eligibility. Distinguished Fellows receive priority consideration for paid speaking opportunities after member approval."
+        : "Only website-trackable counts define technical eligibility. Judgment, influence, and leadership quality are evaluated through nomination evidence and member voting."
   }));
 }
 
