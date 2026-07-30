@@ -8,6 +8,10 @@ import {
   getUserByEmail,
   updateUser
 } from "../_auth.js";
+import {
+  readAccessConfig,
+  writeAccessConfig
+} from "../_access-control.js";
 
 const registrantTypes = {
   member: {
@@ -96,6 +100,9 @@ function normalizeRecord(key, record) {
     eventDate: cleanString(record?.eventDate),
     partnerCompany: cleanString(record?.partnerCompany),
     partnerTier: cleanString(record?.partnerTier),
+    partnerPassword: cleanString(record?.partnerPassword, 120),
+    partnerPasswordGeneratedAt: cleanString(record?.partnerPasswordGeneratedAt),
+    partnerPasswordGeneratedBy: cleanString(record?.partnerPasswordGeneratedBy),
     memberTier: cleanString(record?.memberTier) || "Fellow",
     memberStatus: cleanString(record?.memberStatus),
     memberPassword: cleanString(record?.memberPassword, 120),
@@ -268,6 +275,81 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   return normalizeInviteCode(`${PARTNER_INVITE_PREFIX}${code}`, record);
 }
 
+function companySlug(value) {
+  return cleanString(value, 180)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
+async function grantAccessGroupEmail(env, groupId, email, actor = "") {
+  const normalizedEmail = cleanString(email).toLowerCase();
+  if (!normalizedEmail) return;
+
+  const config = await readAccessConfig(env);
+  const groups = Array.isArray(config.groups) ? config.groups : [];
+  const target = groups.find((group) => group.id === groupId) || {
+    id: groupId,
+    label: groupId === "partners" ? "Partners" : groupId,
+    summary: "",
+    emails: []
+  };
+  const nextEmails = [...new Set([...(target.emails || []), normalizedEmail])].sort();
+  const nextTarget = { ...target, emails: nextEmails };
+  const nextGroups = groups.some((group) => group.id === groupId)
+    ? groups.map((group) => group.id === groupId ? nextTarget : group)
+    : [...groups, nextTarget];
+
+  await writeAccessConfig(env, { ...config, groups: nextGroups }, actor);
+}
+
+async function upsertPartnerContactProfile(env, row, actor = "") {
+  const email = cleanString(row.email).toLowerCase();
+  const company = cleanString(row.partnerCompany || row.company, 240);
+  const slug = companySlug(company);
+  if (!email || !company || !slug) return null;
+
+  const now = new Date().toISOString();
+  const contactKey = `partner-contact:${email}`;
+  const companyKey = `partner-company:${slug}`;
+  const contact = {
+    email,
+    name: cleanString(row.name, 240) || email,
+    company,
+    title: cleanString(row.title, 240),
+    source: "Partner CRM",
+    profileKey: companyKey,
+    companySlug: slug,
+    updatedAt: now,
+    updatedBy: actor
+  };
+  const existingCompany = await env.MOJO_SUMMITS_SETUP_STATE.get(companyKey, "json").catch(() => null);
+  const contacts = Array.isArray(existingCompany?.contacts) ? existingCompany.contacts : [];
+  const contactMap = new Map(contacts.map((entry) => [cleanString(entry?.email).toLowerCase() || cleanString(entry?.name, 240), entry]));
+  const previous = contactMap.get(email) || {};
+  contactMap.set(email, {
+    ...previous,
+    ...contact,
+    source: cleanString(previous.source) || contact.source
+  });
+
+  const companyRecord = {
+    ...(existingCompany || {}),
+    organizationName: cleanString(existingCompany?.organizationName || company, 240),
+    companySlug: slug,
+    tier: cleanString(row.partnerTier || existingCompany?.tier, 120),
+    contacts: [...contactMap.values()],
+    updatedAt: now,
+    updatedBy: actor
+  };
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(contactKey, JSON.stringify(contact));
+  await env.MOJO_SUMMITS_SETUP_STATE.put(companyKey, JSON.stringify(companyRecord));
+  return { contactKey, companyKey };
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: jsonHeaders });
 }
@@ -406,6 +488,56 @@ async function createMemberPassword(env, payload = {}, actor = "") {
   };
 }
 
+async function createPartnerPassword(env, payload = {}, actor = "") {
+  const key = cleanString(payload?.key);
+  const rows = await registrants(env, "partner");
+  const row = rows.find((entry) => entry.key === key || entry.id === key);
+  if (!row) throw new Error("Partner registrant was not found.");
+  if (!row.email) throw new Error("Partner registrant needs an email before a password can be generated.");
+
+  const { key: crmKey, row: crmRow } = await ensureCrmRecord(env, row, "partner");
+  const password = cleanString(payload?.password, 120) || randomMemberPassword();
+  if (password.length < 12) throw new Error("Password must be at least 12 characters.");
+
+  const existingUser = await getUserByEmail(env, crmRow.email);
+  const authPayload = {
+    name: crmRow.name || crmRow.email,
+    email: crmRow.email,
+    password,
+    role: "member",
+    status: "active"
+  };
+
+  if (existingUser) {
+    await updateUser(env, crmRow.email, authPayload, actor);
+  } else {
+    await createUser(env, authPayload, actor);
+  }
+
+  await grantAccessGroupEmail(env, "partners", crmRow.email, actor);
+  await upsertPartnerContactProfile(env, crmRow, actor);
+
+  const now = new Date().toISOString();
+  const next = {
+    ...crmRow,
+    key: undefined,
+    crmType: registrantTypes.partner.crmType,
+    crmStatus: "accepted",
+    partnerPassword: password,
+    partnerPasswordGeneratedAt: now,
+    partnerPasswordGeneratedBy: actor,
+    acceptedAt: crmRow.acceptedAt || now,
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor
+  };
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(crmKey, JSON.stringify(next));
+  return {
+    record: normalizeRecord(crmKey, next),
+    password
+  };
+}
+
 export async function onRequestPost({ request, env, data }) {
   const access = requireCrmAccess(data);
   if (access.response) return access.response;
@@ -431,6 +563,25 @@ export async function onRequestPost({ request, env, data }) {
       }, { status: 201 });
     } catch (error) {
       return json({ error: error.message || "Member password could not be generated." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "generate-partner-password") {
+    try {
+      const result = await createPartnerPassword(env, payload, access.email);
+      const rows = await registrants(env, "partner");
+      return json({
+        ok: true,
+        type: "partner",
+        label: registrantTypes.partner.label,
+        summary: summarize(rows),
+        rows,
+        password: result.password,
+        record: result.record,
+        partnerInviteCodes: await partnerInviteCodes(env)
+      }, { status: 201 });
+    } catch (error) {
+      return json({ error: error.message || "Partner password could not be generated." }, { status: 500 });
     }
   }
 

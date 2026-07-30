@@ -217,6 +217,7 @@
     .notice.visible { display: block; }
     .notice.error { color: #ffc7d0; border-color: rgba(255,99,123,.48); }
     .notice.ok { color: var(--good); border-color: rgba(106,240,182,.42); }
+    .notice.preview { color: var(--cyan); border-color: rgba(0,230,255,.48); }
 
     .login-panel {
       width: min(560px, 100%);
@@ -519,7 +520,184 @@
     const loginPanel = document.querySelector("#loginPanel");
     const profileApp = document.querySelector("#profileApp");
     const logoutButton = document.querySelector("#logoutButton");
+    const adminPreviewCode = "4321";
+    const params = new URLSearchParams(window.location.search);
+    const isAdminPreview = (params.get("preview") || params.get("code") || "").trim() === adminPreviewCode;
     let state = { profile: null, directory: [], invites: [], impact: {}, fellowship: {}, tierGuide: [], staffContacts: [] };
+
+    function previewState() {
+      return {
+        ok: true,
+        preview: true,
+        monthlyMemberInviteLimit: 2,
+        profile: {
+          name: "Alex Rivera",
+          company: "Northstar Systems",
+          title: "Chief AI Officer",
+          industry: "Enterprise Technology",
+          email: "alex.rivera@example.com",
+          phone: "+1 555 013 2468",
+          tier: "Contributing Fellow",
+          status: "accepted",
+          memberSince: "2026-01-15T18:00:00.000Z"
+        },
+        impact: {
+          intelligenceSessions: 9,
+          summitsAttended: 2,
+          documentedContributions: 6,
+          fellowshipNominationsReceived: 3,
+          guestInviteLinksCreated: 4,
+          memberNominationsCreated: 2,
+          memberNominationsThisMonth: 1,
+          yearsOfMembership: 1
+        },
+        fellowship: {
+          stats: {
+            goodStanding: true,
+            profileComplete: true,
+            openToFellowshipNomination: true,
+            yesVotes: 8,
+            noVotes: 1
+          },
+          nominationWindow: {
+            open: true,
+            next: {
+              opensAt: "2026-12-15",
+              closesAt: "2027-01-14",
+              summitDate: "2027-01-15"
+            }
+          },
+          eligibility: [
+            {
+              tier: "Contributing Fellow",
+              currentOrPast: true,
+              promotionEligible: true,
+              technicallyEligible: true,
+              approvalLabel: "Current tier",
+              requirements: [
+                { label: "Sessions attended", current: 9, required: 3, met: true },
+                { label: "Documented contributions", current: 6, required: 2, met: true }
+              ]
+            },
+            {
+              tier: "Executive Fellow",
+              currentOrPast: false,
+              promotionEligible: true,
+              technicallyEligible: true,
+              approvalLabel: "Eligible for member nomination",
+              requirements: [
+                { label: "Sessions attended", current: 9, required: 6, met: true },
+                { label: "Documented contributions", current: 6, required: 5, met: true },
+                { label: "Member nominations", current: 3, required: 2, met: true }
+              ]
+            }
+          ],
+          nominationTargets: [
+            {
+              name: "Priya Shah",
+              email: "priya.shah@example.com",
+              targetTier: "Executive Fellow",
+              requiresLevelFourEvidence: false
+            },
+            {
+              name: "Marcus Chen",
+              email: "marcus.chen@example.com",
+              targetTier: "Distinguished Fellow",
+              requiresLevelFourEvidence: true
+            }
+          ],
+          openNominations: [
+            {
+              id: "preview-nomination-1",
+              candidateName: "Priya Shah",
+              candidateEmail: "priya.shah@example.com",
+              targetTier: "Executive Fellow",
+              nominationReason: "Consistent research contribution, strong peer facilitation, and active mentorship.",
+              yesVotes: 11,
+              noVotes: 1,
+              approvalLabel: "Member vote at quarterly summit event",
+              levelFourEvidence: {}
+            },
+            {
+              id: "preview-nomination-2",
+              candidateName: "Marcus Chen",
+              candidateEmail: "marcus.chen@example.com",
+              targetTier: "Distinguished Fellow",
+              nominationReason: "Sustained executive influence and leadership across multiple initiatives.",
+              yesVotes: 14,
+              noVotes: 2,
+              approvalLabel: "Enhanced evidence review and member vote",
+              levelFourEvidence: {
+                memberCase: "Preview evidence packet for level-four review."
+              }
+            }
+          ]
+        },
+        invites: [
+          {
+            type: "guest",
+            code: "102938",
+            status: "active",
+            eventName: "Dallas Executive AI Summit",
+            eventDate: "January 2027",
+            url: `${window.location.origin}/guest/?invite=102938`
+          },
+          {
+            type: "member",
+            code: "564738",
+            status: "active",
+            eventName: "Dallas Executive AI Summit",
+            nomineeName: "Jordan Ellis",
+            url: `${window.location.origin}/member-registration/?invite=564738`
+          }
+        ],
+        directory: [
+          { name: "Alex Rivera", company: "Northstar Systems", title: "Chief AI Officer", tier: "Contributing Fellow", email: "alex.rivera@example.com", phone: "+1 555 013 2468" },
+          { name: "Priya Shah", company: "Summit Health", title: "VP AI Strategy", tier: "Fellow", email: "priya.shah@example.com", phone: "+1 555 013 1357" },
+          { name: "Marcus Chen", company: "Apex Manufacturing", title: "Chief Digital Officer", tier: "Executive Fellow", email: "marcus.chen@example.com", phone: "+1 555 013 9753" }
+        ],
+        discord: {
+          server: "Discord invite is provided directly by Mojo staff.",
+          channels: [
+            { name: "#announcements", purpose: "Summit and member network updates." },
+            { name: "#executive-intelligence", purpose: "Session follow-ups, research themes, and briefing topics." },
+            { name: "#member-introductions", purpose: "Warm peer introductions and new member welcomes." },
+            { name: "#summit-guests", purpose: "Guest coordination for upcoming shows and events." }
+          ]
+        },
+        staffContacts: [
+          { name: "Membership", role: "Member support", email: "membership@mojoaisummits.com" },
+          { name: "Angel Mosley", role: "VIP Engagement Director", email: "angel@mojoaisummits.com" },
+          { name: "Gina Monroe", role: "Executive Research Curator", email: "gina@mojoaisummits.com" }
+        ],
+        tierGuide: [
+          {
+            tier: "Fellow",
+            minimum: "Accepted member in good standing.",
+            approval: "Baseline membership standing.",
+            contribution: "Participate, share perspective, complete occasional surveys, and make thoughtful introductions."
+          },
+          {
+            tier: "Contributing Fellow",
+            minimum: "Active participation across multiple sessions or research efforts.",
+            approval: "Member-voted quarterly at summit events.",
+            contribution: "Visible participation, research interviews, guest introductions, and private discussion involvement."
+          },
+          {
+            tier: "Executive Fellow",
+            minimum: "Help create the network's intellectual property.",
+            approval: "Member-voted quarterly with contribution review.",
+            contribution: "Lead discussions, review briefs, mentor newer members, write commentary, or host sessions."
+          },
+          {
+            tier: "Distinguished Fellow",
+            minimum: "Sustained executive influence and multi-year contribution.",
+            approval: "Enhanced evidence review and member vote.",
+            contribution: "Chair initiatives, guide strategy, mentor at depth, and help define the community's direction."
+          }
+        ]
+      };
+    }
 
     function escapeHtml(value) {
       return String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -741,6 +919,15 @@
 
     async function loadProfile() {
       clearNotice();
+      if (isAdminPreview) {
+        state = previewState();
+        loginPanel.classList.add("hidden");
+        profileApp.classList.remove("hidden");
+        logoutButton.classList.add("hidden");
+        renderProfile();
+        showNotice("Admin preview mode. This sample profile is for page review only; forms and votes do not submit.", "preview");
+        return;
+      }
       try {
         state = await fetch("/api/member-profile", { cache: "no-store" }).then(readJson);
         loginPanel.classList.add("hidden");
@@ -776,6 +963,10 @@
     });
 
     async function createInvite(form, action) {
+      if (isAdminPreview) {
+        showNotice("Admin preview mode cannot create invite links. Use a signed-in member profile for live actions.", "preview");
+        return;
+      }
       const payload = Object.fromEntries(new FormData(form).entries());
       const data = await fetch("/api/member-profile", {
         method: "POST",
@@ -809,6 +1000,10 @@
 
     document.querySelector("#nominationConsentForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (isAdminPreview) {
+        showNotice("Admin preview mode cannot save fellowship preferences.", "preview");
+        return;
+      }
       try {
         await fetch("/api/member-profile", {
           method: "POST",
@@ -829,6 +1024,10 @@
 
     document.querySelector("#fellowshipNominationForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (isAdminPreview) {
+        showNotice("Admin preview mode cannot submit fellowship nominations.", "preview");
+        return;
+      }
       try {
         const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
         await fetch("/api/member-profile", {
@@ -848,6 +1047,10 @@
       const vote = event.target.dataset.fellowshipVote;
       const nominationId = event.target.dataset.nominationId;
       if (!vote || !nominationId) return;
+      if (isAdminPreview) {
+        showNotice("Admin preview mode cannot record votes.", "preview");
+        return;
+      }
       try {
         await fetch("/api/member-profile", {
           method: "POST",
@@ -869,6 +1072,7 @@
     });
 
     logoutButton.addEventListener("click", async () => {
+      if (isAdminPreview) return;
       await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
       state = { profile: null, directory: [], invites: [], impact: {}, tierGuide: [], staffContacts: [] };
       await loadProfile();

@@ -31,6 +31,10 @@ function isPartnerRegistrationShell(pathname) {
   return pathname === "/partner-registration" || pathname === "/partner-registration/";
 }
 
+function isPartnerProfileShell(pathname) {
+  return pathname === "/partner-profile" || pathname === "/partner-profile/";
+}
+
 function inviteCodeFromUrl(url) {
   return String(url.searchParams.get("invite") || "").replace(/\D/g, "").slice(0, 6);
 }
@@ -72,6 +76,18 @@ export async function onRequest(context) {
     !isPartnerRegistrationPreview(url)
   ) {
     return notFound();
+  }
+
+  if (isPartnerProfileShell(url.pathname) && isPartnerRegistrationPreview(url)) {
+    context.data.auth = {
+      email: "admin-preview@mojoaisummits.com",
+      name: "Admin Preview",
+      role: "admin",
+      status: "active",
+      mode: "preview",
+      accessControlEnabled: true
+    };
+    return context.next();
   }
 
   const config = await readAccessConfig(context.env);

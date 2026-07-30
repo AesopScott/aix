@@ -592,24 +592,46 @@
       `;
     }
 
-    async function loadProfile() {
-      const response = await fetch("/api/partner-profile", { cache: "no-store" });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        if (response.status === 401) {
-          showNotice('Sign in through the <a href="/access/?next=/partner-profile/">Mojo access console</a> to view this partner profile.', true);
-        } else {
-          showNotice(payload.error || "Partner profile could not be loaded.");
-        }
-        setText("partnerTier", "Protected");
-        setText("partnerName", "Partner profile");
-        renderContacts([]);
-        document.getElementById("eventsList").innerHTML = empty("Profile data is protected.");
-        renderPublications([]);
-        renderContributions([]);
-        return;
-      }
+    function previewCode() {
+      const params = new URLSearchParams(window.location.search);
+      return String(params.get("preview") || params.get("code") || "").trim();
+    }
 
+    function previewPayload() {
+      return {
+        configured: true,
+        profile: {
+          organizationName: "Example Intelligence Partner",
+          tier: "Council Partner",
+          contacts: [
+            { name: "Avery Chen", email: "avery@example.com", company: "Example Intelligence Partner", title: "Chief Revenue Officer", source: "Partner CRM" },
+            { name: "Morgan Lee", email: "morgan@example.com", company: "Example Intelligence Partner", title: "VP, AI Strategy", source: "Company profile" }
+          ],
+          events: [
+            {
+              name: "Dallas Executive AI Summit",
+              date: "October 21, 2026",
+              location: "Dallas, TX",
+              role: "Council Partner",
+              attendees: [
+                { name: "Avery Chen", email: "avery@example.com", company: "Example Intelligence Partner", title: "Chief Revenue Officer", type: "Partner" },
+                { name: "Jordan Patel", email: "jordan@example.com", company: "Northstar Manufacturing", title: "CIO", type: "Member" },
+                { name: "Taylor Brooks", email: "taylor@example.com", company: "Summit Health", title: "Chief Digital Officer", type: "Guest" }
+              ]
+            }
+          ],
+          publications: [
+            { title: "Executive AI Adoption Brief", type: "Briefing", date: "November 2026", role: "Quoted contributor", url: "" }
+          ],
+          contributions: [
+            { date: "2026-10-01", event: "Dallas Executive AI Summit", category: "Sponsorship", status: "Received", amount: 25000 }
+          ],
+          totalContributed: 25000
+        }
+      };
+    }
+
+    function renderProfilePayload(payload) {
       const profile = payload.profile || {};
       const contacts = profile.contacts || [];
       const events = profile.events || [];
@@ -636,6 +658,33 @@
       renderEvents(events);
       renderPublications(publications);
       renderContributions(contributions);
+    }
+
+    async function loadProfile() {
+      if (previewCode() === "4321") {
+        showNotice("Admin preview mode. This sample profile is not connected to live partner data.");
+        renderProfilePayload(previewPayload());
+        return;
+      }
+
+      const response = await fetch("/api/partner-profile", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 401) {
+          showNotice('Sign in through the <a href="/access/?next=/partner-profile/">Mojo access console</a> to view this partner profile.', true);
+        } else {
+          showNotice(payload.error || "Partner profile could not be loaded.");
+        }
+        setText("partnerTier", "Protected");
+        setText("partnerName", "Partner profile");
+        renderContacts([]);
+        document.getElementById("eventsList").innerHTML = empty("Profile data is protected.");
+        renderPublications([]);
+        renderContributions([]);
+        return;
+      }
+
+      renderProfilePayload(payload);
     }
 
     loadProfile().catch(() => {

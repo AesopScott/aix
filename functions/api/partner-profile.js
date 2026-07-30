@@ -394,6 +394,10 @@ export async function onRequestGet({ request, env, data }) {
   const email = normalizeEmail(user.email);
   const registrations = await allRegistrations(env);
   const storedProfile = await resolveCompanyProfile(env, email, registrations);
+  if (!storedProfile?.key) {
+    return json({ error: "This account is not connected to a partner company profile." }, { status: 403 });
+  }
+
   const profile = normalizeProfile(storedProfile?.record || {}, storedProfile?.company || "", email);
   const companyRows = attendedByCompany(profile, registrations);
   const contacts = dedupeContacts([

@@ -441,7 +441,7 @@
               <th>Food</th>
               <th>Phone</th>
               <th>Status</th>
-              <th>Member Access</th>
+              <th>Profile Access</th>
               <th>CRM Notes</th>
             </tr>
           </thead>
@@ -543,15 +543,18 @@
     }
 
     function memberAccessCell(row) {
-      if (state.type !== "member") return '<span>Partner access is managed separately.</span>';
-      const hasPassword = Boolean(row.memberPassword);
+      const isPartner = state.type === "partner";
+      const password = isPartner ? row.partnerPassword : row.memberPassword;
+      const hasPassword = Boolean(password);
+      const label = isPartner ? "partner" : "member";
+      const profilePath = isPartner ? "/partner-profile/" : "/member-profile/";
       return `
         <div class="member-access-cell">
           ${memberTierSelect(row)}
-          <span class="pill ${hasPassword ? "" : "warn"}">${hasPassword ? "Password generated" : "No member password"}</span>
-          ${hasPassword ? `<code>${escapeHtml(row.memberPassword)}</code>` : ""}
+          <span class="pill ${hasPassword ? "" : "warn"}">${hasPassword ? "Password generated" : `No ${label} password`}</span>
+          ${hasPassword ? `<code>${escapeHtml(password)}</code>` : ""}
           <button class="compact secondary" type="button" data-password-key="${escapeHtml(row.key)}">${hasPassword ? "Reset Password" : "Generate Password"}</button>
-          <button class="compact secondary" type="button" data-profile-copy="${escapeHtml(row.email || "")}">Copy Profile Link</button>
+          <button class="compact secondary" type="button" data-profile-path="${escapeHtml(profilePath)}">Copy Profile Link</button>
           <span class="password-output" data-password-output="${escapeHtml(row.key)}"></span>
         </div>
       `;
@@ -760,6 +763,33 @@
       }
     }
 
+    async function generatePartnerPassword(key) {
+      const existing = state.rows.find((row) => row.key === key);
+      if (!existing) return;
+      setNotice("Generating partner password...");
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "generate-partner-password",
+            key
+          })
+        }).then(readJson);
+        state = data;
+        render();
+        const output = rowsElement.querySelector(`[data-password-output="${CSS.escape(data.record.key)}"]`);
+        if (output) {
+          output.textContent = data.password;
+          output.classList.add("visible");
+        }
+        await copyText(data.password);
+        setNotice(`Partner password generated for ${data.record.email}. That CRM registration email is their login name. The password was copied if clipboard access is available.`, "ok");
+      } catch (error) {
+        setNotice(error.message, "error");
+      }
+    }
+
     rowsElement.addEventListener("change", (event) => {
       const key = event.target.dataset.statusKey;
       const tierKey = event.target.dataset.tierKey;
@@ -777,14 +807,15 @@
     rowsElement.addEventListener("click", async (event) => {
       const key = event.target.dataset.saveKey;
       const passwordKey = event.target.dataset.passwordKey;
-      const profileEmail = event.target.dataset.profileCopy;
-      if (profileEmail) {
-        await copyText(`${window.location.origin}/member-profile/`);
-        setNotice("Member profile login link copied.", "ok");
+      const profilePath = event.target.dataset.profilePath;
+      if (profilePath) {
+        await copyText(`${window.location.origin}${profilePath}`);
+        setNotice(`${state.type === "partner" ? "Partner" : "Member"} profile login link copied.`, "ok");
         return;
       }
       if (passwordKey) {
-        await generateMemberPassword(passwordKey);
+        if (state.type === "partner") await generatePartnerPassword(passwordKey);
+        else await generateMemberPassword(passwordKey);
         return;
       }
       if (!key) return;
