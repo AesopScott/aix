@@ -64,9 +64,14 @@ sections = [
         "summary": "The council consensus was that AI crossed into operating relevance when teams stopped asking it for answers and started embedding it into accountable workflows. The shift is visible in weekly usage, cross-functional agent adoption, and the emergence of spend controls, permissions, and workflow ownership as executive topics. [1][2][11]",
         "prompt": "Moderator prompt: What changed inside the organization when AI began affecting measurable output instead of individual productivity?",
         "quotes": [
-            ("Maya Serrano, Chief Innovation Officer, Meridian Health Collaborative", "In healthcare, the inflection was not a better summary. It was when discharge planning, prior authorization prep, nursing education updates, and quality reporting started drawing from the same approved knowledge base. The productivity gain came from removing the restart between departments."),
-            ("Darius Holt, Chief Financial Officer, NorthBridge Capital Services", "Finance did not trust the first wave because the numbers were too easy to explain and too hard to govern. The turning point was auditability. When every AI-assisted forecast, variance narrative, and control recommendation had lineage, it moved from interesting to operational."),
-            ("Simone Alvarez, Chief Executive Officer, NexusForge AI", "The most mature buyers no longer buy chat. They buy orchestration. They want to know which workflow, which approval boundary, which system of record, and which executive owns the result."),
+            ("Maya Serrano, Chief Innovation Officer, Meridian Health Collaborative", "At Meridian, the first real productivity win was discharge planning. The team connected case notes, payer rules, pharmacy instructions, and follow-up scheduling into one reviewed packet. Nurses stopped rebuilding the same story four times, and the case managers could see which discharge was stuck because of a missing authorization or home-care slot."),
+            ("Darius Holt, Chief Financial Officer, NorthBridge Capital Services", "NorthBridge started with monthly variance narratives because finance already had the data and the pain was obvious. The controller's team now gets a first draft that ties ledger movements to sales pipeline, hiring, and vendor spend. Nobody books the close from an AI answer, but the review meeting starts with the exceptions instead of a blank page."),
+            ("Simone Alvarez, Chief Executive Officer, NexusForge AI", "The buyers who are getting value are asking for workflow wiring, not another chat window. One insurer asked for a claims-intake agent that reads the file, checks the policy, flags missing evidence, and routes the claim to the right reviewer. The win was not that the model sounded smart. It was that supervisors could see the queue moving."),
+        ],
+        "use_cases": [
+            "Maya Serrano: discharge packets that combine clinical notes, payer rules, pharmacy instructions, and follow-up scheduling.",
+            "Darius Holt: monthly variance drafts that point reviewers to exceptions before the close meeting.",
+            "Simone Alvarez: claims-intake routing that checks missing evidence and moves work to the right reviewer.",
         ],
         "what_changed": "AI work moved from personal productivity to shared accountability. That made adoption visible in operating cadence: weekly business reviews, team dashboards, model usage budgets, and process redesign.",
         "signals": ["AI usage reviewed with business metrics, not tool metrics.", "Agent work queued and reviewed like ordinary work.", "Budget owners ask for unit economics per workflow."],
@@ -78,9 +83,14 @@ sections = [
         "summary": "The council split between leaders treating AI as a transformation portfolio and leaders treating it as a capability layer inside every portfolio. The stronger position was to do both: maintain a central AI operating portfolio while forcing each business unit to name measurable AI-enabled outcomes. [3][5]",
         "prompt": "Moderator prompt: Is AI innovation a separate strategy or the new operating layer for every strategy?",
         "quotes": [
-            ("Kenji Watanabe, Chief Strategy Officer, PacificEdge Logistics", "Global logistics cannot treat AI as a lab. Port delays, customs exceptions, and weather rerouting are not innovation themes. They are operating conditions. The AI portfolio has to sit where capacity decisions are made."),
-            ("Victor Reed, State Chief AI Officer, Colorado Office of Digital Innovation", "In government, the public does not experience an AI strategy. They experience permit timing, call-center accuracy, benefit eligibility, and transparency. Strategy has to translate to a service promise."),
-            ("Elena Kovacs, Chief Digital Officer, EuroGrid Manufacturing Group", "Manufacturing leaders should resist the theater of the pilot. If a use case cannot change downtime, yield, safety, quality, procurement, or engineering throughput, it is not an innovation priority yet."),
+            ("Kenji Watanabe, Chief Strategy Officer, PacificEdge Logistics", "PacificEdge moved AI out of the innovation budget after a typhoon week in Taiwan. The old process had planners copying vessel notices, customs holds, and weather updates into spreadsheets. Now the control tower drafts reroute options, shows which customer commitments are at risk, and asks a planner to approve the tradeoff. That belongs in capacity planning, not a demo day."),
+            ("Victor Reed, State Chief AI Officer, Colorado Office of Digital Innovation", "Residents do not care whether the state has an AI strategy. They care whether the permit comes back in ten days instead of six weeks, whether the call center gives the same answer twice, and whether somebody can explain a denial. The useful work has been turning those service failures into a short list of AI projects the agencies can actually own."),
+            ("Elena Kovacs, Chief Digital Officer, EuroGrid Manufacturing Group", "EuroGrid stopped funding pilots that could not touch a plant metric. The active work now sits around downtime notes, spare-parts forecasting, quality photo review, and supplier-risk briefs. If a plant manager cannot point to yield, safety, scrap, or engineering hours, it waits."),
+        ],
+        "use_cases": [
+            "Kenji Watanabe: logistics control-tower rerouting that combines vessel notices, customs holds, weather, and customer commitments.",
+            "Victor Reed: permit and call-center projects selected from concrete service failures, not abstract AI themes.",
+            "Elena Kovacs: plant-floor AI work tied to downtime notes, spare parts, quality images, and supplier risk.",
         ],
         "what_changed": "AI strategy now requires portfolio discipline. Leaders need a short list of value-backed bets, a retirement path for weak pilots, and explicit rules for where central platforms end and business ownership begins.",
         "signals": ["AI initiatives appear in capital allocation conversations.", "Business units retire pilots publicly.", "Board materials show AI impact by operating outcome."],
@@ -92,9 +102,14 @@ sections = [
         "summary": "Durable productivity came from targeted automation where AI handled preparation, synthesis, drafting, routing, and exception triage while humans retained authority for material decisions. The council saw more value in workflow compression than in full autonomy. [2][6][14]",
         "prompt": "Moderator prompt: Which AI automation patterns are reliable enough for executive operating plans?",
         "quotes": [
-            ("Name withheld, Chief Operations Officer, U.S. national infrastructure contractor", "The best automation is boring. It assembles context, drafts the packet, checks the policy, opens the ticket, and alerts the accountable person. We do not need a dramatic autonomous agent where a disciplined workflow would do."),
-            ("Priya Natarajan, Chief Legal Officer, Halcyon Legal Systems", "Legal teams are becoming process architects. Contract review, policy comparisons, outside counsel summaries, and litigation hold workflows can accelerate, but privilege, retention, and jurisdiction cannot be afterthoughts."),
-            ("Rowan Blake, Chief Technology Officer, VantageGuard Systems", "The agent layer needs the same seriousness as identity management. Who can the agent act for, what can it see, where does it write, and how is the action reversed? Those questions separate productivity from exposure."),
+            ("Name withheld, Chief Operations Officer, U.S. national infrastructure contractor", "The best automation in the contractor's field operations is boring on purpose. A crew lead uploads photos and a daily note. The system drafts the safety packet, checks the work order against the contract, opens a procurement request if a part is missing, and tells the regional manager what needs approval before 7 a.m. That saved hours because nobody had to chase five systems before the day started."),
+            ("Priya Natarajan, Chief Legal Officer, Halcyon Legal Systems", "Halcyon's legal team did not start with courtroom work. It started with repeatable contract intake: pull the vendor paper, compare it to the playbook, flag indemnity and data-use language, and draft the first email back to procurement. Lawyers still make the call. The difference is that they spend their time on the odd clauses instead of hunting for them."),
+            ("Rowan Blake, Chief Technology Officer, VantageGuard Systems", "VantageGuard treats agents like privileged users. In one bank deployment, the loan-file agent can read the CRM and document store, but it cannot update the core system or send a customer message. It writes a recommendation to a queue, and every action has an owner, timestamp, source link, and rollback path."),
+        ],
+        "use_cases": [
+            "Name withheld: field safety packets and procurement requests assembled from crew notes, photos, work orders, and contract rules.",
+            "Priya Natarajan: contract intake that compares vendor paper to a legal playbook and drafts procurement responses.",
+            "Rowan Blake: loan-file agents with read-only access, review queues, timestamps, source links, and rollback paths.",
         ],
         "what_changed": "Automation moved closer to systems of record. That raises the reward and the governance requirement at the same time.",
         "signals": ["Agent permissions are reviewed with identity and access management.", "Legal and compliance teams pre-approve workflow patterns.", "Exception queues shrink without decision quality falling."],
@@ -106,9 +121,14 @@ sections = [
         "summary": "The council rejected governance as a separate bureaucracy. The preferred model was lightweight, embedded governance based on the NIST AI RMF, EU AI Act readiness where relevant, and clear internal policy for transparency, human review, evaluation, and data handling. [8][9][10][13]",
         "prompt": "Moderator prompt: How do organizations govern AI without freezing adoption?",
         "quotes": [
-            ("Victor Reed, State Chief AI Officer, Colorado Office of Digital Innovation", "For public agencies, trust is a deliverable. If residents cannot tell when AI is involved, how the decision is reviewed, and where to appeal, the productivity story will collapse under legitimacy concerns."),
-            ("Priya Natarajan, Chief Legal Officer, Halcyon Legal Systems", "The EU AI Act is not just a European issue. Multinationals will normalize around the strictest repeatable process if it is simpler than maintaining fragmented controls."),
-            ("Maya Serrano, Chief Innovation Officer, Meridian Health Collaborative", "Healthcare governance works when it is close to clinical and administrative workflows. A central review board cannot understand every local exception. It can define the guardrails and require evidence."),
+            ("Victor Reed, State Chief AI Officer, Colorado Office of Digital Innovation", "Colorado's approach has been to put the notice and appeal language right inside the service flow. If an eligibility worker uses an AI summary, the resident still gets a plain-language reason for the decision and a human appeal path. The governance work is not a binder on a shelf. It is the screen the case worker sees and the letter the resident receives."),
+            ("Priya Natarajan, Chief Legal Officer, Halcyon Legal Systems", "Halcyon now tags AI use cases by risk before legal reviews the tool contract. A marketing draft is one lane. Employment screening, regulated claims, and customer-impacting recommendations are another. That made the EU AI Act discussion much less abstract because the business could see which workflows would need records, testing, and human review."),
+            ("Maya Serrano, Chief Innovation Officer, Meridian Health Collaborative", "Meridian stopped asking one central committee to understand every clinical edge case. The governance team writes the guardrails, but the cardiology, oncology, and revenue-cycle teams each keep their own review checklist. A discharge-summary assistant has a different risk profile than a denial-appeal draft, and the review process finally reflects that."),
+        ],
+        "use_cases": [
+            "Victor Reed: resident-facing notices and appeal paths embedded directly into AI-assisted eligibility workflows.",
+            "Priya Natarajan: risk-tier tagging before legal reviews AI tool contracts and regulated use cases.",
+            "Maya Serrano: clinical and revenue-cycle review checklists tailored by workflow risk.",
         ],
         "what_changed": "Model governance became operational governance. The decision is no longer whether the model is impressive; it is whether the workflow is explainable, monitored, recoverable, and appropriate for the risk class.",
         "signals": ["AI inventories include workflow purpose and owner.", "Review policies differ by risk tier.", "Transparency language appears in customer, patient, citizen, and employee-facing experiences."],
@@ -120,9 +140,14 @@ sections = [
         "summary": "The council framed workforce impact as a redesign issue rather than a headcount issue. AI changes role boundaries, managerial expectations, training needs, and the definition of productive work. Microsoft research and enterprise adoption data support the pattern that institutional design, not individual enthusiasm, is the larger determinant of AI impact. [1][3][4]",
         "prompt": "Moderator prompt: What is AI doing to roles, management, and workforce productivity?",
         "quotes": [
-            ("Elena Kovacs, Chief Digital Officer, EuroGrid Manufacturing Group", "The frontline adoption problem is not fear of AI. It is distrust of yet another disconnected tool. When AI appears inside maintenance planning, shift handoff, quality inspection, and procurement, workers judge it by whether it reduces friction."),
-            ("Darius Holt, Chief Financial Officer, NorthBridge Capital Services", "CFOs should stop asking for generic AI savings. Ask which roles get leverage, which controls get stronger, which handoffs disappear, and which work becomes newly possible."),
-            ("Kenji Watanabe, Chief Strategy Officer, PacificEdge Logistics", "The global workforce issue is uneven capability. The same agent that unlocks a planner in Singapore may fail in a region where process data is fragmented or language support is weak."),
+            ("Elena Kovacs, Chief Digital Officer, EuroGrid Manufacturing Group", "On the shop floor, adoption changed when AI showed up in the handoff notes workers already used. A night-shift mechanic records what failed, the system pulls the last three maintenance tickets and likely part numbers, and the morning supervisor gets a cleaner work plan. People did not need a speech about transformation. They needed the tool to stop making them retype the same problem."),
+            ("Darius Holt, Chief Financial Officer, NorthBridge Capital Services", "NorthBridge found the biggest role change in middle management. Branch managers used to ask analysts for a weekly deposit and churn summary. Now they get the first read automatically, but they are expected to challenge it, add local context, and decide what to do by Thursday. The job did not disappear. The tempo changed."),
+            ("Kenji Watanabe, Chief Strategy Officer, PacificEdge Logistics", "PacificEdge had to slow down the global rollout because the same agent behaved differently by region. Singapore had clean milestone data and English-language exception notes. Parts of Latin America had broker updates in WhatsApp screenshots. The workforce plan had to include data cleanup, translation, and local process owners, not just licenses."),
+        ],
+        "use_cases": [
+            "Elena Kovacs: maintenance handoff notes that pull prior tickets and part numbers into the supervisor's morning plan.",
+            "Darius Holt: branch-manager performance summaries that shift managers from reporting to challenge-and-action review.",
+            "Kenji Watanabe: regional rollout plans that include translation, data cleanup, and local process ownership.",
         ],
         "what_changed": "AI fluency is now a management capability. Leaders must teach teams how to delegate to systems, review outputs, escalate errors, and redesign work around new capacity.",
         "signals": ["Managers are trained to redesign work, not just prompt tools.", "Role descriptions include AI delegation and review responsibilities.", "Teams track new work created, not only hours saved."],
@@ -134,9 +159,14 @@ sections = [
         "summary": "The council saw a maturing market: enterprise platforms are racing toward governed agents, services firms are packaging transformation capacity, and security risk is rising as AI expands the attack surface. Boards should watch concentration, vendor dependency, cyber exposure, and the speed at which agentic workflows become standard. [4][7][11][12][14]",
         "prompt": "Moderator prompt: Which external signals will affect executive AI decisions over the next 12 months?",
         "quotes": [
-            ("Simone Alvarez, Chief Executive Officer, NexusForge AI", "The vendor market is shifting from model access to operating integration. Buyers will consolidate around platforms that can prove adoption, governance, cost control, and business impact in the same conversation."),
-            ("Rowan Blake, Chief Technology Officer, VantageGuard Systems", "AI risk is moving from policy documents into live systems. Boards should expect attackers to use AI, employees to use shadow AI, and regulators to ask whether controls kept pace."),
-            ("Name withheld, Chief Operations Officer, U.S. national infrastructure contractor", "The alternate scenario is slower than the hype. Highly regulated operations will adopt agentic workflows, but the winning pattern may be constrained autonomy for years, not full autonomy next quarter."),
+            ("Simone Alvarez, Chief Executive Officer, NexusForge AI", "NexusForge is seeing buyers ask for evidence before they expand. One healthcare client would not approve the next department until the platform showed adoption by role, cost per completed packet, escalation rate, and the number of edits reviewers made. That is where the market is going. The model demo gets the meeting, but the operating dashboard gets the renewal."),
+            ("Rowan Blake, Chief Technology Officer, VantageGuard Systems", "VantageGuard's board brief now includes AI in the cyber section, not just the innovation section. The team tracks shadow tools, prompt injection tests, agent permissions, and vendor data-retention language. One client found that an internal team had pasted customer renewal data into an unsanctioned tool. That one incident changed the board conversation fast."),
+            ("Name withheld, Chief Operations Officer, U.S. national infrastructure contractor", "For critical infrastructure work, the likely path is constrained autonomy for a long time. The contractor is comfortable with AI drafting a field packet, comparing a plan to code, or flagging a missing inspection photo. It is not comfortable letting an agent approve a lane closure, release a crew, or change a safety procedure without a human name on it."),
+        ],
+        "use_cases": [
+            "Simone Alvarez: buyer dashboards showing adoption by role, packet cost, escalation rate, and reviewer edits.",
+            "Rowan Blake: board cyber reporting that includes shadow AI, prompt injection tests, agent permissions, and vendor retention terms.",
+            "Name withheld: critical-infrastructure agents limited to drafting, code comparison, and missing-photo checks.",
         ],
         "what_changed": "The market no longer rewards isolated AI enthusiasm. It rewards the ability to govern AI-enabled operating systems across cost, security, compliance, and measurable performance.",
         "signals": ["Enterprise vendors publish governance and spend-control features.", "Services firms build AI transformation units for specific operations.", "Boards request AI cyber exposure reports alongside productivity plans."],
@@ -210,15 +240,30 @@ class BriefPDF:
         return y
 
     def quote(self, x, y, name, quote, width=67):
+        lines = wrap('"' + quote + '"', width)
         set_stroke(self.c, CYAN)
         self.c.setLineWidth(1.2)
-        self.c.line(x, y + 8, x, y - 70)
+        self.c.line(x, y + 8, x, y - 20 - (13 * len(lines)))
         self.text(x + 14, y, name, 9.8, CYAN, "Helvetica-Bold")
         y -= 16
-        for line in wrap('"' + quote + '"', width):
+        for line in lines:
             self.text(x + 14, y, line, 9.4, WHITE, "Helvetica")
             y -= 13
         return y - 8
+
+    def use_cases_box(self, x, y, items, width=504, wrap_width=88):
+        wrapped_items = [wrap("- " + item, wrap_width) for item in items]
+        height = 34 + sum(len(lines) * 12 for lines in wrapped_items) + (len(items) * 5)
+        set_fill(self.c, SLATE)
+        self.c.roundRect(x, y - height, width, height, 5, fill=1, stroke=0)
+        self.text(x + 14, y - 19, "USE CASES CALLED OUT", 8, CYAN, "Helvetica-Bold", tracking=0.6)
+        yy = y - 38
+        for lines in wrapped_items:
+            for line in lines:
+                self.text(x + 14, yy, line, 8.2, MUTED, "Helvetica")
+                yy -= 12
+            yy -= 5
+        return y - height - 14
 
     def callout(self, x, y, title, items, width=240):
         set_fill(self.c, SLATE)
@@ -326,6 +371,10 @@ def create_pdf():
                 pdf.new_page(f"{section['kicker']} Continued")
                 y = 704
             y = pdf.quote(54, y, name, quote)
+        if y < 220:
+            pdf.new_page(f"{section['kicker']} Continued")
+            y = 704
+        y = pdf.use_cases_box(54, y, section["use_cases"])
         if y < 238:
             pdf.new_page(f"{section['kicker']} Continued")
             y = 704
@@ -428,6 +477,7 @@ def write_html():
             f"""<blockquote><cite>{h(name)}</cite><p>&quot;{h(quote)}&quot;</p></blockquote>"""
             for name, quote in section["quotes"]
         )
+        use_cases = list_items(section["use_cases"])
         section_pages.append(
             f"""<section class="report-page question-page" id="page-{idx}">
   <div class="page-kicker">{h(section["kicker"])} <span>Page {idx:02d}</span></div>
@@ -435,6 +485,7 @@ def write_html():
   <div class="summary-band"><strong>Executive summary</strong><p>{h(section["summary"])}</p></div>
   <p class="moderator">{h(section["prompt"])}</p>
   <div class="quote-stack">{quotes}</div>
+  <div class="use-case-panel"><h3>Use Cases Called Out</h3><ul>{use_cases}</ul></div>
   <div class="two-col">
     <div><h3>Strategic Implication</h3><p>{h(section["what_changed"])}</p></div>
     <div><h3>Signals To Watch</h3><ul>{list_items(section["signals"])}</ul></div>
@@ -463,7 +514,7 @@ def write_html():
     .hero{padding:78px 0 46px}.eyebrow{font:700 10px/1 Space Grotesk;letter-spacing:.34em;text-transform:uppercase;color:var(--cyan)}h1{font-family:Fraunces,serif;font-size:clamp(42px,7vw,86px);line-height:.98;margin:22px 0 20px;max-width:970px}p{color:var(--muted);line-height:1.7}.lead{font-size:19px;max-width:720px}.actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:34px}.btn{border:1px solid var(--cyan);padding:14px 19px;font:700 11px/1 Space Grotesk;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan)}.btn.primary{background:var(--cyan);color:#04101b}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin:54px 0;background:rgba(255,255,255,.09)}.meta div{background:rgba(10,15,30,.76);padding:22px}.meta span{display:block;font:700 10px/1 Space Grotesk;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}.meta strong{font-size:18px}
     .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;padding:24px 0 80px}.panel{border:1px solid var(--border);background:rgba(27,35,51,.58);padding:28px;border-radius:6px}.panel h2,.panel h3{font-family:Fraunces,serif;margin:0 0 16px}.panel li{color:var(--muted);line-height:1.6;margin:10px 0}.brief-card{display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center;border-top:1px solid var(--border);padding:28px 0}.brief-card h2{font-family:Fraunces,serif;margin:0 0 10px}
     .download-dock{position:sticky;top:0;z-index:20;border-block:1px solid rgba(0,230,255,.16);background:rgba(10,15,30,.92);backdrop-filter:blur(14px)}.download-dock .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-block:13px}.download-dock p{font:700 11px/1.3 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}.download-dock .actions{margin:0}
-    .report-pages{width:min(1480px,calc(100% - 32px));padding:14px 0 64px}.report-page{position:relative;min-height:680px;margin:0 auto 22px;padding:40px;border:1px solid rgba(0,230,255,.16);background:linear-gradient(145deg,rgba(10,15,30,.96),rgba(16,25,44,.94));box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}.report-page.question-page{border:1px solid rgba(0,230,255,.34);box-shadow:0 28px 90px rgba(0,0,0,.28),0 0 0 1px rgba(22,102,255,.14) inset,0 0 34px rgba(0,230,255,.08)}.report-page.question-page::before{content:"";position:absolute;inset:12px;border:1px solid rgba(22,102,255,.22);pointer-events:none;z-index:1}.report-page::after{content:"";position:absolute;right:-120px;top:-130px;width:340px;height:340px;border-radius:50%;background:rgba(27,35,51,.72);z-index:0}.report-page>*{position:relative;z-index:2}.report-page.cover{display:flex;flex-direction:column;justify-content:center}.page-kicker{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px solid rgba(0,230,255,.28);font:700 10px/1 Space Grotesk;letter-spacing:.28em;text-transform:uppercase;color:var(--cyan)}.report-page h2{font-family:Fraunces,serif;font-size:clamp(30px,4.2vw,52px);line-height:1.02;margin:0 0 18px}.report-page h3{font:700 12px/1.2 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin:0 0 10px}.summary-band{border-left:2px solid var(--cyan);padding:12px 0 12px 18px;margin:16px 0 20px}.summary-band strong{display:block;margin-bottom:7px;color:var(--white)}.moderator{font-weight:700;color:var(--white)}.quote-stack{display:grid;gap:12px;margin:18px 0}.quote-stack blockquote{margin:0;padding:18px;border:1px solid rgba(255,255,255,.08);background:rgba(27,35,51,.54)}.quote-stack blockquote p{color:var(--white);font-size:16px}.quote-stack cite{display:block;margin-bottom:12px;color:var(--cyan);font:700 13.2px/1.4 Space Grotesk;text-transform:uppercase;letter-spacing:.08em}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.action-strip{margin-top:18px;padding:18px;background:rgba(0,230,255,.07);border:1px solid rgba(0,230,255,.18)}ul{margin:0;padding-left:18px;color:var(--muted)}li{line-height:1.55;margin:6px 0}.contributor-table{width:100%;border-collapse:collapse;margin-top:18px}.contributor-table th,.contributor-table td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;color:var(--muted);font-size:13px;vertical-align:top}.contributor-table th{color:var(--cyan);font:700 10px/1 Space Grotesk;letter-spacing:.16em;text-transform:uppercase}.toc{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:22px}.toc a{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:12px;border:1px solid rgba(255,255,255,.08);color:var(--muted)}.toc span{color:var(--cyan);font-weight:700}.framework{display:grid;gap:10px}.framework div{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:12px;border-bottom:1px solid rgba(255,255,255,.08)}.framework strong{color:var(--cyan)}.visual-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:end;height:220px;margin:24px 0}.visual-bars div{display:flex;align-items:end;justify-content:center;background:linear-gradient(180deg,var(--cyan),var(--blue));color:#06101c;font-weight:800;padding:10px;min-height:70px}.visual-bars div:nth-child(1){height:34%}.visual-bars div:nth-child(2){height:52%}.visual-bars div:nth-child(3){height:68%}.visual-bars div:nth-child(4){height:58%}.visual-bars div:nth-child(5){height:82%}.matrix{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid rgba(255,255,255,.14)}.matrix div{min-height:96px;padding:16px;border:1px solid rgba(255,255,255,.08)}.sources-list{padding:0;list-style:none}.sources-list li{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}.sources-list a{display:block;color:var(--cyan);font-size:12px;word-break:break-word}.sponsor{padding:20px;margin:14px 0;background:rgba(27,35,51,.72);border:1px solid rgba(0,230,255,.16)}.legal{font-size:13px;color:var(--dim)}footer{padding:42px 0;color:var(--dim);text-align:center;border-top:1px solid rgba(255,255,255,.08)}footer a{color:var(--cyan)}
+    .report-pages{width:min(1480px,calc(100% - 32px));padding:14px 0 64px}.report-page{position:relative;min-height:680px;margin:0 auto 22px;padding:40px;border:1px solid rgba(0,230,255,.16);background:linear-gradient(145deg,rgba(10,15,30,.96),rgba(16,25,44,.94));box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}.report-page.question-page{border:1px solid rgba(0,230,255,.34);box-shadow:0 28px 90px rgba(0,0,0,.28),0 0 0 1px rgba(22,102,255,.14) inset,0 0 34px rgba(0,230,255,.08)}.report-page.question-page::before{content:"";position:absolute;inset:12px;border:1px solid rgba(22,102,255,.22);pointer-events:none;z-index:1}.report-page::after{content:"";position:absolute;right:-120px;top:-130px;width:340px;height:340px;border-radius:50%;background:rgba(27,35,51,.72);z-index:0}.report-page>*{position:relative;z-index:2}.report-page.cover{display:flex;flex-direction:column;justify-content:center}.page-kicker{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px solid rgba(0,230,255,.28);font:700 10px/1 Space Grotesk;letter-spacing:.28em;text-transform:uppercase;color:var(--cyan)}.report-page h2{font-family:Fraunces,serif;font-size:clamp(30px,4.2vw,52px);line-height:1.02;margin:0 0 18px}.report-page h3{font:700 12px/1.2 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin:0 0 10px}.summary-band{border-left:2px solid var(--cyan);padding:12px 0 12px 18px;margin:16px 0 20px}.summary-band strong{display:block;margin-bottom:7px;color:var(--white)}.moderator{font-weight:700;color:var(--white)}.quote-stack{display:grid;gap:12px;margin:18px 0}.quote-stack blockquote{margin:0;padding:18px;border:1px solid rgba(255,255,255,.08);background:rgba(27,35,51,.54)}.quote-stack blockquote p{color:var(--white);font-size:16px}.quote-stack cite{display:block;margin-bottom:12px;color:var(--cyan);font:700 13.2px/1.4 Space Grotesk;text-transform:uppercase;letter-spacing:.08em}.use-case-panel{margin:18px 0;padding:18px 20px;border:1px solid rgba(0,230,255,.22);background:rgba(0,230,255,.06)}.use-case-panel h3{margin-bottom:12px}.use-case-panel li{color:rgba(222,235,255,.82)}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.action-strip{margin-top:18px;padding:18px;background:rgba(0,230,255,.07);border:1px solid rgba(0,230,255,.18)}ul{margin:0;padding-left:18px;color:var(--muted)}li{line-height:1.55;margin:6px 0}.contributor-table{width:100%;border-collapse:collapse;margin-top:18px}.contributor-table th,.contributor-table td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;color:var(--muted);font-size:13px;vertical-align:top}.contributor-table th{color:var(--cyan);font:700 10px/1 Space Grotesk;letter-spacing:.16em;text-transform:uppercase}.toc{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:22px}.toc a{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:12px;border:1px solid rgba(255,255,255,.08);color:var(--muted)}.toc span{color:var(--cyan);font-weight:700}.framework{display:grid;gap:10px}.framework div{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:12px;border-bottom:1px solid rgba(255,255,255,.08)}.framework strong{color:var(--cyan)}.visual-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:end;height:220px;margin:24px 0}.visual-bars div{display:flex;align-items:end;justify-content:center;background:linear-gradient(180deg,var(--cyan),var(--blue));color:#06101c;font-weight:800;padding:10px;min-height:70px}.visual-bars div:nth-child(1){height:34%}.visual-bars div:nth-child(2){height:52%}.visual-bars div:nth-child(3){height:68%}.visual-bars div:nth-child(4){height:58%}.visual-bars div:nth-child(5){height:82%}.matrix{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid rgba(255,255,255,.14)}.matrix div{min-height:96px;padding:16px;border:1px solid rgba(255,255,255,.08)}.sources-list{padding:0;list-style:none}.sources-list li{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}.sources-list a{display:block;color:var(--cyan);font-size:12px;word-break:break-word}.sponsor{padding:20px;margin:14px 0;background:rgba(27,35,51,.72);border:1px solid rgba(0,230,255,.16)}.legal{font-size:13px;color:var(--dim)}footer{padding:42px 0;color:var(--dim);text-align:center;border-top:1px solid rgba(255,255,255,.08)}footer a{color:var(--cyan)}
     @media(max-width:780px){.grid,.meta,.brief-card,.two-col,.toc,.matrix{grid-template-columns:1fr}.top{align-items:flex-start;gap:22px;flex-direction:column}.nav{display:none}.brand-lockup{gap:10px}.brand-mark{height:42px}.brand-divider{height:36px}.brand-primary{font-size:23px;letter-spacing:.05em}.brand-secondary{font-size:10px;letter-spacing:.32em;padding-left:.32em}.download-dock .wrap{align-items:flex-start;flex-direction:column}.report-page{min-height:auto;padding:30px}.contributor-table{display:block;overflow-x:auto}.framework div{grid-template-columns:1fr}.visual-bars{height:190px}}
     """
 
