@@ -125,6 +125,17 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/storage", "mojoaisummits.com/storage/*"]
   },
   {
+    id: "files",
+    kind: "page",
+    group: "Data",
+    label: "Storage Portal",
+    summary: "Private files, event assets, media, and receipts.",
+    mode: "allowlist",
+    defaultGroupIds: ["storage-users"],
+    matches: [{ exact: "/files" }, { prefix: "/files/" }],
+    domains: ["mojoaisummits.com/files", "mojoaisummits.com/files/*"]
+  },
+  {
     id: "budget",
     kind: "page",
     group: "Data",
@@ -155,6 +166,16 @@ export const DEFAULT_ACCESS_RULES = [
     defaultGroupIds: ["partners"],
     matches: [{ exact: "/partner-profile" }, { prefix: "/partner-profile/" }],
     domains: ["mojoaisummits.com/partner-profile", "mojoaisummits.com/partner-profile/*"]
+  },
+  {
+    id: "partner-registration",
+    kind: "page",
+    group: "Partner",
+    label: "Partner Registration",
+    summary: "Invite-code partner registration surface.",
+    mode: "public",
+    matches: [{ exact: "/partner-registration" }, { prefix: "/partner-registration/" }],
+    domains: ["mojoaisummits.com/partner-registration", "mojoaisummits.com/partner-registration/*"]
   },
   {
     id: "member-profile",
@@ -195,6 +216,36 @@ export const DEFAULT_ACCESS_RULES = [
     mode: "public",
     matches: [{ exact: "/virtual" }, { prefix: "/virtual/" }],
     domains: ["mojoaisummits.com/virtual", "mojoaisummits.com/virtual/*"]
+  },
+  {
+    id: "membership",
+    kind: "page",
+    group: "Public",
+    label: "Membership",
+    summary: "Public Executive Intelligence Network membership page.",
+    mode: "public",
+    matches: [{ exact: "/membership" }, { prefix: "/membership/" }],
+    domains: ["mojoaisummits.com/membership", "mojoaisummits.com/membership/*"]
+  },
+  {
+    id: "fellowships",
+    kind: "page",
+    group: "Public",
+    label: "Fellowships",
+    summary: "Public fellowship pathway page.",
+    mode: "public",
+    matches: [{ exact: "/fellowships" }, { prefix: "/fellowships/" }],
+    domains: ["mojoaisummits.com/fellowships", "mojoaisummits.com/fellowships/*"]
+  },
+  {
+    id: "partners",
+    kind: "page",
+    group: "Public",
+    label: "Strategic Intelligence Partners",
+    summary: "Public partner page for vendor leaders and strategic contributors.",
+    mode: "public",
+    matches: [{ exact: "/partners" }, { prefix: "/partners/" }],
+    domains: ["mojoaisummits.com/partners", "mojoaisummits.com/partners/*"]
   },
   {
     id: "member-registration",
@@ -297,6 +348,16 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/events", "mojoaisummits.com/api/events/*"]
   },
   {
+    id: "api-virtual-events",
+    kind: "api",
+    group: "APIs",
+    label: "Virtual Events API",
+    summary: "Public virtual event details and Zoom availability.",
+    mode: "public",
+    matches: [{ exact: "/api/virtual-events" }, { prefix: "/api/virtual-events/" }],
+    domains: ["mojoaisummits.com/api/virtual-events", "mojoaisummits.com/api/virtual-events/*"]
+  },
+  {
     id: "api-scheduling-admin",
     kind: "api",
     group: "APIs",
@@ -337,6 +398,16 @@ export const DEFAULT_ACCESS_RULES = [
     defaultGroupIds: ["partners"],
     matches: [{ exact: "/api/partner-profile" }, { prefix: "/api/partner-profile/" }],
     domains: ["mojoaisummits.com/api/partner-profile", "mojoaisummits.com/api/partner-profile/*"]
+  },
+  {
+    id: "api-partner-registration",
+    kind: "api",
+    group: "APIs",
+    label: "Partner Registration API",
+    summary: "Public partner registration submission endpoint.",
+    mode: "public",
+    matches: [{ exact: "/api/partner-registration" }, { prefix: "/api/partner-registration/" }],
+    domains: ["mojoaisummits.com/api/partner-registration", "mojoaisummits.com/api/partner-registration/*"]
   },
   {
     id: "api-member-profile",
@@ -448,6 +519,26 @@ export const DEFAULT_ACCESS_RULES = [
       "mojoaisummits.com/crm/api/public/guest-registration/*",
       "mojoaisummits.com/crm/api/public/guest-invite-codes",
       "mojoaisummits.com/crm/api/public/guest-invite-codes/*"
+    ]
+  },
+  {
+    id: "crm-api-public-partner-registration",
+    kind: "api",
+    group: "APIs",
+    label: "CRM Public Partner Registration API",
+    summary: "Public partner invite-code validation and registration callback endpoints.",
+    mode: "public",
+    matches: [
+      { exact: "/crm/api/public/partner-registration" },
+      { prefix: "/crm/api/public/partner-registration/" },
+      { exact: "/crm/api/public/partner-invite-codes" },
+      { prefix: "/crm/api/public/partner-invite-codes/" }
+    ],
+    domains: [
+      "mojoaisummits.com/crm/api/public/partner-registration",
+      "mojoaisummits.com/crm/api/public/partner-registration/*",
+      "mojoaisummits.com/crm/api/public/partner-invite-codes",
+      "mojoaisummits.com/crm/api/public/partner-invite-codes/*"
     ]
   }
 ];

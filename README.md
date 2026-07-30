@@ -110,7 +110,7 @@ Legacy `/vip-registration/?invite=######` CRM links redirect to `/guest/?invite=
 
 ## Partner Registration
 
-The partner registration page lives at `/partner-registration/`, but it is intentionally hidden from public navigation and site route listings. It should only be opened from CRM-generated links using `/partner-registration/?invite=######`. For administrative page review only, `/partner-registration/?preview=4321` opens the form in non-submitting preview mode.
+The partner registration page lives at `/partner-registration/`, but it is intentionally hidden from public navigation and public site route listings. Attendees should only open it from CRM-generated links using `/partner-registration/?invite=######`. For administrative page review and the private company hub, `/partner-registration/?preview=4321` opens the form in non-submitting preview mode.
 Partner invite codes are generated inside the protected CRM and stored under `crm:partner-invite-code:######` with event metadata such as event name, event date, partner company, partner contact email, and partner tier. Partner registration submissions are routed through `/crm/api/public/partner-registration`, stored under `partner-registration:*` and `crm:partner-registrant:*`, and marked against the single-use partner invite code.
 
 ## Fall 2026 Virtual Events

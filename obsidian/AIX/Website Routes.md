@@ -5,11 +5,11 @@
 - Route: `/admin/`
 - Source file: `dist/admin/index.html`
 - Purpose: company hub for Mojo AI Summits routes grouped by access level.
-- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/member-registration/`, `/member-profile/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
-- Hidden invite-only space: `/partner-registration/` exists only for CRM-generated partner invite links and should not be added to public navigation or site route listings.
-- Partner space: `/partner-profile/` for approved partner contacts.
-- Team space: `/setup/`, `/events/`, `/crm/`, and `/files/` for the Storage portal. `/storage/` remains the legacy Storage path.
-- Admin space: `/access/` and `/budget/`.
+- Public space: `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/book/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
+- Member space: `/member-profile/?preview=4321` for administrative review of the member profile experience.
+- Partner space: `/partner-registration/?preview=4321` for administrative review of hidden partner registration, plus `/partner-profile/` for approved partner contacts.
+- Team space: `/setup/`, `/events/`, `/crm/`, `/files/` for the Storage portal, and `/storage/` as the legacy Storage route.
+- Admin space: `/schedule-admin/`, `/access/`, and `/budget/`.
 - Routing support: `/admin` redirects to `/admin/`; no-cache headers are configured for `/admin` and `/admin/*`.
 - Guest registration compatibility: legacy `/vip-registration/?invite=######` CRM links redirect to `/guest/?invite=######` so existing invite links continue to work while the public language uses guest registration.
 - Registration access: `/member-registration/` is public to load but hides the registration form behind a six-digit member invite code. The home page modal, `?invite=######`, session storage, or direct code entry can unlock it after `/crm/api/public/member-invite-codes/######` validation. The member profile generator writes single-use nomination codes under `crm:member-invite-code:######`; `MOJO_MEMBER_INVITE_CODES_STRICT=true` makes stored active codes mandatory. `/member-profile/?preview=4321` opens the administrative sample member profile with non-submitting forms. `/partner-registration/` is stricter: it unlocks only from a CRM-generated `?invite=######` link backed by a stored `crm:partner-invite-code:######` record. `/partner-registration/?preview=4321` is the administrative non-submitting preview link.
@@ -51,7 +51,7 @@
 - Route: `/partner-registration/`
 - Source file: `dist/partner-registration/index.html`
 - API routes: `/api/partner-registration`, `/crm/api/public/partner-registration`, and `/crm/api/public/partner-invite-codes/[code]`
-- Purpose: hidden event registration flow for partner contacts. The page should not appear in public navigation, the company hub, or public route lists; CRM-generated invite links are the entry point.
+- Purpose: hidden event registration flow for partner contacts. The page should not appear in public navigation or public route lists; CRM-generated invite links are the attendee entry point. The private company hub may link to `/partner-registration/?preview=4321` for administrative page review.
 - Storage model: CRM creates single-use codes under `crm:partner-invite-code:######`. Successful registrations are stored under `partner-registration:*` and `crm:partner-registrant:*`, with event metadata copied from the invite code.
 - Admin preview: `/partner-registration/?preview=4321` opens the form for visual review and page editing checks, but the submit handler blocks registration in preview mode.
 - Routing support: `/partner-registration` redirects to `/partner-registration/`; no-cache headers are configured for `/partner-registration` and `/partner-registration/*`.

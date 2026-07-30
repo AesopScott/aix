@@ -650,12 +650,13 @@
   <script>
     const accessSpaces = {
       Public: "No Mojo account required. These pages can be opened by visitors, invitees, and policy reviewers.",
+      Member: "Member-facing profile and fellowship experience links.",
       Partner: "Requires an approved partner account when access control is enabled.",
       Team: "Requires a Mojo team account when access control is enabled.",
       Admin: "Reserved for owners and admins who manage access or company operations."
     };
 
-    const accessOrder = ["Public", "Partner", "Team", "Admin"];
+    const accessOrder = ["Public", "Member", "Partner", "Team", "Admin"];
 
     const routes = [
       {
@@ -716,6 +717,14 @@
       },
       {
         group: "Partner",
+        title: "Partner Registration Preview",
+        path: "/partner-registration/?preview=4321",
+        summary: "Administrative preview of the invitation-only partner registration form without requiring a live invite code.",
+        status: "Partner",
+        tags: ["partner", "registration", "preview", "invite"]
+      },
+      {
+        group: "Partner",
         title: "Partner Profile",
         path: "/partner-profile/",
         summary: "Private partner dashboard for tier, attended events, visible event guests, publication placements, and sponsorship contributions.",
@@ -723,11 +732,11 @@
         tags: ["partner", "profile", "contributions", "events"]
       },
       {
-        group: "Team",
+        group: "Member",
         title: "Member Profile Preview",
         path: "/member-profile/?preview=4321",
         summary: "Administrative preview of the private member profile experience with sample tier, invite, directory, and fellowship data.",
-        status: "Team",
+        status: "Member",
         tags: ["member", "profile", "preview", "membership"]
       },
       {
@@ -795,6 +804,14 @@
         tags: ["storage", "r2", "files"]
       },
       {
+        group: "Team",
+        title: "Storage Portal Legacy Route",
+        path: "/storage/",
+        summary: "Legacy protected storage portal route retained for existing internal links and access-control coverage.",
+        status: "Team",
+        tags: ["storage", "legacy", "r2"]
+      },
+      {
         group: "Admin",
         title: "Scheduling Admin",
         path: "/schedule-admin/",
@@ -828,7 +845,9 @@
       "/fellowships/",
       "/partners/",
       "/book/",
+      "/partner-registration/",
       "/partner-profile/",
+      "/member-profile/",
       "/member-registration/",
       "/guest/",
       "/privacy/",
@@ -837,6 +856,7 @@
       "/events/",
       "/crm/",
       "/files/",
+      "/storage/",
       "/schedule-admin/",
       "/access/",
       "/budget/"
@@ -1054,7 +1074,6 @@
       ]
         .map(normalizePath)
         .filter((path) => path && path !== "/admin/" && !path.startsWith("/mockups/"))
-        .filter((path) => path !== "/storage/")
         .filter((path, index, list) => list.indexOf(path) === index)
         .filter((path) => !existingPaths.has(path));
 
