@@ -1,6 +1,6 @@
 # Website Access Control
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
 The AIX site uses Mojo app-session authentication for access administration at `/access/`.
 
@@ -17,8 +17,9 @@ Current state:
 - `Admin` and `owner` roles can manage the access console and bypass protected-route group lists; `member` accounts depend on group membership.
 - The account creation UI now asks for access groups (`Admin` and/or `Mojo team`) instead of exposing raw `member/admin/owner` role choices.
 - Access group cards show visible membership lists with account status, backed by the editable group email lists.
+- Existing account rows include editable group checkboxes and a Save Groups action, so owner/admin users can add storage, team, partner, member, or admin access after account creation.
 
 Operational note:
 - Owner/admin users should create additional accounts from `/access/` after the first owner signs in.
-- Add users to `Admin` or `Mojo team` from the account form or by editing the group email lists in `/access/`, then assign each route to the intended group.
+- Add users to access groups from the account form, by editing the group email lists, or by changing the checkboxes on an existing account row in `/access/`, then assign each route to the intended group.
 - Do not store bootstrap tokens, passwords, invite tokens, or recovery material in the repo or Obsidian.

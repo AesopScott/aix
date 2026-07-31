@@ -611,7 +611,7 @@
 
     .user-row {
       display: grid;
-      grid-template-columns: minmax(160px, 1.2fr) minmax(90px, 0.45fr) minmax(90px, 0.45fr) minmax(120px, 0.6fr) auto;
+      grid-template-columns: minmax(150px, 0.85fr) minmax(84px, 0.35fr) minmax(84px, 0.35fr) minmax(260px, 1.2fr) auto auto;
       gap: 0.55rem;
       align-items: center;
       padding: 0.65rem;
@@ -623,6 +623,41 @@
     .user-row strong {
       color: var(--white);
       overflow-wrap: anywhere;
+    }
+
+    .user-membership-editor {
+      display: grid;
+      gap: 0.42rem;
+      min-width: 0;
+    }
+
+    .user-membership-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.38rem;
+    }
+
+    .user-membership-choice {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.38rem;
+      min-height: 34px;
+      padding: 0.42rem 0.55rem;
+      border: 1px solid rgba(0, 230, 255, 0.16);
+      border-radius: 999px;
+      background: rgba(10, 15, 30, 0.5);
+      color: var(--white);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .user-membership-choice input {
+      width: 14px;
+      min-height: 14px;
+      height: 14px;
+      accent-color: var(--cyan);
     }
 
     .compact-button {
@@ -1240,6 +1275,42 @@
       return groupIds.includes("admin") ? "admin" : "member";
     }
 
+    function editableAccessGroups() {
+      return (state.config?.groups || []).filter((group) => group.id !== "public");
+    }
+
+    function userGroupIds(email) {
+      const normalized = String(email || "").trim().toLowerCase();
+      return editableAccessGroups()
+        .filter((group) => (group.emails || []).includes(normalized))
+        .map((group) => group.id);
+    }
+
+    function selectedExistingUserGroupIds(email) {
+      const selector = `[data-user-group-email="${CSS.escape(email)}"]`;
+      return [...document.querySelectorAll(selector)]
+        .filter((checkbox) => checkbox.checked)
+        .map((checkbox) => checkbox.value);
+    }
+
+    function setUserGroups(email, groupIds) {
+      const normalized = String(email || "").trim().toLowerCase();
+      const selectedGroups = new Set(groupIds);
+      state.config.groups = (state.config.groups || []).map((group) => {
+        if (group.id === "public") return { ...group, emails: [] };
+        const emails = new Set((group.emails || []).map((value) => String(value).trim().toLowerCase()).filter(Boolean));
+        if (selectedGroups.has(group.id)) {
+          emails.add(normalized);
+        } else {
+          emails.delete(normalized);
+        }
+        return {
+          ...group,
+          emails: [...emails].sort()
+        };
+      });
+    }
+
     function addEmailToAccessGroups(groupIds, email) {
       syncGroupControls();
       const selectedGroups = new Set(groupIds);
@@ -1251,6 +1322,72 @@
         };
       });
       renderAccessGroups();
+    }
+
+    async function updateUserGroups(email) {
+      clearNotice();
+      const user = state.users.find((entry) => entry.email === email);
+      if (!user) {
+        showNotice("User could not be found.", "error");
+        return;
+      }
+
+      const groupIds = selectedExistingUserGroupIds(email);
+      if (!groupIds.length) {
+        showNotice("Choose at least one access group for this account.", "error");
+        return;
+      }
+
+      const button = document.querySelector(`[data-save-user-groups="${CSS.escape(email)}"]`);
+      if (button) button.disabled = true;
+
+      try {
+        syncGroupControls();
+        setUserGroups(email, groupIds);
+        renderAccessGroups();
+
+        const configResponse = await fetch("/api/access-config", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(currentPayload())
+        });
+        const configPayload = await configResponse.json().catch(() => ({}));
+        if (!configResponse.ok) {
+          throw new Error(configPayload.error || "Group membership could not be saved.");
+        }
+        state.config = configPayload.config;
+
+        if (user.role !== "owner") {
+          const nextRole = roleForAccessGroups(groupIds);
+          if (nextRole !== user.role) {
+            const userResponse = await fetch("/api/access-users", {
+              method: "PUT",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ email, role: nextRole })
+            });
+            const userPayload = await userResponse.json().catch(() => ({}));
+            if (!userResponse.ok) {
+              throw new Error(userPayload.error || "Group membership was saved, but the user role could not be updated.");
+            }
+            state.users = state.users.map((entry) => entry.email === email ? userPayload.user : entry);
+          }
+        }
+
+        renderAccessGroups();
+        renderUsers();
+        renderRoutes();
+        const groupLabels = groupIds
+          .map((id) => (state.config.groups || []).find((entry) => entry.id === id)?.label || id)
+          .join(", ");
+        showNotice(`Updated ${email} access groups: ${groupLabels}.`, "ok");
+      } catch (error) {
+        await loadConfig();
+        renderAccessGroups();
+        renderUsers();
+        showNotice(error.message, "error");
+      } finally {
+        if (button) button.disabled = false;
+      }
     }
 
     function routeModeMap() {
@@ -1395,14 +1532,6 @@
     function renderUsers() {
       if (!canManageAccess()) return;
       const pendingInvites = state.invites.filter((invite) => invite.status === "pending");
-      const membershipsByEmail = new Map();
-      (state.config?.groups || []).forEach((group) => {
-        (group.emails || []).forEach((email) => {
-          const memberships = membershipsByEmail.get(email) || [];
-          memberships.push(group.label);
-          membershipsByEmail.set(email, memberships);
-        });
-      });
       elements.inviteList.innerHTML = `
         <h3>Pending Invites</h3>
         ${pendingInvites.length ? pendingInvites.map((invite) => `
@@ -1418,17 +1547,32 @@
 
       elements.userList.innerHTML = `
         <h3>Accounts</h3>
-        ${state.users.length ? state.users.map((user) => `
-          <div class="user-row">
-            <strong>${escapeHtml(user.email)}</strong>
-            <span class="tag ${user.status === "active" ? "public" : "closed"}">${escapeHtml(user.status)}</span>
-            <span class="tag">${escapeHtml(user.role)}</span>
-            <span class="tag">${escapeHtml((membershipsByEmail.get(user.email) || ["No group"]).join(", "))}</span>
-            <button class="danger compact-button" data-disable-user="${escapeHtml(user.email)}" type="button" ${user.status === "disabled" ? "disabled" : ""}>Disable</button>
-          </div>
-        `).join("") : '<p>No accounts have been created yet.</p>'}
+        ${state.users.length ? state.users.map((user) => {
+          const groupIds = new Set(userGroupIds(user.email));
+          const groupOptions = editableAccessGroups().map((group) => `
+            <label class="user-membership-choice">
+              <input data-user-group-email="${escapeHtml(user.email)}" type="checkbox" value="${escapeHtml(group.id)}" ${groupIds.has(group.id) ? "checked" : ""}>
+              <span>${escapeHtml(group.label)}</span>
+            </label>
+          `).join("");
+          return `
+            <div class="user-row">
+              <strong>${escapeHtml(user.email)}</strong>
+              <span class="tag ${user.status === "active" ? "public" : "closed"}">${escapeHtml(user.status)}</span>
+              <span class="tag">${escapeHtml(user.role)}</span>
+              <div class="user-membership-editor">
+                <div class="user-membership-options">${groupOptions}</div>
+              </div>
+              <button class="secondary compact-button" data-save-user-groups="${escapeHtml(user.email)}" type="button">Save Groups</button>
+              <button class="danger compact-button" data-disable-user="${escapeHtml(user.email)}" type="button" ${user.status === "disabled" ? "disabled" : ""}>Disable</button>
+            </div>
+          `;
+        }).join("") : '<p>No accounts have been created yet.</p>'}
       `;
 
+      document.querySelectorAll("[data-save-user-groups]").forEach((button) => {
+        button.addEventListener("click", () => updateUserGroups(button.dataset.saveUserGroups));
+      });
       document.querySelectorAll("[data-disable-user]").forEach((button) => {
         button.addEventListener("click", () => disableUser(button.dataset.disableUser));
       });
