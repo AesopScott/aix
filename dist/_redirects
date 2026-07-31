@@ -13,7 +13,8 @@
 /member-profile /member-profile/ 301
 /partner-registration /partner-registration/ 301
 /guest /guest/ 301
-/crm /crm/ 301
+/crm /crm/index.html 200
+/crm/ /crm/index.html 200
 /privacy /privacy/ 301
 /sms-terms /sms-terms/ 301
 /dallas /dallas/ 301
