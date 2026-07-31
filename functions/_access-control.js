@@ -400,6 +400,26 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/crm", "mojoaisummits.com/api/crm/*"]
   },
   {
+    id: "api-live-crm-contacts",
+    kind: "api",
+    group: "APIs",
+    label: "CRM Contacts API",
+    summary: "Contact records for the live CRM application.",
+    mode: "allowlist",
+    matches: [{ exact: "/api/contacts" }, { prefix: "/api/contacts/" }],
+    domains: ["mojoaisummits.com/api/contacts", "mojoaisummits.com/api/contacts/*"]
+  },
+  {
+    id: "api-live-crm-stats",
+    kind: "api",
+    group: "APIs",
+    label: "CRM Stats API",
+    summary: "CRM dashboard counts for the live CRM application.",
+    mode: "allowlist",
+    matches: [{ exact: "/api/stats" }, { prefix: "/api/stats/" }],
+    domains: ["mojoaisummits.com/api/stats", "mojoaisummits.com/api/stats/*"]
+  },
+  {
     id: "api-partner-profile",
     kind: "api",
     group: "APIs",
