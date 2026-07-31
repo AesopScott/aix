@@ -317,6 +317,14 @@
     height:18px;
     accent-color:var(--cyan);
   }
+  .checkbox-row.disabled{
+    color:var(--ink-dim);
+    opacity:.48;
+    cursor:not-allowed;
+  }
+  .checkbox-row.disabled input{
+    cursor:not-allowed;
+  }
   .consent-row{
     margin-top:10px;
     color:var(--ink-dim);
@@ -558,6 +566,8 @@
   const form = document.getElementById('partnerRegistrationForm');
   const success = document.getElementById('registrationSuccess');
   const verificationStatus = document.getElementById('phoneVerificationStatus');
+  const liveRoleInputs = Array.from(form.querySelectorAll('input[name="isPresenter"], input[name="isRoundtableLeader"]'));
+  const virtualRoleInput = form.querySelector('input[name="isFeaturedMember"]');
   const adminPreviewCode = '4321';
   let adminPreviewMode = false;
 
@@ -593,6 +603,30 @@
   function normalizePhone(phone){
     return String(phone || '').replace(/[^\d+]/g, '');
   }
+
+  function setRoleDisabled(input, disabled){
+    input.disabled = disabled;
+    input.closest('.checkbox-row')?.classList.toggle('disabled', disabled);
+  }
+
+  function syncEventRoleAvailability(changedInput){
+    if (changedInput === virtualRoleInput && virtualRoleInput.checked) {
+      liveRoleInputs.forEach((input) => { input.checked = false; });
+    }
+    if (liveRoleInputs.includes(changedInput) && changedInput.checked) {
+      virtualRoleInput.checked = false;
+    }
+
+    const hasLiveRole = liveRoleInputs.some((input) => input.checked);
+    const hasVirtualRole = virtualRoleInput.checked;
+    setRoleDisabled(virtualRoleInput, hasLiveRole);
+    liveRoleInputs.forEach((input) => setRoleDisabled(input, hasVirtualRole));
+  }
+
+  [...liveRoleInputs, virtualRoleInput].forEach((input) => {
+    input.addEventListener('change', () => syncEventRoleAvailability(input));
+  });
+  syncEventRoleAvailability();
 
   async function validateInviteCode(code){
     const response = await fetch(`/crm/api/public/partner-invite-codes/${encodeURIComponent(code)}`);
