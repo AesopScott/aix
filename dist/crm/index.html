@@ -564,7 +564,9 @@
           Registration type
           <select id="registrationInviteType" name="type">
             <option value="guest">Guest</option>
-            <option value="member">Member</option>
+            <option value="featured-guest">Featured guest</option>
+            <option value="presenter">Presenter</option>
+            <option value="roundtable-leader">Round table leader</option>
           </select>
         </label>
         <label>
@@ -868,9 +870,7 @@
     }
 
     function updateRegistrationInviteSubmit() {
-      registrationInviteSubmit.textContent = registrationInviteType.value === "member"
-        ? "Generate Member Link"
-        : "Generate Guest Link";
+      registrationInviteSubmit.textContent = "Generate Guest Link";
     }
 
     async function copyText(value) {
@@ -919,7 +919,7 @@
           <div class="invite-row">
             <div>
               <strong>${escapeHtml(invite.eventName || "Event registration invite")}</strong>
-              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(invite.type || "guest")} | ${escapeHtml(inviteStatusText(invite))}</p>
+              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(invite.guestRegistrationType || invite.registrationRole || invite.type || "guest")} | ${escapeHtml(inviteStatusText(invite))}</p>
               <p>Invited: ${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Name not recorded")}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
@@ -1328,10 +1328,11 @@
       event.preventDefault();
       const formData = new FormData(registrationInviteForm);
       const selected = registrationInviteEvent.selectedOptions[0];
-      const payload = {
-        action: "create-registration-invite",
-        type: formData.get("type") || "guest",
-        eventSlug: formData.get("eventSlug") || "",
+        const payload = {
+          action: "create-registration-invite",
+          type: "guest",
+          guestRegistrationType: formData.get("type") || "guest",
+          eventSlug: formData.get("eventSlug") || "",
         intendedGuestName: formData.get("intendedGuestName") || "",
         eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
         eventDate: selected?.dataset.eventDate || ""

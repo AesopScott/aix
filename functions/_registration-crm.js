@@ -55,6 +55,16 @@ function cleanBoolean(value) {
   return value === true || value === "true";
 }
 
+function cleanGuestRegistrationType(value) {
+  return {
+    "featured-guest": "featured-guest",
+    presenter: "presenter",
+    roundtable: "roundtable-leader",
+    "roundtable-leader": "roundtable-leader",
+    guest: "guest"
+  }[cleanString(value).toLowerCase()] || "guest";
+}
+
 function slugify(value) {
   return cleanString(value)
     .toLowerCase()
@@ -75,9 +85,10 @@ function registrationRoleLabel(type) {
 
 function registrationRoles(type, registration = {}) {
   const roles = [registrationRoleLabel(type)];
-  if (cleanBoolean(registration.isPresenter)) roles.push("Presenter");
-  if (cleanBoolean(registration.isRoundtableLeader)) roles.push("Round table leader");
-  if (cleanBoolean(registration.isFeaturedGuest)) roles.push("Featured guest");
+  const guestRegistrationType = cleanGuestRegistrationType(registration.guestRegistrationType || registration.registrationRole);
+  if (cleanBoolean(registration.isPresenter) || guestRegistrationType === "presenter") roles.push("Presenter");
+  if (cleanBoolean(registration.isRoundtableLeader) || guestRegistrationType === "roundtable-leader") roles.push("Round table leader");
+  if (cleanBoolean(registration.isFeaturedGuest) || guestRegistrationType === "featured-guest") roles.push("Featured guest");
   if (cleanBoolean(registration.isFeaturedMember)) roles.push("Featured member");
   return [...new Set(roles.filter(Boolean))];
 }
@@ -106,6 +117,8 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
     inviteCode: cleanString(registration.inviteCode),
     intendedGuestName: cleanString(registration.intendedGuestName || registration.invitedName || registration.guestName),
     invitedName: cleanString(registration.invitedName || registration.intendedGuestName || registration.guestName),
+    guestRegistrationType: cleanGuestRegistrationType(registration.guestRegistrationType || registration.registrationRole),
+    registrationRole: cleanGuestRegistrationType(registration.registrationRole || registration.guestRegistrationType),
     registrationId: cleanString(registration.id),
     registrationType: cleanString(type),
     role: roles.join(", "),
@@ -177,6 +190,11 @@ function inviteMeta(inviteRecord) {
     intendedGuestName: cleanString(record.intendedGuestName || record.invitedName || record.guestName),
     invitedName: cleanString(record.invitedName || record.intendedGuestName || record.guestName),
     guestName: cleanString(record.guestName || record.intendedGuestName || record.invitedName),
+    guestRegistrationType: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole),
+    registrationRole: cleanGuestRegistrationType(record.registrationRole || record.guestRegistrationType),
+    isPresenter: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "presenter",
+    isRoundtableLeader: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "roundtable-leader",
+    isFeaturedGuest: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "featured-guest",
     partnerCompany: cleanString(record.partnerCompany),
     partnerContactEmail: cleanString(record.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record.partnerTier)
@@ -312,6 +330,8 @@ export async function upsertRegistrationContact(env, type, registration, config 
     name: cleanString(registration.name) || email,
     invitedName: cleanString(registration.invitedName || registration.intendedGuestName || registration.guestName),
     intendedGuestName: cleanString(registration.intendedGuestName || registration.invitedName || registration.guestName),
+    guestRegistrationType: cleanGuestRegistrationType(registration.guestRegistrationType || registration.registrationRole),
+    registrationRole: cleanGuestRegistrationType(registration.registrationRole || registration.guestRegistrationType),
     company,
     companySlug,
     companyKey,

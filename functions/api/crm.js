@@ -135,6 +135,16 @@ function cleanInviteType(value) {
   return value === "member" ? "member" : "guest";
 }
 
+function cleanGuestRegistrationType(value) {
+  return {
+    "featured-guest": "featured-guest",
+    presenter: "presenter",
+    roundtable: "roundtable-leader",
+    "roundtable-leader": "roundtable-leader",
+    guest: "guest"
+  }[cleanString(value, 80).toLowerCase()] || "guest";
+}
+
 function randomInviteCode() {
   return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
 }
@@ -166,6 +176,8 @@ function normalizeRecord(key, record) {
     eventDate: cleanString(record?.eventDate),
     intendedGuestName: cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName),
     invitedName: cleanString(record?.invitedName || record?.intendedGuestName || record?.guestName),
+    guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
+    registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.guestRegistrationType),
     partnerCompany: cleanString(record?.partnerCompany),
     partnerTier: cleanString(record?.partnerTier),
     partnerPassword: cleanString(record?.partnerPassword, 120),
@@ -230,6 +242,8 @@ function normalizeContactRecord(key, record = {}) {
       eventDate: cleanString(event?.eventDate),
       intendedGuestName: cleanString(event?.intendedGuestName || event?.invitedName || event?.guestName),
       invitedName: cleanString(event?.invitedName || event?.intendedGuestName || event?.guestName),
+      guestRegistrationType: cleanGuestRegistrationType(event?.guestRegistrationType || event?.registrationRole),
+      registrationRole: cleanGuestRegistrationType(event?.registrationRole || event?.guestRegistrationType),
       inviteCode: cleanString(event?.inviteCode),
       registrationId: cleanString(event?.registrationId),
       registrationType: cleanString(event?.registrationType),
@@ -374,6 +388,8 @@ function normalizeInviteCode(key, record) {
     intendedGuestName: cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName),
     invitedName: cleanString(record?.invitedName || record?.intendedGuestName || record?.guestName),
     guestName: cleanString(record?.guestName || record?.intendedGuestName || record?.invitedName),
+    guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
+    registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.guestRegistrationType),
     partnerCompany: cleanString(record?.partnerCompany),
     partnerContactEmail: cleanString(record?.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record?.partnerTier),
@@ -503,6 +519,7 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     payload.intendedGuestName || payload.invitedName || payload.guestName || payload.name,
     240
   );
+  const guestRegistrationType = cleanGuestRegistrationType(payload.guestRegistrationType || payload.registrationRole || payload.type);
   if (!eventSlug && !eventName) throw new Error("Select an event before generating an invite code.");
   if (!intendedGuestName) throw new Error("Enter the guest or user name before generating an invite code.");
 
@@ -518,6 +535,8 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     intendedGuestName,
     invitedName: intendedGuestName,
     guestName: intendedGuestName,
+    guestRegistrationType,
+    registrationRole: guestRegistrationType,
     createdAt,
     createdBy: actor
   };
