@@ -30,12 +30,6 @@ function cleanBoolean(value) {
   return value === true || value === "true";
 }
 
-function cleanArray(value) {
-  return Array.isArray(value)
-    ? value.map(cleanString).filter(Boolean).slice(0, 12)
-    : [];
-}
-
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -63,9 +57,7 @@ function cleanPayload(payload) {
     isPresenter: cleanBoolean(payload?.isPresenter),
     isRoundtableLeader: cleanBoolean(payload?.isRoundtableLeader),
     publicationUseName: cleanBoolean(payload?.publicationUseName),
-    publicationUseCompany: cleanBoolean(payload?.publicationUseCompany),
-    foodPreferences: cleanArray(payload?.foodPreferences),
-    foodNotes: cleanString(payload?.foodNotes)
+    publicationUseCompany: cleanBoolean(payload?.publicationUseCompany)
   };
 }
 

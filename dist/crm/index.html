@@ -474,7 +474,6 @@
               <th>Contact</th>
               <th>Roles</th>
               <th>Publication</th>
-              <th>Food</th>
               <th>Phone</th>
               <th>Status</th>
               <th>Profile Access</th>
@@ -571,11 +570,6 @@
       if (row.isFeaturedMember) roles.push("Featured member");
       if (!roles.length) roles.push("Attendee");
       return roles.map((role) => `<span class="pill">${escapeHtml(role)}</span>`).join("");
-    }
-
-    function foodBadges(row) {
-      const foods = row.foodPreferences?.length ? row.foodPreferences : ["No preference"];
-      return foods.map((food) => `<span class="pill">${escapeHtml(food)}</span>`).join("");
     }
 
     function publicationBadges(row) {
@@ -768,9 +762,7 @@
           row.eventName,
           row.eventDate,
           row.partnerTier,
-          row.foodNotes,
-          row.crmNotes,
-          ...(row.foodPreferences || [])
+          row.crmNotes
         ].some((value) => String(value || "").toLowerCase().includes(search));
       });
     }
@@ -792,7 +784,7 @@
       const label = activeLabel();
       registrantsTitle.textContent = `${label} Registrants`;
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="10">No ${label} registrants match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="9">No ${label} registrants match the current filters.</td></tr>`;
         return;
       }
 
@@ -816,10 +808,6 @@
           </td>
           <td><div class="role-list">${roleBadges(row)}</div></td>
           <td><div class="role-list">${publicationBadges(row)}</div></td>
-          <td>
-            <div class="food-list">${foodBadges(row)}</div>
-            ${row.foodNotes ? `<p>${escapeHtml(row.foodNotes)}</p>` : ""}
-          </td>
           <td>${phonePill(row)}</td>
           <td>
             <select class="inline-select" data-status-key="${escapeHtml(row.key)}">

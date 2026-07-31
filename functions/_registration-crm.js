@@ -59,12 +59,6 @@ function cleanBoolean(value) {
   return value === true || value === "true";
 }
 
-function cleanArray(value) {
-  return Array.isArray(value)
-    ? value.map(cleanString).filter(Boolean).slice(0, 12)
-    : [];
-}
-
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -94,9 +88,7 @@ function cleanPayload(payload, type = "") {
     isFeaturedGuest: cleanBoolean(payload?.isFeaturedGuest),
     isFeaturedMember: cleanBoolean(payload?.isFeaturedMember),
     publicationUseName: cleanBoolean(payload?.publicationUseName),
-    publicationUseCompany: cleanBoolean(payload?.publicationUseCompany),
-    foodPreferences: cleanArray(payload?.foodPreferences),
-    foodNotes: cleanString(payload?.foodNotes)
+    publicationUseCompany: cleanBoolean(payload?.publicationUseCompany)
   };
 }
 

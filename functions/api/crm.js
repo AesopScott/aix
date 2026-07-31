@@ -170,10 +170,6 @@ function normalizeRecord(key, record) {
     isFeaturedMember: Boolean(record?.isFeaturedMember),
     publicationUseName: Boolean(record?.publicationUseName),
     publicationUseCompany: Boolean(record?.publicationUseCompany),
-    foodPreferences: Array.isArray(record?.foodPreferences)
-      ? record.foodPreferences.map(cleanString).filter(Boolean)
-      : [],
-    foodNotes: cleanString(record?.foodNotes),
     crmStatus: allowedStatuses.has(record?.crmStatus) ? record.crmStatus : "new",
     crmNotes: cleanString(record?.crmNotes),
     crmUpdatedAt: cleanString(record?.crmUpdatedAt),
@@ -583,8 +579,6 @@ export async function onRequestGet({ request, env, data }) {
         "Featured Member",
         "Publication Use Name",
         "Publication Use Company",
-        "Food Preferences",
-        "Food Notes",
         "CRM Notes"
       ],
       ...rows.map((row) => [
@@ -608,8 +602,6 @@ export async function onRequestGet({ request, env, data }) {
         row.isFeaturedMember ? "Yes" : "No",
         row.publicationUseName ? "Yes" : "No",
         row.publicationUseCompany ? "Yes" : "No",
-        row.foodPreferences.join("; "),
-        row.foodNotes,
         row.crmNotes
       ])
     ]

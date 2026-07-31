@@ -488,21 +488,6 @@
                 <label class="checkbox-row"><input type="checkbox" name="isFeaturedGuest" value="true"> I am a featured guest. I understand that I must be on screen and dressed professionally.</label>
               </div>
             </div>
-            <div class="field full">
-              <label>Food preferences</label>
-              <div class="checkbox-group checkbox-grid">
-                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Vegetarian"> Vegetarian</label>
-                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Vegan"> Vegan</label>
-                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Gluten-free"> Gluten-free</label>
-                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Dairy-free"> Dairy-free</label>
-                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="Nut allergy"> Nut allergy</label>
-                <label class="checkbox-row"><input type="checkbox" name="foodPreference" value="No preference"> No preference</label>
-              </div>
-            </div>
-            <div class="field full">
-              <label for="foodNotes">Food notes <span class="opt">(optional)</span></label>
-              <input type="text" id="foodNotes" name="foodNotes" placeholder="Allergies, restrictions, or anything the catering team should know">
-            </div>
           </div>
           <input type="hidden" id="phoneVerificationStatus" name="phoneVerificationStatus" value="pending_sms_setup">
           <p class="message error" id="formError"></p>
@@ -690,7 +675,6 @@
     payload.isFeaturedGuest = formData.has('isFeaturedGuest');
     payload.publicationUseName = formData.has('publicationUseName');
     payload.publicationUseCompany = formData.has('publicationUseCompany');
-    payload.foodPreferences = formData.getAll('foodPreference');
     verificationStatus.value = 'pending_sms_setup';
     payload.phoneVerificationStatus = 'pending_sms_setup';
 
