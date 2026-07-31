@@ -224,7 +224,12 @@ async function getStoredText(env, key) {
 async function getStoredJson(env, key) {
   const object = await schedulingObjectStore(env)?.get(key).catch(() => null);
   if (object) {
-    const value = JSON.parse(await object.text());
+    let value = null;
+    try {
+      value = JSON.parse(await object.text());
+    } catch {
+      return null;
+    }
     const clean = withoutExpiryMetadata(value);
     if (!clean) {
       await deleteStoredValue(env, key).catch(() => null);
@@ -1013,7 +1018,7 @@ async function connectedCalendarBusyIntervals(env, employee, start, end) {
   return busyIntervalsFromSchedule(calendars.flat(), employee);
 }
 
-async function bookingBusyIntervals(env, employee, start, end) {
+async function sharedZoomBusyIntervals(env, start, end) {
   const dateKeys = new Set();
   for (let cursor = addUtcDays(start, -1); cursor <= addUtcDays(end, 1); cursor = addUtcDays(cursor, 1)) {
     dateKeys.add(utcDateKey(cursor));
@@ -1023,9 +1028,10 @@ async function bookingBusyIntervals(env, employee, start, end) {
   await Promise.all([...dateKeys].map(async (dateKey) => {
     records.push(...(await listStoredJsonByPrefix(env, `${BOOKING_PREFIX}${dateKey}:`)));
   }));
+  records.push(...(await listStoredJsonByPrefix(env, HOLD_PREFIX)));
 
   return records
-    .filter((record) => record.employeeSlug === employee.slug && record.status !== "cancelled")
+    .filter((record) => record.status !== "cancelled")
     .map((record) => ({
       start: record.start,
       end: record.end
@@ -1036,6 +1042,10 @@ async function bookingBusyIntervals(env, employee, start, end) {
       start: new Date(interval.start),
       end: new Date(interval.end)
     }));
+}
+
+async function hasSharedZoomConflict(env, start, end) {
+  return (await sharedZoomBusyIntervals(env, start, end)).length > 0;
 }
 
 function buildCandidateSlots(employee, dateValue, meetingType, busyIntervals = []) {
@@ -1107,10 +1117,10 @@ export async function availability(env, query) {
     source = `${source}+connected-calendars`;
   }
 
-  const bookingIntervals = await bookingBusyIntervals(env, employee, dayStart, dayEnd);
-  if (bookingIntervals.length) {
-    busyIntervals = [...busyIntervals, ...bookingIntervals];
-    source = `${source}+confirmed-bookings`;
+  const sharedZoomIntervals = await sharedZoomBusyIntervals(env, dayStart, dayEnd);
+  if (sharedZoomIntervals.length) {
+    busyIntervals = [...busyIntervals, ...sharedZoomIntervals];
+    source = `${source}+shared-zoom`;
   }
 
   return {
@@ -1217,12 +1227,23 @@ export async function createBooking(env, input = {}) {
   if (!guestName) return { response: json({ error: "Enter your name." }, { status: 400 }) };
   if (!isValidEmail(guestEmail)) return { response: json({ error: "Enter a valid email address." }, { status: 400 }) };
 
-  const holdKey = `${HOLD_PREFIX}${employee.slug}:${meetingType.id}:${start.toISOString()}`;
-  const existingHold = await getStoredText(env, holdKey);
-  if (existingHold) return { response: json({ error: "That slot is already being booked. Choose another time." }, { status: 409 }) };
-  await putStoredText(env, holdKey, crypto.randomUUID(), { expirationTtl: HOLD_TTL_SECONDS });
-
   const end = new Date(start.getTime() + meetingType.durationMinutes * 60000);
+  if (await hasSharedZoomConflict(env, start, end)) {
+    return { response: json({ error: "That Zoom time is no longer available. Choose another time." }, { status: 409 }) };
+  }
+
+  const holdKey = `${HOLD_PREFIX}zoom:${start.toISOString()}`;
+  await putStoredJson(env, holdKey, {
+    id: crypto.randomUUID(),
+    employeeSlug: employee.slug,
+    employeeEmail: employee.email,
+    meetingTypeId: meetingType.id,
+    start: start.toISOString(),
+    end: end.toISOString(),
+    status: "held",
+    createdAt: new Date().toISOString()
+  }, { expirationTtl: HOLD_TTL_SECONDS });
+
   const booking = {
     id: crypto.randomUUID(),
     employeeSlug: employee.slug,
