@@ -1091,6 +1091,7 @@
   </main>
 
   <script>
+    const ACCESS_CONSOLE_BUILD = "2026.07.31.1-api-guard";
     const state = {
       config: null,
       modes: [],
@@ -1190,6 +1191,25 @@
     function clearNotice() {
       elements.notice.className = "notice";
       elements.notice.textContent = "";
+    }
+
+    async function readApiPayload(response, fallbackMessage) {
+      const contentType = response.headers.get("content-type") || "";
+      const text = await response.text().catch(() => "");
+      const trimmed = text.trim();
+      if (/^<!doctype/i.test(trimmed) || /<html/i.test(trimmed)) {
+        return {
+          error: response.ok
+            ? "Access returned a web page instead of data. Refresh and sign in again."
+            : `Access API returned a web page instead of data: ${response.status} ${contentType || "without a content type"}.`
+        };
+      }
+      if (!trimmed) return { error: fallbackMessage };
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return { error: `${fallbackMessage} Access API returned ${response.status} ${contentType || "without a content type"}.` };
+      }
     }
 
     function setLoginResult(message = "", type = "") {
@@ -1348,10 +1368,10 @@
 
         const configResponse = await fetch("/api/access-config", {
           method: "PUT",
-          headers: { "content-type": "application/json" },
+          headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify(currentPayload())
         });
-        const configPayload = await configResponse.json().catch(() => ({}));
+        const configPayload = await readApiPayload(configResponse, "Group membership could not be saved.");
         if (!configResponse.ok) {
           throw new Error(configPayload.error || "Group membership could not be saved.");
         }
@@ -1362,10 +1382,10 @@
           if (nextRole !== user.role) {
             const userResponse = await fetch("/api/access-users", {
               method: "PUT",
-              headers: { "content-type": "application/json" },
+              headers: { accept: "application/json", "content-type": "application/json" },
               body: JSON.stringify({ email, role: nextRole })
             });
-            const userPayload = await userResponse.json().catch(() => ({}));
+            const userPayload = await readApiPayload(userResponse, "User role could not be updated.");
             if (!userResponse.ok) {
               throw new Error(userPayload.error || "Group membership was saved, but the user role could not be updated.");
             }
@@ -1520,13 +1540,14 @@
       elements.firstOwnerInvitePanel.classList.toggle("hidden", !firstOwnerRequired || acceptingInvite);
       elements.loginForm.classList.toggle("hidden", firstOwnerRequired || acceptingInvite);
       elements.acceptInviteForm.classList.toggle("hidden", !acceptingInvite);
-      elements.authMessage.textContent = acceptingInvite
+      const authMessage = acceptingInvite
         ? "Create your Mojo access account."
         : firstOwnerRequired
           ? "No owner account exists yet."
           : authenticated && !canManageAccess()
             ? "Your account is signed in, but access administration requires an owner or admin role."
             : "Sign in to manage route access.";
+      elements.authMessage.textContent = `${authMessage} Build ${ACCESS_CONSOLE_BUILD}.`;
     }
 
     function renderUsers() {
@@ -1646,8 +1667,10 @@
       clearNotice();
       setBusy(true);
       try {
-        const response = await fetch("/api/access-config");
-        const payload = await response.json();
+        const response = await fetch(`/api/access-config?build=${encodeURIComponent(ACCESS_CONSOLE_BUILD)}`, {
+          headers: { accept: "application/json" }
+        });
+        const payload = await readApiPayload(response, "Access configuration could not be loaded.");
         if (!response.ok) throw new Error(payload.error || "Access configuration could not be loaded.");
         state.config = payload.config;
         state.modes = payload.modes;
@@ -1672,8 +1695,10 @@
 
     async function loadUsers() {
       if (!canManageAccess()) return;
-      const response = await fetch("/api/access-users");
-      const payload = await response.json();
+      const response = await fetch(`/api/access-users?build=${encodeURIComponent(ACCESS_CONSOLE_BUILD)}`, {
+        headers: { accept: "application/json" }
+      });
+      const payload = await readApiPayload(response, "Users could not be loaded.");
       if (!response.ok) throw new Error(payload.error || "Users could not be loaded.");
       state.users = payload.users || [];
       if (state.config) renderAccessGroups();
@@ -1683,8 +1708,10 @@
 
     async function loadInvites() {
       if (!canManageAccess()) return;
-      const response = await fetch("/api/access-invites");
-      const payload = await response.json();
+      const response = await fetch(`/api/access-invites?build=${encodeURIComponent(ACCESS_CONSOLE_BUILD)}`, {
+        headers: { accept: "application/json" }
+      });
+      const payload = await readApiPayload(response, "Invites could not be loaded.");
       if (!response.ok) throw new Error(payload.error || "Invites could not be loaded.");
       state.invites = payload.invites || [];
       renderUsers();
@@ -1693,8 +1720,10 @@
     async function loadInvite() {
       if (!state.inviteToken) return;
       try {
-        const response = await fetch(`/api/auth/invite?token=${encodeURIComponent(state.inviteToken)}`);
-        const payload = await response.json();
+        const response = await fetch(`/api/auth/invite?token=${encodeURIComponent(state.inviteToken)}&build=${encodeURIComponent(ACCESS_CONSOLE_BUILD)}`, {
+          headers: { accept: "application/json" }
+        });
+        const payload = await readApiPayload(response, "Invite could not be loaded.");
         if (!response.ok) throw new Error(payload.error || "Invite could not be loaded.");
         state.invite = payload.invite;
         elements.inviteMessage.textContent = `Invite for ${payload.invite.email}. Create a separate Mojo password for this site.`;
@@ -1708,8 +1737,10 @@
     async function loadSession() {
       clearNotice();
       try {
-        const response = await fetch("/api/auth/me");
-        const payload = await response.json();
+        const response = await fetch(`/api/auth/me?build=${encodeURIComponent(ACCESS_CONSOLE_BUILD)}`, {
+          headers: { accept: "application/json" }
+        });
+        const payload = await readApiPayload(response, "Session could not be checked.");
         if (!response.ok) throw new Error(payload.error || "Session could not be checked.");
         state.session = payload;
         renderSession();
@@ -1738,13 +1769,13 @@
       try {
         const response = await fetch("/api/auth/login", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify({
             email: elements.loginEmail.value,
             password: elements.loginPassword.value
           })
         });
-        const payload = await response.json();
+        const payload = await readApiPayload(response, "Sign in failed.");
         if (!response.ok) throw new Error(payload.error || "Sign in failed.");
         elements.loginPassword.value = "";
         setLoginResult("");
@@ -1780,12 +1811,13 @@
         const response = await fetch("/api/auth/invite", {
           method: "POST",
           headers: {
+            accept: "application/json",
             authorization: `Bearer ${bootstrapToken}`,
             "content-type": "application/json"
           },
           body: JSON.stringify({ action: "first-owner" })
         });
-        const payload = await response.json();
+        const payload = await readApiPayload(response, "Scott owner invite could not be created.");
         if (!response.ok) throw new Error(payload.error || "Scott owner invite could not be created.");
         elements.firstOwnerInviteResult.innerHTML = `<a href="${escapeHtml(payload.acceptUrl)}">Open Scott owner invite</a>`;
         showNotice("Scott owner invite created. Open the invite link to set your password.", "ok");
@@ -1856,7 +1888,7 @@
       try {
         const response = await fetch("/api/access-users", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify({
             name: elements.userName.value.trim(),
             email,
@@ -1864,15 +1896,15 @@
             role: roleForAccessGroups(groupIds)
           })
         });
-        const payload = await response.json().catch(() => ({}));
+        const payload = await readApiPayload(response, "User could not be created.");
         if (!response.ok) throw new Error(payload.error || "User could not be created.");
         addEmailToAccessGroups(groupIds, payload.user.email);
         const configResponse = await fetch("/api/access-config", {
           method: "PUT",
-          headers: { "content-type": "application/json" },
+          headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify(currentPayload())
         });
-        const configPayload = await configResponse.json().catch(() => ({}));
+        const configPayload = await readApiPayload(configResponse, "Group membership could not be saved.");
         if (!configResponse.ok) {
           throw new Error(configPayload.error || "Account was created, but group membership could not be saved.");
         }
@@ -1913,9 +1945,10 @@
       clearNotice();
       try {
         const response = await fetch(`/api/access-invites?id=${encodeURIComponent(id)}`, {
-          method: "DELETE"
+          method: "DELETE",
+          headers: { accept: "application/json" }
         });
-        const payload = await response.json();
+        const payload = await readApiPayload(response, "Invite could not be revoked.");
         if (!response.ok) throw new Error(payload.error || "Invite could not be revoked.");
         state.invites = state.invites.filter((invite) => invite.id !== id);
         renderUsers();
@@ -1960,13 +1993,13 @@
       try {
         const response = await fetch("/api/auth/invite", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify({
             token: state.inviteToken,
             password
           })
         });
-        const payload = await response.json().catch(() => ({}));
+        const payload = await readApiPayload(response, "Invite could not be accepted.");
         if (!response.ok) throw new Error(payload.error || "Invite could not be accepted.");
         history.replaceState({}, "", "/access/");
         state.inviteToken = "";
@@ -1987,9 +2020,10 @@
       clearNotice();
       try {
         const response = await fetch(`/api/access-users?email=${encodeURIComponent(email)}`, {
-          method: "DELETE"
+          method: "DELETE",
+          headers: { accept: "application/json" }
         });
-        const payload = await response.json();
+        const payload = await readApiPayload(response, "User could not be disabled.");
         if (!response.ok) throw new Error(payload.error || "User could not be disabled.");
         await loadUsers();
         showNotice("User disabled.", "ok");
@@ -2004,10 +2038,10 @@
       try {
         const response = await fetch("/api/access-config", {
           method: "PUT",
-          headers: { "content-type": "application/json" },
+          headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify(currentPayload())
         });
-        const payload = await response.json();
+        const payload = await readApiPayload(response, "Access configuration could not be saved.");
         if (!response.ok) throw new Error(payload.error || "Access configuration could not be saved.");
         state.config = payload.config;
         elements.accessEnabled.checked = state.config.enabled === true;
@@ -2033,13 +2067,13 @@
         showNotice("Checking the Company Hub for new pages...", "");
         const response = await fetch("/api/access-config", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify({
             action: "refresh-admin-routes",
             config: currentPayload()
           })
         });
-        const payload = await response.json().catch(() => ({}));
+        const payload = await readApiPayload(response, "Routes could not be refreshed.");
         if (!response.ok) throw new Error(payload.error || "Routes could not be refreshed.");
         state.config = payload.config;
         elements.accessEnabled.checked = state.config.enabled === true;
@@ -2063,8 +2097,11 @@
       clearNotice();
       setBusy(true);
       try {
-        const response = await fetch("/api/access-config", { method: "DELETE" });
-        const payload = await response.json();
+        const response = await fetch(`/api/access-config?build=${encodeURIComponent(ACCESS_CONSOLE_BUILD)}`, {
+          method: "DELETE",
+          headers: { accept: "application/json" }
+        });
+        const payload = await readApiPayload(response, "Access defaults could not be restored.");
         if (!response.ok) throw new Error(payload.error || "Access defaults could not be restored.");
         state.config = payload.config;
         elements.accessEnabled.checked = state.config.enabled === true;
