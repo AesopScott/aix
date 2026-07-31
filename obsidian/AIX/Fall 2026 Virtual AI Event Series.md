@@ -23,6 +23,7 @@ MOJO AI Summits is scaffolding five fall 2026 virtual AI events as a lead-in to 
 ## Implementation Notes
 
 - Added public route: `/virtual/`
+- Added dedicated event route: `/ai-executive-readiness-online/` for the September 4 AI Executive Readiness moderated roundtable.
 - The Fall 2026 virtual series should live on its own `/virtual/` page, not as a full home-page section.
 - The home page councils section should show five separate virtual opportunity cards under the heading `Executive Research Councils`, above the state/city cards. Each virtual card links to `/virtual/`, shows its event date plus a second `Virtual` tag in the same style, and has a topic-specific cyan line icon. Do not collapse them into one virtual card in the state row.
 - Home-page navigation should label this area as `Councils` and target `#councils`; do not show a separate top-nav `Virtual` link. Retain a hidden `#events` alias only for backward-compatible old links.

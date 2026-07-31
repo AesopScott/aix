@@ -6,6 +6,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Company hub: https://mojoaisummits.com/admin/
 - Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
+- AI Executive Readiness Online: https://mojoaisummits.com/ai-executive-readiness-online/
 - Strategic intelligence partners: https://mojoaisummits.com/partners/
 - Executive AI intelligence briefs: https://mojoaisummits.com/briefs/
 - Public booking: https://mojoaisummits.com/book/
@@ -122,6 +123,8 @@ Partner invite codes are generated inside the protected CRM and stored under `cr
 ## Fall 2026 Virtual Events
 
 The public virtual event series route lives at `/virtual/`.
+
+The dedicated page for the first session lives at `/ai-executive-readiness-online/`. It positions the Friday, September 4, 2026 AI Executive Readiness event as an invitation-only moderated virtual roundtable for nine executives around adoption momentum, frontier model movement, AI value measurement, organizational ownership, AI output chain of custody, human review, workforce fear, and regulation.
 
 Confirmed virtual AI event dates:
 
