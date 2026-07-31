@@ -129,9 +129,9 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
     role: roles.join(", "),
     roles,
     registeredAt: cleanString(registration.createdAt) || now,
-    attended: typeof previous.attended === "boolean" ? previous.attended : false,
-    attendanceStatus: cleanString(previous.attendanceStatus) || "not_recorded",
-    attendedAt: cleanString(previous.attendedAt),
+    attended: typeof previous.attended === "boolean" ? previous.attended : cleanBoolean(registration.attended),
+    attendanceStatus: cleanString(previous.attendanceStatus || registration.attendanceStatus) || "not_recorded",
+    attendedAt: cleanString(previous.attendedAt || registration.attendedAt),
     attendanceNotes: cleanString(previous.attendanceNotes),
     updatedAt: now
   };

@@ -458,11 +458,15 @@ function summarize(rows) {
 }
 
 function summarizeContacts(rows) {
+  const eventSignupCount = rows.reduce((sum, row) => sum + (row.eventCount || 0), 0);
+  const attendedEventCount = rows.reduce((sum, row) => sum + (row.attendedCount || 0), 0);
   return {
     total: rows.length,
     newCount: rows.filter((row) => row.eventCount > 0).length,
-    presenterCount: rows.reduce((sum, row) => sum + (row.eventCount || 0), 0),
-    roundtableLeaderCount: rows.reduce((sum, row) => sum + (row.attendedCount || 0), 0),
+    presenterCount: eventSignupCount,
+    roundtableLeaderCount: attendedEventCount,
+    eventSignupCount,
+    attendedEventCount,
     pendingPhoneCount: rows.filter((row) => !row.phone).length
   };
 }
@@ -802,6 +806,118 @@ async function updateContact(env, payload = {}, actor = "") {
     crmUpdatedAt: new Date().toISOString(),
     crmUpdatedBy: actor || "crm"
   }));
+}
+
+function contactEventIdentity(event = {}) {
+  return cleanString(
+    event.registrationId ||
+      event.eventId ||
+      event.eventSlug ||
+      event.eventName ||
+      event.inviteCode ||
+      event.registeredAt ||
+      event.id
+  ).toLowerCase();
+}
+
+function contactEventMatches(event = {}, target = {}) {
+  const directFields = ["registrationId", "eventId", "eventSlug", "inviteCode", "registeredAt", "id"];
+  for (const field of directFields) {
+    const left = cleanString(event[field]).toLowerCase();
+    const right = cleanString(target[field]).toLowerCase();
+    if (left && right && left === right) return true;
+  }
+
+  const leftIdentity = contactEventIdentity(event);
+  const rightIdentity = contactEventIdentity(target);
+  if (leftIdentity && rightIdentity && leftIdentity === rightIdentity) return true;
+
+  const leftName = cleanString(event.eventName).toLowerCase();
+  const rightName = cleanString(target.eventName).toLowerCase();
+  const leftDate = cleanString(event.eventDate).toLowerCase();
+  const rightDate = cleanString(target.eventDate).toLowerCase();
+  return Boolean(leftName && rightName && leftName === rightName && (!rightDate || leftDate === rightDate));
+}
+
+async function syncRegistrationAttendance(env, email, targetEvent, attended, actor = "", now = "") {
+  for (const type of ["guest", "member", "partner"]) {
+    const config = registrantTypes[type];
+    const keys = [...new Set([
+      ...(await listKeys(env, config.crmPrefix)),
+      ...(await listKeys(env, config.legacyPrefix))
+    ])];
+
+    for (const key of keys) {
+      const record = await readRawRecord(env, key);
+      if (!record || cleanString(record.email).toLowerCase() !== email) continue;
+      if (!contactEventMatches(record, targetEvent)) continue;
+
+      await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+        ...record,
+        attended,
+        attendanceStatus: attended ? "attended" : "not_attended",
+        attendedAt: attended ? (cleanString(record.attendedAt) || now) : "",
+        attendanceUpdatedAt: now,
+        attendanceUpdatedBy: actor || "crm"
+      }));
+    }
+  }
+}
+
+async function updateContactEventAttendance(env, payload = {}, actor = "") {
+  const requestedKey = cleanString(payload.key || payload.contactKey);
+  const email = cleanString(
+    payload.email ||
+      (requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
+        ? requestedKey.replace(registrantTypes.contacts.crmPrefix, "")
+        : requestedKey)
+  ).toLowerCase();
+  if (!email || !email.includes("@")) throw new Error("Contact email is required before updating attendance.");
+
+  const key = `${registrantTypes.contacts.crmPrefix}${email}`;
+  const existing = await readRawRecord(env, key);
+  if (!existing) throw new Error("Contact was not found.");
+
+  const targetEvent = {
+    id: cleanString(payload.eventKey || payload.id),
+    eventId: cleanString(payload.eventId),
+    eventSlug: cleanString(payload.eventSlug),
+    eventName: cleanString(payload.eventName),
+    eventDate: cleanString(payload.eventDate),
+    inviteCode: cleanString(payload.inviteCode),
+    registrationId: cleanString(payload.registrationId),
+    registeredAt: cleanString(payload.registeredAt)
+  };
+  if (!contactEventIdentity(targetEvent)) throw new Error("Event is required before updating attendance.");
+
+  const events = Array.isArray(existing.events) ? existing.events : [];
+  let matched = false;
+  const attended = payload.attended === true;
+  const now = new Date().toISOString();
+  const nextEvents = events.map((event) => {
+    if (!contactEventMatches(event, targetEvent)) return event;
+    matched = true;
+    return {
+      ...event,
+      attended,
+      attendanceStatus: attended ? "attended" : "not_attended",
+      attendedAt: attended ? (cleanString(event.attendedAt) || now) : "",
+      attendanceUpdatedAt: now,
+      attendanceUpdatedBy: actor || "crm"
+    };
+  });
+
+  if (!matched) throw new Error("Contact event was not found.");
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+    ...existing,
+    events: nextEvents,
+    updatedAt: now,
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor || "crm"
+  }));
+
+  await syncRegistrationAttendance(env, email, targetEvent, attended, actor, now);
 }
 
 function companySlug(value) {
@@ -1222,6 +1338,25 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Contact could not be updated." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "update-contact-event-attendance") {
+    try {
+      await updateContactEventAttendance(env, payload, access.email);
+      const rows = await contacts(env);
+      return json({
+        ok: true,
+        type: "contacts",
+        label: registrantTypes.contacts.label,
+        summary: summarizeContacts(rows),
+        rows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Attendance could not be updated." }, { status: 500 });
     }
   }
 

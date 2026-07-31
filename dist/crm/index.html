@@ -333,6 +333,58 @@
       gap: 0.35rem;
     }
 
+    .event-attendance-list {
+      display: grid;
+      gap: 0.5rem;
+      min-width: 18rem;
+    }
+
+    .event-attendance-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.6rem;
+      align-items: center;
+      padding: 0.55rem;
+      border: 1px solid rgba(0, 230, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.56);
+    }
+
+    .event-attendance-name {
+      display: block;
+      color: var(--white);
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+
+    .event-attendance-date {
+      display: block;
+      margin-top: 0.15rem;
+      color: var(--muted);
+      font-size: 0.76rem;
+    }
+
+    .attendance-toggle {
+      display: inline-flex;
+      grid-auto-flow: column;
+      gap: 0.35rem;
+      align-items: center;
+      color: var(--muted-blue);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: none;
+      white-space: nowrap;
+    }
+
+    .attendance-toggle input {
+      width: 1rem;
+      min-width: 1rem;
+      height: 1rem;
+      padding: 0;
+      accent-color: var(--cyan);
+    }
+
     .inline-select {
       min-width: 9rem;
       padding: 0.58rem 0.65rem;
@@ -895,14 +947,50 @@
       return titleCaseLabel(event.registrationType || "Guest");
     }
 
+    function eventAttendanceKey(event = {}) {
+      return event.registrationId ||
+        event.eventId ||
+        event.eventSlug ||
+        event.eventName ||
+        event.inviteCode ||
+        event.registeredAt ||
+        event.id ||
+        "";
+    }
+
     function eventBadges(row) {
       const events = row.events || [];
       if (state.type === "contacts") {
         if (!events.length) return '<span class="pill warn">No event</span>';
-        return events.map((event) => {
+        return `<div class="event-attendance-list">${events.map((event) => {
           const label = event.eventName || event.inviteCode || "Registration";
-          return `<span class="pill">${escapeHtml(label)}</span>`;
-        }).join("");
+          const eventKey = eventAttendanceKey(event);
+          return `
+            <div class="event-attendance-item">
+              <div>
+                <span class="event-attendance-name">${escapeHtml(label)}</span>
+                ${event.eventDate ? `<span class="event-attendance-date">${escapeHtml(event.eventDate)}</span>` : ""}
+              </div>
+              <label class="attendance-toggle">
+                <input
+                  type="checkbox"
+                  data-attendance-contact-key="${escapeHtml(row.key)}"
+                  data-attendance-email="${escapeHtml(row.email)}"
+                  data-attendance-event-key="${escapeHtml(eventKey)}"
+                  data-attendance-event-id="${escapeHtml(event.eventId || "")}"
+                  data-attendance-event-slug="${escapeHtml(event.eventSlug || "")}"
+                  data-attendance-event-name="${escapeHtml(event.eventName || "")}"
+                  data-attendance-event-date="${escapeHtml(event.eventDate || "")}"
+                  data-attendance-invite-code="${escapeHtml(event.inviteCode || "")}"
+                  data-attendance-registration-id="${escapeHtml(event.registrationId || "")}"
+                  data-attendance-registered-at="${escapeHtml(event.registeredAt || "")}"
+                  ${event.attended ? "checked" : ""}
+                >
+                <span>Attended</span>
+              </label>
+            </div>
+          `;
+        }).join("")}</div>`;
       }
       return `<span>${escapeHtml(row.eventName || row.inviteCode || "")}</span>${row.eventDate ? `<br><span>${escapeHtml(row.eventDate)}</span>` : ""}`;
     }
@@ -1180,8 +1268,8 @@
         metrics.innerHTML = `
           <div class="metric"><span>Total contacts</span><strong>${summary.total || 0}</strong></div>
           <div class="metric"><span>With registrations</span><strong>${summary.newCount || 0}</strong></div>
-          <div class="metric"><span>Total event signups</span><strong>${summary.presenterCount || 0}</strong></div>
-          <div class="metric"><span>Attended</span><strong>${summary.roundtableLeaderCount || 0}</strong></div>
+          <div class="metric"><span>Total event signups</span><strong>${summary.eventSignupCount ?? summary.presenterCount ?? 0}</strong></div>
+          <div class="metric"><span>Attended</span><strong>${summary.attendedEventCount ?? summary.roundtableLeaderCount ?? 0}</strong></div>
           <div class="metric warn"><span>Missing phone</span><strong>${summary.pendingPhoneCount || 0}</strong></div>
         `;
         return;
@@ -1454,6 +1542,41 @@
       }
     }
 
+    async function saveContactAttendance(input) {
+      const key = input.dataset.attendanceContactKey;
+      const existing = state.rows.find((row) => row.key === key);
+      if (!existing) return;
+
+      input.disabled = true;
+      setNotice("Saving attendance...");
+      try {
+        state = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "update-contact-event-attendance",
+            key,
+            email: input.dataset.attendanceEmail || existing.email,
+            attended: input.checked,
+            eventKey: input.dataset.attendanceEventKey || "",
+            eventId: input.dataset.attendanceEventId || "",
+            eventSlug: input.dataset.attendanceEventSlug || "",
+            eventName: input.dataset.attendanceEventName || "",
+            eventDate: input.dataset.attendanceEventDate || "",
+            inviteCode: input.dataset.attendanceInviteCode || "",
+            registrationId: input.dataset.attendanceRegistrationId || "",
+            registeredAt: input.dataset.attendanceRegisteredAt || ""
+          })
+        }).then(readJson);
+        setNotice(`Attendance ${input.checked ? "marked" : "cleared"} for ${existing.name || existing.email}.`, "ok");
+        render();
+      } catch (error) {
+        input.checked = !input.checked;
+        input.disabled = false;
+        setNotice(error.message, "error");
+      }
+    }
+
     async function deleteInviteLink(key, type) {
       if (!key) return;
       setNotice("Deleting registration link...");
@@ -1568,6 +1691,12 @@
     }
 
     rowsElement.addEventListener("change", (event) => {
+      const attendanceKey = event.target.dataset.attendanceContactKey;
+      if (attendanceKey) {
+        saveContactAttendance(event.target);
+        return;
+      }
+
       const key = event.target.dataset.statusKey;
       const tierKey = event.target.dataset.tierKey;
       if (!key && !tierKey) return;
