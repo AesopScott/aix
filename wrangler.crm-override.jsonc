@@ -1,0 +1,15 @@
+{
+  "name": "mojo-crm-route-override",
+  "main": "workers/mojo-crm-route-override.js",
+  "compatibility_date": "2026-07-31",
+  "routes": [
+    {
+      "pattern": "mojoaisummits.com/crm",
+      "zone_name": "mojoaisummits.com"
+    },
+    {
+      "pattern": "mojoaisummits.com/crm/*",
+      "zone_name": "mojoaisummits.com"
+    }
+  ]
+}
