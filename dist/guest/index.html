@@ -457,9 +457,9 @@
               <label for="phone">Mobile phone</label>
               <div class="phone-row">
                 <input type="tel" id="phone" name="phone" placeholder="+1 555 123 4567" autocomplete="tel" required>
-                <button type="button" class="btn-ghost" id="sendCodeButton">Verify Phone</button>
+                <button type="button" class="btn-ghost" id="sendCodeButton" disabled aria-disabled="true" title="Phone verification is not currently enabled.">Verify Phone</button>
               </div>
-              <p class="sms-disclosure">By selecting Verify Phone, you agree that MOJO AI Summits may text this mobile number a one-time verification code for guest registration. Message frequency is one verification text per request. Message and data rates may apply. Reply STOP to opt out or HELP for help. See our <a href="/sms-terms/" target="_blank" rel="noopener">SMS terms</a> and <a href="/privacy/" target="_blank" rel="noopener">privacy policy</a>. No marketing texts will be sent from this form.</p>
+              <p class="sms-disclosure">Phone verification is not currently enabled for guest registration. The MOJO AI Summits team will manually confirm phone details when reviewing registrations.</p>
             </div>
             <div class="field full verify-code" id="verifyCodeRow">
               <div>
@@ -494,7 +494,7 @@
               <input type="text" id="foodNotes" name="foodNotes" placeholder="Allergies, restrictions, or anything the catering team should know">
             </div>
           </div>
-          <input type="hidden" id="phoneVerificationStatus" name="phoneVerificationStatus" value="unverified">
+          <input type="hidden" id="phoneVerificationStatus" name="phoneVerificationStatus" value="pending_sms_setup">
           <p class="message error" id="formError"></p>
           <p class="fine-print">Personal Gmail and Googlemail addresses are not accepted for guest registration.</p>
           <button type="submit" class="btn-primary" id="submitButton">Submit Guest Registration</button>
@@ -557,14 +557,14 @@
 
   emailInput.addEventListener('input', () => {
     if (isBlockedEmail(emailInput.value)) {
-      setMessage(formError, 'Use a company email address. Gmail and Googlemail addresses are not accepted.', 'error');
+      setMessage(formError, 'Please use a company email address. Gmail and Googlemail addresses are not accepted.', 'error');
     } else {
       clearMessage(formError);
     }
   });
 
   phoneInput.addEventListener('input', () => {
-    verificationStatus.value = 'unverified';
+    verificationStatus.value = 'pending_sms_setup';
     verifyCodeRow.classList.remove('show');
     clearMessage(phoneMessage);
   });
@@ -581,6 +581,7 @@
   }
 
   sendCodeButton.addEventListener('click', async () => {
+    if (sendCodeButton.disabled) return;
     clearMessage(formError);
     const phone = normalizePhone(phoneInput.value);
     if (phone.length < 10) {
@@ -653,23 +654,18 @@
     payload.publicationUseName = formData.has('publicationUseName');
     payload.publicationUseCompany = formData.has('publicationUseCompany');
     payload.foodPreferences = formData.getAll('foodPreference');
-    payload.phoneVerificationStatus = verificationStatus.value;
+    verificationStatus.value = 'pending_sms_setup';
+    payload.phoneVerificationStatus = 'pending_sms_setup';
 
     if (!/^\d{6}$/.test(String(payload.inviteCode || '').trim())) {
       setMessage(formError, 'Enter a valid six-digit invite code.', 'error');
       return;
     }
     if (isBlockedEmail(payload.email)) {
-      setMessage(formError, 'Use a company email address. Gmail and Googlemail addresses are not accepted.', 'error');
+      setMessage(formError, 'Please use a company email address. Gmail and Googlemail addresses are not accepted.', 'error');
       emailInput.focus();
       return;
     }
-    if (payload.phoneVerificationStatus === 'unverified' || payload.phoneVerificationStatus === 'code_sent') {
-      setMessage(formError, 'Verify the phone number first so the registration has a phone confirmation status.', 'error');
-      phoneInput.focus();
-      return;
-    }
-
     const submitButton = document.getElementById('submitButton');
     submitButton.disabled = true;
     submitButton.textContent = 'Submitting...';

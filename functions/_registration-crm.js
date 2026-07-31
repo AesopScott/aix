@@ -127,6 +127,21 @@ function validateRegistration(registration) {
   return "";
 }
 
+function normalizeRegistrationForType(type, registration) {
+  if (
+    type === "guest" &&
+    (!registration.phoneVerificationStatus ||
+      registration.phoneVerificationStatus === "unverified" ||
+      registration.phoneVerificationStatus === "code_sent")
+  ) {
+    return {
+      ...registration,
+      phoneVerificationStatus: "pending_sms_setup"
+    };
+  }
+  return registration;
+}
+
 function codeKeys(type, code) {
   return [
     `${type}-invite-code:${code}`,
@@ -229,7 +244,7 @@ export async function handlePublicRegistration({ request, env }, type) {
   }
 
   const payload = await request.json().catch(() => null);
-  const registration = cleanPayload(payload);
+  const registration = normalizeRegistrationForType(type, cleanPayload(payload));
   const validationError = validateRegistration(registration);
   if (validationError) return json({ error: validationError }, { status: 400 });
 

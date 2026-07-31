@@ -1,0 +1,1 @@
+We need an email send capability from the link generation process in the CRM. 

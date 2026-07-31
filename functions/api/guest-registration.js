@@ -85,13 +85,27 @@ function validateRegistration(registration) {
   return "";
 }
 
+function normalizeGuestRegistration(registration) {
+  if (
+    !registration.phoneVerificationStatus ||
+    registration.phoneVerificationStatus === "unverified" ||
+    registration.phoneVerificationStatus === "code_sent"
+  ) {
+    return {
+      ...registration,
+      phoneVerificationStatus: "pending_sms_setup"
+    };
+  }
+  return registration;
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: jsonHeaders });
 }
 
 export async function onRequestPost({ request, env }) {
   const payload = await request.json().catch(() => null);
-  const registration = cleanPayload(payload);
+  const registration = normalizeGuestRegistration(cleanPayload(payload));
   const error = validateRegistration(registration);
 
   if (error) return json({ error }, { status: 400 });
