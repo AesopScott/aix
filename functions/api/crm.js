@@ -46,6 +46,44 @@ const REGISTRATION_INVITE_PREFIXES = {
   guest: "crm:guest-invite-code:"
 };
 const PARTNER_INVITE_PREFIX = "crm:partner-invite-code:";
+const DEFAULT_UPCOMING_EVENTS = [
+  {
+    slug: "ai-executive-readiness",
+    title: "AI Executive Readiness",
+    date: "Friday, September 4, 2026",
+    format: "Virtual"
+  },
+  {
+    slug: "ai-use-cases-that-survive-finance",
+    title: "AI Use Cases That Survive Finance",
+    date: "Friday, September 25, 2026",
+    format: "Virtual"
+  },
+  {
+    slug: "ai-integration-and-workflow",
+    title: "AI Integration and Workflow",
+    date: "Friday, October 16, 2026",
+    format: "Virtual"
+  },
+  {
+    slug: "ai-security-governance-and-trust",
+    title: "AI Security, Governance, and Trust",
+    date: "Friday, November 6, 2026",
+    format: "Virtual"
+  },
+  {
+    slug: "ai-operating-model-for-2027",
+    title: "AI Operating Model for 2027",
+    date: "Friday, November 27, 2026",
+    format: "Virtual"
+  },
+  {
+    slug: "dallas-2027",
+    title: "Dallas 2027 Summit",
+    date: "January 2027",
+    format: "In person"
+  }
+];
 const allowedStatuses = new Set(["new", "contacted", "confirmed", "accepted", "waitlist", "declined"]);
 const maxFieldLength = 2000;
 
@@ -289,8 +327,10 @@ async function registrationInviteCodes(env) {
 
 function eventTime(value) {
   if (!value) return Number.POSITIVE_INFINITY;
-  const time = new Date(`${value}T12:00:00`).getTime();
-  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+  const exactDate = new Date(`${value}T12:00:00`).getTime();
+  if (!Number.isNaN(exactDate)) return exactDate;
+  const looseDate = new Date(value).getTime();
+  return Number.isNaN(looseDate) ? Number.POSITIVE_INFINITY : looseDate;
 }
 
 async function upcomingEvents(env) {
@@ -298,7 +338,7 @@ async function upcomingEvents(env) {
   const rows = Array.isArray(stored) ? stored : [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return rows
+  const events = rows
     .map((event) => ({
       slug: cleanString(event?.slug, 200),
       title: cleanString(event?.title, 240),
@@ -306,7 +346,12 @@ async function upcomingEvents(env) {
       format: cleanString(event?.format, 80),
       updatedAt: cleanString(event?.updatedAt, 80)
     }))
-    .filter((event) => event.slug && event.title)
+    .filter((event) => event.slug && event.title);
+
+  const bySlug = new Map(DEFAULT_UPCOMING_EVENTS.map((event) => [event.slug, { ...event, updatedAt: "" }]));
+  for (const event of events) bySlug.set(event.slug, event);
+
+  return [...bySlug.values()]
     .filter((event) => !event.date || eventTime(event.date) >= today.getTime())
     .sort((a, b) => eventTime(a.date) - eventTime(b.date) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
 }
