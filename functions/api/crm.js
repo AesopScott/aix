@@ -58,6 +58,7 @@ const REGISTRATION_INVITE_PREFIXES = {
 };
 const PARTNER_INVITE_PREFIX = "crm:partner-invite-code:";
 const REGISTRATION_DEBUG_PREFIX = "crm:registration-debug:";
+const OVERFLOW_REGISTRATION_PREFIX = "crm-overflow/registrations";
 const DEFAULT_UPCOMING_EVENTS = [
   {
     slug: "ai-executive-readiness",
@@ -309,6 +310,33 @@ async function readContactRecords(env, keys) {
   return records.filter(Boolean);
 }
 
+async function overflowRegistrants(env, type = "member") {
+  if (!env.MOJO_SUMMITS_STORAGE?.list || !env.MOJO_SUMMITS_STORAGE?.get) return [];
+  const keys = [];
+  let cursor;
+  const prefix = `${OVERFLOW_REGISTRATION_PREFIX}/${cleanType(type)}/`;
+
+  do {
+    const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit: 1000 }).catch(() => null);
+    if (!result) break;
+    keys.push(...(result.objects || []).map((object) => object.key));
+    cursor = result.truncated ? result.cursor : undefined;
+  } while (cursor);
+
+  const records = await Promise.all(
+    keys.map(async (key) => {
+      const object = await env.MOJO_SUMMITS_STORAGE.get(key).catch(() => null);
+      const record = object ? await object.json().catch(() => null) : null;
+      return record ? normalizeRecord(key, {
+        ...record,
+        source: record.source || `${cleanType(type)}-registration-overflow`
+      }) : null;
+    })
+  );
+
+  return records.filter(Boolean);
+}
+
 async function registrants(env, type = "member") {
   const config = registrantTypes[cleanType(type)];
   const crmKeys = await listKeys(env, config.crmPrefix);
@@ -317,28 +345,104 @@ async function registrants(env, type = "member") {
 
   const legacyKeys = await listKeys(env, config.legacyPrefix);
   const legacyRows = (await readRecords(env, legacyKeys)).filter((row) => !ids.has(row.id));
+  for (const row of legacyRows) ids.add(row.id);
+  const overflowRows = (await overflowRegistrants(env, type)).filter((row) => !ids.has(row.id));
 
-  const rows = [...crmRows, ...legacyRows].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  for (const row of [...rows].reverse()) {
-    await upsertRegistrationContact(env, cleanType(type), row, {
-      label: cleanType(type),
-      source: row.source || `${cleanType(type)}-registration`
-    }).catch(() => null);
-  }
+  return [...crmRows, ...legacyRows, ...overflowRows].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+function roleLabelForRow(row = {}, type = "") {
+  const role = cleanGuestRegistrationType(row.guestRegistrationType || row.registrationRole);
+  if (type === "partner") return "Partner Guest";
+  if (type === "member") return row.isFeaturedMember ? "Featured Member" : "Member";
+  if (role === "presenter" || row.isPresenter) return "Presenter";
+  if (role === "roundtable-leader" || row.isRoundtableLeader) return "Round Table Leader";
+  if (role === "featured-guest" || row.isFeaturedGuest) return "Featured Guest";
+  return "Guest";
+}
+
+function contactFromRegistrant(row = {}, type = "") {
+  const email = cleanString(row.email).toLowerCase();
+  if (!email) return null;
+  const company = cleanString(row.partnerCompany || row.company);
+  const eventId = cleanString(row.eventId || row.eventSlug || row.eventName || row.inviteCode || row.id);
+  return normalizeContactRecord(`crm:contact:${email}`, {
+    id: email,
+    email,
+    name: cleanString(row.name) || email,
+    company,
+    title: cleanString(row.title),
+    industry: cleanString(row.industry),
+    phone: cleanString(row.phone),
+    source: cleanString(row.source || `${type}-registration`),
+    registrationId: cleanString(row.id),
+    registrationType: cleanString(type),
+    createdAt: cleanString(row.createdAt),
+    updatedAt: cleanString(row.createdAt),
+    events: [{
+      id: eventId,
+      eventId,
+      eventSlug: cleanString(row.eventSlug),
+      eventName: cleanString(row.eventName) || eventId || "Registration",
+      eventDate: cleanString(row.eventDate),
+      inviteCode: cleanString(row.inviteCode),
+      registrationId: cleanString(row.id),
+      registrationType: cleanString(type),
+      guestRegistrationType: cleanGuestRegistrationType(row.guestRegistrationType || row.registrationRole),
+      registrationRole: cleanGuestRegistrationType(row.registrationRole || row.guestRegistrationType),
+      role: roleLabelForRow(row, type),
+      registeredAt: cleanString(row.createdAt),
+      attended: false,
+      attendanceStatus: "not_recorded"
+    }]
+  });
+}
+
+async function derivedContactRows(env) {
+  const rows = (await Promise.all(["member", "guest", "partner"].map(async (type) => {
+    const records = await registrants(env, type);
+    return records.map((row) => contactFromRegistrant(row, type));
+  }))).flat().filter(Boolean);
+
   return rows;
 }
 
-async function rebuildContactsFromRegistrants(env) {
-  const types = ["member", "guest", "partner"];
-  for (const type of types) {
-    await registrants(env, type);
+function mergeContactRows(storedRows, derivedRows) {
+  const byEmail = new Map();
+  for (const row of [...derivedRows, ...storedRows]) {
+    const email = cleanString(row.email).toLowerCase();
+    if (!email) continue;
+    const previous = byEmail.get(email);
+    if (!previous) {
+      byEmail.set(email, row);
+      continue;
+    }
+    const eventMap = new Map();
+    for (const event of [...(previous.events || []), ...(row.events || [])]) {
+      const key = contactEventIdentity(event);
+      if (!key) continue;
+      eventMap.set(key, {
+        ...(eventMap.get(key) || {}),
+        ...event
+      });
+    }
+    byEmail.set(email, normalizeContactRecord(`crm:contact:${email}`, {
+      ...previous,
+      ...row,
+      name: cleanString(row.name) || cleanString(previous.name) || email,
+      company: cleanString(row.company) || cleanString(previous.company),
+      title: cleanString(row.title) || cleanString(previous.title),
+      industry: cleanString(row.industry) || cleanString(previous.industry),
+      phone: cleanString(row.phone) || cleanString(previous.phone),
+      events: [...eventMap.values()]
+    }));
   }
+  return [...byEmail.values()];
 }
 
 async function contacts(env) {
-  await rebuildContactsFromRegistrants(env);
   const keys = await listKeys(env, "crm:contact:");
-  const rows = await readContactRecords(env, keys);
+  const rows = mergeContactRows(await readContactRecords(env, keys), await derivedContactRows(env));
   return rows.sort((a, b) => {
     const left = cleanString(b.updatedAt || b.latestRegisteredAt || b.createdAt);
     const right = cleanString(a.updatedAt || a.latestRegisteredAt || a.createdAt);
