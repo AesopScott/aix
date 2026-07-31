@@ -286,7 +286,7 @@
       <div>
         <h1>Scheduling</h1>
         <p id="graphStatus">Checking calendar connection...</p>
-        <p class="build-stamp" id="buildStamp">Build 2026.07.30.5-auth-row-editor</p>
+        <p class="build-stamp" id="buildStamp">Build 2026.07.31.4-auth-new-tab</p>
       </div>
       <div class="employee-list" id="employees"></div>
       <button type="button" class="secondary" id="newEmployee">New Profile</button>
@@ -322,16 +322,22 @@
           Same-Tenant Busy Emails
           <input name="busyCalendarEmails" placeholder="other@mojoaisummits.com, second@mojoaisummits.com">
         </label>
-        <div class="wide stack">
-          <div class="field-label">Authenticated Calendar Emails</div>
-          <textarea class="hidden-field" name="authenticatedCalendarEmails"></textarea>
-          <div class="connection-list" id="connectedCalendars"></div>
-          <button type="button" class="secondary" id="addAuthenticatedCalendarEmail">Add Email</button>
-        </div>
         <label class="wide">
-          Busy Calendar URLs
-          <textarea name="busyCalendarUrls" placeholder="https://.../calendar.ics"></textarea>
+          Blind Calendar Invite Emails
+          <input name="mirrorInviteEmails" placeholder="sschindler@cmcenters.org">
         </label>
+        <div class="wide stack">
+          <div class="field-label">External Microsoft Calendar Read Connections</div>
+          <textarea class="hidden-field" name="authenticatedCalendarEmails"></textarea>
+          <div class="connection-list" id="microsoftCalendarRows"></div>
+          <button type="button" class="secondary" id="addMicrosoftReadConnection">Add Microsoft Read Connection</button>
+        </div>
+        <div class="wide stack">
+          <div class="field-label">Published Calendar Feed URLs</div>
+          <textarea class="hidden-field" name="busyCalendarUrls"></textarea>
+          <div class="connection-list" id="calendarFeedRows"></div>
+          <button type="button" class="secondary" id="addCalendarFeedUrl">Add Feed URL</button>
+        </div>
         <label>
           Title
           <input name="title">
@@ -387,18 +393,21 @@
   </main>
 
   <script>
-    const SCHEDULING_ADMIN_BUILD = "2026.07.30.5-auth-row-editor";
+    const SCHEDULING_ADMIN_BUILD = "2026.07.31.4-auth-new-tab";
     const employeesEl = document.querySelector("#employees");
     const graphStatusEl = document.querySelector("#graphStatus");
     const buildStampEl = document.querySelector("#buildStamp");
     const form = document.querySelector("#profileForm");
     const statusEl = document.querySelector("#status");
     const newEmployeeButton = document.querySelector("#newEmployee");
-    const addAuthenticatedCalendarEmailButton = document.querySelector("#addAuthenticatedCalendarEmail");
-    const connectedCalendarsEl = document.querySelector("#connectedCalendars");
+    const addMicrosoftReadConnectionButton = document.querySelector("#addMicrosoftReadConnection");
+    const addCalendarFeedUrlButton = document.querySelector("#addCalendarFeedUrl");
+    const microsoftCalendarRowsEl = document.querySelector("#microsoftCalendarRows");
+    const calendarFeedRowsEl = document.querySelector("#calendarFeedRows");
     let employees = [];
     let selectedSlug = "";
     let authEmailDrafts = [""];
+    let feedUrlDrafts = [""];
 
     if (buildStampEl) {
       buildStampEl.textContent = `Build ${SCHEDULING_ADMIN_BUILD} · JS ready`;
@@ -428,12 +437,36 @@
         .filter(isValidEmail))];
     }
 
+    function isValidCalendarFeedUrl(url) {
+      const value = String(url || "").trim();
+      if (!value) return false;
+      try {
+        const parsed = new URL(value.replace(/^webcal:/i, "https:"));
+        return ["https:", "http:"].includes(parsed.protocol);
+      } catch {
+        return false;
+      }
+    }
+
+    function cleanCalendarFeedDraft(url) {
+      return String(url || "").trim();
+    }
+
     function authUrlFor(slug, email) {
       return new URL(`/api/scheduling/oauth/start?slug=${encodeURIComponent(slug)}&email=${encodeURIComponent(email)}`, window.location.origin).toString();
     }
 
     function syncAuthenticatedCalendarField() {
       field("authenticatedCalendarEmails").value = emailListFromText(authEmailDrafts.join("\n")).join("\n");
+    }
+
+    function syncCalendarFeedField() {
+      field("busyCalendarUrls").value = [...new Set(feedUrlDrafts.map(cleanCalendarFeedDraft).filter(Boolean))].join("\n");
+    }
+
+    function syncExternalCalendarFields() {
+      syncAuthenticatedCalendarField();
+      syncCalendarFeedField();
     }
 
     function renderEmployees() {
@@ -453,8 +486,8 @@
       });
     }
 
-    function renderConnections(employee = selectedEmployee()) {
-      connectedCalendarsEl.innerHTML = "";
+    function renderMicrosoftConnections(employee = selectedEmployee()) {
+      microsoftCalendarRowsEl.innerHTML = "";
       const connections = new Map((employee?.connectedCalendars || []).map((connection) => [
         String(connection.expectedEmail || connection.email || "").toLowerCase(),
         connection
@@ -473,12 +506,12 @@
 
       const header = document.createElement("div");
       header.className = "connection-row connection-heading";
-      ["Email", "Authentication URL", "Action"].forEach((label) => {
+      ["Email", "Read Authentication URL", "Action"].forEach((label) => {
         const item = document.createElement("span");
         item.textContent = label;
         header.append(item);
       });
-      connectedCalendarsEl.append(header);
+      microsoftCalendarRowsEl.append(header);
 
       authEmailDrafts.forEach((email, index) => {
         const slug = field("slug").value || employee?.slug || selectedSlug;
@@ -499,7 +532,7 @@
           syncAuthenticatedCalendarField();
           const valid = isValidEmail(normalizedEmail);
           const authUrl = valid && slug ? authUrlFor(slug, normalizedEmail) : "";
-          urlEl.textContent = authUrl || "Enter an email to generate the authentication URL.";
+          urlEl.textContent = authUrl || "Enter an email to generate the read URL.";
           button.textContent = connections.has(normalizedEmail) ? "Reconnect" : "Connect";
           button.disabled = !slug || !valid;
         };
@@ -515,12 +548,73 @@
             setStatus("Enter a valid calendar email before connecting.", "error");
             return;
           }
-          window.location.href = authUrlFor(slug, normalizedEmail);
+          window.open(authUrlFor(slug, normalizedEmail), "_blank", "noopener,noreferrer");
         });
         updateRow();
         item.append(emailEl, urlEl, button);
-        connectedCalendarsEl.append(item);
+        microsoftCalendarRowsEl.append(item);
       });
+    }
+
+    function renderCalendarFeeds(employee = selectedEmployee()) {
+      calendarFeedRowsEl.innerHTML = "";
+      const rowUrls = feedUrlDrafts.map(cleanCalendarFeedDraft);
+      const seenUrls = new Set(rowUrls.filter(Boolean));
+      (employee?.busyCalendarUrls || []).forEach((url) => {
+        const normalizedUrl = cleanCalendarFeedDraft(url);
+        if (normalizedUrl && !seenUrls.has(normalizedUrl)) {
+          rowUrls.push(normalizedUrl);
+          seenUrls.add(normalizedUrl);
+        }
+      });
+      feedUrlDrafts = rowUrls.length ? rowUrls : [""];
+      syncCalendarFeedField();
+
+      const header = document.createElement("div");
+      header.className = "connection-row connection-heading";
+      ["Calendar Feed URL", "Read Mode", "Action"].forEach((label) => {
+        const item = document.createElement("span");
+        item.textContent = label;
+        header.append(item);
+      });
+      calendarFeedRowsEl.append(header);
+
+      feedUrlDrafts.forEach((url, index) => {
+        const item = document.createElement("div");
+        item.className = "connection connection-row";
+        const urlInput = document.createElement("input");
+        urlInput.type = "url";
+        urlInput.placeholder = "https://.../calendar.ics or webcal://...";
+        urlInput.value = url;
+        const modeEl = document.createElement("code");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "secondary";
+        button.textContent = "Remove";
+
+        const updateRow = () => {
+          feedUrlDrafts[index] = cleanCalendarFeedDraft(urlInput.value);
+          syncCalendarFeedField();
+          modeEl.textContent = isValidCalendarFeedUrl(feedUrlDrafts[index])
+            ? "Read busy times only"
+            : "Enter a published iCalendar feed URL.";
+        };
+
+        urlInput.addEventListener("input", updateRow);
+        button.addEventListener("click", () => {
+          feedUrlDrafts.splice(index, 1);
+          if (!feedUrlDrafts.length) feedUrlDrafts = [""];
+          renderCalendarFeeds(selectedEmployee());
+        });
+        updateRow();
+        item.append(urlInput, modeEl, button);
+        calendarFeedRowsEl.append(item);
+      });
+    }
+
+    function renderExternalCalendars(employee = selectedEmployee()) {
+      renderMicrosoftConnections(employee);
+      renderCalendarFeeds(employee);
     }
 
     function resetForm() {
@@ -536,13 +630,14 @@
       field("maxDaysAhead").value = "45";
       field("photoUrl").value = "";
       field("busyCalendarEmails").value = "";
+      field("mirrorInviteEmails").value = "";
       authEmailDrafts = [""];
-      syncAuthenticatedCalendarField();
-      field("busyCalendarUrls").value = "";
+      feedUrlDrafts = [""];
+      syncExternalCalendarFields();
       field("meetingLabel").value = "Intro call";
       field("durationMinutes").value = "30";
       field("meetingDescription").value = "A focused conversation with the Mojo team.";
-      renderConnections(null);
+      renderExternalCalendars(null);
       renderEmployees();
       setStatus("");
     }
@@ -557,13 +652,15 @@
       field("email").value = employee.email || "";
       field("photoUrl").value = employee.photoUrl || "";
       field("busyCalendarEmails").value = (employee.busyCalendarEmails || []).join(", ");
+      field("mirrorInviteEmails").value = (employee.mirrorInviteEmails || []).join(", ");
       authEmailDrafts = [...new Set([
         ...(employee.authenticatedCalendarEmails || []),
         ...(employee.connectedCalendars || []).map((connection) => connection.expectedEmail || connection.email).filter(Boolean)
       ].map((email) => String(email).toLowerCase()))];
       if (!authEmailDrafts.length) authEmailDrafts = [""];
       syncAuthenticatedCalendarField();
-      field("busyCalendarUrls").value = (employee.busyCalendarUrls || []).join("\n");
+      feedUrlDrafts = (employee.busyCalendarUrls || []).length ? [...employee.busyCalendarUrls] : [""];
+      syncCalendarFeedField();
       field("title").value = employee.title || "";
       field("timezone").value = employee.timezone || "America/Denver";
       field("dayStart").value = employee.dayStart || "09:00";
@@ -577,7 +674,7 @@
       field("meetingLabel").value = type.label || "Intro call";
       field("durationMinutes").value = type.durationMinutes || 30;
       field("meetingDescription").value = type.description || "A focused conversation with the Mojo team.";
-      renderConnections(employee);
+      renderExternalCalendars(employee);
       renderEmployees();
       setStatus("");
     }
@@ -597,7 +694,7 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       setStatus("Saving...");
-      syncAuthenticatedCalendarField();
+      syncExternalCalendarFields();
 
       const body = {
         slug: field("slug").value,
@@ -606,6 +703,7 @@
         email: field("email").value,
         photoUrl: field("photoUrl").value,
         busyCalendarEmails: field("busyCalendarEmails").value,
+        mirrorInviteEmails: field("mirrorInviteEmails").value,
         authenticatedCalendarEmails: field("authenticatedCalendarEmails").value,
         busyCalendarUrls: field("busyCalendarUrls").value,
         title: field("title").value,
@@ -643,9 +741,13 @@
     });
 
     newEmployeeButton.addEventListener("click", resetForm);
-    addAuthenticatedCalendarEmailButton.addEventListener("click", () => {
+    addMicrosoftReadConnectionButton.addEventListener("click", () => {
       authEmailDrafts.push("");
-      renderConnections(selectedEmployee());
+      renderExternalCalendars(selectedEmployee());
+    });
+    addCalendarFeedUrlButton.addEventListener("click", () => {
+      feedUrlDrafts.push("");
+      renderExternalCalendars(selectedEmployee());
     });
 
     const calendarStatus = new URLSearchParams(window.location.search).get("calendar");

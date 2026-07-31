@@ -31,6 +31,7 @@ export async function onRequestGet({ request, env, data }) {
       busyCalendarEmails: employee.busyCalendarEmails || [],
       authenticatedCalendarEmails: employee.authenticatedCalendarEmails || [],
       busyCalendarUrls: employee.busyCalendarUrls || [],
+      mirrorInviteEmails: employee.mirrorInviteEmails || [],
     connectedCalendars: await listPublicCalendarConnections(env, employee.slug),
     workingDays: employee.workingDays,
     dayStart: employee.dayStart,

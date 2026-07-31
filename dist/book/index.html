@@ -372,7 +372,8 @@
       employees: [],
       employee: null,
       meetingType: null,
-      slot: null
+      slot: null,
+      confirmedStarts: new Set()
     };
 
     const teamEl = document.querySelector("#team");
@@ -446,7 +447,12 @@
       loadAvailability();
     }
 
+    function visibleSlots(slots) {
+      return (slots || []).filter((slot) => !state.confirmedStarts.has(slot.start));
+    }
+
     function renderSlots(slots) {
+      slots = visibleSlots(slots);
       slotsEl.innerHTML = "";
       bookingForm.classList.add("hidden");
       if (!slots.length) {
@@ -555,6 +561,8 @@
 
       bookingForm.reset();
       bookingForm.classList.add("hidden");
+      state.confirmedStarts.add(state.slot.start);
+      state.slot = null;
       setStatus("Booked. The calendar invitation is on its way.", "ok");
       await loadAvailability().catch(() => null);
     });

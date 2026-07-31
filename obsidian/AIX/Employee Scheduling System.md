@@ -22,10 +22,17 @@ Implementation notes:
 - Treat the profile's `Calendar Email` as the mailbox where booked events are created.
 - Treat `Busy Calendar Emails` as private Microsoft 365 calendars that remove available slots but do not receive created booking events.
 - Treat `Busy Calendar URLs` as private read-only iCalendar feeds that remove available slots for alternate calendars.
-- Authenticated alternate Microsoft calendars must use the scheduling OAuth connection flow; the app stores encrypted refresh tokens and refreshes server-side to avoid recurring browser login timeouts.
-- Authenticated calendar emails are configured one per line, and the admin page generates one row per email with the email, authentication URL, and connect/reconnect button. The OAuth callback verifies the signed-in account matches the requested row.
+- Alternate calendars must be read-only busy-time sources. They must never require write/admin access in another tenant.
+- Authenticated alternate Microsoft calendars use delegated OAuth with `Calendars.Read`; the app stores encrypted refresh tokens and refreshes server-side to avoid recurring browser login timeouts. This only works when the external tenant allows user/admin consent for the Mojo app.
+- Published calendar feed URLs are the no-consent fallback for outside tenants. The app reads those `.ics`/`webcal` feeds and subtracts busy time from availability.
+- Authenticated calendar emails are configured one per row, and the admin page generates one read authentication URL per email. The OAuth callback verifies the signed-in account matches the requested row.
+- Blind calendar invite emails are mirror/copy calendar addresses. The booking event is created on the Mojo calendar, those addresses are added as optional attendees, and Microsoft Graph `hideAttendees` is enabled so invitees only see themselves instead of the full mirror list.
+- Availability must always treat confirmed local booking records as busy time, independent of Microsoft Graph readback. This prevents already-booked slots from staying visible when Graph or KV readback is delayed.
+- The booking page also removes the selected slot client-side immediately after a successful booking response.
 - Scheduling admin build `2026.07.30.4-auth-rows` added a visible build stamp so stale browser/admin UI loads can be identified quickly.
 - Scheduling admin build `2026.07.30.5-auth-row-editor` replaced the authenticated-calendar textarea with an editable row UI. The earlier placeholder looked like a configured email but was not saved data.
+- Scheduling admin build `2026.07.31.2-read-calendars` split external calendars into Microsoft read connections and published feed URL rows.
+- Scheduling admin build `2026.07.31.3-blind-invites` added profile-level blind calendar invite emails for private calendar invite mirroring.
 - Keep Microsoft app credentials only in environment variables or Cloudflare secrets.
 - Do not store or write secrets, Graph tokens, refresh tokens, or OAuth credentials into repo docs, Obsidian notes, logs, or commits.
 

@@ -4,7 +4,7 @@
 
 The home page uses a cache-busted OG image URL so stale social preview caches do not keep serving an older shared asset.
 
-- Home meta image: `https://mojoaisummits.com/assets/og-image.png?v=20260727b`
+- Home meta image: `https://mojoaisummits.com/assets/og-image.png?v=20260731a`
 - Local file: `C:\Users\scott\Code\aix\dist\assets\og-image.png`
 - Current visual message: `Where executive leaders shape the future of AI`
 

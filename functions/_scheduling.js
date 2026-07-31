@@ -105,6 +105,16 @@ function timeFromMinutes(value) {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
+function utcDateKey(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addUtcDays(date, days) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
 function cleanPositiveInteger(value, fallback, min, max) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
@@ -224,6 +234,7 @@ export function sanitizeEmployee(input = {}) {
   const busyCalendarEmails = cleanEmailList(input.busyCalendarEmails).filter((address) => address !== email);
   const authenticatedCalendarEmails = cleanEmailList(input.authenticatedCalendarEmails).filter((address) => address !== email);
   const busyCalendarUrls = cleanCalendarUrlList(input.busyCalendarUrls);
+  const mirrorInviteEmails = cleanEmailList(input.mirrorInviteEmails).filter((address) => address !== email);
   const meetingTypes = Array.isArray(input.meetingTypes) && input.meetingTypes.length
     ? input.meetingTypes.map(sanitizeMeetingType)
     : [DEFAULT_MEETING_TYPE];
@@ -234,6 +245,7 @@ export function sanitizeEmployee(input = {}) {
     busyCalendarEmails,
     authenticatedCalendarEmails,
     busyCalendarUrls,
+    mirrorInviteEmails,
     name: cleanText(input.name || email, 120),
     title: cleanText(input.title || "Mojo AI Summits", 160),
     bio: cleanText(input.bio || "", 320),
@@ -333,6 +345,8 @@ export async function saveEmployee(env, input, actor = "") {
   if (invalidBusyEmail) throw new Error(`Fix the busy calendar email: ${invalidBusyEmail}`);
   const invalidAuthenticatedEmail = emailTokens(input.authenticatedCalendarEmails).find((address) => !isValidEmail(address));
   if (invalidAuthenticatedEmail) throw new Error(`Fix the authenticated calendar email: ${invalidAuthenticatedEmail}`);
+  const invalidMirrorEmail = emailTokens(input.mirrorInviteEmails).find((address) => !isValidEmail(address));
+  if (invalidMirrorEmail) throw new Error(`Fix the blind calendar invite email: ${invalidMirrorEmail}`);
   const invalidBusyUrl = textTokens(input.busyCalendarUrls).find((url) => !cleanCalendarUrl(url));
   if (invalidBusyUrl) throw new Error(`Fix the busy calendar URL: ${invalidBusyUrl}`);
   if (input.photoUrl && !cleanPhotoUrl(input.photoUrl)) throw new Error("Enter a valid profile photo URL.");
@@ -725,13 +739,17 @@ async function calendarFeedBusyIntervals(employee, start, end) {
   if (!urls.length) return [];
 
   const calendars = await Promise.all(urls.map(async (url) => {
-    const response = await fetch(url, {
-      headers: { accept: "text/calendar,text/plain,*/*" }
-    });
-    if (!response.ok) throw new Error(`Calendar feed could not be read: ${url}`);
-    const text = await response.text();
-    if (text.length > 2000000) throw new Error(`Calendar feed is too large: ${url}`);
-    return busyIntervalsFromIcal(text, employee, start, end);
+    try {
+      const response = await fetch(url, {
+        headers: { accept: "text/calendar,text/plain,*/*" }
+      });
+      if (!response.ok) return [];
+      const text = await response.text();
+      if (text.length > 2000000) return [];
+      return busyIntervalsFromIcal(text, employee, start, end);
+    } catch {
+      return [];
+    }
   }));
 
   return calendars.flat();
@@ -742,23 +760,63 @@ async function connectedCalendarBusyIntervals(env, employee, start, end) {
   if (!connections.length) return [];
 
   const calendars = await Promise.all(connections.map(async (connection) => {
-    if (connection.provider !== "microsoft" || connection.status === "disabled") return [];
-    const accessToken = await delegatedAccessToken(env, null, connection);
-    const params = new URLSearchParams({
-      startDateTime: start.toISOString(),
-      endDateTime: end.toISOString(),
-      "$select": "start,end,showAs,isCancelled"
-    });
-    const payload = await delegatedGraphGet(accessToken, `/me/calendarView?${params.toString()}`);
-    return (payload.value || [])
-      .filter((event) => event && event.isCancelled !== true && event.showAs !== "free")
-      .map((event) => ({
-        start: event.start,
-        end: event.end
-      }));
+    try {
+      if (connection.provider !== "microsoft" || connection.status === "disabled") return [];
+      const accessToken = await delegatedAccessToken(env, null, connection);
+      const params = new URLSearchParams({
+        startDateTime: start.toISOString(),
+        endDateTime: end.toISOString(),
+        "$select": "start,end,showAs,isCancelled"
+      });
+      const payload = await delegatedGraphGet(accessToken, `/me/calendarView?${params.toString()}`);
+      return (payload.value || [])
+        .filter((event) => event && event.isCancelled !== true && event.showAs !== "free")
+        .map((event) => ({
+          start: event.start,
+          end: event.end
+        }));
+    } catch {
+      return [];
+    }
   }));
 
   return busyIntervalsFromSchedule(calendars.flat(), employee);
+}
+
+async function bookingBusyIntervals(env, employee, start, end) {
+  const dateKeys = new Set();
+  for (let cursor = addUtcDays(start, -1); cursor <= addUtcDays(end, 1); cursor = addUtcDays(cursor, 1)) {
+    dateKeys.add(utcDateKey(cursor));
+  }
+
+  const records = [];
+  await Promise.all([...dateKeys].map(async (dateKey) => {
+    let cursor;
+    do {
+      const page = await env.MOJO_SUMMITS_SETUP_STATE.list({
+        prefix: `${BOOKING_PREFIX}${dateKey}:`,
+        cursor
+      });
+      const values = await Promise.all((page.keys || []).map((item) => (
+        env.MOJO_SUMMITS_SETUP_STATE.get(item.name, "json").catch(() => null)
+      )));
+      records.push(...values.filter(Boolean));
+      cursor = page.list_complete === false ? page.cursor : undefined;
+    } while (cursor);
+  }));
+
+  return records
+    .filter((record) => record.employeeSlug === employee.slug && record.status !== "cancelled")
+    .map((record) => ({
+      start: record.start,
+      end: record.end
+    }))
+    .filter((interval) => interval.start && interval.end)
+    .filter((interval) => overlaps(start, end, new Date(interval.start), new Date(interval.end)))
+    .map((interval) => ({
+      start: new Date(interval.start),
+      end: new Date(interval.end)
+    }));
 }
 
 function buildCandidateSlots(employee, dateValue, meetingType, busyIntervals = []) {
@@ -830,6 +888,12 @@ export async function availability(env, query) {
     source = `${source}+connected-calendars`;
   }
 
+  const bookingIntervals = await bookingBusyIntervals(env, employee, dayStart, dayEnd);
+  if (bookingIntervals.length) {
+    busyIntervals = [...busyIntervals, ...bookingIntervals];
+    source = `${source}+confirmed-bookings`;
+  }
+
   return {
     employee: publicEmployee(employee),
     meetingType,
@@ -843,6 +907,25 @@ export async function availability(env, query) {
 async function createGraphEvent(env, employee, meetingType, booking, start, end) {
   const token = await graphAccessToken(env);
   const subject = `${meetingType.label}: ${booking.guestName}`;
+  const mirrorInviteEmails = [...new Set((employee.mirrorInviteEmails || [])
+    .map(cleanEmail)
+    .filter((email) => email && email !== booking.guestEmail && email !== employee.email))];
+  const attendees = [
+    {
+      emailAddress: {
+        address: booking.guestEmail,
+        name: booking.guestName
+      },
+      type: "required"
+    },
+    ...mirrorInviteEmails.map((email) => ({
+      emailAddress: {
+        address: email,
+        name: email
+      },
+      type: "optional"
+    }))
+  ];
   const response = await fetch(
     `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(employee.email)}/calendar/events`,
     {
@@ -865,15 +948,8 @@ async function createGraphEvent(env, employee, meetingType, booking, start, end)
         start: { dateTime: start.toISOString(), timeZone: "UTC" },
         end: { dateTime: end.toISOString(), timeZone: "UTC" },
         location: { displayName: meetingType.location },
-        attendees: [
-          {
-            emailAddress: {
-              address: booking.guestEmail,
-              name: booking.guestName
-            },
-            type: "required"
-          }
-        ],
+        attendees,
+        hideAttendees: mirrorInviteEmails.length > 0,
         isOnlineMeeting: /teams/i.test(meetingType.location),
         onlineMeetingProvider: /teams/i.test(meetingType.location) ? "teamsForBusiness" : undefined
       })
