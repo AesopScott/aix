@@ -1091,7 +1091,7 @@
   </main>
 
   <script>
-    const ACCESS_CONSOLE_BUILD = "2026.07.31.1-api-guard";
+    const ACCESS_CONSOLE_BUILD = "2026.07.31.2-next-redirect";
     const state = {
       config: null,
       modes: [],
@@ -1744,6 +1744,11 @@
         if (!response.ok) throw new Error(payload.error || "Session could not be checked.");
         state.session = payload;
         renderSession();
+        const nextPath = safeNextPath();
+        if (payload.authenticated && nextPath) {
+          location.assign(nextPath);
+          return;
+        }
         if (payload.authenticated && canManageAccess()) {
           await loadConfig();
           await loadUsers();
