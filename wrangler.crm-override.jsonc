@@ -1,5 +1,5 @@
 {
-  "name": "mojo-crm-route-override",
+  "name": "open-crm",
   "main": "workers/mojo-crm-route-override.js",
   "compatibility_date": "2026-07-31",
   "routes": [
