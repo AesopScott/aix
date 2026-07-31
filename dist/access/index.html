@@ -913,6 +913,7 @@
           <input id="loginPassword" type="password" autocomplete="current-password" required>
         </label>
         <button type="submit">Sign In</button>
+        <p class="inline-result" id="loginResult" role="alert" aria-live="assertive"></p>
       </form>
       <div class="auth-card hidden" id="firstOwnerInvitePanel">
         <h2>First Owner Invite</h2>
@@ -1092,6 +1093,7 @@
       loginForm: document.querySelector("#loginForm"),
       loginEmail: document.querySelector("#loginEmail"),
       loginPassword: document.querySelector("#loginPassword"),
+      loginResult: document.querySelector("#loginResult"),
       logoutButton: document.querySelector("#logoutButton"),
       modeFilter: document.querySelector("#modeFilter"),
       notice: document.querySelector("#notice"),
@@ -1153,6 +1155,11 @@
     function clearNotice() {
       elements.notice.className = "notice";
       elements.notice.textContent = "";
+    }
+
+    function setLoginResult(message = "", type = "") {
+      elements.loginResult.textContent = message;
+      elements.loginResult.className = `inline-result ${type}`.trim();
     }
 
     function safeNextPath() {
@@ -1583,6 +1590,7 @@
     async function login(event) {
       event.preventDefault();
       clearNotice();
+      setLoginResult("");
       try {
         const response = await fetch("/api/auth/login", {
           method: "POST",
@@ -1595,6 +1603,7 @@
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Sign in failed.");
         elements.loginPassword.value = "";
+        setLoginResult("");
         const nextPath = safeNextPath();
         if (nextPath) {
           location.assign(nextPath);
@@ -1602,6 +1611,7 @@
         }
         await loadSession();
       } catch (error) {
+        setLoginResult(error.message || "Email or password is incorrect.", "error");
         showNotice(error.message, "error");
       }
     }
