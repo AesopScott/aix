@@ -347,7 +347,7 @@
       <div class="hero-copy">
         <p class="eyebrow">Registrant CRM</p>
         <h1>Registration data, ready for follow-up.</h1>
-        <p>Member, guest, and partner registrations are added here with contact details, event roles, phone verification status, and food preferences.</p>
+        <p>Guest, member, and partner registrations are added here with contact details, event history, and phone confirmation status.</p>
       </div>
       <div class="metrics" id="metrics"></div>
     </section>
@@ -356,8 +356,8 @@
       <label>
         Registration
         <select id="typeFilter">
-          <option value="member">Members</option>
           <option value="guest">Guests</option>
+          <option value="member">Members</option>
           <option value="partner">Partners</option>
         </select>
       </label>
@@ -508,8 +508,8 @@
     const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
     const partnerInviteList = document.querySelector("#partnerInviteList");
     let state = {
-      type: "member",
-      label: "Member",
+      type: "guest",
+      label: "Guest",
       rows: [],
       summary: {},
       partnerInviteCodes: [],
