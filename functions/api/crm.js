@@ -213,6 +213,7 @@ function normalizeContactRecord(key, record = {}) {
   });
   const latestEvent = sortedEvents[0] || {};
   const email = cleanString(record.email || key.replace(/^crm:contact:/, "")).toLowerCase();
+  const contactStatus = contactStatusFromRegistration(latestEvent.registrationType || record.registrationType || record.source);
   return {
     key,
     id: email,
@@ -227,6 +228,8 @@ function normalizeContactRecord(key, record = {}) {
     source: cleanString(record.source),
     registrationId: cleanString(record.registrationId),
     registrationType: cleanString(record.registrationType),
+    contactStatus,
+    publicationCount: Number.isFinite(Number(record.publicationCount)) ? Number(record.publicationCount) : 0,
     companyKey: cleanString(record.companyKey),
     companySlug: cleanString(record.companySlug),
     profileKey: cleanString(record.profileKey),
@@ -254,6 +257,14 @@ function normalizeContactRecord(key, record = {}) {
       registeredAt: cleanString(event?.registeredAt)
     }))
   };
+}
+
+function contactStatusFromRegistration(value) {
+  const normalized = cleanString(value).toLowerCase().replace(/[_-]+/g, " ");
+  if (normalized.includes("partner member")) return "partner member";
+  if (normalized.includes("partner")) return "partner guest";
+  if (normalized.includes("member")) return "member";
+  return "guest";
 }
 
 async function listKeys(env, prefix) {

@@ -845,6 +845,14 @@
       return String(value || "new").replace(/-/g, " ");
     }
 
+    function contactStatusLabel(row) {
+      const status = String(row.contactStatus || row.registrationType || row.source || "guest").toLowerCase();
+      if (status.includes("partner member")) return "partner member";
+      if (status.includes("partner")) return "partner guest";
+      if (status.includes("member")) return "member";
+      return "guest";
+    }
+
     function roleBadges(row) {
       if (state.type === "contacts") {
         const events = row.events || [];
@@ -865,8 +873,8 @@
 
     function publicationBadges(row) {
       if (state.type === "contacts") {
-        const count = Number(row.eventCount || 0);
-        return `<span class="pill">${count} event${count === 1 ? "" : "s"}</span>`;
+        const count = Number(row.publicationCount || 0);
+        return `<span class="pill">${count} publication${count === 1 ? "" : "s"}</span>`;
       }
       const approvals = [];
       if (row.publicationUseName) approvals.push("Name");
@@ -877,7 +885,7 @@
 
     function phonePill(row) {
       if (state.type === "contacts") {
-        return `<span class="pill ${row.phone ? "" : "warn"}">${row.phone ? "Phone entered" : "No phone"}</span>`;
+        return `<span class="pill ${row.phone ? "" : "warn"}">${escapeHtml(row.phone || "No phone")}</span>`;
       }
       const pending = row.phoneVerificationStatus !== "verified";
       return `<span class="pill ${pending ? "warn" : ""}">${escapeHtml(statusLabel(row.phoneVerificationStatus || "unverified"))}</span>`;
@@ -1246,7 +1254,7 @@
           <td><div class="role-list">${publicationBadges(row)}</div></td>
           <td>${phonePill(row)}</td>
           <td>
-            ${state.type === "contacts" ? '<span class="pill">Contact</span>' : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
+            ${state.type === "contacts" ? `<span class="pill">${escapeHtml(contactStatusLabel(row))}</span>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
               ${["new", "contacted", "confirmed", "accepted", "waitlist", "declined"].map((status) => `
                 <option value="${status}" ${row.crmStatus === status ? "selected" : ""}>${statusLabel(status)}</option>
               `).join("")}
