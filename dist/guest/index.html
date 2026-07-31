@@ -670,7 +670,7 @@
     submitButton.disabled = true;
     submitButton.textContent = 'Submitting...';
     try {
-      await postJson('/crm/api/public/guest-registration', payload);
+      await postJson('/api/guest-registration', payload);
       form.classList.add('hide');
       success.classList.add('show');
     } catch (error) {
