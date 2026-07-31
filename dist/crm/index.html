@@ -345,6 +345,37 @@
       min-width: 15rem;
     }
 
+    .contact-cell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.6rem;
+      align-items: start;
+      min-width: 14rem;
+    }
+
+    .icon-button {
+      display: inline-grid;
+      place-items: center;
+      width: 2rem;
+      min-width: 2rem;
+      height: 2rem;
+      padding: 0;
+      border-radius: 999px;
+      color: #ffc7d0;
+      background: rgba(255, 99, 123, 0.08);
+      border-color: rgba(255, 99, 123, 0.5);
+      font-size: 1.1rem;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .icon-button:hover {
+      color: var(--white);
+      border-color: rgba(255, 99, 123, 0.9);
+      background: rgba(255, 99, 123, 0.18);
+    }
+
     .member-access-cell {
       display: grid;
       gap: 0.55rem;
@@ -1203,8 +1234,13 @@
             ${row.partnerTier ? `<br><span>${escapeHtml(row.partnerTier)}</span>` : ""}
           </td>
           <td>
-            <strong>${escapeHtml(row.email)}</strong><br>
-            <span>${escapeHtml(row.phone)}</span>
+            <div class="contact-cell">
+              <div>
+                <strong>${escapeHtml(row.email)}</strong><br>
+                <span>${escapeHtml(row.phone)}</span>
+              </div>
+              ${state.type === "contacts" ? `<button class="icon-button" type="button" title="Delete contact" aria-label="Delete contact ${escapeHtml(row.email)}" data-delete-contact-key="${escapeHtml(row.key)}" data-delete-contact-email="${escapeHtml(row.email)}">&times;</button>` : ""}
+            </div>
           </td>
           <td><div class="role-list">${roleBadges(row)}</div></td>
           <td><div class="role-list">${publicationBadges(row)}</div></td>
@@ -1218,10 +1254,7 @@
           </td>
           <td>${memberAccessCell(row)}</td>
           <td>
-            ${state.type === "contacts" ? `<div class="notes-cell">
-              <span>${escapeHtml(row.updatedAt ? `Updated ${formatDate(row.updatedAt)}` : "")}</span>
-              <button class="compact secondary" type="button" data-delete-contact-key="${escapeHtml(row.key)}" data-delete-contact-email="${escapeHtml(row.email)}">Delete Contact</button>
-            </div>` : `<div class="notes-cell">
+            ${state.type === "contacts" ? `<span>${escapeHtml(row.updatedAt ? `Updated ${formatDate(row.updatedAt)}` : "")}</span>` : `<div class="notes-cell">
               <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Follow-up notes">${escapeHtml(row.crmNotes || "")}</textarea>
               <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
             </div>`}
@@ -1381,7 +1414,7 @@
       if (!window.confirm(`Delete ${label} from Contacts and remove that person's stored registration rows?`)) return;
       setNotice("Deleting contact...");
       try {
-        state = await fetch(api, {
+        const data = await fetch(api, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -1390,7 +1423,20 @@
             email
           })
         }).then(readJson);
-        setNotice(`Contact deleted: ${state.deleted?.email || label}`, "ok");
+        const deletedEmail = (data.deleted?.email || email || "").toLowerCase();
+        state = {
+          ...data,
+          rows: (data.rows || state.rows || []).filter((row) =>
+            row.key !== key && String(row.email || "").toLowerCase() !== deletedEmail
+          ),
+          summary: {
+            ...(data.summary || state.summary || {}),
+            total: (data.rows || state.rows || []).filter((row) =>
+              row.key !== key && String(row.email || "").toLowerCase() !== deletedEmail
+            ).length
+          }
+        };
+        setNotice(`Contact deleted: ${data.deleted?.email || label}`, "ok");
         render();
       } catch (error) {
         setNotice(error.message, "error");
