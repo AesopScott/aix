@@ -379,6 +379,71 @@
       background: rgba(10, 15, 30, 0.48);
     }
 
+    .confirmation {
+      display: grid;
+      gap: 0.75rem;
+      border: 1px solid rgba(106, 240, 182, 0.52);
+      border-radius: 8px;
+      padding: 1rem;
+      background: rgba(106, 240, 182, 0.08);
+    }
+
+    .confirmation h2 {
+      color: var(--ok);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .confirmation-details {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .confirmation-row {
+      display: grid;
+      grid-template-columns: 7.5rem minmax(0, 1fr);
+      gap: 0.75rem;
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+
+    .confirmation-row span:first-child {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .confirmation-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .confirmation-actions a,
+    .confirmation-actions button {
+      width: auto;
+      min-width: 11rem;
+    }
+
+    .confirmation-actions a {
+      display: inline-grid;
+      place-items: center;
+      min-height: 2.75rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.62rem 0.72rem;
+      color: var(--cyan);
+      background: rgba(10, 15, 30, 0.78);
+      font-size: 0.82rem;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
     .status.error {
       border-color: rgba(255, 111, 135, 0.42);
       color: var(--danger);
@@ -477,6 +542,7 @@
         <button type="submit">Confirm Booking</button>
       </form>
 
+      <div class="confirmation hidden" id="confirmation" aria-live="polite"></div>
       <div class="status hidden" id="status"></div>
     </section>
   </main>
@@ -489,7 +555,8 @@
       slot: null,
       directSlug: "",
       calendarCursor: null,
-      confirmedStarts: new Set()
+      confirmedStarts: new Set(),
+      confirmation: null
     };
 
     const teamEl = document.querySelector("#team");
@@ -508,11 +575,79 @@
     const warningEl = document.querySelector("#warning");
     const statusEl = document.querySelector("#status");
     const bookingForm = document.querySelector("#bookingForm");
+    const confirmationEl = document.querySelector("#confirmation");
 
     function setStatus(message, kind = "") {
       statusEl.textContent = message;
       statusEl.className = `status ${kind}`.trim();
       statusEl.classList.toggle("hidden", !message);
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function clearConfirmation() {
+      state.confirmation = null;
+      confirmationEl.classList.add("hidden");
+      confirmationEl.innerHTML = "";
+    }
+
+    function formatBookingRange(booking) {
+      const start = new Date(booking.start);
+      const end = new Date(booking.end);
+      const timezone = booking.timezone || state.employee?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const date = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      }).format(start);
+      const time = `${new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        hour: "numeric",
+        minute: "2-digit"
+      }).format(start)} - ${new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short"
+      }).format(end)}`;
+      return { date, time };
+    }
+
+    function renderConfirmation(booking) {
+      state.confirmation = booking;
+      const { date, time } = formatBookingRange(booking);
+      const employeeName = booking.employee?.name || state.employee?.name || "Mojo AI Summits";
+      const meetingLabel = booking.meetingType?.label || state.meetingType?.label || "Meeting";
+      const location = booking.onlineMeetingUrl ? "Zoom link included" : booking.meetingType?.location || "Zoom";
+      confirmationEl.innerHTML = `
+        <h2>Event booked.</h2>
+        <p>The calendar invitation is on its way.</p>
+        <div class="confirmation-details">
+          <div class="confirmation-row"><span>Meeting</span><strong>${escapeHtml(meetingLabel)}</strong></div>
+          <div class="confirmation-row"><span>Host</span><strong>${escapeHtml(employeeName)}</strong></div>
+          <div class="confirmation-row"><span>Date</span><strong>${escapeHtml(date)}</strong></div>
+          <div class="confirmation-row"><span>Time</span><strong>${escapeHtml(time)}</strong></div>
+          <div class="confirmation-row"><span>Location</span><strong>${escapeHtml(location)}</strong></div>
+        </div>
+        <div class="confirmation-actions">
+          ${booking.onlineMeetingUrl ? `<a href="${escapeHtml(booking.onlineMeetingUrl)}" target="_blank" rel="noopener">Open Zoom</a>` : ""}
+          <button class="secondary" id="bookAnotherTime" type="button">Book Another Time</button>
+        </div>
+      `;
+      confirmationEl.classList.remove("hidden");
+      confirmationEl.querySelector("#bookAnotherTime")?.addEventListener("click", () => {
+        clearConfirmation();
+        loadAvailability().catch((error) => setStatus(error.message, "error"));
+      });
     }
 
     function todayValue() {
@@ -580,7 +715,10 @@
       calendarButtonLabel.textContent = formatDateLabel(value);
       state.calendarCursor = new Date(dateFromValue(value).getFullYear(), dateFromValue(value).getMonth(), 1);
       renderCalendar();
-      if (shouldLoad) loadAvailability().catch((error) => setStatus(error.message, "error"));
+      if (shouldLoad) {
+        clearConfirmation();
+        loadAvailability().catch((error) => setStatus(error.message, "error"));
+      }
     }
 
     function renderCalendar() {
@@ -679,6 +817,7 @@
       if (state.directSlug && slug !== state.directSlug) return;
       state.employee = state.employees.find((employee) => employee.slug === slug) || null;
       state.slot = null;
+      clearConfirmation();
       renderTeam();
       renderMeetingTypes();
       updateBookingCopy();
@@ -732,6 +871,7 @@
 
     async function loadAvailability() {
       state.slot = null;
+      clearConfirmation();
       setStatus("");
       warningEl.classList.add("hidden");
       bookingForm.classList.add("hidden");
@@ -824,10 +964,13 @@
 
       bookingForm.reset();
       bookingForm.classList.add("hidden");
-      state.confirmedStarts.add(state.slot.start);
+      const booking = payload.booking || {};
+      state.confirmedStarts.add(booking.start || state.slot.start);
       state.slot = null;
-      setStatus("Booked. The calendar invitation is on its way.", "ok");
-      await loadAvailability().catch(() => null);
+      slotsEl.innerHTML = "";
+      warningEl.classList.add("hidden");
+      setStatus("");
+      renderConfirmation(booking);
     });
 
     setSelectedDate(todayValue(), false);
