@@ -108,8 +108,8 @@ export const DEFAULT_ACCESS_RULES = [
     kind: "page",
     group: "Data",
     label: "CRM",
-    summary: "Member, guest, and partner registrants, invite codes, notes, statuses, and exports.",
-    mode: "allowlist",
+    summary: "CRM shell for member, guest, and partner registrants. CRM data remains protected by the API route.",
+    mode: "public",
     matches: [{ exact: "/crm" }, { prefix: "/crm/" }],
     domains: ["mojoaisummits.com/crm", "mojoaisummits.com/crm/*"]
   },
