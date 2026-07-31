@@ -296,3 +296,102 @@ export async function statsResponse(env) {
     }
   });
 }
+
+export async function companiesResponse(request, env) {
+  const url = new URL(request.url);
+  const contacts = await readContacts(env);
+  const companies = new Map();
+
+  for (const contact of contacts) {
+    const id = contact.company_id || contact.company_name;
+    if (!id) continue;
+    const existing = companies.get(id) || {
+      id,
+      key: id,
+      name: contact.company_name,
+      company_name: contact.company_name,
+      pipeline: url.searchParams.get("pipeline") || "default",
+      contacts: 0,
+      contact_count: 0,
+      created_at: contact.created_at,
+      updated_at: contact.updated_at
+    };
+    existing.contacts += 1;
+    existing.contact_count = existing.contacts;
+    if (String(contact.updated_at).localeCompare(String(existing.updated_at || "")) > 0) {
+      existing.updated_at = contact.updated_at;
+    }
+    companies.set(id, existing);
+  }
+
+  const search = cleanString(url.searchParams.get("search")).toLowerCase();
+  const rows = [...companies.values()]
+    .filter((company) => !search || cleanString(company.name).toLowerCase().includes(search))
+    .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+  const page = paginate(rows, url);
+
+  return json({
+    ok: true,
+    companies: page.rows,
+    items: page.rows,
+    data: page.rows,
+    rows: page.rows,
+    total: rows.length,
+    count: page.rows.length,
+    page: page.page,
+    limit: page.limit,
+    offset: page.offset
+  });
+}
+
+export function dealsResponse() {
+  return json({
+    ok: true,
+    deals: [],
+    items: [],
+    data: [],
+    rows: [],
+    total: 0,
+    totalValue: 0
+  });
+}
+
+export function customFieldsResponse() {
+  return json({
+    ok: true,
+    defs: [],
+    customFields: [],
+    fields: []
+  });
+}
+
+export function integrationsResponse() {
+  return json({
+    ok: true,
+    email: false,
+    meeting: false,
+    slack: false
+  });
+}
+
+export function stagesResponse() {
+  const stages = [
+    { key: "new", id: "new", label: "New", order: 1 },
+    { key: "contacted", id: "contacted", label: "Contacted", order: 2 },
+    { key: "confirmed", id: "confirmed", label: "Confirmed", order: 3 },
+    { key: "accepted", id: "accepted", label: "Accepted", order: 4 }
+  ];
+
+  return json({
+    ok: true,
+    stages
+  });
+}
+
+export function vipInviteCodesResponse() {
+  return json({
+    ok: true,
+    codes: [],
+    links: []
+  });
+}
