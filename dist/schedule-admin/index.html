@@ -421,7 +421,7 @@
   </main>
 
   <script>
-    const SCHEDULING_ADMIN_BUILD = "2026.07.31.7-json-errors";
+    const SCHEDULING_ADMIN_BUILD = "2026.07.31.8-admin-api-guard";
     const employeesEl = document.querySelector("#employees");
     const graphStatusEl = document.querySelector("#graphStatus");
     const buildStampEl = document.querySelector("#buildStamp");
@@ -449,20 +449,23 @@
 
     async function readApiPayload(response, fallbackMessage) {
       const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        return response.json().catch(() => ({ error: fallbackMessage }));
-      }
-
       const text = await response.text().catch(() => "");
-      if (text.trim().startsWith("<!doctype") || text.includes("<html")) {
+      const trimmed = text.trim();
+      if (/^<!doctype/i.test(trimmed) || /<html/i.test(trimmed)) {
         return {
           error: response.ok
             ? "Scheduling admin returned a web page instead of data. Refresh and sign in through Access again."
-            : "Sign in with an approved Mojo AI Summits account to use scheduling admin."
+            : `Sign in with an approved Mojo AI Summits account to use scheduling admin. The admin API returned ${response.status} ${contentType || "without a content type"}.`
         };
       }
 
-      return { error: text.trim() || fallbackMessage };
+      if (!trimmed) return { error: fallbackMessage };
+
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return { error: `${fallbackMessage} The admin API returned ${response.status} ${contentType || "without a content type"}.` };
+      }
     }
 
     function field(name) {
@@ -744,7 +747,7 @@
     }
 
     async function loadAdmin() {
-      const response = await fetch("/api/scheduling/admin", {
+      const response = await fetch(`/api/scheduling/admin?build=${encodeURIComponent(SCHEDULING_ADMIN_BUILD)}`, {
         cache: "no-store",
         headers: { accept: "application/json" }
       });
@@ -793,7 +796,7 @@
         }]
       };
 
-      const response = await fetch("/api/scheduling/admin", {
+      const response = await fetch(`/api/scheduling/admin?build=${encodeURIComponent(SCHEDULING_ADMIN_BUILD)}`, {
         method: "POST",
         headers: { accept: "application/json", "content-type": "application/json" },
         body: JSON.stringify(body)
