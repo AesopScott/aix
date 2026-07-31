@@ -68,6 +68,83 @@ function slugify(value) {
     .slice(0, 120);
 }
 
+function registrationRoleLabel(type) {
+  const labels = {
+    member: "Member",
+    guest: "Guest",
+    partner: "Partner"
+  };
+  return labels[type] || cleanString(type) || "Registrant";
+}
+
+function registrationRoles(type, registration = {}) {
+  const roles = [registrationRoleLabel(type)];
+  if (cleanBoolean(registration.isPresenter)) roles.push("Presenter");
+  if (cleanBoolean(registration.isRoundtableLeader)) roles.push("Round table leader");
+  if (cleanBoolean(registration.isFeaturedGuest)) roles.push("Featured guest");
+  if (cleanBoolean(registration.isFeaturedMember)) roles.push("Featured member");
+  return [...new Set(roles.filter(Boolean))];
+}
+
+function eventIdentity(registration = {}) {
+  return cleanString(
+    registration.eventId ||
+      registration.eventSlug ||
+      registration.eventName ||
+      registration.inviteCode ||
+      registration.id ||
+      registration.createdAt
+  );
+}
+
+function contactEventEntry(type, registration = {}, previous = {}, now = "") {
+  const roles = registrationRoles(type, registration);
+  const eventId = eventIdentity(registration);
+  return {
+    ...previous,
+    id: eventId,
+    eventId,
+    eventSlug: cleanString(registration.eventSlug),
+    eventName: cleanString(registration.eventName) || eventId || "Registration",
+    eventDate: cleanString(registration.eventDate),
+    inviteCode: cleanString(registration.inviteCode),
+    registrationId: cleanString(registration.id),
+    registrationType: cleanString(type),
+    role: roles.join(", "),
+    roles,
+    registeredAt: cleanString(registration.createdAt) || now,
+    attended: typeof previous.attended === "boolean" ? previous.attended : false,
+    attendanceStatus: cleanString(previous.attendanceStatus) || "not_recorded",
+    attendedAt: cleanString(previous.attendedAt),
+    attendanceNotes: cleanString(previous.attendanceNotes),
+    updatedAt: now
+  };
+}
+
+function contactEventKey(event = {}) {
+  return cleanString(event.registrationId || event.eventId || event.eventSlug || event.eventName || event.inviteCode || event.registeredAt)
+    .toLowerCase();
+}
+
+function mergeContactEvents(existingEvents, type, registration, now) {
+  const map = new Map();
+  for (const event of Array.isArray(existingEvents) ? existingEvents : []) {
+    const key = contactEventKey(event);
+    if (key) map.set(key, event);
+  }
+
+  const next = contactEventEntry(type, registration, {}, now);
+  const key = contactEventKey(next);
+  const previous = key ? map.get(key) || {} : {};
+  if (key) map.set(key, contactEventEntry(type, registration, previous, now));
+
+  return [...map.values()].sort((a, b) => {
+    const left = cleanString(b.eventDate || b.registeredAt || b.updatedAt);
+    const right = cleanString(a.eventDate || a.registeredAt || a.updatedAt);
+    return left.localeCompare(right);
+  });
+}
+
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -234,30 +311,33 @@ export async function upsertRegistrationContact(env, type, registration, config 
   if (!email || !company || !companySlug) return {};
 
   const now = registration.createdAt || new Date().toISOString();
+  const companyKey = `crm:company:${companySlug}`;
+  const partnerCompanyKey = `partner-company:${companySlug}`;
+  const updatedBy = cleanString(config.updatedBy) || "registration";
   const contact = {
+    id: email,
     email,
     name: cleanString(registration.name) || email,
     company,
+    companySlug,
+    companyKey,
+    profileKey: type === "partner" ? partnerCompanyKey : companyKey,
     title: cleanString(registration.title),
     phone: cleanString(registration.phone),
     registrationId: cleanString(registration.id),
     registrationType: cleanString(config.label || type),
     source: cleanString(config.source || registration.source || `${type}-registration`),
     updatedAt: now,
-    updatedBy: "registration"
+    updatedBy
   };
-  const contactKeys = [
-    `crm:contact:${email}`,
-    `${type}-contact:${email}`
-  ];
+  const contactKeys = [`crm:contact:${email}`];
   const companyKeys = [
-    `crm:company:${companySlug}`,
+    companyKey,
     `${type}-company:${companySlug}`
   ];
 
   if (type === "partner") {
-    contactKeys.push(`partner-contact:${email}`);
-    companyKeys.push(`partner-company:${companySlug}`);
+    companyKeys.push(partnerCompanyKey);
   }
 
   for (const key of [...new Set(contactKeys)]) {
@@ -265,8 +345,11 @@ export async function upsertRegistrationContact(env, type, registration, config 
     await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
       ...(existing || {}),
       ...contact,
+      id: email,
+      name: contact.name || cleanString(existing?.name) || email,
       source: cleanString(existing?.source) || contact.source,
-      createdAt: cleanString(existing?.createdAt) || now
+      createdAt: cleanString(existing?.createdAt) || now,
+      events: mergeContactEvents(existing?.events, type, registration, now)
     }));
   }
 
@@ -291,13 +374,15 @@ export async function upsertRegistrationContact(env, type, registration, config 
       companySlug,
       contacts: [...contactMap.values()],
       updatedAt: now,
-      updatedBy: "registration"
+      updatedBy
     }));
   }
 
   return {
+    contactId: email,
     contactKey: `crm:contact:${email}`,
-    companyKey: `crm:company:${companySlug}`
+    companyKey: `crm:company:${companySlug}`,
+    profileKey: type === "partner" ? partnerCompanyKey : `crm:company:${companySlug}`
   };
 }
 

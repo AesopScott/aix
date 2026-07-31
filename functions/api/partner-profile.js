@@ -5,8 +5,8 @@ const jsonHeaders = {
   "cache-control": "no-store"
 };
 
-const profilePrefixes = ["partner-company:", "partner-profile-company:", "partner-profile:", "partner:"];
-const contactPrefixes = ["partner-contact:", "partner-profile-contact:"];
+const profilePrefixes = ["partner-company:", "crm:company:", "partner-profile-company:", "partner-profile:", "partner:"];
+const contactPrefixes = ["crm:contact:", "partner-contact:", "partner-profile-contact:"];
 const registrationSources = [
   { type: "partner", label: "Partner", prefixes: ["crm:partner-registrant:", "partner-registration:"] },
   { type: "member", label: "Member", prefixes: ["crm:member-registrant:", "member-registration:"] },
@@ -432,7 +432,7 @@ export async function onRequestGet({ request, env, data }) {
     schema: {
       profileKey: storedProfile?.key || `partner-company:${companySlug(profile.organizationName)}`,
       contactKeys: contactPrefixes.map((prefix) => `${prefix}${email}`),
-      note: "Partner profiles are company-based. Map contacts to a company profile with partner-contact:{email}, or store contacts on partner-company:{company-slug}."
+      note: "Partner profiles are company-based. Map contacts to a company profile with crm:contact:{email}, or store contacts on partner-company:{company-slug}."
     }
   });
 }

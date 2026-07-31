@@ -509,42 +509,32 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
   if (!email || !company || !slug) return null;
 
   const now = new Date().toISOString();
-  const contactKey = `partner-contact:${email}`;
   const companyKey = `partner-company:${slug}`;
-  const contact = {
-    email,
-    name: cleanString(row.name, 240) || email,
+  const refs = await upsertRegistrationContact(env, "partner", {
+    ...row,
     company,
-    title: cleanString(row.title, 240),
+    partnerCompany: company,
+    createdAt: row.createdAt || now,
+    source: "Partner CRM"
+  }, {
+    label: "partner",
     source: "Partner CRM",
-    profileKey: companyKey,
-    companySlug: slug,
-    updatedAt: now,
-    updatedBy: actor
-  };
-  const existingCompany = await env.MOJO_SUMMITS_SETUP_STATE.get(companyKey, "json").catch(() => null);
-  const contacts = Array.isArray(existingCompany?.contacts) ? existingCompany.contacts : [];
-  const contactMap = new Map(contacts.map((entry) => [cleanString(entry?.email).toLowerCase() || cleanString(entry?.name, 240), entry]));
-  const previous = contactMap.get(email) || {};
-  contactMap.set(email, {
-    ...previous,
-    ...contact,
-    source: cleanString(previous.source) || contact.source
+    updatedBy: actor || "crm"
   });
 
+  const existingCompany = await env.MOJO_SUMMITS_SETUP_STATE.get(companyKey, "json").catch(() => null);
   const companyRecord = {
     ...(existingCompany || {}),
     organizationName: cleanString(existingCompany?.organizationName || company, 240),
+    company,
     companySlug: slug,
     tier: cleanString(row.partnerTier || existingCompany?.tier, 120),
-    contacts: [...contactMap.values()],
     updatedAt: now,
-    updatedBy: actor
+    updatedBy: actor || "crm"
   };
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(contactKey, JSON.stringify(contact));
   await env.MOJO_SUMMITS_SETUP_STATE.put(companyKey, JSON.stringify(companyRecord));
-  return { contactKey, companyKey };
+  return { ...refs, companyKey };
 }
 
 export async function onRequestOptions() {
