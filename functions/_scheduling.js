@@ -17,7 +17,7 @@ const DEFAULT_MEETING_TYPE = {
   label: "Intro call",
   durationMinutes: 30,
   description: "A focused conversation with the Mojo team.",
-  location: "Microsoft Teams"
+  location: "Zoom"
 };
 const DEFAULT_PHOTOS = {
   angel: "/assets/images/angel.png",
@@ -324,6 +324,20 @@ function graphConfig(env) {
   };
 }
 
+function zoomConfig(env) {
+  const accountId = cleanText(env.ZOOM_ACCOUNT_ID, 200);
+  const clientId = cleanText(env.ZOOM_CLIENT_ID, 200);
+  const clientSecret = String(env.ZOOM_CLIENT_SECRET || "");
+  const userId = cleanText(env.ZOOM_USER_ID || "me", 200);
+  return {
+    accountId,
+    clientId,
+    clientSecret,
+    userId,
+    configured: Boolean(accountId && clientId && clientSecret)
+  };
+}
+
 function delegatedGraphConfig(env) {
   const base = graphConfig(env);
   return {
@@ -348,7 +362,14 @@ function publicEmployee(employee) {
     bookingUrl: `/book-${employee.slug}/`,
     timezone: employee.timezone,
     active: employee.active,
-    meetingTypes: employee.meetingTypes
+    meetingTypes: (employee.meetingTypes || []).map(publicMeetingType)
+  };
+}
+
+function publicMeetingType(meetingType) {
+  return {
+    ...meetingType,
+    location: /teams/i.test(meetingType?.location || "") ? "Zoom" : meetingType.location || "Zoom"
   };
 }
 
@@ -591,6 +612,82 @@ async function graphAccessToken(env) {
     throw new Error(payload.error_description || payload.error || "Microsoft Graph token request failed.");
   }
   return payload.access_token;
+}
+
+async function zoomAccessToken(env) {
+  const config = zoomConfig(env);
+  if (!config.configured) throw new Error("Zoom scheduling credentials are not configured yet.");
+  const credentials = btoa(`${config.clientId}:${config.clientSecret}`);
+  const response = await fetch(
+    `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${encodeURIComponent(config.accountId)}`,
+    {
+      method: "POST",
+      headers: { authorization: `Basic ${credentials}` }
+    }
+  );
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.reason || payload.message || "Zoom OAuth token request failed.");
+  return payload.access_token;
+}
+
+function zoomStartTime(start) {
+  return start.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+async function createZoomMeeting(env, employee, meetingType, booking, start, end) {
+  const token = await zoomAccessToken(env);
+  const config = zoomConfig(env);
+  const response = await fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(config.userId)}/meetings`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      topic: `MOJO AI Summits | ${meetingType.label}: ${booking.guestName}`,
+      type: 2,
+      start_time: zoomStartTime(start),
+      duration: Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000)),
+      timezone: "UTC",
+      agenda: [
+        `Booked through mojoaisummits.com.`,
+        `Host: ${employee.name} <${employee.email}>`,
+        `Guest: ${booking.guestName} <${booking.guestEmail}>`,
+        booking.company ? `Company: ${booking.company}` : ""
+      ].filter(Boolean).join("\n"),
+      settings: {
+        approval_type: 2,
+        audio: "both",
+        auto_recording: "none",
+        host_video: true,
+        join_before_host: false,
+        mute_upon_entry: true,
+        participant_video: false,
+        waiting_room: true
+      }
+    })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.message || "Zoom meeting creation failed.");
+  return {
+    meetingId: String(payload.id || ""),
+    joinUrl: payload.join_url || "",
+    passcode: payload.password || "",
+    startAt: payload.start_time || start.toISOString()
+  };
+}
+
+async function deleteZoomMeeting(env, meetingId) {
+  if (!meetingId) return;
+  try {
+    const token = await zoomAccessToken(env);
+    await fetch(`https://api.zoom.us/v2/meetings/${encodeURIComponent(meetingId)}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${token}` }
+    });
+  } catch {
+    // If calendar creation fails, avoid making the user wait on best-effort Zoom cleanup.
+  }
 }
 
 async function exchangeDelegatedToken(env, request, params) {
@@ -1018,7 +1115,7 @@ export async function availability(env, query) {
 
   return {
     employee: publicEmployee(employee),
-    meetingType,
+    meetingType: publicMeetingType(meetingType),
     date: dateValue,
     source,
     warning,
@@ -1026,7 +1123,7 @@ export async function availability(env, query) {
   };
 }
 
-async function createGraphEvent(env, employee, meetingType, booking, start, end) {
+async function createGraphEvent(env, employee, meetingType, booking, start, end, zoomMeeting) {
   const token = await graphAccessToken(env);
   const subject = `${meetingType.label}: ${booking.guestName}`;
   const mirrorInviteEmails = [...new Set((employee.mirrorInviteEmails || [])
@@ -1062,6 +1159,9 @@ async function createGraphEvent(env, employee, meetingType, booking, start, end)
           contentType: "Text",
           content: [
             `Booked through mojoaisummits.com.`,
+            zoomMeeting?.joinUrl ? `Zoom: ${zoomMeeting.joinUrl}` : "",
+            zoomMeeting?.passcode ? `Zoom passcode: ${zoomMeeting.passcode}` : "",
+            zoomMeeting?.meetingId ? `Zoom meeting ID: ${zoomMeeting.meetingId}` : "",
             `Guest: ${booking.guestName} <${booking.guestEmail}>`,
             booking.company ? `Company: ${booking.company}` : "",
             booking.notes ? `Notes: ${booking.notes}` : ""
@@ -1069,11 +1169,9 @@ async function createGraphEvent(env, employee, meetingType, booking, start, end)
         },
         start: { dateTime: start.toISOString(), timeZone: "UTC" },
         end: { dateTime: end.toISOString(), timeZone: "UTC" },
-        location: { displayName: meetingType.location },
+        location: { displayName: zoomMeeting?.joinUrl || meetingType.location || "Zoom" },
         attendees,
-        hideAttendees: mirrorInviteEmails.length > 0,
-        isOnlineMeeting: /teams/i.test(meetingType.location),
-        onlineMeetingProvider: /teams/i.test(meetingType.location) ? "teamsForBusiness" : undefined
+        hideAttendees: mirrorInviteEmails.length > 0
       })
     }
   );
@@ -1088,6 +1186,10 @@ export async function createBooking(env, input = {}) {
   const graph = graphConfig(env);
   if (!graph.configured) {
     return { response: json({ error: "Microsoft Graph scheduling credentials are not configured yet." }, { status: 503 }) };
+  }
+  const zoom = zoomConfig(env);
+  if (!zoom.configured) {
+    return { response: json({ error: "Zoom scheduling credentials are not configured yet." }, { status: 503 }) };
   }
 
   const employee = await getEmployee(env, input.host || input.employee || input.slug);
@@ -1138,12 +1240,22 @@ export async function createBooking(env, input = {}) {
   };
 
   try {
-    const event = await createGraphEvent(env, employee, meetingType, booking, start, end);
+    const zoomMeeting = await createZoomMeeting(env, employee, meetingType, booking, start, end);
+    let event;
+    try {
+      event = await createGraphEvent(env, employee, meetingType, booking, start, end, zoomMeeting);
+    } catch (error) {
+      await deleteZoomMeeting(env, zoomMeeting.meetingId);
+      throw error;
+    }
     const record = {
       ...booking,
       graphEventId: event.id || "",
       graphWebLink: event.webLink || "",
-      onlineMeetingUrl: event.onlineMeeting?.joinUrl || ""
+      zoomMeetingId: zoomMeeting.meetingId || "",
+      zoomJoinUrl: zoomMeeting.joinUrl || "",
+      zoomPasscode: zoomMeeting.passcode || "",
+      onlineMeetingUrl: zoomMeeting.joinUrl || ""
     };
 
     const dateKey = record.start.slice(0, 10);
@@ -1154,7 +1266,7 @@ export async function createBooking(env, input = {}) {
       booking: {
         id: record.id,
         employee: publicEmployee(employee),
-        meetingType,
+        meetingType: publicMeetingType(meetingType),
         start: record.start,
         end: record.end,
         timezone: record.timezone,
