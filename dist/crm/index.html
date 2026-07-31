@@ -381,7 +381,7 @@
     }
 
     .registration-invite-grid {
-      grid-template-columns: minmax(10rem, 0.7fr) minmax(20rem, 1.7fr) minmax(11rem, auto);
+      grid-template-columns: minmax(10rem, 0.7fr) minmax(18rem, 1.5fr) minmax(14rem, 1fr) minmax(11rem, auto);
     }
 
     .invite-list {
@@ -572,6 +572,10 @@
           <select id="registrationInviteEvent" name="eventSlug" required>
             <option value="">Loading events...</option>
           </select>
+        </label>
+        <label>
+          Guest or user name
+          <input id="registrationInviteName" name="intendedGuestName" placeholder="Invited person's name" autocomplete="name" required>
         </label>
         <button type="submit" id="registrationInviteSubmit">Generate Link</button>
       </form>
@@ -916,6 +920,7 @@
             <div>
               <strong>${escapeHtml(invite.eventName || "Event registration invite")}</strong>
               <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(invite.type || "guest")} | ${escapeHtml(inviteStatusText(invite))}</p>
+              <p>Invited: ${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Name not recorded")}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
               <p>${escapeHtml(url)}</p>
@@ -1327,11 +1332,16 @@
         action: "create-registration-invite",
         type: formData.get("type") || "guest",
         eventSlug: formData.get("eventSlug") || "",
+        intendedGuestName: formData.get("intendedGuestName") || "",
         eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
         eventDate: selected?.dataset.eventDate || ""
       };
       if (!payload.eventSlug) {
         setNotice("Select an event before generating a registration code.", "error");
+        return;
+      }
+      if (!String(payload.intendedGuestName || "").trim()) {
+        setNotice("Enter the guest or user name before generating a registration code.", "error");
         return;
       }
       setNotice("Generating registration invite...");

@@ -532,6 +532,7 @@
 <script>
   const inviteInput = document.getElementById('inviteCode');
   const inviteBadge = document.getElementById('inviteBadge');
+  const fullNameInput = document.getElementById('fullName');
   const emailInput = document.getElementById('email');
   const phoneInput = document.getElementById('phone');
   const sendCodeButton = document.getElementById('sendCodeButton');
@@ -584,9 +585,16 @@
     return data;
   }
 
-  function unlockRegistration(code){
+  function applyInviteDetails(data = {}){
+    const invite = data.invite || {};
+    const invitedName = invite.intendedGuestName || invite.invitedName || invite.guestName || '';
+    if (invitedName && !fullNameInput.value.trim()) fullNameInput.value = invitedName;
+  }
+
+  function unlockRegistration(code, data = {}){
     inviteInput.value = code;
     inviteBadge.textContent = `Invite ${code}`;
+    applyInviteDetails(data);
     accessGate.classList.add('hide');
     form.classList.remove('hide');
     clearMessage(accessCodeMessage);
@@ -609,8 +617,8 @@
       accessCodeButton.textContent = 'Checking...';
     }
     try {
-      await validateInviteCode(normalized);
-      unlockRegistration(normalized);
+      const data = await validateInviteCode(normalized);
+      unlockRegistration(normalized, data);
       return true;
     } catch (error) {
       if (!options.silent) setMessage(accessCodeMessage, error.message, 'error');

@@ -498,6 +498,7 @@
 <script>
   const inviteInput = document.getElementById('inviteCode');
   const inviteBadge = document.getElementById('inviteBadge');
+  const fullNameInput = document.getElementById('fullName');
   const emailInput = document.getElementById('email');
   const phoneInput = document.getElementById('phone');
   const sendCodeButton = document.getElementById('sendCodeButton');
@@ -534,10 +535,26 @@
     return String(phone || '').replace(/[^\d+]/g, '');
   }
 
+  async function validateInviteCode(code){
+    const response = await fetch(`/api/guest-invite-codes/${encodeURIComponent(code)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'That invite code is invalid or has already been used.');
+    return data;
+  }
+
+  function applyInviteDetails(data = {}){
+    const invite = data.invite || {};
+    const invitedName = invite.intendedGuestName || invite.invitedName || invite.guestName || '';
+    if (invitedName && !fullNameInput.value.trim()) fullNameInput.value = invitedName;
+  }
+
   const incomingInviteCode = getInviteCode();
   if (incomingInviteCode) {
     inviteInput.value = incomingInviteCode;
     inviteBadge.textContent = `Invite ${incomingInviteCode}`;
+    validateInviteCode(incomingInviteCode).then(applyInviteDetails).catch((error) => {
+      setMessage(formError, error.message, 'error');
+    });
   } else {
     setMessage(formError, 'Enter your six-digit invite code from the home page before registering.', 'error');
   }

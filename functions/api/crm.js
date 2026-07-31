@@ -164,6 +164,8 @@ function normalizeRecord(key, record) {
     eventSlug: cleanString(record?.eventSlug),
     eventName: cleanString(record?.eventName),
     eventDate: cleanString(record?.eventDate),
+    intendedGuestName: cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName),
+    invitedName: cleanString(record?.invitedName || record?.intendedGuestName || record?.guestName),
     partnerCompany: cleanString(record?.partnerCompany),
     partnerTier: cleanString(record?.partnerTier),
     partnerPassword: cleanString(record?.partnerPassword, 120),
@@ -226,6 +228,8 @@ function normalizeContactRecord(key, record = {}) {
       eventSlug: cleanString(event?.eventSlug),
       eventName: cleanString(event?.eventName),
       eventDate: cleanString(event?.eventDate),
+      intendedGuestName: cleanString(event?.intendedGuestName || event?.invitedName || event?.guestName),
+      invitedName: cleanString(event?.invitedName || event?.intendedGuestName || event?.guestName),
       inviteCode: cleanString(event?.inviteCode),
       registrationId: cleanString(event?.registrationId),
       registrationType: cleanString(event?.registrationType),
@@ -367,6 +371,9 @@ function normalizeInviteCode(key, record) {
     eventSlug: cleanString(record?.eventSlug),
     eventName: cleanString(record?.eventName),
     eventDate: cleanString(record?.eventDate),
+    intendedGuestName: cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName),
+    invitedName: cleanString(record?.invitedName || record?.intendedGuestName || record?.guestName),
+    guestName: cleanString(record?.guestName || record?.intendedGuestName || record?.invitedName),
     partnerCompany: cleanString(record?.partnerCompany),
     partnerContactEmail: cleanString(record?.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record?.partnerTier),
@@ -492,7 +499,12 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
 
   const eventSlug = cleanString(payload.eventSlug, 200);
   const eventName = cleanString(payload.eventName, 240);
+  const intendedGuestName = cleanString(
+    payload.intendedGuestName || payload.invitedName || payload.guestName || payload.name,
+    240
+  );
   if (!eventSlug && !eventName) throw new Error("Select an event before generating an invite code.");
+  if (!intendedGuestName) throw new Error("Enter the guest or user name before generating an invite code.");
 
   const createdAt = new Date().toISOString();
   const record = {
@@ -503,6 +515,9 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     eventSlug,
     eventName,
     eventDate: cleanString(payload.eventDate, 120),
+    intendedGuestName,
+    invitedName: intendedGuestName,
+    guestName: intendedGuestName,
     createdAt,
     createdBy: actor
   };
