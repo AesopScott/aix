@@ -293,7 +293,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1480px;
+      min-width: 1680px;
     }
 
     th, td {
@@ -598,9 +598,9 @@
         <select id="roleFilter">
           <option value="all">All roles</option>
           <option value="presenter">Presenters</option>
-          <option value="roundtable">Round table leaders</option>
-          <option value="featured-guest">Featured guests</option>
-          <option value="featured-member">Featured members</option>
+          <option value="roundtable">Round Table Leaders</option>
+          <option value="featured-guest">Featured Guests</option>
+          <option value="featured-member">Featured Members</option>
           <option value="attendee">Attendees</option>
         </select>
       </label>
@@ -629,8 +629,10 @@
             <tr>
               <th>Registered</th>
               <th>Registrant</th>
+              <th>Company</th>
               <th>Contact</th>
-              <th>Roles</th>
+              <th>Event</th>
+              <th>Role</th>
               <th>Publication</th>
               <th>Phone</th>
               <th>Status</th>
@@ -664,9 +666,9 @@
           Registration type
           <select id="registrationInviteType" name="type">
             <option value="guest">Guest</option>
-            <option value="featured-guest">Featured guest</option>
+            <option value="featured-guest">Featured Guest</option>
             <option value="presenter">Presenter</option>
-            <option value="roundtable-leader">Round table leader</option>
+            <option value="roundtable-leader">Round Table Leader</option>
           </select>
         </label>
         <label>
@@ -812,7 +814,7 @@
     }
 
     function showRegistrationInviteResult(invite, url, copied) {
-      const role = invite.guestRegistrationType || invite.registrationRole || invite.type || "guest";
+      const role = guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type);
       registrationInviteResult.innerHTML = `
         <div>
           <strong>Guest invite link generated.</strong>
@@ -845,28 +847,71 @@
       return String(value || "new").replace(/-/g, " ");
     }
 
+    function titleCaseLabel(value) {
+      return String(value || "")
+        .replace(/-/g, " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    }
+
+    function guestRegistrationTypeLabel(value) {
+      const role = String(value || "").toLowerCase();
+      if (role === "featured-guest") return "Featured Guest";
+      if (role === "presenter") return "Presenter";
+      if (role === "roundtable-leader" || role === "roundtable") return "Round Table Leader";
+      if (role === "partner") return "Partner Guest";
+      if (role === "member") return "Member";
+      return "Guest";
+    }
+
     function contactStatusLabel(row) {
       const status = String(row.contactStatus || row.registrationType || row.source || "guest").toLowerCase();
-      if (status.includes("partner member")) return "partner member";
-      if (status.includes("partner")) return "partner guest";
-      if (status.includes("member")) return "member";
-      return "guest";
+      if (status.includes("partner member")) return "Partner Member";
+      if (status.includes("partner")) return "Partner Guest";
+      if (status.includes("member")) return "Member";
+      return "Guest";
+    }
+
+    function roleLabelFromEvent(event = {}) {
+      const registrationRole = String(event.registrationRole || event.guestRegistrationType || "").toLowerCase();
+      if (registrationRole === "featured-guest") return "Featured Guest";
+      if (registrationRole === "presenter") return "Presenter";
+      if (registrationRole === "roundtable-leader") return "Round Table Leader";
+      if (registrationRole === "guest") return "Guest";
+
+      const role = String(event.role || "").toLowerCase();
+      if (role.includes("featured guest")) return "Featured Guest";
+      if (role.includes("presenter")) return "Presenter";
+      if (role.includes("round table")) return "Round Table Leader";
+      if (role.includes("partner")) return "Partner Guest";
+      if (role.includes("member")) return "Member";
+      return titleCaseLabel(event.registrationType || "Guest");
+    }
+
+    function eventBadges(row) {
+      const events = row.events || [];
+      if (state.type === "contacts") {
+        if (!events.length) return '<span class="pill warn">No event</span>';
+        return events.slice(0, 3).map((event) => {
+          const label = event.eventName || event.inviteCode || "Registration";
+          return `<span class="pill">${escapeHtml(label)}</span>`;
+        }).join("");
+      }
+      return `<span>${escapeHtml(row.eventName || row.inviteCode || "")}</span>${row.eventDate ? `<br><span>${escapeHtml(row.eventDate)}</span>` : ""}`;
     }
 
     function roleBadges(row) {
       if (state.type === "contacts") {
         const events = row.events || [];
-        if (!events.length) return '<span class="pill warn">No events</span>';
+        if (!events.length) return '<span class="pill warn">No role</span>';
         return events.slice(0, 3).map((event) => {
-          const label = [event.eventName || event.inviteCode || "Registration", event.role].filter(Boolean).join(" | ");
-          return `<span class="pill">${escapeHtml(label)}</span>`;
+          return `<span class="pill">${escapeHtml(roleLabelFromEvent(event))}</span>`;
         }).join("");
       }
       const roles = [];
       if (row.isPresenter) roles.push("Presenter");
-      if (row.isRoundtableLeader) roles.push("Round table");
-      if (row.isFeaturedGuest) roles.push("Featured guest");
-      if (row.isFeaturedMember) roles.push("Featured member");
+      if (row.isRoundtableLeader) roles.push("Round Table Leader");
+      if (row.isFeaturedGuest) roles.push("Featured Guest");
+      if (row.isFeaturedMember) roles.push("Featured Member");
       if (!roles.length) roles.push("Attendee");
       return roles.map((role) => `<span class="pill">${escapeHtml(role)}</span>`).join("");
     }
@@ -1068,11 +1113,12 @@
       }
       registrationInviteList.innerHTML = invites.slice(0, 16).map((invite) => {
         const url = registrationInviteUrl(invite);
+        const role = guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type);
         return `
           <div class="invite-row">
             <div>
               <strong>${escapeHtml(invite.eventName || "Event registration invite")}</strong>
-              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(invite.guestRegistrationType || invite.registrationRole || invite.type || "guest")} | ${escapeHtml(inviteStatusText(invite))}</p>
+              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(inviteStatusText(invite))}</p>
               <p>Invited: ${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Name not recorded")}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
@@ -1151,7 +1197,7 @@
     function renderPartnerCompanyRows(rows) {
       registrantsTitle.textContent = "Partners by Company";
       if (!rows.length) {
-        rowsElement.innerHTML = '<tr><td colspan="9">No partner company records found.</td></tr>';
+        rowsElement.innerHTML = '<tr><td colspan="11">No partner company records found.</td></tr>';
         return;
       }
 
@@ -1171,8 +1217,7 @@
               <tr>
                 <td>
                   <strong>${escapeHtml(formatDate(row.createdAt))}</strong><br>
-                  <span>${escapeHtml(row.eventName || "")}</span>
-                  ${row.eventDate ? `<br><span>${escapeHtml(row.eventDate)}</span>` : ""}
+                  <span>${escapeHtml(row.inviteCode || row.id || "")}</span>
                 </td>
                 <td>
                   <strong>${escapeHtml(row.name)}</strong><br>
@@ -1180,9 +1225,14 @@
                   <span>${escapeHtml(row.partnerTier || "Partner")}</span>
                 </td>
                 <td>
+                  <strong>${escapeHtml(row.company || row.partnerCompany || "")}</strong>
+                  ${row.industry ? `<br><span>${escapeHtml(row.industry)}</span>` : ""}
+                </td>
+                <td>
                   <strong>${escapeHtml(row.email)}</strong><br>
                   <span>${escapeHtml(row.phone)}</span>
                 </td>
+                <td>${eventBadges(row)}</td>
                 <td><div class="role-list">${roleBadges(row)}</div></td>
                 <td><div class="role-list">${publicationBadges(row)}</div></td>
                 <td>${phonePill(row)}</td>
@@ -1205,7 +1255,7 @@
 
           return `
             <tr class="company-row">
-              <td colspan="9"><strong>${escapeHtml(company)}</strong>${companyRows.length} partner contact${companyRows.length === 1 ? "" : "s"}</td>
+              <td colspan="11"><strong>${escapeHtml(company)}</strong>${companyRows.length} partner contact${companyRows.length === 1 ? "" : "s"}</td>
             </tr>
             ${contacts}
           `;
@@ -1221,7 +1271,7 @@
       }
       registrantsTitle.textContent = state.type === "contacts" ? "Contacts" : `${label} Registrants`;
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="9">No ${label.toLowerCase()} match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="11">No ${label.toLowerCase()} match the current filters.</td></tr>`;
         return;
       }
 
@@ -1230,16 +1280,15 @@
           <td>
             <strong>${escapeHtml(formatDate(row.createdAt || row.latestRegisteredAt))}</strong><br>
             <span>${escapeHtml(row.inviteCode || row.id || "")}</span>
-            ${row.eventName ? `<br><span>${escapeHtml(row.eventName)}</span>` : ""}
-            ${row.eventDate ? `<br><span>${escapeHtml(row.eventDate)}</span>` : ""}
-            ${state.type === "contacts" && row.latestEventName ? `<br><span>${escapeHtml(row.latestEventName)}</span>` : ""}
-            ${state.type === "contacts" && row.latestEventDate ? `<br><span>${escapeHtml(row.latestEventDate)}</span>` : ""}
           </td>
           <td>
             <strong>${escapeHtml(row.name)}</strong><br>
-            <span>${escapeHtml(row.title || "")}</span><br>
-            <span>${escapeHtml(row.company || "")}${row.industry ? ` | ${escapeHtml(row.industry)}` : ""}</span>
+            <span>${escapeHtml(row.title || "")}</span>
             ${row.partnerTier ? `<br><span>${escapeHtml(row.partnerTier)}</span>` : ""}
+          </td>
+          <td>
+            <strong>${escapeHtml(row.company || "")}</strong>
+            ${row.industry ? `<br><span>${escapeHtml(row.industry)}</span>` : ""}
           </td>
           <td>
             <div class="contact-cell">
@@ -1250,6 +1299,7 @@
               ${state.type === "contacts" ? `<button class="icon-button" type="button" title="Delete contact" aria-label="Delete contact ${escapeHtml(row.email)}" data-delete-contact-key="${escapeHtml(row.key)}" data-delete-contact-email="${escapeHtml(row.email)}">&times;</button>` : ""}
             </div>
           </td>
+          <td><div class="role-list">${eventBadges(row)}</div></td>
           <td><div class="role-list">${roleBadges(row)}</div></td>
           <td><div class="role-list">${publicationBadges(row)}</div></td>
           <td>${phonePill(row)}</td>

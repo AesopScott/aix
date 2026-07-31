@@ -84,12 +84,17 @@ function registrationRoleLabel(type) {
 }
 
 function registrationRoles(type, registration = {}) {
-  const roles = [registrationRoleLabel(type)];
   const guestRegistrationType = cleanGuestRegistrationType(registration.guestRegistrationType || registration.registrationRole);
-  if (cleanBoolean(registration.isPresenter) || guestRegistrationType === "presenter") roles.push("Presenter");
-  if (cleanBoolean(registration.isRoundtableLeader) || guestRegistrationType === "roundtable-leader") roles.push("Round table leader");
-  if (cleanBoolean(registration.isFeaturedGuest) || guestRegistrationType === "featured-guest") roles.push("Featured guest");
-  if (cleanBoolean(registration.isFeaturedMember)) roles.push("Featured member");
+  const roles = [];
+  if (type === "guest") {
+    if (cleanBoolean(registration.isPresenter) || guestRegistrationType === "presenter") roles.push("Presenter");
+    if (cleanBoolean(registration.isRoundtableLeader) || guestRegistrationType === "roundtable-leader") roles.push("Round Table Leader");
+    if (cleanBoolean(registration.isFeaturedGuest) || guestRegistrationType === "featured-guest") roles.push("Featured Guest");
+    if (!roles.length) roles.push("Guest");
+  } else {
+    roles.push(registrationRoleLabel(type));
+  }
+  if (cleanBoolean(registration.isFeaturedMember)) roles.push("Featured Member");
   return [...new Set(roles.filter(Boolean))];
 }
 
