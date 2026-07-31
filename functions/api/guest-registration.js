@@ -53,6 +53,7 @@ function cleanPayload(payload) {
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
     isPresenter: cleanBoolean(payload?.isPresenter),
     isRoundtableLeader: cleanBoolean(payload?.isRoundtableLeader),
+    isFeaturedGuest: cleanBoolean(payload?.isFeaturedGuest),
     publicationUseName: cleanBoolean(payload?.publicationUseName),
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany),
     foodPreferences: cleanArray(payload?.foodPreferences),

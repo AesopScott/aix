@@ -91,6 +91,8 @@ function cleanPayload(payload, type = "") {
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
     isPresenter: cleanBoolean(payload?.isPresenter),
     isRoundtableLeader: cleanBoolean(payload?.isRoundtableLeader),
+    isFeaturedGuest: cleanBoolean(payload?.isFeaturedGuest),
+    isFeaturedMember: cleanBoolean(payload?.isFeaturedMember),
     publicationUseName: cleanBoolean(payload?.publicationUseName),
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany),
     foodPreferences: cleanArray(payload?.foodPreferences),

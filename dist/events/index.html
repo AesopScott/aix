@@ -1349,6 +1349,8 @@
                 <span class="tag">${escapeHtml(registrantTypeLabel(row.type))}</span>
                 ${row.isPresenter ? '<span class="tag">Presenter</span>' : ""}
                 ${row.isRoundtableLeader ? '<span class="tag">Round table</span>' : ""}
+                ${row.isFeaturedGuest ? '<span class="tag">Featured guest</span>' : ""}
+                ${row.isFeaturedMember ? '<span class="tag">Featured member</span>' : ""}
                 ${row.publicationUseName || row.publicationUseCompany ? '<span class="tag">Publication opt-in</span>' : ""}
               </div>
             </div>

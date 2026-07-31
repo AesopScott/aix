@@ -379,6 +379,8 @@
           <option value="all">All roles</option>
           <option value="presenter">Presenters</option>
           <option value="roundtable">Round table leaders</option>
+          <option value="featured-guest">Featured guests</option>
+          <option value="featured-member">Featured members</option>
           <option value="attendee">Attendees</option>
         </select>
       </label>
@@ -565,6 +567,8 @@
       const roles = [];
       if (row.isPresenter) roles.push("Presenter");
       if (row.isRoundtableLeader) roles.push("Round table");
+      if (row.isFeaturedGuest) roles.push("Featured guest");
+      if (row.isFeaturedMember) roles.push("Featured member");
       if (!roles.length) roles.push("Attendee");
       return roles.map((role) => `<span class="pill">${escapeHtml(role)}</span>`).join("");
     }
@@ -747,7 +751,9 @@
         if (status !== "all" && row.crmStatus !== status) return false;
         if (role === "presenter" && !row.isPresenter) return false;
         if (role === "roundtable" && !row.isRoundtableLeader) return false;
-        if (role === "attendee" && (row.isPresenter || row.isRoundtableLeader)) return false;
+        if (role === "featured-guest" && !row.isFeaturedGuest) return false;
+        if (role === "featured-member" && !row.isFeaturedMember) return false;
+        if (role === "attendee" && (row.isPresenter || row.isRoundtableLeader || row.isFeaturedGuest || row.isFeaturedMember)) return false;
         if (phone === "verified" && row.phoneVerificationStatus !== "verified") return false;
         if (phone === "pending" && row.phoneVerificationStatus === "verified") return false;
         if (!search) return true;

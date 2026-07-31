@@ -509,6 +509,7 @@
               <div class="checkbox-group">
                 <label class="checkbox-row"><input type="checkbox" name="isPresenter" value="true"> I am a presenter</label>
                 <label class="checkbox-row"><input type="checkbox" name="isRoundtableLeader" value="true"> I am leading a round table</label>
+                <label class="checkbox-row"><input type="checkbox" name="isFeaturedMember" value="true"> I am a featured member. I understand that I must be on screen and dressed professionally.</label>
               </div>
             </div>
             <div class="field full">
@@ -745,6 +746,7 @@
     payload.phone = normalizePhone(payload.phone);
     payload.isPresenter = formData.has('isPresenter');
     payload.isRoundtableLeader = formData.has('isRoundtableLeader');
+    payload.isFeaturedMember = formData.has('isFeaturedMember');
     payload.publicationUseName = formData.has('publicationUseName');
     payload.publicationUseCompany = formData.has('publicationUseCompany');
     payload.foodPreferences = formData.getAll('foodPreference');

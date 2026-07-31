@@ -138,6 +138,8 @@ function publicRegistrant(record, type) {
     phoneVerificationStatus: cleanString(record?.phoneVerificationStatus || "unverified", 80),
     isPresenter: Boolean(record?.isPresenter),
     isRoundtableLeader: Boolean(record?.isRoundtableLeader),
+    isFeaturedGuest: Boolean(record?.isFeaturedGuest),
+    isFeaturedMember: Boolean(record?.isFeaturedMember),
     publicationUseName: Boolean(record?.publicationUseName),
     publicationUseCompany: Boolean(record?.publicationUseCompany),
     createdAt: cleanString(record?.createdAt, 80)
