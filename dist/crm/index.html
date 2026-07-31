@@ -229,6 +229,17 @@
 
     .record-type-field { display: none; }
 
+    .threshold-field {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(4.5rem, 0.55fr);
+      gap: 0.5rem;
+      align-items: end;
+    }
+
+    .threshold-field > span {
+      grid-column: 1 / -1;
+    }
+
     .panel {
       padding: 1.25rem;
       overflow: hidden;
@@ -646,6 +657,12 @@
         </select>
       </label>
       <label>
+        Event
+        <select id="eventFilter">
+          <option value="all">All events</option>
+        </select>
+      </label>
+      <label>
         Role
         <select id="roleFilter">
           <option value="all">All roles</option>
@@ -655,6 +672,32 @@
           <option value="featured-member">Featured Members</option>
           <option value="attendee">Attendees</option>
         </select>
+      </label>
+      <label>
+        Company
+        <select id="companyFilter">
+          <option value="all">All companies</option>
+        </select>
+      </label>
+      <label class="threshold-field">
+        <span>Publications</span>
+        <select id="publicationOperatorFilter">
+          <option value="all">Any</option>
+          <option value="gte">At least</option>
+          <option value="lte">At most</option>
+          <option value="eq">Exactly</option>
+        </select>
+        <input id="publicationThresholdFilter" type="number" min="0" step="1" placeholder="0">
+      </label>
+      <label class="threshold-field">
+        <span>Events attended</span>
+        <select id="attendedOperatorFilter">
+          <option value="all">Any</option>
+          <option value="gte">At least</option>
+          <option value="lte">At most</option>
+          <option value="eq">Exactly</option>
+        </select>
+        <input id="attendedThresholdFilter" type="number" min="0" step="1" placeholder="0">
       </label>
       <label>
         Phone
@@ -795,7 +838,13 @@
     const metrics = document.querySelector("#metrics");
     const typeFilter = document.querySelector("#typeFilter");
     const statusFilter = document.querySelector("#statusFilter");
+    const eventFilter = document.querySelector("#eventFilter");
     const roleFilter = document.querySelector("#roleFilter");
+    const companyFilter = document.querySelector("#companyFilter");
+    const publicationOperatorFilter = document.querySelector("#publicationOperatorFilter");
+    const publicationThresholdFilter = document.querySelector("#publicationThresholdFilter");
+    const attendedOperatorFilter = document.querySelector("#attendedOperatorFilter");
+    const attendedThresholdFilter = document.querySelector("#attendedThresholdFilter");
     const phoneFilter = document.querySelector("#phoneFilter");
     const searchInput = document.querySelector("#searchInput");
     const refreshButton = document.querySelector("#refreshButton");
@@ -947,6 +996,10 @@
       return titleCaseLabel(event.registrationType || "Guest");
     }
 
+    function filterKey(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
     function eventAttendanceKey(event = {}) {
       return event.registrationId ||
         event.eventId ||
@@ -956,6 +1009,69 @@
         event.registeredAt ||
         event.id ||
         "";
+    }
+
+    function eventFilterKey(event = {}) {
+      return filterKey(event.eventSlug || event.eventId || event.eventName || event.inviteCode || eventAttendanceKey(event));
+    }
+
+    function rowEvents(row = {}) {
+      if (state.type === "contacts") return Array.isArray(row.events) ? row.events : [];
+      return [{
+        eventId: row.eventId,
+        eventSlug: row.eventSlug,
+        eventName: row.eventName,
+        eventDate: row.eventDate,
+        inviteCode: row.inviteCode,
+        registrationId: row.id,
+        registeredAt: row.createdAt,
+        role: roleBadges(row)
+      }];
+    }
+
+    function contactHasRole(row, role) {
+      if (role === "all") return true;
+      const events = rowEvents(row);
+      if (state.type !== "contacts") {
+        if (role === "presenter") return Boolean(row.isPresenter);
+        if (role === "roundtable") return Boolean(row.isRoundtableLeader);
+        if (role === "featured-guest") return Boolean(row.isFeaturedGuest);
+        if (role === "featured-member") return Boolean(row.isFeaturedMember);
+        if (role === "attendee") return !(row.isPresenter || row.isRoundtableLeader || row.isFeaturedGuest || row.isFeaturedMember);
+        return true;
+      }
+
+      return events.some((event) => {
+        const label = roleLabelFromEvent(event).toLowerCase();
+        const rawRole = String(event.role || event.roles || "").toLowerCase();
+        if (role === "presenter") return label.includes("presenter") || rawRole.includes("presenter");
+        if (role === "roundtable") return label.includes("round table") || label.includes("roundtable") || rawRole.includes("round table") || rawRole.includes("roundtable");
+        if (role === "featured-guest") return label.includes("featured guest") || rawRole.includes("featured guest");
+        if (role === "featured-member") return label.includes("featured member") || rawRole.includes("featured member");
+        if (role === "attendee") return label === "guest" || label === "member" || label === "partner guest" || rawRole.includes("guest");
+        return true;
+      });
+    }
+
+    function rowHasEvent(row, eventValue) {
+      if (eventValue === "all") return true;
+      return rowEvents(row).some((event) => eventFilterKey(event) === eventValue);
+    }
+
+    function passesNumberThreshold(value, operator, thresholdValue) {
+      if (operator === "all" || thresholdValue === "") return true;
+      const count = Number(value || 0);
+      const threshold = Number(thresholdValue);
+      if (!Number.isFinite(threshold)) return true;
+      if (operator === "gte") return count >= threshold;
+      if (operator === "lte") return count <= threshold;
+      if (operator === "eq") return count === threshold;
+      return true;
+    }
+
+    function publicationCountForRow(row) {
+      if (state.type === "contacts") return Number(row.publicationCount || 0);
+      return [row.publicationUseName, row.publicationUseCompany].filter(Boolean).length;
     }
 
     function eventBadges(row) {
@@ -1139,6 +1255,44 @@
       partnerInviteEvent.innerHTML = markup;
     }
 
+    function optionMarkup(value, label, selectedValue) {
+      return `<option value="${escapeHtml(value)}" ${value === selectedValue ? "selected" : ""}>${escapeHtml(label)}</option>`;
+    }
+
+    function renderRecordFilterOptions() {
+      const selectedEvent = eventFilter.value || "all";
+      const selectedCompany = companyFilter.value || "all";
+      const events = new Map();
+      const companies = new Map();
+
+      for (const row of state.rows || []) {
+        const company = String(row.company || "").trim();
+        if (company) companies.set(filterKey(company), company);
+
+        for (const event of rowEvents(row)) {
+          const key = eventFilterKey(event);
+          const label = event.eventName || event.inviteCode || event.eventSlug || event.eventId || "Registration";
+          if (key && label) events.set(key, label);
+        }
+      }
+
+      eventFilter.innerHTML = [
+        optionMarkup("all", "All events", selectedEvent),
+        ...[...events.entries()]
+          .sort((left, right) => left[1].localeCompare(right[1]))
+          .map(([value, label]) => optionMarkup(value, label, selectedEvent))
+      ].join("");
+      if (selectedEvent !== "all" && eventFilter.value !== selectedEvent) eventFilter.value = "all";
+
+      companyFilter.innerHTML = [
+        optionMarkup("all", "All companies", selectedCompany),
+        ...[...companies.entries()]
+          .sort((left, right) => left[1].localeCompare(right[1]))
+          .map(([value, label]) => optionMarkup(value, label, selectedCompany))
+      ].join("");
+      if (selectedCompany !== "all" && companyFilter.value !== selectedCompany) companyFilter.value = "all";
+    }
+
     function updateRegistrationInviteSubmit() {
       const role = guestRegistrationTypeLabel(registrationInviteType.value || "guest");
       registrationInviteSubmit.textContent = `Generate ${role} Link`;
@@ -1224,21 +1378,28 @@
 
     function filteredRows() {
       const status = statusFilter.value;
+      const eventValue = eventFilter.value || "all";
       const role = roleFilter.value;
+      const company = companyFilter.value || "all";
+      const publicationOperator = publicationOperatorFilter.value || "all";
+      const publicationThreshold = publicationThresholdFilter.value.trim();
+      const attendedOperator = attendedOperatorFilter.value || "all";
+      const attendedThreshold = attendedThresholdFilter.value.trim();
       const phone = phoneFilter.value;
       const search = searchInput.value.trim().toLowerCase();
 
       return state.rows.filter((row) => {
+        if (!rowHasEvent(row, eventValue)) return false;
+        if (!contactHasRole(row, role)) return false;
+        if (company !== "all" && filterKey(row.company) !== company) return false;
+        if (!passesNumberThreshold(publicationCountForRow(row), publicationOperator, publicationThreshold)) return false;
+        if (!passesNumberThreshold(row.attendedCount || 0, attendedOperator, attendedThreshold)) return false;
+
         if (state.type === "contacts") {
           if (phone === "verified" && !row.phone) return false;
           if (phone === "pending" && row.phone) return false;
         } else {
           if (status !== "all" && row.crmStatus !== status) return false;
-          if (role === "presenter" && !row.isPresenter) return false;
-          if (role === "roundtable" && !row.isRoundtableLeader) return false;
-          if (role === "featured-guest" && !row.isFeaturedGuest) return false;
-          if (role === "featured-member" && !row.isFeaturedMember) return false;
-          if (role === "attendee" && (row.isPresenter || row.isRoundtableLeader || row.isFeaturedGuest || row.isFeaturedMember)) return false;
           if (phone === "verified" && row.phoneVerificationStatus !== "verified") return false;
           if (phone === "pending" && row.phoneVerificationStatus === "verified") return false;
         }
@@ -1255,6 +1416,7 @@
           row.eventDate,
           row.latestEventName,
           row.latestEventDate,
+          ...(row.events || []).flatMap((event) => [event.eventName, event.eventDate, event.role, roleLabelFromEvent(event)]),
           row.partnerTier,
           row.crmNotes
         ].some((value) => String(value || "").toLowerCase().includes(search));
@@ -1470,6 +1632,7 @@
       syncViewPanels();
       renderMetrics();
       renderEventOptions();
+      renderRecordFilterOptions();
       renderRegistrationInvites();
       renderPartnerInvites();
       if (isRecordsView()) renderRows();
@@ -1736,7 +1899,18 @@
       });
     });
 
-    [statusFilter, roleFilter, phoneFilter, searchInput].forEach((input) => {
+    [
+      statusFilter,
+      eventFilter,
+      roleFilter,
+      companyFilter,
+      publicationOperatorFilter,
+      publicationThresholdFilter,
+      attendedOperatorFilter,
+      attendedThresholdFilter,
+      phoneFilter,
+      searchInput
+    ].forEach((input) => {
       input.addEventListener("input", renderRows);
       input.addEventListener("change", renderRows);
     });
