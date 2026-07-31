@@ -18,8 +18,10 @@ Current state:
 - The account creation UI now asks for access groups (`Admin` and/or `Mojo team`) instead of exposing raw `member/admin/owner` role choices.
 - Access group cards show visible membership lists with account status, backed by the editable group email lists.
 - Existing account rows include editable group checkboxes and a Save Groups action, so owner/admin users can add storage, team, partner, member, or admin access after account creation.
+- Existing account rows include Reset Password, which generates a new password, updates the Mojo Auth user record, and displays/copies the one-time handoff password for the owner/admin to give the user manually.
 
 Operational note:
 - Owner/admin users should create additional accounts from `/access/` after the first owner signs in.
 - Add users to access groups from the account form, by editing the group email lists, or by changing the checkboxes on an existing account row in `/access/`, then assign each route to the intended group.
+- Use Reset Password from an existing account row when a user needs a new password; the site does not send password email, so the owner/admin must hand the generated password to the user.
 - Do not store bootstrap tokens, passwords, invite tokens, or recovery material in the repo or Obsidian.

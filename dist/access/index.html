@@ -611,7 +611,7 @@
 
     .user-row {
       display: grid;
-      grid-template-columns: minmax(150px, 0.85fr) minmax(84px, 0.35fr) minmax(84px, 0.35fr) minmax(260px, 1.2fr) auto auto;
+      grid-template-columns: minmax(150px, 0.85fr) minmax(84px, 0.35fr) minmax(84px, 0.35fr) minmax(260px, 1.2fr) minmax(210px, auto);
       gap: 0.55rem;
       align-items: center;
       padding: 0.65rem;
@@ -658,6 +658,21 @@
       min-height: 14px;
       height: 14px;
       accent-color: var(--cyan);
+    }
+
+    .user-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, max-content));
+      gap: 0.38rem;
+      align-items: center;
+      justify-content: end;
+    }
+
+    .user-password-result {
+      grid-column: 1 / -1;
+      max-width: 360px;
+      overflow-wrap: anywhere;
+      text-align: right;
     }
 
     .compact-button {
@@ -1444,6 +1459,53 @@
       }
     }
 
+    function setUserPasswordResetResult(email, message = "", type = "") {
+      const result = document.querySelector(`[data-password-result="${CSS.escape(email)}"]`);
+      if (!result) return;
+      result.textContent = message;
+      result.className = `inline-result user-password-result ${type}`.trim();
+    }
+
+    async function resetUserPassword(email) {
+      clearNotice();
+      const user = state.users.find((entry) => entry.email === email);
+      if (!user) {
+        showNotice("User could not be found.", "error");
+        return;
+      }
+
+      const button = document.querySelector(`[data-reset-password="${CSS.escape(email)}"]`);
+      const password = generatePassword();
+      if (button) button.disabled = true;
+      setUserPasswordResetResult(email, "Resetting password...", "");
+
+      try {
+        const response = await fetch("/api/access-users", {
+          method: "PUT",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const payload = await readApiPayload(response, "Password could not be reset.");
+        if (!response.ok) throw new Error(payload.error || "Password could not be reset.");
+
+        state.users = state.users.map((entry) => entry.email === email ? payload.user : entry);
+        renderUsers();
+        setUserPasswordResetResult(email, `New password: ${password}`, "ok");
+        showNotice(`Password reset for ${email}. Give them the new password shown in their account row.`, "ok");
+        try {
+          await navigator.clipboard.writeText(password);
+          showNotice(`Password reset for ${email}. New password copied to clipboard and shown in their account row.`, "ok");
+        } catch {
+          // Clipboard access can be blocked; the generated password is still shown in the row.
+        }
+      } catch (error) {
+        setUserPasswordResetResult(email, error.message, "error");
+        showNotice(error.message, "error");
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
+
     function routeModeMap() {
       return new Map(state.config.routes.map((route) => [route.id, route.mode]));
     }
@@ -1619,8 +1681,12 @@
               <div class="user-membership-editor">
                 <div class="user-membership-options">${groupOptions}</div>
               </div>
-              <button class="secondary compact-button" data-save-user-groups="${escapeHtml(user.email)}" type="button">Save Groups</button>
-              <button class="danger compact-button" data-disable-user="${escapeHtml(user.email)}" type="button" ${user.status === "disabled" ? "disabled" : ""}>Disable</button>
+              <div class="user-actions">
+                <button class="secondary compact-button" data-save-user-groups="${escapeHtml(user.email)}" type="button">Save Groups</button>
+                <button class="secondary compact-button" data-reset-password="${escapeHtml(user.email)}" type="button">Reset Password</button>
+                <button class="danger compact-button" data-disable-user="${escapeHtml(user.email)}" type="button" ${user.status === "disabled" ? "disabled" : ""}>Disable</button>
+                <span class="inline-result user-password-result" data-password-result="${escapeHtml(user.email)}" aria-live="polite"></span>
+              </div>
             </div>
           `;
         }).join("") : '<p>No accounts have been created yet.</p>'}
@@ -1628,6 +1694,9 @@
 
       document.querySelectorAll("[data-save-user-groups]").forEach((button) => {
         button.addEventListener("click", () => updateUserGroups(button.dataset.saveUserGroups));
+      });
+      document.querySelectorAll("[data-reset-password]").forEach((button) => {
+        button.addEventListener("click", () => resetUserPassword(button.dataset.resetPassword));
       });
       document.querySelectorAll("[data-disable-user]").forEach((button) => {
         button.addEventListener("click", () => disableUser(button.dataset.disableUser));
