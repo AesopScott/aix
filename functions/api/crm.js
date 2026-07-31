@@ -17,6 +17,14 @@ import {
 } from "../_registration-crm.js";
 
 const registrantTypes = {
+  contacts: {
+    label: "Contacts",
+    section: "contacts",
+    crmType: "contact",
+    crmPrefix: "crm:contact:",
+    legacyPrefix: "",
+    csvFilename: "mojo-ai-summits-contacts.csv"
+  },
   member: {
     label: "Member",
     section: "member-registrants",
@@ -181,6 +189,54 @@ function normalizeRecord(key, record) {
   };
 }
 
+function normalizeContactRecord(key, record = {}) {
+  const events = Array.isArray(record.events) ? record.events : [];
+  const sortedEvents = [...events].sort((a, b) => {
+    const left = cleanString(b.eventDate || b.registeredAt || b.updatedAt);
+    const right = cleanString(a.eventDate || a.registeredAt || a.updatedAt);
+    return left.localeCompare(right);
+  });
+  const latestEvent = sortedEvents[0] || {};
+  const email = cleanString(record.email || key.replace(/^crm:contact:/, "")).toLowerCase();
+  return {
+    key,
+    id: email,
+    createdAt: cleanString(record.createdAt),
+    updatedAt: cleanString(record.updatedAt),
+    name: cleanString(record.name) || email,
+    company: cleanString(record.company),
+    title: cleanString(record.title),
+    industry: cleanString(record.industry),
+    email,
+    phone: cleanString(record.phone),
+    source: cleanString(record.source),
+    registrationId: cleanString(record.registrationId),
+    registrationType: cleanString(record.registrationType),
+    companyKey: cleanString(record.companyKey),
+    companySlug: cleanString(record.companySlug),
+    profileKey: cleanString(record.profileKey),
+    eventCount: sortedEvents.length,
+    latestEventName: cleanString(latestEvent.eventName || latestEvent.eventId || latestEvent.inviteCode),
+    latestEventDate: cleanString(latestEvent.eventDate),
+    latestRegisteredAt: cleanString(latestEvent.registeredAt),
+    attendedCount: sortedEvents.filter((event) => event?.attended === true).length,
+    events: sortedEvents.map((event) => ({
+      id: cleanString(event?.id || event?.eventId || event?.registrationId),
+      eventId: cleanString(event?.eventId),
+      eventSlug: cleanString(event?.eventSlug),
+      eventName: cleanString(event?.eventName),
+      eventDate: cleanString(event?.eventDate),
+      inviteCode: cleanString(event?.inviteCode),
+      registrationId: cleanString(event?.registrationId),
+      registrationType: cleanString(event?.registrationType),
+      role: cleanString(event?.role),
+      attended: event?.attended === true,
+      attendanceStatus: cleanString(event?.attendanceStatus) || "not_recorded",
+      registeredAt: cleanString(event?.registeredAt)
+    }))
+  };
+}
+
 async function listKeys(env, prefix) {
   const keys = [];
   let cursor;
@@ -209,6 +265,17 @@ async function readRecords(env, keys) {
   return records.filter(Boolean);
 }
 
+async function readContactRecords(env, keys) {
+  const records = await Promise.all(
+    keys.map(async (key) => {
+      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      return record ? normalizeContactRecord(key, record) : null;
+    })
+  );
+
+  return records.filter(Boolean);
+}
+
 async function registrants(env, type = "member") {
   const config = registrantTypes[cleanType(type)];
   const crmKeys = await listKeys(env, config.crmPrefix);
@@ -219,11 +286,31 @@ async function registrants(env, type = "member") {
   const legacyRows = (await readRecords(env, legacyKeys)).filter((row) => !ids.has(row.id));
 
   const rows = [...crmRows, ...legacyRows].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  await Promise.all(rows.map((row) => upsertRegistrationContact(env, cleanType(type), row, {
-    label: cleanType(type),
-    source: row.source || `${cleanType(type)}-registration`
-  }).catch(() => null)));
+  for (const row of [...rows].reverse()) {
+    await upsertRegistrationContact(env, cleanType(type), row, {
+      label: cleanType(type),
+      source: row.source || `${cleanType(type)}-registration`
+    }).catch(() => null);
+  }
   return rows;
+}
+
+async function rebuildContactsFromRegistrants(env) {
+  const types = ["member", "guest", "partner"];
+  for (const type of types) {
+    await registrants(env, type);
+  }
+}
+
+async function contacts(env) {
+  await rebuildContactsFromRegistrants(env);
+  const keys = await listKeys(env, "crm:contact:");
+  const rows = await readContactRecords(env, keys);
+  return rows.sort((a, b) => {
+    const left = cleanString(b.updatedAt || b.latestRegisteredAt || b.createdAt);
+    const right = cleanString(a.updatedAt || a.latestRegisteredAt || a.createdAt);
+    return left.localeCompare(right);
+  });
 }
 
 function summarize(rows) {
@@ -233,6 +320,16 @@ function summarize(rows) {
     presenterCount: rows.filter((row) => row.isPresenter).length,
     roundtableLeaderCount: rows.filter((row) => row.isRoundtableLeader).length,
     pendingPhoneCount: rows.filter((row) => row.phoneVerificationStatus !== "verified").length
+  };
+}
+
+function summarizeContacts(rows) {
+  return {
+    total: rows.length,
+    newCount: rows.filter((row) => row.eventCount > 0).length,
+    presenterCount: rows.reduce((sum, row) => sum + (row.eventCount || 0), 0),
+    roundtableLeaderCount: rows.reduce((sum, row) => sum + (row.attendedCount || 0), 0),
+    pendingPhoneCount: rows.filter((row) => !row.phone).length
   };
 }
 
@@ -552,11 +649,27 @@ export async function onRequestGet({ request, env, data }) {
   const url = new URL(request.url);
   const type = cleanType(url.searchParams.get("type"));
   const config = registrantTypes[type];
-  const rows = await registrants(env, type);
+  const isContacts = type === "contacts";
+  const rows = isContacts ? await contacts(env) : await registrants(env, type);
 
   if (url.searchParams.get("download") === "csv") {
-    const csv = [
-      [
+    const headings = isContacts
+      ? [
+        "Contact ID",
+        "Name",
+        "Company",
+        "Title",
+        "Email",
+        "Phone",
+        "Last Updated",
+        "Latest Registration",
+        "Latest Event",
+        "Latest Event Date",
+        "Events",
+        "Attended",
+        "Source"
+      ]
+      : [
         "Registered At",
         "Status",
         "Registration Type",
@@ -578,8 +691,24 @@ export async function onRequestGet({ request, env, data }) {
         "Publication Use Name",
         "Publication Use Company",
         "CRM Notes"
-      ],
-      ...rows.map((row) => [
+      ];
+    const csvRows = isContacts
+      ? rows.map((row) => [
+        row.id,
+        row.name,
+        row.company,
+        row.title,
+        row.email,
+        row.phone,
+        row.updatedAt,
+        row.latestRegisteredAt,
+        row.latestEventName,
+        row.latestEventDate,
+        row.eventCount,
+        row.attendedCount,
+        row.source
+      ])
+      : rows.map((row) => [
         row.createdAt,
         row.crmStatus,
         config.label,
@@ -601,8 +730,8 @@ export async function onRequestGet({ request, env, data }) {
         row.publicationUseName ? "Yes" : "No",
         row.publicationUseCompany ? "Yes" : "No",
         row.crmNotes
-      ])
-    ]
+      ]);
+    const csv = [headings, ...csvRows]
       .map((line) => line.map(csvEscape).join(","))
       .join("\n");
 
@@ -620,7 +749,7 @@ export async function onRequestGet({ request, env, data }) {
     type,
     label: config.label,
     section: config.section,
-    summary: summarize(rows),
+    summary: isContacts ? summarizeContacts(rows) : summarize(rows),
     rows,
     partnerInviteCodes: await partnerInviteCodes(env),
     registrationInviteCodes: await registrationInviteCodes(env),
