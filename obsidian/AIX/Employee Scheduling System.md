@@ -18,7 +18,8 @@ Implementation notes:
 - Public routes: `/book/`, `/api/scheduling/team`, `/api/scheduling/availability`, `/api/scheduling/book`.
 - Protected routes: `/schedule-admin/`, `/api/scheduling/admin`.
 - Store employee booking profiles, booking records, short TTL holds, and audit metadata in the existing Cloudflare storage pattern.
-- Public booking cards can show `photoUrl`; Scott defaults to `/assets/scott-pro3-6.png`.
+- Public booking cards can show `photoUrl`; Scott defaults to `/assets/images/scott-pro3-6.png`.
+- Team profile photos should be stored in source under `assets/images/` and deployed under `/assets/images/{file}.png`. Default scheduler photo paths now use that convention for known team slugs: angel, charlie, gina, jodi, robert, ron, and scott.
 - Treat the profile's `Calendar Email` as the mailbox where booked events are created.
 - Treat `Busy Calendar Emails` as private Microsoft 365 calendars that remove available slots but do not receive created booking events.
 - Treat `Busy Calendar URLs` as private read-only iCalendar feeds that remove available slots for alternate calendars.
@@ -33,6 +34,8 @@ Implementation notes:
 - Scheduling admin build `2026.07.30.5-auth-row-editor` replaced the authenticated-calendar textarea with an editable row UI. The earlier placeholder looked like a configured email but was not saved data.
 - Scheduling admin build `2026.07.31.2-read-calendars` split external calendars into Microsoft read connections and published feed URL rows.
 - Scheduling admin build `2026.07.31.3-blind-invites` added profile-level blind calendar invite emails for private calendar invite mirroring.
+- On 2026-07-31, the Mojo Scheduling Entra app was changed to multi-tenant (`AzureADMultipleOrgs`) and the Web redirect URI `https://mojoaisummits.com/api/scheduling/oauth/callback` was added. This fixed the earlier external-tenant `AADSTS700016` and `AADSTS900971` failures.
+- The CMC test account `sschindler@cmcenters.org` then reached Microsoft sign-in successfully, but CMC blocked consent with "Approval required" for the unverified Mojo Scheduling app. That is an external tenant consent policy block, not a Mojo login/session timeout. Options are CMC admin approval, Microsoft publisher verification plus permissive CMC consent policy, or published `.ics` calendar feed fallback.
 - Keep Microsoft app credentials only in environment variables or Cloudflare secrets.
 - Do not store or write secrets, Graph tokens, refresh tokens, or OAuth credentials into repo docs, Obsidian notes, logs, or commits.
 

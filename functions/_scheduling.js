@@ -20,7 +20,13 @@ const DEFAULT_MEETING_TYPE = {
   location: "Microsoft Teams"
 };
 const DEFAULT_PHOTOS = {
-  scott: "/assets/scott-pro3-6.png"
+  angel: "/assets/images/angel.png",
+  charlie: "/assets/images/charlie.png",
+  gina: "/assets/images/gina.png",
+  jodi: "/assets/images/jodi.png",
+  robert: "/assets/images/robert.png",
+  ron: "/assets/images/ron.png",
+  scott: "/assets/images/scott-pro3-6.png"
 };
 
 function cleanText(value, max = 240) {
