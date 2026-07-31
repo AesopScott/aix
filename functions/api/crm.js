@@ -12,6 +12,9 @@ import {
   readAccessConfig,
   writeAccessConfig
 } from "../_access-control.js";
+import {
+  upsertRegistrationContact
+} from "../_registration-crm.js";
 
 const registrantTypes = {
   member: {
@@ -215,7 +218,12 @@ async function registrants(env, type = "member") {
   const legacyKeys = await listKeys(env, config.legacyPrefix);
   const legacyRows = (await readRecords(env, legacyKeys)).filter((row) => !ids.has(row.id));
 
-  return [...crmRows, ...legacyRows].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const rows = [...crmRows, ...legacyRows].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  await Promise.all(rows.map((row) => upsertRegistrationContact(env, cleanType(type), row, {
+    label: cleanType(type),
+    source: row.source || `${cleanType(type)}-registration`
+  }).catch(() => null)));
+  return rows;
 }
 
 function summarize(rows) {

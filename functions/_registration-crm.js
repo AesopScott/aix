@@ -59,6 +59,15 @@ function cleanBoolean(value) {
   return value === true || value === "true";
 }
 
+function slugify(value) {
+  return cleanString(value)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -218,6 +227,80 @@ async function markInviteCodeUsed(env, type, code, registration) {
   );
 }
 
+export async function upsertRegistrationContact(env, type, registration, config = {}) {
+  const email = cleanString(registration.email).toLowerCase();
+  const company = cleanString(registration.partnerCompany || registration.company);
+  const companySlug = slugify(company);
+  if (!email || !company || !companySlug) return {};
+
+  const now = registration.createdAt || new Date().toISOString();
+  const contact = {
+    email,
+    name: cleanString(registration.name) || email,
+    company,
+    title: cleanString(registration.title),
+    phone: cleanString(registration.phone),
+    registrationId: cleanString(registration.id),
+    registrationType: cleanString(config.label || type),
+    source: cleanString(config.source || registration.source || `${type}-registration`),
+    updatedAt: now,
+    updatedBy: "registration"
+  };
+  const contactKeys = [
+    `crm:contact:${email}`,
+    `${type}-contact:${email}`
+  ];
+  const companyKeys = [
+    `crm:company:${companySlug}`,
+    `${type}-company:${companySlug}`
+  ];
+
+  if (type === "partner") {
+    contactKeys.push(`partner-contact:${email}`);
+    companyKeys.push(`partner-company:${companySlug}`);
+  }
+
+  for (const key of [...new Set(contactKeys)]) {
+    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+      ...(existing || {}),
+      ...contact,
+      source: cleanString(existing?.source) || contact.source,
+      createdAt: cleanString(existing?.createdAt) || now
+    }));
+  }
+
+  for (const key of [...new Set(companyKeys)]) {
+    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const contacts = Array.isArray(existing?.contacts) ? existing.contacts : [];
+    const contactMap = new Map(contacts.map((entry) => [
+      cleanString(entry?.email).toLowerCase() || cleanString(entry?.name),
+      entry
+    ]));
+    const previous = contactMap.get(email) || {};
+    contactMap.set(email, {
+      ...previous,
+      ...contact,
+      source: cleanString(previous.source) || contact.source
+    });
+
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+      ...(existing || {}),
+      organizationName: cleanString(existing?.organizationName || existing?.company || company),
+      company,
+      companySlug,
+      contacts: [...contactMap.values()],
+      updatedAt: now,
+      updatedBy: "registration"
+    }));
+  }
+
+  return {
+    contactKey: `crm:contact:${email}`,
+    companyKey: `crm:company:${companySlug}`
+  };
+}
+
 export async function handleInviteCodeValidation({ params, env }, type) {
   const result = await validateInviteCode(env, type, params?.code);
   if (!result.ok) return json({ error: result.error }, { status: result.status });
@@ -261,10 +344,15 @@ export async function handlePublicRegistration({ request, env }, type) {
     crmUpdatedAt: "",
     crmUpdatedBy: ""
   };
+  const contactRefs = await upsertRegistrationContact(env, type, record, config);
+  const storedRecord = {
+    ...record,
+    ...contactRefs
+  };
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${config.legacyPrefix}${createdAt}:${id}`, JSON.stringify(record));
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${config.crmPrefix}${createdAt}:${id}`, JSON.stringify(record));
-  await markInviteCodeUsed(env, type, registration.inviteCode, record);
+  await env.MOJO_SUMMITS_SETUP_STATE.put(`${config.legacyPrefix}${createdAt}:${id}`, JSON.stringify(storedRecord));
+  await env.MOJO_SUMMITS_SETUP_STATE.put(`${config.crmPrefix}${createdAt}:${id}`, JSON.stringify(storedRecord));
+  await markInviteCodeUsed(env, type, registration.inviteCode, storedRecord);
 
   return json({
     ok: true,
