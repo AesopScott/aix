@@ -8,8 +8,10 @@ const SESSION_COOKIE = "mojo_auth";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const INVITE_TTL_SECONDS = 7 * 24 * 60 * 60;
 const PASSWORD_ITERATIONS = 100000;
+const STATELESS_SESSION_VERSION = "v2";
 
 const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
 function bytesToBase64(bytes) {
   let binary = "";
@@ -21,6 +23,19 @@ function bytesToBase64(bytes) {
 
 function base64ToBytes(value) {
   return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
+function bytesToBase64Url(bytes) {
+  return bytesToBase64(bytes)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function base64UrlToBytes(value) {
+  const normalized = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  return base64ToBytes(padded);
 }
 
 function randomBase64(byteLength = 32) {
@@ -55,6 +70,30 @@ function timingSafeEqual(a, b) {
 async function sha256Base64(value) {
   const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
   return bytesToBase64(new Uint8Array(digest));
+}
+
+async function hmacKey(secret) {
+  return crypto.subtle.importKey(
+    "raw",
+    encoder.encode(String(secret || "")),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
+}
+
+async function signText(value, secret) {
+  const signature = await crypto.subtle.sign("HMAC", await hmacKey(secret), encoder.encode(value));
+  return bytesToBase64Url(new Uint8Array(signature));
+}
+
+async function verifyTextSignature(value, signature, secret) {
+  return crypto.subtle.verify(
+    "HMAC",
+    await hmacKey(secret),
+    base64UrlToBytes(signature),
+    encoder.encode(value)
+  );
 }
 
 async function hashPassword(password, salt = randomBase64(16), iterations = PASSWORD_ITERATIONS) {
@@ -541,10 +580,34 @@ export async function authenticateUser(env, email, password) {
 }
 
 export async function createSession(env, user, userAgent = "") {
-  const token = `${crypto.randomUUID()}.${randomBase64(32)}`;
-  const tokenHash = await sha256Base64(token);
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_TTL_SECONDS * 1000).toISOString();
+  const db = authDatabase(env);
+
+  if (!db) {
+    const payload = {
+      version: STATELESS_SESSION_VERSION,
+      id: crypto.randomUUID(),
+      email: user.email,
+      createdAt: now.toISOString(),
+      expiresAt
+    };
+    const encodedPayload = bytesToBase64Url(encoder.encode(JSON.stringify(payload)));
+    const signature = await signText(encodedPayload, user.passwordHash);
+    const token = `${STATELESS_SESSION_VERSION}.${encodedPayload}.${signature}`;
+    return {
+      token,
+      session: {
+        ...payload,
+        userEmail: user.email,
+        userAgent: cleanText(userAgent, 500),
+        stateless: true
+      }
+    };
+  }
+
+  const token = `${crypto.randomUUID()}.${randomBase64(32)}`;
+  const tokenHash = await sha256Base64(token);
   const session = {
     id: crypto.randomUUID(),
     tokenHash,
@@ -554,33 +617,55 @@ export async function createSession(env, user, userAgent = "") {
     userAgent: cleanText(userAgent, 500)
   };
 
-  const db = authDatabase(env);
-  if (db) {
-    await db
-      .prepare(
-        `INSERT INTO auth_sessions (
-          id, token_hash, user_email, created_at, expires_at, user_agent
-        ) VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .bind(session.id, session.tokenHash, session.userEmail, session.createdAt, session.expiresAt, session.userAgent)
-      .run();
-    await db
-      .prepare("UPDATE auth_users SET last_login_at = ? WHERE email = ?")
-      .bind(session.createdAt, user.email)
-      .run();
-  } else {
-    await requireAuthKv(env).put(`${SESSION_PREFIX}${tokenHash}`, JSON.stringify(session), {
-      expirationTtl: SESSION_TTL_SECONDS
-    });
-    await updateUser(env, user.email, { lastLoginAt: session.createdAt }, user.email).catch(() => null);
-  }
+  await db
+    .prepare(
+      `INSERT INTO auth_sessions (
+        id, token_hash, user_email, created_at, expires_at, user_agent
+      ) VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .bind(session.id, session.tokenHash, session.userEmail, session.createdAt, session.expiresAt, session.userAgent)
+    .run();
+  await db
+    .prepare("UPDATE auth_users SET last_login_at = ? WHERE email = ?")
+    .bind(session.createdAt, user.email)
+    .run();
 
   return { token, session };
+}
+
+async function getStatelessSessionUser(token, env) {
+  const [version, encodedPayload, signature] = String(token || "").split(".");
+  if (version !== STATELESS_SESSION_VERSION || !encodedPayload || !signature) return null;
+
+  let payload = null;
+  try {
+    payload = JSON.parse(decoder.decode(base64UrlToBytes(encodedPayload)));
+  } catch {
+    return null;
+  }
+
+  if (
+    payload?.version !== STATELESS_SESSION_VERSION ||
+    !payload.email ||
+    !payload.expiresAt ||
+    new Date(payload.expiresAt).getTime() <= Date.now()
+  ) {
+    return null;
+  }
+
+  const user = await getUserByEmail(env, payload.email);
+  if (!user || user.status !== "active" || !user.passwordHash) return null;
+  const verified = await verifyTextSignature(encodedPayload, signature, user.passwordHash).catch(() => false);
+  return verified ? publicUser(user) : null;
 }
 
 export async function getSessionUser(request, env) {
   const token = parseCookies(request.headers.get("cookie"))[SESSION_COOKIE];
   if (!token) return null;
+
+  if (String(token).startsWith(`${STATELESS_SESSION_VERSION}.`)) {
+    return getStatelessSessionUser(token, env);
+  }
 
   const tokenHash = await sha256Base64(token);
   const db = authDatabase(env);
@@ -604,6 +689,8 @@ export async function getSessionUser(request, env) {
 export async function revokeSession(request, env) {
   const token = parseCookies(request.headers.get("cookie"))[SESSION_COOKIE];
   if (!token) return;
+
+  if (String(token).startsWith(`${STATELESS_SESSION_VERSION}.`)) return;
 
   const tokenHash = await sha256Base64(token);
   const db = authDatabase(env);
