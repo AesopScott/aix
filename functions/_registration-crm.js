@@ -51,10 +51,6 @@ function cleanString(value) {
     : "";
 }
 
-function cleanPhone(value) {
-  return cleanString(value).replace(/[^\d+]/g, "");
-}
-
 function cleanBoolean(value) {
   return value === true || value === "true";
 }
@@ -154,11 +150,6 @@ function isBlockedEmail(email) {
   return blockedEmailDomains.has(domain);
 }
 
-function isLikelyPhone(phone) {
-  const digits = phone.replace(/\D/g, "");
-  return digits.length >= 10 && digits.length <= 15;
-}
-
 function cleanPayload(payload, type = "") {
   return {
     inviteCode: cleanString(payload?.inviteCode),
@@ -167,7 +158,7 @@ function cleanPayload(payload, type = "") {
     title: cleanString(payload?.title),
     industry: cleanString(payload?.industry),
     email: cleanString(payload?.email).toLowerCase(),
-    phone: type === "guest" ? cleanString(payload?.phone) : cleanPhone(payload?.phone),
+    phone: cleanString(payload?.phone),
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
     publicationUseName: cleanBoolean(payload?.publicationUseName),
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany)
@@ -196,11 +187,7 @@ function validateRegistration(registration, type = "") {
   if (!registration.email) return "Company email is required.";
   if (!isValidEmail(registration.email)) return "Enter a valid email address.";
   if (isBlockedEmail(registration.email)) return "Gmail and Googlemail addresses are not accepted.";
-  if (type === "guest") {
-    if (!registration.phone) return "Phone number is required.";
-  } else if (!isLikelyPhone(registration.phone)) {
-    return "Enter a valid mobile phone number.";
-  }
+  if (!registration.phone) return "Phone number is required.";
   if (!acceptedPhoneStatuses.has(registration.phoneVerificationStatus)) {
     return "Phone verification status is required.";
   }

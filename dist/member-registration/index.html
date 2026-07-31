@@ -578,7 +578,7 @@
   }
 
   async function validateInviteCode(code){
-    const response = await fetch(`/crm/api/public/member-invite-codes/${encodeURIComponent(code)}`);
+    const response = await fetch(`/api/member-invite-codes/${encodeURIComponent(code)}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'That invite code is invalid or has already been used.');
     return data;
