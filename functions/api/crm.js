@@ -58,6 +58,7 @@ const REGISTRATION_INVITE_PREFIXES = {
 };
 const PARTNER_INVITE_PREFIX = "crm:partner-invite-code:";
 const REGISTRATION_DEBUG_PREFIX = "crm:registration-debug:";
+const R2_REGISTRATION_PREFIX = "crm/registrations";
 const OVERFLOW_REGISTRATION_PREFIX = "crm-overflow/registrations";
 const DEFAULT_UPCOMING_EVENTS = [
   {
@@ -310,18 +311,23 @@ async function readContactRecords(env, keys) {
   return records.filter(Boolean);
 }
 
-async function overflowRegistrants(env, type = "member") {
+async function r2Registrants(env, type = "member") {
   if (!env.MOJO_SUMMITS_STORAGE?.list || !env.MOJO_SUMMITS_STORAGE?.get) return [];
   const keys = [];
-  let cursor;
-  const prefix = `${OVERFLOW_REGISTRATION_PREFIX}/${cleanType(type)}/`;
+  const prefixes = [
+    `${R2_REGISTRATION_PREFIX}/${cleanType(type)}/`,
+    `${OVERFLOW_REGISTRATION_PREFIX}/${cleanType(type)}/`
+  ];
 
-  do {
-    const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit: 1000 }).catch(() => null);
-    if (!result) break;
-    keys.push(...(result.objects || []).map((object) => object.key));
-    cursor = result.truncated ? result.cursor : undefined;
-  } while (cursor);
+  for (const prefix of prefixes) {
+    let cursor;
+    do {
+      const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit: 1000 }).catch(() => null);
+      if (!result) break;
+      keys.push(...(result.objects || []).map((object) => object.key));
+      cursor = result.truncated ? result.cursor : undefined;
+    } while (cursor);
+  }
 
   const records = await Promise.all(
     keys.map(async (key) => {
@@ -329,12 +335,39 @@ async function overflowRegistrants(env, type = "member") {
       const record = object ? await object.json().catch(() => null) : null;
       return record ? normalizeRecord(key, {
         ...record,
-        source: record.source || `${cleanType(type)}-registration-overflow`
+        source: record.source || (key.startsWith(OVERFLOW_REGISTRATION_PREFIX) ? `${cleanType(type)}-registration-overflow` : `${cleanType(type)}-registration`)
       }) : null;
     })
   );
 
   return records.filter(Boolean);
+}
+
+async function deleteR2RegistrantsForEmail(env, email) {
+  if (!env.MOJO_SUMMITS_STORAGE?.list || !env.MOJO_SUMMITS_STORAGE?.get || !env.MOJO_SUMMITS_STORAGE?.delete) return [];
+  const deletedKeys = [];
+  for (const type of ["guest", "member", "partner"]) {
+    const prefixes = [
+      `${R2_REGISTRATION_PREFIX}/${type}/`,
+      `${OVERFLOW_REGISTRATION_PREFIX}/${type}/`
+    ];
+    for (const prefix of prefixes) {
+      let cursor;
+      do {
+        const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit: 1000 }).catch(() => null);
+        if (!result) break;
+        for (const object of result.objects || []) {
+          const stored = await env.MOJO_SUMMITS_STORAGE.get(object.key).catch(() => null);
+          const record = stored ? await stored.json().catch(() => null) : null;
+          if (cleanString(record?.email).toLowerCase() !== email) continue;
+          await env.MOJO_SUMMITS_STORAGE.delete(object.key);
+          deletedKeys.push(object.key);
+        }
+        cursor = result.truncated ? result.cursor : undefined;
+      } while (cursor);
+    }
+  }
+  return deletedKeys;
 }
 
 async function registrants(env, type = "member") {
@@ -346,9 +379,9 @@ async function registrants(env, type = "member") {
   const legacyKeys = await listKeys(env, config.legacyPrefix);
   const legacyRows = (await readRecords(env, legacyKeys)).filter((row) => !ids.has(row.id));
   for (const row of legacyRows) ids.add(row.id);
-  const overflowRows = (await overflowRegistrants(env, type)).filter((row) => !ids.has(row.id));
+  const r2Rows = (await r2Registrants(env, type)).filter((row) => !ids.has(row.id));
 
-  return [...crmRows, ...legacyRows, ...overflowRows].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return [...crmRows, ...legacyRows, ...r2Rows].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
 function roleLabelForRow(row = {}, type = "") {
@@ -478,11 +511,11 @@ async function readRawRecord(env, key) {
 
 async function registrationDiagnostics(env) {
   const generatedAt = new Date().toISOString();
-  const contactKeys = await listKeys(env, registrantTypes.contacts.crmPrefix);
-  const contactEmails = new Set(contactKeys.map((key) => key.replace(registrantTypes.contacts.crmPrefix, "").toLowerCase()));
+  const contactRows = await contacts(env);
+  const contactEmails = new Set(contactRows.map((row) => row.email).filter(Boolean));
   const registrationRows = [];
   const counts = {
-    contacts: contactKeys.length,
+    contacts: contactRows.length,
     guest: 0,
     member: 0,
     partner: 0,
@@ -491,23 +524,16 @@ async function registrationDiagnostics(env) {
   };
 
   for (const type of ["guest", "member", "partner"]) {
-    const config = registrantTypes[type];
-    const keys = [...new Set([
-      ...(await listKeys(env, config.crmPrefix)),
-      ...(await listKeys(env, config.legacyPrefix))
-    ])];
+    const rows = await registrants(env, type);
     const seenRows = new Set();
-    for (const key of keys) {
-      const record = await readRawRecord(env, key);
-      if (!record) continue;
-      const row = normalizeRecord(key, record);
+    for (const row of rows) {
       const rowIdentity = row.id || `${row.email}:${row.createdAt}:${row.inviteCode}`;
       if (seenRows.has(rowIdentity)) continue;
       seenRows.add(rowIdentity);
       const expectedContactKey = row.email ? `${registrantTypes.contacts.crmPrefix}${row.email}` : "";
       const contactExists = row.email ? contactEmails.has(row.email) : false;
       registrationRows.push({
-        key,
+        key: row.key,
         type,
         id: row.id,
         createdAt: row.createdAt,
@@ -882,10 +908,12 @@ async function deleteContact(env, payload = {}, actor = "") {
     }
   }
 
+  const deletedR2Keys = await deleteR2RegistrantsForEmail(env, email);
   const deletedFromCompanies = await removeEmailFromCompanyContacts(env, email, actor);
   return {
     email,
     deletedKeys: [...new Set(deletedKeys)],
+    deletedR2Keys,
     deletedFromCompanies
   };
 }
@@ -902,12 +930,17 @@ async function updateContact(env, payload = {}, actor = "") {
 
   const key = `${registrantTypes.contacts.crmPrefix}${email}`;
   const existing = await readRawRecord(env, key);
-  if (!existing) throw new Error("Contact was not found.");
+  const now = new Date().toISOString();
 
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
-    ...existing,
+    ...(existing || {}),
+    id: email,
+    email,
+    name: cleanString(existing?.name) || email,
+    source: cleanString(existing?.source) || "crm-contact-overlay",
+    createdAt: cleanString(existing?.createdAt) || now,
     crmNotes: cleanString(payload.crmNotes),
-    crmUpdatedAt: new Date().toISOString(),
+    crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
   }));
 }
@@ -980,7 +1013,6 @@ async function updateContactEventAttendance(env, payload = {}, actor = "") {
 
   const key = `${registrantTypes.contacts.crmPrefix}${email}`;
   const existing = await readRawRecord(env, key);
-  if (!existing) throw new Error("Contact was not found.");
 
   const targetEvent = {
     id: cleanString(payload.eventKey || payload.id),
@@ -994,7 +1026,7 @@ async function updateContactEventAttendance(env, payload = {}, actor = "") {
   };
   if (!contactEventIdentity(targetEvent)) throw new Error("Event is required before updating attendance.");
 
-  const events = Array.isArray(existing.events) ? existing.events : [];
+  const events = Array.isArray(existing?.events) ? existing.events : [targetEvent];
   let matched = false;
   const attended = payload.attended === true;
   const now = new Date().toISOString();
@@ -1014,7 +1046,12 @@ async function updateContactEventAttendance(env, payload = {}, actor = "") {
   if (!matched) throw new Error("Contact event was not found.");
 
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
-    ...existing,
+    ...(existing || {}),
+    id: email,
+    email,
+    name: cleanString(existing?.name) || email,
+    source: cleanString(existing?.source) || "crm-contact-overlay",
+    createdAt: cleanString(existing?.createdAt) || now,
     events: nextEvents,
     updatedAt: now,
     crmUpdatedAt: now,

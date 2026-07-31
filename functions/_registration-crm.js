@@ -6,7 +6,8 @@ const jsonHeaders = {
 const maxFieldLength = 2000;
 const acceptedPhoneStatuses = new Set(["verified", "pending_sms_setup"]);
 const blockedEmailDomains = new Set(["gmail.com", "googlemail.com"]);
-const overflowRegistrationPrefix = "crm-overflow/registrations";
+const registrationObjectPrefix = "crm/registrations";
+const inviteUsageObjectPrefix = "crm/invite-usage";
 
 const registrationConfig = {
   member: {
@@ -287,6 +288,24 @@ async function readInviteCode(env, type, code) {
   return null;
 }
 
+function safeObjectPart(value) {
+  return cleanString(value).replace(/[^0-9A-Za-z.-]+/g, "-");
+}
+
+function registrationObjectKey(type, createdAt, id) {
+  return `${registrationObjectPrefix}/${type}/${safeObjectPart(createdAt)}-${safeObjectPart(id)}.json`;
+}
+
+function inviteUsageObjectKey(type, code) {
+  return `${inviteUsageObjectPrefix}/${type}/${cleanString(code).replace(/\D/g, "").slice(0, 6)}.json`;
+}
+
+async function readInviteUsage(env, type, code) {
+  if (!env.MOJO_SUMMITS_STORAGE?.get) return null;
+  const object = await env.MOJO_SUMMITS_STORAGE.get(inviteUsageObjectKey(type, code)).catch(() => null);
+  return object ? object.json().catch(() => null) : null;
+}
+
 function inviteCodeError(config, inviteRecord) {
   if (!inviteRecord) return "";
   const record = inviteRecord.record || {};
@@ -322,6 +341,11 @@ export async function validateInviteCode(env, type, code) {
     return { ok: false, status: 404, error: "That invite code is invalid or has already been used." };
   }
 
+  const inviteUsage = await readInviteUsage(env, type, inviteCode);
+  if (inviteUsage) {
+    return { ok: false, status: 409, error: "That invite code is invalid or has already been used." };
+  }
+
   return {
     ok: true,
     code: inviteCode,
@@ -350,31 +374,86 @@ async function markInviteCodeUsed(env, type, code, registration) {
   );
 }
 
-function isKvLimitError(error) {
-  const message = String(error?.message || error || "").toLowerCase();
-  return message.includes("kv") && message.includes("limit");
+async function markInviteCodeUsedInR2(env, type, code, registration) {
+  if (!env.MOJO_SUMMITS_STORAGE?.put) return null;
+  const key = inviteUsageObjectKey(type, code);
+  await env.MOJO_SUMMITS_STORAGE.put(
+    key,
+    JSON.stringify({
+      type,
+      code,
+      status: "used",
+      usedAt: registration.createdAt,
+      usedBy: registration.name || registration.email,
+      usedByName: registration.name,
+      usedByEmail: registration.email,
+      registrationId: registration.id,
+      eventName: registration.eventName,
+      eventDate: registration.eventDate
+    }),
+    {
+      httpMetadata: { contentType: "application/json; charset=utf-8" },
+      customMetadata: { area: "crm", kind: "invite-usage", type }
+    }
+  );
+  return key;
 }
 
-async function writeOverflowRegistration(env, type, record, error) {
+function contactRefsForRegistration(type, registration) {
+  const email = cleanString(registration.email).toLowerCase();
+  const company = cleanString(registration.partnerCompany || registration.company);
+  const companySlug = slugify(company);
+  if (!email || !company || !companySlug) return {};
+
+  const companyKey = `crm:company:${companySlug}`;
+  const partnerCompanyKey = `partner-company:${companySlug}`;
+  return {
+    contactId: email,
+    contactKey: `crm:contact:${email}`,
+    companyKey,
+    profileKey: type === "partner" ? partnerCompanyKey : companyKey
+  };
+}
+
+async function writeR2Registration(env, type, record, options = {}) {
   if (!env?.MOJO_SUMMITS_STORAGE || !record?.id) return null;
   const createdAt = cleanString(record.createdAt) || new Date().toISOString();
-  const safeCreatedAt = createdAt.replace(/[^0-9A-Za-z.-]+/g, "-");
-  const key = `${overflowRegistrationPrefix}/${type}/${safeCreatedAt}-${record.id}.json`;
+  const key = options.key || registrationObjectKey(type, createdAt, record.id);
+  const overflow = options.overflow === true;
   await env.MOJO_SUMMITS_STORAGE.put(
     key,
     JSON.stringify({
       ...record,
-      overflowStorage: true,
-      overflowReason: "kv-write-limit",
-      overflowError: cleanString(error?.message || error),
-      overflowStoredAt: new Date().toISOString()
+      storage: overflow ? "r2-overflow" : "r2",
+      overflowStorage: overflow,
+      overflowReason: cleanString(options.overflowReason),
+      overflowError: cleanString(options.overflowError),
+      r2StoredAt: new Date().toISOString()
     }),
     {
       httpMetadata: { contentType: "application/json; charset=utf-8" },
-      customMetadata: { area: "crm", kind: "registration-overflow", type }
+      customMetadata: { area: "crm", kind: overflow ? "registration-overflow" : "registration", type }
     }
   );
   return key;
+}
+
+async function mirrorRegistrationToKv(env, type, record, config) {
+  if (env?.MOJO_REGISTRATION_KV_MIRROR !== "true") return {};
+
+  const contactRefs = await upsertRegistrationContact(env, type, record, config);
+  const storedRecord = {
+    ...record,
+    ...contactRefs
+  };
+  const registrationKey = `${config.crmPrefix}${record.createdAt}:${record.id}`;
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(registrationKey, JSON.stringify(storedRecord));
+  await markInviteCodeUsed(env, type, record.inviteCode, storedRecord);
+  return {
+    ...contactRefs,
+    kvRegistrationKey: registrationKey
+  };
 }
 
 export async function upsertRegistrationContact(env, type, registration, config = {}) {
@@ -475,7 +554,10 @@ export async function handlePublicRegistration({ request, env }, type) {
   const config = registrationConfig[type];
   if (!config) return json({ error: "Registration type is not configured." }, { status: 500 });
   if (!env.MOJO_SUMMITS_SETUP_STATE) {
-    return json({ error: "Registration storage is not configured." }, { status: 500 });
+    return json({ error: "Registration invite storage is not configured." }, { status: 500 });
+  }
+  if (!env.MOJO_SUMMITS_STORAGE) {
+    return json({ error: "Registration R2 storage is not configured." }, { status: 500 });
   }
 
   const payload = await request.json().catch(() => null);
@@ -487,7 +569,6 @@ export async function handlePublicRegistration({ request, env }, type) {
     company: registration.company,
     inviteCode: registration.inviteCode
   };
-  let overflowRecord = null;
 
   try {
     const validationError = validateRegistration(registration, type);
@@ -524,51 +605,35 @@ export async function handlePublicRegistration({ request, env }, type) {
       crmUpdatedAt: "",
       crmUpdatedBy: ""
     };
-    overflowRecord = record;
-    const contactRefs = await upsertRegistrationContact(env, type, record, config);
+    const contactRefs = contactRefsForRegistration(type, record);
     const storedRecord = {
       ...record,
       ...contactRefs
     };
-    overflowRecord = storedRecord;
-    const registrationKey = `${config.crmPrefix}${createdAt}:${id}`;
-    const registrationKeys = [registrationKey];
-
-    await env.MOJO_SUMMITS_SETUP_STATE.put(registrationKey, JSON.stringify(storedRecord));
-    await markInviteCodeUsed(env, type, registration.inviteCode, storedRecord);
+    const registrationKey = await writeR2Registration(env, type, storedRecord);
+    const inviteUsageKey = await markInviteCodeUsedInR2(env, type, registration.inviteCode, storedRecord);
+    const kvRefs = await mirrorRegistrationToKv(env, type, storedRecord, config).catch(() => ({}));
+    const registrationKeys = [registrationKey, kvRefs.kvRegistrationKey].filter(Boolean);
     await writeRegistrationDebug(env, type, "stored", {
       ...debugBase,
       ...storedRecord,
       stage: "complete",
-      registrationKeys
+      registrationKeys,
+      inviteUsageKey
     });
 
     return json({
       ok: true,
       id,
-      createdAt
+      createdAt,
+      storage: "r2"
     }, { status: 201 });
   } catch (error) {
-    if (isKvLimitError(error) && overflowRecord) {
-      const overflowKey = await writeOverflowRegistration(env, type, overflowRecord, error).catch(() => "");
-      if (overflowKey) {
-        return json({
-          ok: true,
-          id: overflowRecord.id,
-          createdAt: overflowRecord.createdAt,
-          storage: "overflow",
-          message: "Registration received. CRM storage is at its daily KV write limit, so this was saved to overflow storage."
-        }, { status: 202 });
-      }
-    }
     await writeRegistrationDebug(env, type, "failed", {
       ...debugBase,
       stage: "exception",
       error: error.message || "Registration could not be stored."
     });
-    const message = isKvLimitError(error)
-      ? "Registration storage is temporarily at its daily write limit. Please try again later."
-      : error.message || "Registration could not be stored.";
-    return json({ error: message }, { status: isKvLimitError(error) ? 503 : 500 });
+    return json({ error: error.message || "Registration could not be stored." }, { status: 500 });
   }
 }
