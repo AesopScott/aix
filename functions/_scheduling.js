@@ -169,10 +169,138 @@ async function decryptText(env, value) {
 }
 
 function requireStore(env) {
-  if (!env.MOJO_SUMMITS_SETUP_STATE) {
+  if (!env.MOJO_SUMMITS_STORAGE && !env.MOJO_SUMMITS_SETUP_STATE) {
     return json({ error: "Scheduling storage is not configured." }, { status: 500 });
   }
   return null;
+}
+
+function schedulingObjectStore(env) {
+  return env.MOJO_SUMMITS_STORAGE?.get && env.MOJO_SUMMITS_STORAGE?.put
+    ? env.MOJO_SUMMITS_STORAGE
+    : null;
+}
+
+function schedulingKvStore(env) {
+  return env.MOJO_SUMMITS_SETUP_STATE?.get ? env.MOJO_SUMMITS_SETUP_STATE : null;
+}
+
+function withoutExpiryMetadata(value) {
+  if (!value || typeof value !== "object" || !value.__expiresAt) return value;
+  const { __expiresAt, ...rest } = value;
+  if (new Date(__expiresAt).getTime() <= Date.now()) return null;
+  return rest;
+}
+
+async function objectText(object) {
+  if (!object) return null;
+  return object.text();
+}
+
+async function getStoredText(env, key) {
+  const object = await schedulingObjectStore(env)?.get(key).catch(() => null);
+  const text = await objectText(object);
+  if (text !== null) {
+    const trimmed = text.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        const wrapper = JSON.parse(trimmed);
+        if (wrapper?.__value !== undefined) {
+          if (wrapper.__expiresAt && new Date(wrapper.__expiresAt).getTime() <= Date.now()) {
+            await deleteStoredValue(env, key).catch(() => null);
+            return null;
+          }
+          return String(wrapper.__value);
+        }
+      } catch {
+        return text;
+      }
+    }
+    return text;
+  }
+  return schedulingKvStore(env)?.get(key).catch(() => null) || null;
+}
+
+async function getStoredJson(env, key) {
+  const object = await schedulingObjectStore(env)?.get(key).catch(() => null);
+  if (object) {
+    const value = JSON.parse(await object.text());
+    const clean = withoutExpiryMetadata(value);
+    if (!clean) {
+      await deleteStoredValue(env, key).catch(() => null);
+      return null;
+    }
+    return clean;
+  }
+  return schedulingKvStore(env)?.get(key, "json").catch(() => null) || null;
+}
+
+async function putStoredText(env, key, value, options = {}) {
+  const objectStore = schedulingObjectStore(env);
+  if (objectStore) {
+    const body = options.expirationTtl
+      ? JSON.stringify({
+          __value: String(value),
+          __expiresAt: new Date(Date.now() + options.expirationTtl * 1000).toISOString()
+        })
+      : String(value);
+    await objectStore.put(key, body, {
+      httpMetadata: {
+        contentType: options.expirationTtl ? "application/json; charset=utf-8" : "text/plain; charset=utf-8"
+      }
+    });
+    return;
+  }
+  await schedulingKvStore(env).put(key, String(value), options);
+}
+
+async function putStoredJson(env, key, value, options = {}) {
+  const payload = options.expirationTtl
+    ? {
+        ...value,
+        __expiresAt: new Date(Date.now() + options.expirationTtl * 1000).toISOString()
+      }
+    : value;
+  const objectStore = schedulingObjectStore(env);
+  if (objectStore) {
+    await objectStore.put(key, JSON.stringify(payload), {
+      httpMetadata: { contentType: "application/json; charset=utf-8" }
+    });
+    return;
+  }
+  await schedulingKvStore(env).put(key, JSON.stringify(value), options);
+}
+
+async function deleteStoredValue(env, key) {
+  const objectStore = schedulingObjectStore(env);
+  if (objectStore) await objectStore.delete(key).catch(() => null);
+  await schedulingKvStore(env)?.delete(key).catch(() => null);
+}
+
+async function listStoredJsonByPrefix(env, prefix) {
+  const keys = new Set();
+  const objectStore = schedulingObjectStore(env);
+  if (objectStore) {
+    let cursor;
+    do {
+      const page = await objectStore.list({ prefix, cursor }).catch(() => null);
+      (page?.objects || []).forEach((object) => keys.add(object.key));
+      cursor = page?.truncated ? page.cursor : undefined;
+    } while (cursor);
+  }
+
+  const kv = schedulingKvStore(env);
+  if (kv) {
+    let cursor;
+    do {
+      const page = await kv.list({ prefix, cursor }).catch(() => null);
+      (page?.keys || []).forEach((item) => keys.add(item.name));
+      cursor = page?.list_complete === false ? page.cursor : undefined;
+    } while (cursor);
+  }
+
+  const records = await Promise.all([...keys].map((key) => getStoredJson(env, key)));
+  return records.filter(Boolean);
 }
 
 function requestOrigin(request) {
@@ -275,10 +403,10 @@ export function sanitizeEmployee(input = {}) {
 }
 
 export async function listEmployees(env, { includeInactive = false } = {}) {
-  const ids = await env.MOJO_SUMMITS_SETUP_STATE.get(TEAM_INDEX_KEY, "json").catch(() => null);
+  const ids = await getStoredJson(env, TEAM_INDEX_KEY);
   const employees = await Promise.all(
     (Array.isArray(ids) ? ids : []).map((slug) =>
-      env.MOJO_SUMMITS_SETUP_STATE.get(`${EMPLOYEE_PREFIX}${slug}`, "json").catch(() => null)
+      getStoredJson(env, `${EMPLOYEE_PREFIX}${slug}`)
     )
   );
   return employees
@@ -289,13 +417,11 @@ export async function listEmployees(env, { includeInactive = false } = {}) {
 export async function getEmployee(env, slug) {
   const clean = cleanSlug(slug);
   if (!clean) return null;
-  return env.MOJO_SUMMITS_SETUP_STATE.get(`${EMPLOYEE_PREFIX}${clean}`, "json").catch(() => null);
+  return getStoredJson(env, `${EMPLOYEE_PREFIX}${clean}`);
 }
 
 async function connectionIds(env, employeeSlug) {
-  const ids = await env.MOJO_SUMMITS_SETUP_STATE
-    .get(`${CONNECTION_INDEX_PREFIX}${cleanSlug(employeeSlug)}`, "json")
-    .catch(() => null);
+  const ids = await getStoredJson(env, `${CONNECTION_INDEX_PREFIX}${cleanSlug(employeeSlug)}`);
   return Array.isArray(ids) ? ids.map(cleanSlug).filter(Boolean) : [];
 }
 
@@ -316,7 +442,7 @@ export async function listCalendarConnections(env, employeeSlug) {
   const slug = cleanSlug(employeeSlug);
   const ids = await connectionIds(env, slug);
   const records = await Promise.all(ids.map((id) =>
-    env.MOJO_SUMMITS_SETUP_STATE.get(`${CONNECTION_PREFIX}${slug}:${id}`, "json").catch(() => null)
+    getStoredJson(env, `${CONNECTION_PREFIX}${slug}:${id}`)
   ));
   return records.filter(Boolean);
 }
@@ -331,7 +457,7 @@ async function saveCalendarConnection(env, employeeSlug, connection) {
   const id = cleanSlug(connection.id || connection.email || crypto.randomUUID());
   const ids = [...new Set([...(await connectionIds(env, slug)), id])].sort();
   const now = new Date().toISOString();
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${CONNECTION_PREFIX}${slug}:${id}`, JSON.stringify({
+  await putStoredJson(env, `${CONNECTION_PREFIX}${slug}:${id}`, {
     ...connection,
     id,
     employeeSlug: slug,
@@ -339,8 +465,8 @@ async function saveCalendarConnection(env, employeeSlug, connection) {
     status: "connected",
     connectedAt: connection.connectedAt || now,
     updatedAt: now
-  }));
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${CONNECTION_INDEX_PREFIX}${slug}`, JSON.stringify(ids));
+  });
+  await putStoredJson(env, `${CONNECTION_INDEX_PREFIX}${slug}`, ids);
   return id;
 }
 
@@ -361,13 +487,13 @@ export async function saveEmployee(env, input, actor = "") {
     throw new Error("Working day end time must be later than the start time.");
   }
 
-  const ids = await env.MOJO_SUMMITS_SETUP_STATE.get(TEAM_INDEX_KEY, "json").catch(() => null);
+  const ids = await getStoredJson(env, TEAM_INDEX_KEY);
   const nextIds = [...new Set([...(Array.isArray(ids) ? ids : []), employee.slug])].sort();
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${EMPLOYEE_PREFIX}${employee.slug}`, JSON.stringify({
+  await putStoredJson(env, `${EMPLOYEE_PREFIX}${employee.slug}`, {
     ...employee,
     updatedBy: cleanEmail(actor)
-  }));
-  await env.MOJO_SUMMITS_SETUP_STATE.put(TEAM_INDEX_KEY, JSON.stringify(nextIds));
+  });
+  await putStoredJson(env, TEAM_INDEX_KEY, nextIds);
   return employee;
 }
 
@@ -530,12 +656,12 @@ export async function beginMicrosoftCalendarOAuth(env, request, { slug, email = 
   }
 
   const state = crypto.randomUUID();
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${OAUTH_STATE_PREFIX}${state}`, JSON.stringify({
+  await putStoredJson(env, `${OAUTH_STATE_PREFIX}${state}`, {
     slug: employee.slug,
     expectedEmail,
     actor: cleanEmail(actor),
     createdAt: new Date().toISOString()
-  }), { expirationTtl: OAUTH_STATE_TTL_SECONDS });
+  }, { expirationTtl: OAUTH_STATE_TTL_SECONDS });
 
   const authorize = new URL(`https://login.microsoftonline.com/${encodeURIComponent(config.tenantId)}/oauth2/v2.0/authorize`);
   authorize.searchParams.set("client_id", config.clientId);
@@ -555,8 +681,8 @@ export async function finishMicrosoftCalendarOAuth(env, request, query) {
   if (!state || !code) return Response.redirect(`${requestOrigin(request)}/schedule-admin/?calendar=missing-code`, 302);
 
   const stateKey = `${OAUTH_STATE_PREFIX}${state}`;
-  const stateRecord = await env.MOJO_SUMMITS_SETUP_STATE.get(stateKey, "json").catch(() => null);
-  await env.MOJO_SUMMITS_SETUP_STATE.delete(stateKey).catch(() => null);
+  const stateRecord = await getStoredJson(env, stateKey);
+  await deleteStoredValue(env, stateKey);
   if (!stateRecord?.slug) return Response.redirect(`${requestOrigin(request)}/schedule-admin/?calendar=expired`, 302);
 
   const tokenPayload = await exchangeDelegatedToken(env, request, {
@@ -798,18 +924,7 @@ async function bookingBusyIntervals(env, employee, start, end) {
 
   const records = [];
   await Promise.all([...dateKeys].map(async (dateKey) => {
-    let cursor;
-    do {
-      const page = await env.MOJO_SUMMITS_SETUP_STATE.list({
-        prefix: `${BOOKING_PREFIX}${dateKey}:`,
-        cursor
-      });
-      const values = await Promise.all((page.keys || []).map((item) => (
-        env.MOJO_SUMMITS_SETUP_STATE.get(item.name, "json").catch(() => null)
-      )));
-      records.push(...values.filter(Boolean));
-      cursor = page.list_complete === false ? page.cursor : undefined;
-    } while (cursor);
+    records.push(...(await listStoredJsonByPrefix(env, `${BOOKING_PREFIX}${dateKey}:`)));
   }));
 
   return records
@@ -1001,9 +1116,9 @@ export async function createBooking(env, input = {}) {
   if (!isValidEmail(guestEmail)) return { response: json({ error: "Enter a valid email address." }, { status: 400 }) };
 
   const holdKey = `${HOLD_PREFIX}${employee.slug}:${meetingType.id}:${start.toISOString()}`;
-  const existingHold = await env.MOJO_SUMMITS_SETUP_STATE.get(holdKey).catch(() => null);
+  const existingHold = await getStoredText(env, holdKey);
   if (existingHold) return { response: json({ error: "That slot is already being booked. Choose another time." }, { status: 409 }) };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(holdKey, crypto.randomUUID(), { expirationTtl: HOLD_TTL_SECONDS });
+  await putStoredText(env, holdKey, crypto.randomUUID(), { expirationTtl: HOLD_TTL_SECONDS });
 
   const end = new Date(start.getTime() + meetingType.durationMinutes * 60000);
   const booking = {
@@ -1032,7 +1147,7 @@ export async function createBooking(env, input = {}) {
     };
 
     const dateKey = record.start.slice(0, 10);
-    await env.MOJO_SUMMITS_SETUP_STATE.put(`${BOOKING_PREFIX}${dateKey}:${record.id}`, JSON.stringify(record));
+    await putStoredJson(env, `${BOOKING_PREFIX}${dateKey}:${record.id}`, record);
 
     return {
       ok: true,
@@ -1047,8 +1162,8 @@ export async function createBooking(env, input = {}) {
       }
     };
   } finally {
-    await env.MOJO_SUMMITS_SETUP_STATE.delete(holdKey).catch(() => null);
+    await deleteStoredValue(env, holdKey).catch(() => null);
   }
 }
 
-export { requireStore, publicEmployee, graphConfig };
+export { requireStore, publicEmployee, graphConfig, getStoredText, putStoredText };

@@ -1,16 +1,16 @@
 import { json } from "../../_access-control.js";
-import { createBooking, requireStore } from "../../_scheduling.js";
+import { createBooking, getStoredText, putStoredText, requireStore } from "../../_scheduling.js";
 
 async function rateLimit(request, env, input) {
   const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "unknown";
   const email = String(input?.guestEmail || input?.email || "").trim().toLowerCase();
   const hour = new Date().toISOString().slice(0, 13);
   const key = `scheduling:rate:${hour}:${ip}:${email}`;
-  const count = Number(await env.MOJO_SUMMITS_SETUP_STATE.get(key).catch(() => "0")) || 0;
+  const count = Number(await getStoredText(env, key).catch(() => "0")) || 0;
   if (count >= 8) {
     return json({ error: "Too many booking attempts. Try again later." }, { status: 429 });
   }
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, String(count + 1), { expirationTtl: 3700 });
+  await putStoredText(env, key, String(count + 1), { expirationTtl: 3700 });
   return null;
 }
 
