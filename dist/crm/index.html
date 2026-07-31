@@ -64,14 +64,61 @@
       text-transform: uppercase;
     }
 
-    nav { display: flex; flex-wrap: wrap; gap: 0.9rem; align-items: center; }
-    nav a { color: var(--cyan); text-decoration: none; font-weight: 800; }
+    .top-nav { display: flex; flex-wrap: wrap; gap: 0.9rem; align-items: center; }
+    .top-nav a { color: var(--cyan); text-decoration: none; font-weight: 800; }
 
     main {
-      width: min(1320px, calc(100% - 2rem));
+      width: min(1500px, calc(100% - 2rem));
       margin: 0 auto;
       padding: 2rem 0 4rem;
     }
+
+    .crm-shell {
+      display: grid;
+      grid-template-columns: 18rem minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .side-nav {
+      position: sticky;
+      top: 1rem;
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.85rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.82);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+    }
+
+    .side-nav button {
+      min-height: 2.75rem;
+      padding: 0.75rem 0.85rem;
+      text-align: left;
+      background: transparent;
+      border-color: rgba(0, 230, 255, 0.18);
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      text-transform: none;
+      box-shadow: none;
+    }
+
+    .side-nav button:hover,
+    .side-nav button.active {
+      color: var(--white);
+      border-color: rgba(0, 230, 255, 0.62);
+      background: rgba(22, 102, 255, 0.24);
+      transform: none;
+    }
+
+    .crm-content {
+      display: grid;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .view-section[hidden] { display: none !important; }
 
     section {
       background:
@@ -141,11 +188,13 @@
     .metric.warn strong { color: var(--warning); }
 
     .toolbar {
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       align-items: end;
       margin-bottom: 1rem;
       padding: 1.25rem;
     }
+
+    .record-type-field { display: none; }
 
     .panel { padding: 1.25rem; }
 
@@ -322,8 +371,23 @@
       min-width: 8.5rem;
     }
 
+    .company-row td {
+      padding: 0.9rem 0.85rem;
+      color: var(--white);
+      background: rgba(22, 102, 255, 0.18);
+      border-top: 1px solid rgba(0, 230, 255, 0.28);
+    }
+
+    .company-row strong {
+      display: inline-flex;
+      margin-right: 0.65rem;
+      color: var(--cyan);
+      font-size: 1rem;
+    }
+
     @media (max-width: 980px) {
-      header, .hero, .toolbar, .invite-grid, .registration-invite-grid, .invite-row { grid-template-columns: 1fr; }
+      header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .invite-row { grid-template-columns: 1fr; }
+      .side-nav { position: static; }
     }
   </style>
 </head>
@@ -333,7 +397,7 @@
       <strong>Mojo AI Summits</strong>
       <span>CRM</span>
     </div>
-    <nav>
+    <nav class="top-nav">
       <a href="/">Home</a>
       <a href="/member-registration/">Member Registration</a>
       <a href="/files/">Storage</a>
@@ -352,8 +416,21 @@
       <div class="metrics" id="metrics"></div>
     </section>
 
+    <div class="crm-shell">
+      <aside class="side-nav" aria-label="CRM sections">
+        <button class="active" type="button" data-view="contacts">Contacts</button>
+        <button type="button" data-view="guest-invite-links">Guest Invite</button>
+        <button type="button" data-view="create-guest-invite-links">Create Guest Invite Links</button>
+        <button type="button" data-view="guest-partner-invite-links">Guest Partner Invite Links</button>
+        <button type="button" data-view="partners-company">Partners by Company</button>
+        <button type="button" data-view="guest">Guest Registrants</button>
+        <button type="button" data-view="member">Members</button>
+      </aside>
+
+      <div class="crm-content">
+        <div class="view-section" data-view-panel="records">
     <section class="toolbar">
-      <label>
+      <label class="record-type-field">
         Registration
         <select id="typeFilter">
           <option value="contacts">Contacts</option>
@@ -401,7 +478,40 @@
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
     </section>
 
-    <section class="invite-panel" id="registrationInvitePanel">
+    <section class="panel" id="member-registrants">
+      <h2 id="registrantsTitle">Contacts</h2>
+      <div id="notice" class="notice">Loading CRM...</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Registered</th>
+              <th>Registrant</th>
+              <th>Contact</th>
+              <th>Roles</th>
+              <th>Publication</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>Profile Access</th>
+              <th>CRM Notes</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+        </div>
+
+    <section class="invite-panel view-section" id="guestInvitePanel" data-view-panel="guest-invite-links" hidden>
+      <div>
+        <p class="eyebrow">Guest invite links</p>
+        <h2>Guest and member invite links</h2>
+        <p>Review active and used guest or member registration links.</p>
+      </div>
+      <div class="invite-list" id="registrationInviteList"></div>
+    </section>
+
+    <section class="invite-panel view-section" id="registrationInvitePanel" data-view-panel="create-guest-invite-links" hidden>
       <div>
         <p class="eyebrow">Guest invite links</p>
         <h2>Create event-tied guest invite links</h2>
@@ -423,10 +533,9 @@
         </label>
         <button type="submit" id="registrationInviteSubmit">Generate Link</button>
       </form>
-      <div class="invite-list" id="registrationInviteList"></div>
     </section>
 
-    <section class="invite-panel" id="partnerInvitePanel">
+    <section class="invite-panel view-section" id="partnerInvitePanel" data-view-panel="guest-partner-invite-links" hidden>
       <div>
         <p class="eyebrow">Partner event invites</p>
         <h2>Create hidden partner registration links</h2>
@@ -462,33 +571,14 @@
       </form>
       <div class="invite-list" id="partnerInviteList"></div>
     </section>
-
-    <section class="panel" id="member-registrants">
-      <h2 id="registrantsTitle">Member Registrants</h2>
-      <div id="notice" class="notice">Loading CRM...</div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Registered</th>
-              <th>Registrant</th>
-              <th>Contact</th>
-              <th>Roles</th>
-              <th>Publication</th>
-              <th>Phone</th>
-              <th>Status</th>
-              <th>Profile Access</th>
-              <th>CRM Notes</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
       </div>
-    </section>
+    </div>
   </main>
 
   <script>
     const api = "/api/crm";
+    const navButtons = [...document.querySelectorAll("[data-view]")];
+    const viewPanels = [...document.querySelectorAll("[data-view-panel]")];
     const rowsElement = document.querySelector("#rows");
     const notice = document.querySelector("#notice");
     const metrics = document.querySelector("#metrics");
@@ -508,6 +598,13 @@
     const partnerInviteForm = document.querySelector("#partnerInviteForm");
     const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
     const partnerInviteList = document.querySelector("#partnerInviteList");
+    const recordViewTypes = {
+      contacts: "contacts",
+      guest: "guest",
+      member: "member",
+      "partners-company": "partner"
+    };
+    let activeView = "contacts";
     let state = {
       type: "contacts",
       label: "Contacts",
@@ -637,7 +734,43 @@
     }
 
     function activeLabel() {
+      if (activeView === "guest") return "Guest";
+      if (activeView === "partners-company") return "Partners by Company";
       return state.label || (state.type === "contacts" ? "Contacts" : state.type === "partner" ? "Partner" : "Member");
+    }
+
+    function recordsTypeForView(view = activeView) {
+      return recordViewTypes[view] || "contacts";
+    }
+
+    function isRecordsView(view = activeView) {
+      return Boolean(recordViewTypes[view]);
+    }
+
+    function syncViewPanels() {
+      navButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.view === activeView);
+      });
+      viewPanels.forEach((panel) => {
+        const panelView = panel.dataset.viewPanel;
+        panel.hidden = panelView === "records"
+          ? !isRecordsView()
+          : panelView !== activeView;
+      });
+    }
+
+    function setActiveView(view) {
+      activeView = view || "contacts";
+      syncViewPanels();
+      if (isRecordsView()) {
+        const nextType = recordsTypeForView();
+        if (typeFilter.value !== nextType) typeFilter.value = nextType;
+        if (state.type !== nextType) {
+          loadCrm();
+          return;
+        }
+      }
+      render();
     }
 
     function partnerRegistrationUrl(invite) {
@@ -815,9 +948,77 @@
       `;
     }
 
+    function renderPartnerCompanyRows(rows) {
+      registrantsTitle.textContent = "Partners by Company";
+      if (!rows.length) {
+        rowsElement.innerHTML = '<tr><td colspan="9">No partner company records found.</td></tr>';
+        return;
+      }
+
+      const groups = new Map();
+      for (const row of rows) {
+        const company = row.partnerCompany || row.company || "Unassigned Company";
+        if (!groups.has(company)) groups.set(company, []);
+        groups.get(company).push(row);
+      }
+
+      rowsElement.innerHTML = [...groups.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([company, companyRows]) => {
+          const contacts = companyRows
+            .sort((a, b) => String(a.name || a.email).localeCompare(String(b.name || b.email)))
+            .map((row) => `
+              <tr>
+                <td>
+                  <strong>${escapeHtml(formatDate(row.createdAt))}</strong><br>
+                  <span>${escapeHtml(row.eventName || "")}</span>
+                  ${row.eventDate ? `<br><span>${escapeHtml(row.eventDate)}</span>` : ""}
+                </td>
+                <td>
+                  <strong>${escapeHtml(row.name)}</strong><br>
+                  <span>${escapeHtml(row.title || "")}</span><br>
+                  <span>${escapeHtml(row.partnerTier || "Partner")}</span>
+                </td>
+                <td>
+                  <strong>${escapeHtml(row.email)}</strong><br>
+                  <span>${escapeHtml(row.phone)}</span>
+                </td>
+                <td><div class="role-list">${roleBadges(row)}</div></td>
+                <td><div class="role-list">${publicationBadges(row)}</div></td>
+                <td>${phonePill(row)}</td>
+                <td>
+                  <select class="inline-select" data-status-key="${escapeHtml(row.key)}">
+                    ${["new", "contacted", "confirmed", "accepted", "waitlist", "declined"].map((status) => `
+                      <option value="${status}" ${row.crmStatus === status ? "selected" : ""}>${statusLabel(status)}</option>
+                    `).join("")}
+                  </select>
+                </td>
+                <td>${memberAccessCell(row)}</td>
+                <td>
+                  <div class="notes-cell">
+                    <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Follow-up notes">${escapeHtml(row.crmNotes || "")}</textarea>
+                    <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
+                  </div>
+                </td>
+              </tr>
+            `).join("");
+
+          return `
+            <tr class="company-row">
+              <td colspan="9"><strong>${escapeHtml(company)}</strong>${companyRows.length} partner contact${companyRows.length === 1 ? "" : "s"}</td>
+            </tr>
+            ${contacts}
+          `;
+        }).join("");
+    }
+
     function renderRows() {
       const rows = filteredRows();
       const label = activeLabel();
+      if (activeView === "partners-company") {
+        renderPartnerCompanyRows(rows);
+        return;
+      }
       registrantsTitle.textContent = state.type === "contacts" ? "Contacts" : `${label} Registrants`;
       if (!rows.length) {
         rowsElement.innerHTML = `<tr><td colspan="9">No ${label.toLowerCase()} match the current filters.</td></tr>`;
@@ -866,17 +1067,19 @@
     }
 
     function render() {
+      syncViewPanels();
       renderMetrics();
       renderEventOptions();
       renderRegistrationInvites();
       renderPartnerInvites();
-      renderRows();
+      if (isRecordsView()) renderRows();
     }
 
     async function loadCrm() {
       setNotice("Loading CRM...");
       try {
-        const type = typeFilter.value || "contacts";
+        const type = isRecordsView() ? recordsTypeForView() : (typeFilter.value || "contacts");
+        typeFilter.value = type;
         state = await fetch(`${api}?type=${encodeURIComponent(type)}`).then(readJson);
         typeFilter.value = state.type || type;
         const noun = state.type === "contacts" ? "contact" : "registrant";
@@ -1029,11 +1232,19 @@
       input.addEventListener("change", renderRows);
     });
 
-    typeFilter.addEventListener("change", loadCrm);
+    typeFilter.addEventListener("change", () => {
+      const nextView = typeFilter.value === "partner" ? "partners-company" : typeFilter.value;
+      activeView = nextView || "contacts";
+      loadCrm();
+    });
+
+    navButtons.forEach((button) => {
+      button.addEventListener("click", () => setActiveView(button.dataset.view));
+    });
 
     refreshButton.addEventListener("click", loadCrm);
     downloadButton.addEventListener("click", () => {
-      window.location.href = `${api}?type=${encodeURIComponent(typeFilter.value || "contacts")}&download=csv`;
+      window.location.href = `${api}?type=${encodeURIComponent(recordsTypeForView())}&download=csv`;
     });
 
     partnerInviteForm.addEventListener("submit", async (event) => {
