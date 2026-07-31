@@ -25,9 +25,16 @@
 
     * { box-sizing: border-box; }
 
+    html {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
+      max-width: 100%;
+      overflow-x: hidden;
       color: var(--text);
       background:
         radial-gradient(circle at 14% 8%, rgba(22, 102, 255, 0.28), transparent 34rem),
@@ -68,7 +75,8 @@
     .top-nav a { color: var(--cyan); text-decoration: none; font-weight: 800; }
 
     main {
-      width: min(1500px, calc(100% - 2rem));
+      width: min(1500px, calc(100vw - 2rem));
+      max-width: 100%;
       margin: 0 auto;
       padding: 2rem 0 4rem;
     }
@@ -78,6 +86,9 @@
       grid-template-columns: 18rem minmax(0, 1fr);
       gap: 1rem;
       align-items: start;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .side-nav {
@@ -116,11 +127,20 @@
       display: grid;
       gap: 1rem;
       min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .view-section {
+      min-width: 0;
+      max-width: 100%;
     }
 
     .view-section[hidden] { display: none !important; }
 
     section {
+      min-width: 0;
+      max-width: 100%;
       background:
         linear-gradient(180deg, rgba(27, 35, 51, 0.92), rgba(10, 15, 30, 0.78)),
         var(--slate);
@@ -141,6 +161,17 @@
         linear-gradient(110deg, rgba(22, 102, 255, 0.28), transparent 46%),
         radial-gradient(circle at 82% 20%, rgba(0, 230, 255, 0.16), transparent 24rem),
         rgba(27, 35, 51, 0.64);
+    }
+
+    .crm-content .hero {
+      margin-bottom: 0;
+      min-height: 220px;
+    }
+
+    .crm-content .hero h1 {
+      max-width: 18ch;
+      font-size: clamp(2rem, 4vw, 3.7rem);
+      line-height: 0.98;
     }
 
     .hero-copy { display: grid; gap: 1rem; }
@@ -188,20 +219,26 @@
     .metric.warn strong { color: var(--warning); }
 
     .toolbar {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
       align-items: end;
       margin-bottom: 1rem;
       padding: 1.25rem;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .record-type-field { display: none; }
 
-    .panel { padding: 1.25rem; }
+    .panel {
+      padding: 1.25rem;
+      overflow: hidden;
+    }
 
     label { display: grid; gap: 0.4rem; color: var(--muted-blue); }
 
     input, select, textarea, button {
       width: 100%;
+      min-width: 0;
       border: 1px solid var(--line);
       border-radius: 6px;
       padding: 0.78rem 0.9rem;
@@ -246,7 +283,12 @@
 
     .notice.error { border-color: rgba(255, 99, 123, 0.62); color: #ffc7d0; }
     .notice.ok { border-color: rgba(0, 230, 255, 0.56); color: var(--ok); }
-    .table-wrap { overflow: auto; }
+    .table-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
 
     table {
       width: 100%;
@@ -407,15 +449,6 @@
   </header>
 
   <main>
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">Registrant CRM</p>
-        <h1>Registration data, ready for follow-up.</h1>
-        <p>Guest, member, and partner registrations are added here with contact details, event history, and phone confirmation status.</p>
-      </div>
-      <div class="metrics" id="metrics"></div>
-    </section>
-
     <div class="crm-shell">
       <aside class="side-nav" aria-label="CRM sections">
         <button class="active" type="button" data-view="contacts">Contacts</button>
@@ -428,6 +461,15 @@
       </aside>
 
       <div class="crm-content">
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Registrant CRM</p>
+            <h1>Registration data, ready for follow-up.</h1>
+            <p>Guest, member, and partner registrations are added here with contact details, event history, and phone confirmation status.</p>
+          </div>
+          <div class="metrics" id="metrics"></div>
+        </section>
+
         <div class="view-section" data-view-panel="records">
     <section class="toolbar">
       <label class="record-type-field">
