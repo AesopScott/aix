@@ -293,7 +293,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1680px;
+      min-width: 1520px;
     }
 
     th, td {
@@ -627,7 +627,6 @@
         <table>
           <thead>
             <tr>
-              <th>Registered</th>
               <th>Registrant</th>
               <th>Company</th>
               <th>Contact</th>
@@ -636,7 +635,7 @@
               <th>Publication</th>
               <th>Phone</th>
               <th>Status</th>
-              <th>Profile Access</th>
+              <th>Events Attended</th>
               <th>CRM Notes</th>
             </tr>
           </thead>
@@ -948,27 +947,7 @@
     }
 
     function memberAccessCell(row) {
-      if (state.type === "contacts") {
-        return `<span class="pill">${Number(row.attendedCount || 0)} attended</span>`;
-      }
-      if (state.type === "guest") {
-        return '<span class="pill">Guest registration</span>';
-      }
-      const isPartner = state.type === "partner";
-      const password = isPartner ? row.partnerPassword : row.memberPassword;
-      const hasPassword = Boolean(password);
-      const label = isPartner ? "partner" : "member";
-      const profilePath = isPartner ? "/partner-profile/" : "/member-profile/";
-      return `
-        <div class="member-access-cell">
-          ${memberTierSelect(row)}
-          <span class="pill ${hasPassword ? "" : "warn"}">${hasPassword ? "Password generated" : `No ${label} password`}</span>
-          ${hasPassword ? `<code>${escapeHtml(password)}</code>` : ""}
-          <button class="compact secondary" type="button" data-password-key="${escapeHtml(row.key)}">${hasPassword ? "Reset Password" : "Generate Password"}</button>
-          <button class="compact secondary" type="button" data-profile-path="${escapeHtml(profilePath)}">Copy Profile Link</button>
-          <span class="password-output" data-password-output="${escapeHtml(row.key)}"></span>
-        </div>
-      `;
+      return `<span class="pill">${Number(row.attendedCount || 0)} attended</span>`;
     }
 
     function activeLabel() {
@@ -1197,7 +1176,7 @@
     function renderPartnerCompanyRows(rows) {
       registrantsTitle.textContent = "Partners by Company";
       if (!rows.length) {
-        rowsElement.innerHTML = '<tr><td colspan="11">No partner company records found.</td></tr>';
+        rowsElement.innerHTML = '<tr><td colspan="10">No partner company records found.</td></tr>';
         return;
       }
 
@@ -1215,10 +1194,6 @@
             .sort((a, b) => String(a.name || a.email).localeCompare(String(b.name || b.email)))
             .map((row) => `
               <tr>
-                <td>
-                  <strong>${escapeHtml(formatDate(row.createdAt))}</strong><br>
-                  <span>${escapeHtml(row.inviteCode || row.id || "")}</span>
-                </td>
                 <td>
                   <strong>${escapeHtml(row.name)}</strong><br>
                   <span>${escapeHtml(row.title || "")}</span><br>
@@ -1255,7 +1230,7 @@
 
           return `
             <tr class="company-row">
-              <td colspan="11"><strong>${escapeHtml(company)}</strong>${companyRows.length} partner contact${companyRows.length === 1 ? "" : "s"}</td>
+              <td colspan="10"><strong>${escapeHtml(company)}</strong>${companyRows.length} partner contact${companyRows.length === 1 ? "" : "s"}</td>
             </tr>
             ${contacts}
           `;
@@ -1271,16 +1246,12 @@
       }
       registrantsTitle.textContent = state.type === "contacts" ? "Contacts" : `${label} Registrants`;
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="11">No ${label.toLowerCase()} match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="10">No ${label.toLowerCase()} match the current filters.</td></tr>`;
         return;
       }
 
       rowsElement.innerHTML = rows.map((row) => `
         <tr>
-          <td>
-            <strong>${escapeHtml(formatDate(row.createdAt || row.latestRegisteredAt))}</strong><br>
-            <span>${escapeHtml(row.inviteCode || row.id || "")}</span>
-          </td>
           <td>
             <strong>${escapeHtml(row.name)}</strong><br>
             <span>${escapeHtml(row.title || "")}</span>
