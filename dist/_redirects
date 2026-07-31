@@ -36,5 +36,5 @@
 /virtual-events /virtual/ 301
 /events /events/ 301
 /events/* /events/index.html 200
-/book-* /book-link.html 200
-/book-*/* /book-link.html 200
+/book-* /booking-profile.html 200
+/book-*/* /booking-profile.html 200
