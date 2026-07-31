@@ -79,7 +79,7 @@ function isLikelyPhone(phone) {
   return digits.length >= 10 && digits.length <= 15;
 }
 
-function cleanPayload(payload) {
+function cleanPayload(payload, type = "") {
   return {
     inviteCode: cleanString(payload?.inviteCode),
     name: cleanString(payload?.name),
@@ -87,7 +87,7 @@ function cleanPayload(payload) {
     title: cleanString(payload?.title),
     industry: cleanString(payload?.industry),
     email: cleanString(payload?.email).toLowerCase(),
-    phone: cleanPhone(payload?.phone),
+    phone: type === "guest" ? cleanString(payload?.phone) : cleanPhone(payload?.phone),
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
     isPresenter: cleanBoolean(payload?.isPresenter),
     isRoundtableLeader: cleanBoolean(payload?.isRoundtableLeader),
@@ -111,7 +111,7 @@ function inviteMeta(inviteRecord) {
   };
 }
 
-function validateRegistration(registration) {
+function validateRegistration(registration, type = "") {
   if (!/^\d{6}$/.test(registration.inviteCode)) return "Enter a valid six-digit invite code.";
   if (!registration.name) return "Name is required.";
   if (!registration.company) return "Company is required.";
@@ -120,7 +120,11 @@ function validateRegistration(registration) {
   if (!registration.email) return "Company email is required.";
   if (!isValidEmail(registration.email)) return "Enter a valid email address.";
   if (isBlockedEmail(registration.email)) return "Gmail and Googlemail addresses are not accepted.";
-  if (!isLikelyPhone(registration.phone)) return "Enter a valid mobile phone number.";
+  if (type === "guest") {
+    if (!registration.phone) return "Phone number is required.";
+  } else if (!isLikelyPhone(registration.phone)) {
+    return "Enter a valid mobile phone number.";
+  }
   if (!acceptedPhoneStatuses.has(registration.phoneVerificationStatus)) {
     return "Phone verification status is required.";
   }
@@ -244,8 +248,8 @@ export async function handlePublicRegistration({ request, env }, type) {
   }
 
   const payload = await request.json().catch(() => null);
-  const registration = normalizeRegistrationForType(type, cleanPayload(payload));
-  const validationError = validateRegistration(registration);
+  const registration = normalizeRegistrationForType(type, cleanPayload(payload, type));
+  const validationError = validateRegistration(registration, type);
   if (validationError) return json({ error: validationError }, { status: 400 });
 
   const inviteValidation = await validateInviteCode(env, type, registration.inviteCode);

@@ -648,7 +648,7 @@
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
     payload.email = String(payload.email || '').trim();
-    payload.phone = normalizePhone(payload.phone);
+    payload.phone = String(payload.phone || '').trim();
     payload.isPresenter = formData.has('isPresenter');
     payload.isRoundtableLeader = formData.has('isRoundtableLeader');
     payload.publicationUseName = formData.has('publicationUseName');
