@@ -400,66 +400,6 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/crm", "mojoaisummits.com/api/crm/*"]
   },
   {
-    id: "api-live-crm-contacts",
-    kind: "api",
-    group: "APIs",
-    label: "CRM Contacts API",
-    summary: "Contact records for the live CRM application.",
-    mode: "allowlist",
-    matches: [{ exact: "/api/contacts" }, { prefix: "/api/contacts/" }],
-    domains: ["mojoaisummits.com/api/contacts", "mojoaisummits.com/api/contacts/*"]
-  },
-  {
-    id: "api-live-crm-stats",
-    kind: "api",
-    group: "APIs",
-    label: "CRM Stats API",
-    summary: "CRM dashboard counts for the live CRM application.",
-    mode: "allowlist",
-    matches: [{ exact: "/api/stats" }, { prefix: "/api/stats/" }],
-    domains: ["mojoaisummits.com/api/stats", "mojoaisummits.com/api/stats/*"]
-  },
-  {
-    id: "api-live-crm-compat",
-    kind: "api",
-    group: "APIs",
-    label: "CRM Compatibility API",
-    summary: "Legacy CRM app endpoints for companies, deals, stages, fields, integrations, and invite links.",
-    mode: "allowlist",
-    matches: [
-      { exact: "/api/companies" },
-      { prefix: "/api/companies/" },
-      { exact: "/api/deals" },
-      { prefix: "/api/deals/" },
-      { exact: "/api/stages" },
-      { prefix: "/api/stages/" },
-      { exact: "/api/custom-fields" },
-      { prefix: "/api/custom-fields/" },
-      { exact: "/api/integrations" },
-      { prefix: "/api/integrations/" },
-      { exact: "/api/vip-invite-codes" },
-      { prefix: "/api/vip-invite-codes/" },
-      { exact: "/api/activities" },
-      { prefix: "/api/activities/" }
-    ],
-    domains: [
-      "mojoaisummits.com/api/companies",
-      "mojoaisummits.com/api/companies/*",
-      "mojoaisummits.com/api/deals",
-      "mojoaisummits.com/api/deals/*",
-      "mojoaisummits.com/api/stages",
-      "mojoaisummits.com/api/stages/*",
-      "mojoaisummits.com/api/custom-fields",
-      "mojoaisummits.com/api/custom-fields/*",
-      "mojoaisummits.com/api/integrations",
-      "mojoaisummits.com/api/integrations/*",
-      "mojoaisummits.com/api/vip-invite-codes",
-      "mojoaisummits.com/api/vip-invite-codes/*",
-      "mojoaisummits.com/api/activities",
-      "mojoaisummits.com/api/activities/*"
-    ]
-  },
-  {
     id: "api-partner-profile",
     kind: "api",
     group: "APIs",
