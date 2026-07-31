@@ -9,10 +9,17 @@ import {
   saveEmployee
 } from "../../_scheduling.js";
 
-async function requireAdmin(request, env, data = {}) {
+function hasSchedulingAccess(user, data = {}) {
+  return canManageAccess(user) || (
+    data.auth?.accessControlEnabled === true &&
+    data.auth?.email === user.email
+  );
+}
+
+async function requireSchedulingAccess(request, env, data = {}) {
   const user = data?.auth?.email ? data.auth : await getSessionUser(request, env);
-  if (!user) return { response: json({ error: "Sign in with a Mojo AI Summits admin account." }, { status: 401 }) };
-  if (!canManageAccess(user)) return { response: json({ error: "Only owners and admins can manage scheduling." }, { status: 403 }) };
+  if (!user) return { response: json({ error: "Sign in with a Mojo AI Summits account approved for scheduling." }, { status: 401 }) };
+  if (!hasSchedulingAccess(user, data)) return { response: json({ error: "This account is not approved to manage scheduling." }, { status: 403 }) };
   return { user };
 }
 
@@ -20,7 +27,7 @@ export async function onRequestGet({ request, env, data }) {
   const storageError = requireStore(env);
   if (storageError) return storageError;
 
-  const access = await requireAdmin(request, env, data);
+  const access = await requireSchedulingAccess(request, env, data);
   if (access.response) return access.response;
 
   const employees = await listEmployees(env, { includeInactive: true });
@@ -54,7 +61,7 @@ export async function onRequestPost({ request, env, data }) {
   const storageError = requireStore(env);
   if (storageError) return storageError;
 
-  const access = await requireAdmin(request, env, data);
+  const access = await requireSchedulingAccess(request, env, data);
   if (access.response) return access.response;
 
   const input = await request.json().catch(() => null);

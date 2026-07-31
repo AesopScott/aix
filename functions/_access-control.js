@@ -99,7 +99,7 @@ export const DEFAULT_ACCESS_RULES = [
     label: "Scheduling Admin",
     summary: "Employee booking profile and availability configuration.",
     mode: "allowlist",
-    defaultGroupIds: ["admin"],
+    defaultGroupIds: ["mojo-team"],
     matches: [{ exact: "/schedule-admin" }, { prefix: "/schedule-admin/" }],
     domains: ["mojoaisummits.com/schedule-admin", "mojoaisummits.com/schedule-admin/*"]
   },
@@ -364,7 +364,7 @@ export const DEFAULT_ACCESS_RULES = [
     label: "Scheduling Admin API",
     summary: "Protected employee booking profile configuration.",
     mode: "allowlist",
-    defaultGroupIds: ["admin"],
+    defaultGroupIds: ["mojo-team"],
     matches: [{ exact: "/api/scheduling/admin" }, { prefix: "/api/scheduling/admin/" }],
     domains: ["mojoaisummits.com/api/scheduling/admin", "mojoaisummits.com/api/scheduling/admin/*"]
   },
@@ -375,7 +375,7 @@ export const DEFAULT_ACCESS_RULES = [
     label: "Scheduling Calendar OAuth API",
     summary: "Protected authenticated calendar connection endpoints.",
     mode: "allowlist",
-    defaultGroupIds: ["admin"],
+    defaultGroupIds: ["mojo-team"],
     matches: [{ exact: "/api/scheduling/oauth" }, { prefix: "/api/scheduling/oauth/" }],
     domains: ["mojoaisummits.com/api/scheduling/oauth", "mojoaisummits.com/api/scheduling/oauth/*"]
   },

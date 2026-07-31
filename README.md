@@ -39,12 +39,15 @@ Access modes:
 
 These modes are staged until `Enable access control` is turned on in `/access/`.
 
+Scheduling admin access is controlled by the route policy. Assign `/schedule-admin/`, `/api/scheduling/admin`, and `/api/scheduling/oauth` to `Mojo team` in `/access/` when employee schedulers should manage booking profiles without receiving full access-admin privileges.
+
 Protected internal routes:
 
 - `/admin/`
 - `/schedule-admin/`
 - `/api/access-config`, `/api/access-users`, and `/api/access-invites`
 - `/api/scheduling/admin`
+- `/api/scheduling/oauth`
 - `/crm/` and `/api/crm`
 - `/member-profile/` and `/api/member-profile`
 - `/partner-profile/` and `/api/partner-profile`
