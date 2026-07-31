@@ -514,13 +514,6 @@
             <div class="field full">
               <p class="message" id="phoneMessage"></p>
             </div>
-            <div class="field full">
-              <label>Event role</label>
-              <div class="checkbox-group">
-                <label class="checkbox-row"><input type="checkbox" name="isPresenter" value="true"> I am a presenter - live events only</label>
-                <label class="checkbox-row"><input type="checkbox" name="isRoundtableLeader" value="true"> I am leading a round table - live events only</label>
-              </div>
-            </div>
           </div>
           <input type="hidden" id="phoneVerificationStatus" name="phoneVerificationStatus" value="unverified">
           <p class="message error" id="formError"></p>
@@ -735,8 +728,6 @@
     const payload = Object.fromEntries(formData.entries());
     payload.email = String(payload.email || '').trim();
     payload.phone = normalizePhone(payload.phone);
-    payload.isPresenter = formData.has('isPresenter');
-    payload.isRoundtableLeader = formData.has('isRoundtableLeader');
     payload.publicationUseName = formData.has('publicationUseName');
     payload.publicationUseCompany = formData.has('publicationUseCompany');
     payload.phoneVerificationStatus = verificationStatus.value;

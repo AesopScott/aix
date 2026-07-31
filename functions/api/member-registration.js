@@ -54,8 +54,6 @@ function cleanPayload(payload) {
     email: cleanString(payload?.email).toLowerCase(),
     phone: cleanPhone(payload?.phone),
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
-    isPresenter: cleanBoolean(payload?.isPresenter),
-    isRoundtableLeader: cleanBoolean(payload?.isRoundtableLeader),
     publicationUseName: cleanBoolean(payload?.publicationUseName),
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany)
   };

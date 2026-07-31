@@ -513,14 +513,6 @@
             <div class="field full">
               <p class="message" id="phoneMessage"></p>
             </div>
-            <div class="field full">
-              <label>Event role</label>
-              <div class="checkbox-group">
-                <label class="checkbox-row"><input type="checkbox" name="isPresenter" value="true"> I am a presenter - live events only</label>
-                <label class="checkbox-row"><input type="checkbox" name="isRoundtableLeader" value="true"> I am leading a round table - live events only</label>
-                <label class="checkbox-row"><input type="checkbox" name="isFeaturedMember" value="true"> I am a featured member. I understand that I must be on screen and dressed professionally.</label>
-              </div>
-            </div>
           </div>
           <input type="hidden" id="phoneVerificationStatus" name="phoneVerificationStatus" value="unverified">
           <p class="message error" id="formError"></p>
@@ -552,8 +544,6 @@
   const form = document.getElementById('partnerRegistrationForm');
   const success = document.getElementById('registrationSuccess');
   const verificationStatus = document.getElementById('phoneVerificationStatus');
-  const liveRoleInputs = Array.from(form.querySelectorAll('input[name="isPresenter"], input[name="isRoundtableLeader"]'));
-  const virtualRoleInput = form.querySelector('input[name="isFeaturedMember"]');
   const adminPreviewCode = '4321';
   let adminPreviewMode = false;
 
@@ -589,30 +579,6 @@
   function normalizePhone(phone){
     return String(phone || '').replace(/[^\d+]/g, '');
   }
-
-  function setRoleDisabled(input, disabled){
-    input.disabled = disabled;
-    input.closest('.checkbox-row')?.classList.toggle('disabled', disabled);
-  }
-
-  function syncEventRoleAvailability(changedInput){
-    if (changedInput === virtualRoleInput && virtualRoleInput.checked) {
-      liveRoleInputs.forEach((input) => { input.checked = false; });
-    }
-    if (liveRoleInputs.includes(changedInput) && changedInput.checked) {
-      virtualRoleInput.checked = false;
-    }
-
-    const hasLiveRole = liveRoleInputs.some((input) => input.checked);
-    const hasVirtualRole = virtualRoleInput.checked;
-    setRoleDisabled(virtualRoleInput, hasLiveRole);
-    liveRoleInputs.forEach((input) => setRoleDisabled(input, hasVirtualRole));
-  }
-
-  [...liveRoleInputs, virtualRoleInput].forEach((input) => {
-    input.addEventListener('change', () => syncEventRoleAvailability(input));
-  });
-  syncEventRoleAvailability();
 
   async function validateInviteCode(code){
     const response = await fetch(`/crm/api/public/partner-invite-codes/${encodeURIComponent(code)}`);
@@ -764,9 +730,6 @@
     const payload = Object.fromEntries(formData.entries());
     payload.email = String(payload.email || '').trim();
     payload.phone = normalizePhone(payload.phone);
-    payload.isPresenter = formData.has('isPresenter');
-    payload.isRoundtableLeader = formData.has('isRoundtableLeader');
-    payload.isFeaturedMember = formData.has('isFeaturedMember');
     payload.publicationUseName = formData.has('publicationUseName');
     payload.publicationUseCompany = formData.has('publicationUseCompany');
     payload.phoneVerificationStatus = verificationStatus.value;

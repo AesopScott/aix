@@ -83,10 +83,6 @@ function cleanPayload(payload, type = "") {
     email: cleanString(payload?.email).toLowerCase(),
     phone: type === "guest" ? cleanString(payload?.phone) : cleanPhone(payload?.phone),
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
-    isPresenter: cleanBoolean(payload?.isPresenter),
-    isRoundtableLeader: cleanBoolean(payload?.isRoundtableLeader),
-    isFeaturedGuest: cleanBoolean(payload?.isFeaturedGuest),
-    isFeaturedMember: cleanBoolean(payload?.isFeaturedMember),
     publicationUseName: cleanBoolean(payload?.publicationUseName),
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany)
   };
