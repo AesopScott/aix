@@ -217,6 +217,7 @@ function publicEmployee(employee) {
     title: employee.title,
     bio: employee.bio,
     photoUrl: employee.photoUrl || DEFAULT_PHOTOS[employee.slug] || "",
+    bookingUrl: `/book-${employee.slug}/`,
     timezone: employee.timezone,
     active: employee.active,
     meetingTypes: employee.meetingTypes

@@ -243,6 +243,27 @@
       font-size: 0.72rem;
     }
 
+    .booking-link-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(5.5rem, auto);
+      gap: 0.45rem;
+    }
+
+    .booking-link-row a {
+      display: inline-grid;
+      place-items: center;
+      min-height: 2.72rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--cyan);
+      background: rgba(10, 15, 30, 0.78);
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
     .status {
       border: 1px solid rgba(0, 230, 255, 0.18);
       border-radius: 8px;
@@ -286,7 +307,7 @@
       <div>
         <h1>Scheduling</h1>
         <p id="graphStatus">Checking calendar connection...</p>
-        <p class="build-stamp" id="buildStamp">Build 2026.07.31.5-team-images</p>
+        <p class="build-stamp" id="buildStamp">Build 2026.07.31.6-profile-links</p>
       </div>
       <div class="employee-list" id="employees"></div>
       <button type="button" class="secondary" id="newEmployee">New Profile</button>
@@ -298,6 +319,13 @@
         <label>
           Slug
           <input name="slug" placeholder="gina">
+        </label>
+        <label>
+          Booking Link
+          <span class="booking-link-row">
+            <input name="bookingUrl" readonly>
+            <a id="bookingUrlOpen" href="/book/" target="_blank" rel="noopener">Open</a>
+          </span>
         </label>
         <label>
           Active
@@ -393,7 +421,7 @@
   </main>
 
   <script>
-    const SCHEDULING_ADMIN_BUILD = "2026.07.31.5-team-images";
+    const SCHEDULING_ADMIN_BUILD = "2026.07.31.6-profile-links";
     const employeesEl = document.querySelector("#employees");
     const graphStatusEl = document.querySelector("#graphStatus");
     const buildStampEl = document.querySelector("#buildStamp");
@@ -404,6 +432,7 @@
     const addCalendarFeedUrlButton = document.querySelector("#addCalendarFeedUrl");
     const microsoftCalendarRowsEl = document.querySelector("#microsoftCalendarRows");
     const calendarFeedRowsEl = document.querySelector("#calendarFeedRows");
+    const bookingUrlOpenEl = document.querySelector("#bookingUrlOpen");
     let employees = [];
     let selectedSlug = "";
     let authEmailDrafts = [""];
@@ -454,6 +483,21 @@
 
     function authUrlFor(slug, email) {
       return new URL(`/api/scheduling/oauth/start?slug=${encodeURIComponent(slug)}&email=${encodeURIComponent(email)}`, window.location.origin).toString();
+    }
+
+    function bookingPathForSlug(slug) {
+      const cleanSlug = String(slug || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+      return cleanSlug ? `/book-${cleanSlug}/` : "/book/";
+    }
+
+    function bookingUrlForSlug(slug) {
+      return new URL(bookingPathForSlug(slug), window.location.origin).toString();
+    }
+
+    function refreshBookingLink() {
+      const url = bookingUrlForSlug(field("slug").value);
+      field("bookingUrl").value = url;
+      bookingUrlOpenEl.href = url;
     }
 
     function syncAuthenticatedCalendarField() {
@@ -629,6 +673,7 @@
       field("minNoticeHours").value = "4";
       field("maxDaysAhead").value = "45";
       field("photoUrl").value = "";
+      refreshBookingLink();
       field("busyCalendarEmails").value = "";
       field("mirrorInviteEmails").value = "";
       authEmailDrafts = [""];
@@ -647,6 +692,7 @@
       if (!employee) return;
       selectedSlug = employee.slug;
       field("slug").value = employee.slug;
+      refreshBookingLink();
       field("active").value = employee.active === false ? "false" : "true";
       field("name").value = employee.name || "";
       field("email").value = employee.email || "";
@@ -690,6 +736,8 @@
       renderEmployees();
       if (employees[0]) loadEmployee(employees[0].slug);
     }
+
+    field("slug").addEventListener("input", refreshBookingLink);
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();

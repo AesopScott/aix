@@ -89,8 +89,8 @@ export const DEFAULT_ACCESS_RULES = [
     label: "Booking",
     summary: "Public employee booking surface.",
     mode: "public",
-    matches: [{ exact: "/book" }, { prefix: "/book/" }],
-    domains: ["mojoaisummits.com/book", "mojoaisummits.com/book/*"]
+    matches: [{ exact: "/book" }, { prefix: "/book/" }, { prefix: "/book-" }],
+    domains: ["mojoaisummits.com/book", "mojoaisummits.com/book/*", "mojoaisummits.com/book-*"]
   },
   {
     id: "schedule-admin",

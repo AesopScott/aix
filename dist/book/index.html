@@ -421,8 +421,8 @@
   <main>
     <section class="panel stack">
       <div>
-        <h1>Book time</h1>
-        <p>Choose a Mojo team member and a confirmed opening.</p>
+        <h1 id="bookingTitle">Book time</h1>
+        <p id="bookingIntro">Choose a Mojo team member and a confirmed opening.</p>
       </div>
       <div class="team-list" id="team"></div>
     </section>
@@ -487,11 +487,14 @@
       employee: null,
       meetingType: null,
       slot: null,
+      directSlug: "",
       calendarCursor: null,
       confirmedStarts: new Set()
     };
 
     const teamEl = document.querySelector("#team");
+    const bookingTitleEl = document.querySelector("#bookingTitle");
+    const bookingIntroEl = document.querySelector("#bookingIntro");
     const meetingTypeEl = document.querySelector("#meetingType");
     const dateEl = document.querySelector("#date");
     const calendarButton = document.querySelector("#calendarButton");
@@ -514,6 +517,25 @@
 
     function todayValue() {
       return new Date().toISOString().slice(0, 10);
+    }
+
+    function directBookingSlug() {
+      const directMatch = window.location.pathname.match(/^\/book-([a-z0-9-]+)\/?$/i);
+      if (directMatch) return directMatch[1].toLowerCase();
+      const queryHost = new URLSearchParams(window.location.search).get("host");
+      return String(queryHost || "").trim().toLowerCase();
+    }
+
+    function updateBookingCopy() {
+      if (state.directSlug && state.employee) {
+        bookingTitleEl.textContent = `Book ${state.employee.name}`;
+        bookingIntroEl.textContent = "Choose a confirmed opening for this team member.";
+        document.title = `Book ${state.employee.name} - Mojo AI Summits`;
+        return;
+      }
+      bookingTitleEl.textContent = "Book time";
+      bookingIntroEl.textContent = "Choose a Mojo team member and a confirmed opening.";
+      document.title = "Book Mojo AI Summits";
     }
 
     function dateFromValue(value) {
@@ -608,7 +630,10 @@
     function renderTeam() {
       teamEl.innerHTML = "";
       if (!state.employees.length) {
-        teamEl.innerHTML = '<div class="notice">No bookable team profiles yet.</div>';
+        teamEl.innerHTML = state.directSlug
+          ? '<div class="notice">This booking profile is not available.</div>'
+          : '<div class="notice">No bookable team profiles yet.</div>';
+        updateBookingCopy();
         return;
       }
 
@@ -651,10 +676,12 @@
     }
 
     function selectEmployee(slug) {
+      if (state.directSlug && slug !== state.directSlug) return;
       state.employee = state.employees.find((employee) => employee.slug === slug) || null;
       state.slot = null;
       renderTeam();
       renderMeetingTypes();
+      updateBookingCopy();
       loadAvailability();
     }
 
@@ -691,10 +718,15 @@
       const response = await fetch("/api/scheduling/team", { cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Unable to load team.");
-      state.employees = payload.employees || [];
+      const allEmployees = payload.employees || [];
+      state.directSlug = directBookingSlug();
+      state.employees = state.directSlug
+        ? allEmployees.filter((employee) => employee.slug === state.directSlug)
+        : allEmployees;
       state.employee = state.employees[0] || null;
       renderTeam();
       renderMeetingTypes();
+      updateBookingCopy();
       if (state.employee) await loadAvailability();
     }
 
