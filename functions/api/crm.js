@@ -1149,13 +1149,10 @@ export async function onRequestPost({ request, env, data }) {
   if (payload?.action === "create-partner-invite") {
     try {
       const invite = await createPartnerInviteCode(env, payload, access.email);
-      const invites = await partnerInviteCodes(env);
       return json({
         ok: true,
         invite,
-        partnerInviteCodes: invites,
-        registrationInviteCodes: await registrationInviteCodes(env),
-        upcomingEvents: await upcomingEvents(env)
+        partnerInviteCodes: [invite]
       }, { status: 201 });
     } catch (error) {
       return json({ error: error.message || "Partner invite code could not be created." }, { status: 500 });
@@ -1168,9 +1165,7 @@ export async function onRequestPost({ request, env, data }) {
       return json({
         ok: true,
         invite,
-        partnerInviteCodes: await partnerInviteCodes(env),
-        registrationInviteCodes: await registrationInviteCodes(env),
-        upcomingEvents: await upcomingEvents(env)
+        registrationInviteCodes: [invite]
       }, { status: 201 });
     } catch (error) {
       return json({ error: error.message || "Registration invite code could not be created." }, { status: 500 });

@@ -811,11 +811,21 @@
       registrationInviteResult.innerHTML = "";
     }
 
+    function showRegistrationInviteProgress(message) {
+      registrationInviteResult.innerHTML = `<p>${escapeHtml(message)}</p>`;
+      registrationInviteResult.classList.add("visible");
+    }
+
+    function showRegistrationInviteError(message) {
+      registrationInviteResult.innerHTML = `<p>${escapeHtml(message)}</p>`;
+      registrationInviteResult.classList.add("visible");
+    }
+
     function showRegistrationInviteResult(invite, url, copied) {
       const role = guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type);
       registrationInviteResult.innerHTML = `
         <div>
-          <strong>Guest invite link generated.</strong>
+          <strong>${escapeHtml(role)} invite link generated.</strong>
           <p>${copied ? "The link was copied to your clipboard." : "Copy the link below, or open the Guest Invite page to review it."}</p>
           <p><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a></p>
           <p>${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Invited guest")} | ${escapeHtml(role)} | ${escapeHtml(invite.eventName || "Event invite")}</p>
@@ -1042,7 +1052,20 @@
     }
 
     function updateRegistrationInviteSubmit() {
-      registrationInviteSubmit.textContent = "Generate Guest Link";
+      const role = guestRegistrationTypeLabel(registrationInviteType.value || "guest");
+      registrationInviteSubmit.textContent = `Generate ${role} Link`;
+    }
+
+    function mergeInviteList(existingInvites, newInvites) {
+      const merged = [];
+      const seen = new Set();
+      [...(newInvites || []), ...(existingInvites || [])].forEach((invite) => {
+        const id = invite?.key || invite?.code;
+        if (!id || seen.has(id)) return;
+        seen.add(id);
+        merged.push(invite);
+      });
+      return merged;
     }
 
     async function copyText(value) {
@@ -1607,6 +1630,7 @@
 
     partnerInviteForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      const submitButton = partnerInviteForm.querySelector('button[type="submit"]');
       const formData = new FormData(partnerInviteForm);
       const selected = partnerInviteEvent.selectedOptions[0];
       const payload = {
@@ -1619,19 +1643,28 @@
         return;
       }
       setNotice("Generating partner invite...");
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Generating...";
+      }
       try {
         const data = await fetch(api, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ ...payload, action: "create-partner-invite" })
         }).then(readJson);
-        state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
+        state.partnerInviteCodes = mergeInviteList(state.partnerInviteCodes, data.partnerInviteCodes || (data.invite ? [data.invite] : []));
         renderPartnerInvites();
         const url = partnerRegistrationUrl(data.invite || {});
         await copyText(url);
         setNotice("Partner invite link generated and copied if clipboard access is available.", "ok");
       } catch (error) {
         setNotice(error.message, "error");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = "Generate Invite";
+        }
       }
     });
 
@@ -1659,24 +1692,29 @@
         return;
       }
       setNotice("Generating registration invite...");
-      clearRegistrationInviteResult();
+      registrationInviteSubmit.disabled = true;
+      registrationInviteSubmit.textContent = "Generating...";
+      showRegistrationInviteProgress("Generating registration invite link...");
       try {
         const data = await fetch(api, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload)
         }).then(readJson);
-        state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.registrationInviteCodes = mergeInviteList(state.registrationInviteCodes, data.registrationInviteCodes || (data.invite ? [data.invite] : []));
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         renderEventOptions();
         renderRegistrationInvites();
         const url = registrationInviteUrl(data.invite || {});
         const copied = await copyText(url);
         showRegistrationInviteResult(data.invite || {}, url, copied);
-        setNotice("Guest invite link generated successfully.", "ok");
+        setNotice(`${guestRegistrationTypeLabel(data.invite?.guestRegistrationType || data.invite?.registrationRole || payload.guestRegistrationType)} invite link generated successfully.`, "ok");
       } catch (error) {
-        clearRegistrationInviteResult();
+        showRegistrationInviteError(error.message || "Registration invite link could not be generated.");
         setNotice(error.message, "error");
+      } finally {
+        registrationInviteSubmit.disabled = false;
+        updateRegistrationInviteSubmit();
       }
     });
 
