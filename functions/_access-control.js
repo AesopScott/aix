@@ -17,8 +17,8 @@ export const DEFAULT_ACCESS_GROUPS = [
   },
   {
     id: "mojo-team",
-    label: "Mojo team",
-    summary: "People who work with Mojo AI Summits.",
+    label: "Teams access",
+    summary: "Internal Mojo team members who can use protected operating tools.",
     emails: []
   },
   {
@@ -390,12 +390,23 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/scheduling", "mojoaisummits.com/api/scheduling/*"]
   },
   {
+    id: "api-scheduling-team",
+    kind: "api",
+    group: "APIs",
+    label: "Scheduling Team API",
+    summary: "Public team directory endpoint used by the booking surface.",
+    mode: "public",
+    matches: [{ exact: "/api/scheduling/team" }, { prefix: "/api/scheduling/team/" }],
+    domains: ["mojoaisummits.com/api/scheduling/team", "mojoaisummits.com/api/scheduling/team/*"]
+  },
+  {
     id: "api-crm",
     kind: "api",
     group: "APIs",
     label: "CRM API",
-    summary: "Member registrant records and exports.",
+    summary: "Protected CRM contacts, invite links, diagnostics, notes, and exports.",
     mode: "allowlist",
+    defaultGroupIds: ["mojo-team"],
     matches: [{ exact: "/api/crm" }, { prefix: "/api/crm/" }],
     domains: ["mojoaisummits.com/api/crm", "mojoaisummits.com/api/crm/*"]
   },
@@ -483,6 +494,16 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/member-registration", "mojoaisummits.com/api/member-registration/*"]
   },
   {
+    id: "api-member-invite-codes",
+    kind: "api",
+    group: "APIs",
+    label: "Member Invite Codes API",
+    summary: "Public member invite-code validation endpoint used by member registration.",
+    mode: "public",
+    matches: [{ exact: "/api/member-invite-codes" }, { prefix: "/api/member-invite-codes/" }],
+    domains: ["mojoaisummits.com/api/member-invite-codes", "mojoaisummits.com/api/member-invite-codes/*"]
+  },
+  {
     id: "api-guest-registration",
     kind: "api",
     group: "APIs",
@@ -491,6 +512,26 @@ export const DEFAULT_ACCESS_RULES = [
     mode: "public",
     matches: [{ exact: "/api/guest-registration" }, { prefix: "/api/guest-registration/" }],
     domains: ["mojoaisummits.com/api/guest-registration", "mojoaisummits.com/api/guest-registration/*"]
+  },
+  {
+    id: "api-guest-invite-codes",
+    kind: "api",
+    group: "APIs",
+    label: "Guest Invite Codes API",
+    summary: "Public guest invite-code validation endpoint used by guest registration.",
+    mode: "public",
+    matches: [{ exact: "/api/guest-invite-codes" }, { prefix: "/api/guest-invite-codes/" }],
+    domains: ["mojoaisummits.com/api/guest-invite-codes", "mojoaisummits.com/api/guest-invite-codes/*"]
+  },
+  {
+    id: "api-partner-invite-codes",
+    kind: "api",
+    group: "APIs",
+    label: "Partner Invite Codes API",
+    summary: "Public partner invite-code validation endpoint used by partner registration.",
+    mode: "public",
+    matches: [{ exact: "/api/partner-invite-codes" }, { prefix: "/api/partner-invite-codes/" }],
+    domains: ["mojoaisummits.com/api/partner-invite-codes", "mojoaisummits.com/api/partner-invite-codes/*"]
   },
   {
     id: "crm-api-public-member-registration",
