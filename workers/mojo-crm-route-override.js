@@ -22,6 +22,28 @@ function noStore(response) {
   });
 }
 
+function rewriteRedirect(response, request) {
+  if (response.status < 300 || response.status >= 400) return response;
+
+  const location = response.headers.get("location");
+  if (!location) return response;
+
+  const requestUrl = new URL(request.url);
+  const nextLocation = new URL(location, PAGES_ORIGIN);
+  if (nextLocation.origin === PAGES_ORIGIN) {
+    nextLocation.protocol = requestUrl.protocol;
+    nextLocation.host = requestUrl.host;
+  }
+
+  const headers = new Headers(response.headers);
+  headers.set("location", nextLocation.toString());
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -49,6 +71,6 @@ export default {
     }
 
     const response = await fetch(target, init);
-    return noStore(response);
+    return noStore(rewriteRedirect(response, request));
   }
 };
