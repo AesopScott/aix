@@ -293,7 +293,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1520px;
+      min-width: 1400px;
     }
 
     th, td {
@@ -633,7 +633,6 @@
               <th>Event</th>
               <th>Role</th>
               <th>Publication</th>
-              <th>Phone</th>
               <th>Status</th>
               <th>Events Attended</th>
               <th>CRM Notes</th>
@@ -890,7 +889,7 @@
       const events = row.events || [];
       if (state.type === "contacts") {
         if (!events.length) return '<span class="pill warn">No event</span>';
-        return events.slice(0, 3).map((event) => {
+        return events.map((event) => {
           const label = event.eventName || event.inviteCode || "Registration";
           return `<span class="pill">${escapeHtml(label)}</span>`;
         }).join("");
@@ -902,7 +901,7 @@
       if (state.type === "contacts") {
         const events = row.events || [];
         if (!events.length) return '<span class="pill warn">No role</span>';
-        return events.slice(0, 3).map((event) => {
+        return events.map((event) => {
           return `<span class="pill">${escapeHtml(roleLabelFromEvent(event))}</span>`;
         }).join("");
       }
@@ -1176,7 +1175,7 @@
     function renderPartnerCompanyRows(rows) {
       registrantsTitle.textContent = "Partners by Company";
       if (!rows.length) {
-        rowsElement.innerHTML = '<tr><td colspan="10">No partner company records found.</td></tr>';
+        rowsElement.innerHTML = '<tr><td colspan="9">No partner company records found.</td></tr>';
         return;
       }
 
@@ -1210,7 +1209,6 @@
                 <td>${eventBadges(row)}</td>
                 <td><div class="role-list">${roleBadges(row)}</div></td>
                 <td><div class="role-list">${publicationBadges(row)}</div></td>
-                <td>${phonePill(row)}</td>
                 <td>
                   <select class="inline-select" data-status-key="${escapeHtml(row.key)}">
                     ${["new", "contacted", "confirmed", "accepted", "waitlist", "declined"].map((status) => `
@@ -1230,7 +1228,7 @@
 
           return `
             <tr class="company-row">
-              <td colspan="10"><strong>${escapeHtml(company)}</strong>${companyRows.length} partner contact${companyRows.length === 1 ? "" : "s"}</td>
+              <td colspan="9"><strong>${escapeHtml(company)}</strong>${companyRows.length} partner contact${companyRows.length === 1 ? "" : "s"}</td>
             </tr>
             ${contacts}
           `;
@@ -1246,7 +1244,7 @@
       }
       registrantsTitle.textContent = state.type === "contacts" ? "Contacts" : `${label} Registrants`;
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="10">No ${label.toLowerCase()} match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="9">No ${label.toLowerCase()} match the current filters.</td></tr>`;
         return;
       }
 
@@ -1273,7 +1271,6 @@
           <td><div class="role-list">${eventBadges(row)}</div></td>
           <td><div class="role-list">${roleBadges(row)}</div></td>
           <td><div class="role-list">${publicationBadges(row)}</div></td>
-          <td>${phonePill(row)}</td>
           <td>
             ${state.type === "contacts" ? `<span class="pill">${escapeHtml(contactStatusLabel(row))}</span>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
               ${["new", "contacted", "confirmed", "accepted", "waitlist", "declined"].map((status) => `
@@ -1283,7 +1280,11 @@
           </td>
           <td>${memberAccessCell(row)}</td>
           <td>
-            ${state.type === "contacts" ? `<span>${escapeHtml(row.updatedAt ? `Updated ${formatDate(row.updatedAt)}` : "")}</span>` : `<div class="notes-cell">
+            ${state.type === "contacts" ? `<div class="notes-cell">
+              <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Contact notes">${escapeHtml(row.crmNotes || "")}</textarea>
+              <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
+              <span>${escapeHtml(row.crmUpdatedAt ? `Updated ${formatDate(row.crmUpdatedAt)}` : "")}</span>
+            </div>` : `<div class="notes-cell">
               <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Follow-up notes">${escapeHtml(row.crmNotes || "")}</textarea>
               <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
             </div>`}
@@ -1396,6 +1397,22 @@
       if (!existing) return;
       setNotice("Saving CRM update...");
       try {
+        if (state.type === "contacts") {
+          state = await fetch(api, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "save-contact",
+              key,
+              email: existing.email,
+              crmNotes: changes.crmNotes ?? existing.crmNotes ?? ""
+            })
+          }).then(readJson);
+          setNotice("Contact notes saved.", "ok");
+          render();
+          return;
+        }
+
         state = await fetch(api, {
           method: "POST",
           headers: { "content-type": "application/json" },

@@ -228,6 +228,9 @@ function normalizeContactRecord(key, record = {}) {
     source: cleanString(record.source),
     registrationId: cleanString(record.registrationId),
     registrationType: cleanString(record.registrationType),
+    crmNotes: cleanString(record.crmNotes),
+    crmUpdatedAt: cleanString(record.crmUpdatedAt),
+    crmUpdatedBy: cleanString(record.crmUpdatedBy),
     contactStatus,
     publicationCount: Number.isFinite(Number(record.publicationCount)) ? Number(record.publicationCount) : 0,
     companyKey: cleanString(record.companyKey),
@@ -779,6 +782,28 @@ async function deleteContact(env, payload = {}, actor = "") {
   };
 }
 
+async function updateContact(env, payload = {}, actor = "") {
+  const requestedKey = cleanString(payload.key);
+  const email = cleanString(
+    payload.email ||
+      (requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
+        ? requestedKey.replace(registrantTypes.contacts.crmPrefix, "")
+        : requestedKey)
+  ).toLowerCase();
+  if (!email || !email.includes("@")) throw new Error("Contact email is required before updating a contact.");
+
+  const key = `${registrantTypes.contacts.crmPrefix}${email}`;
+  const existing = await readRawRecord(env, key);
+  if (!existing) throw new Error("Contact was not found.");
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+    ...existing,
+    crmNotes: cleanString(payload.crmNotes),
+    crmUpdatedAt: new Date().toISOString(),
+    crmUpdatedBy: actor || "crm"
+  }));
+}
+
 function companySlug(value) {
   return cleanString(value, 180)
     .toLowerCase()
@@ -1183,6 +1208,25 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Contact could not be deleted." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "save-contact") {
+    try {
+      await updateContact(env, payload, access.email);
+      const rows = await contacts(env);
+      return json({
+        ok: true,
+        type: "contacts",
+        label: registrantTypes.contacts.label,
+        summary: summarizeContacts(rows),
+        rows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Contact could not be updated." }, { status: 500 });
     }
   }
 
