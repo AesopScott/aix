@@ -180,6 +180,35 @@ function cleanPayload(payload, type = "") {
   };
 }
 
+async function writeRegistrationDebug(env, type, status, details = {}) {
+  if (!env?.MOJO_SUMMITS_SETUP_STATE) return;
+  const createdAt = cleanString(details.createdAt) || new Date().toISOString();
+  const id = cleanString(details.id) || crypto.randomUUID();
+  const entry = {
+    id,
+    createdAt,
+    type: cleanString(type),
+    status: cleanString(status),
+    stage: cleanString(details.stage),
+    name: cleanString(details.name),
+    email: cleanString(details.email).toLowerCase(),
+    company: cleanString(details.company),
+    inviteCode: cleanString(details.inviteCode),
+    eventName: cleanString(details.eventName),
+    eventDate: cleanString(details.eventDate),
+    contactKey: cleanString(details.contactKey),
+    registrationKeys: Array.isArray(details.registrationKeys)
+      ? details.registrationKeys.map(cleanString).filter(Boolean)
+      : [],
+    error: cleanString(details.error)
+  };
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(
+    `crm:registration-debug:${createdAt}:${id}`,
+    JSON.stringify(entry)
+  ).catch(() => null);
+}
+
 function inviteMeta(inviteRecord) {
   const record = inviteRecord?.record || {};
   return {
@@ -421,41 +450,80 @@ export async function handlePublicRegistration({ request, env }, type) {
 
   const payload = await request.json().catch(() => null);
   const registration = normalizeRegistrationForType(type, cleanPayload(payload, type));
-  const validationError = validateRegistration(registration, type);
-  if (validationError) return json({ error: validationError }, { status: 400 });
+  const debugBase = {
+    stage: "received",
+    name: registration.name,
+    email: registration.email,
+    company: registration.company,
+    inviteCode: registration.inviteCode
+  };
 
-  const inviteValidation = await validateInviteCode(env, type, registration.inviteCode);
-  if (!inviteValidation.ok) {
-    return json({ error: inviteValidation.error }, { status: inviteValidation.status });
+  try {
+    const validationError = validateRegistration(registration, type);
+    if (validationError) {
+      await writeRegistrationDebug(env, type, "rejected", {
+        ...debugBase,
+        stage: "validation",
+        error: validationError
+      });
+      return json({ error: validationError }, { status: 400 });
+    }
+
+    const inviteValidation = await validateInviteCode(env, type, registration.inviteCode);
+    if (!inviteValidation.ok) {
+      await writeRegistrationDebug(env, type, "rejected", {
+        ...debugBase,
+        stage: "invite-validation",
+        error: inviteValidation.error
+      });
+      return json({ error: inviteValidation.error }, { status: inviteValidation.status });
+    }
+
+    const createdAt = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const record = {
+      ...registration,
+      ...(inviteValidation.invite || {}),
+      id,
+      createdAt,
+      source: config.source,
+      crmType: config.crmType,
+      crmStatus: "new",
+      crmNotes: "",
+      crmUpdatedAt: "",
+      crmUpdatedBy: ""
+    };
+    const contactRefs = await upsertRegistrationContact(env, type, record, config);
+    const storedRecord = {
+      ...record,
+      ...contactRefs
+    };
+    const registrationKeys = [
+      `${config.legacyPrefix}${createdAt}:${id}`,
+      `${config.crmPrefix}${createdAt}:${id}`
+    ];
+
+    await env.MOJO_SUMMITS_SETUP_STATE.put(registrationKeys[0], JSON.stringify(storedRecord));
+    await env.MOJO_SUMMITS_SETUP_STATE.put(registrationKeys[1], JSON.stringify(storedRecord));
+    await markInviteCodeUsed(env, type, registration.inviteCode, storedRecord);
+    await writeRegistrationDebug(env, type, "stored", {
+      ...debugBase,
+      ...storedRecord,
+      stage: "complete",
+      registrationKeys
+    });
+
+    return json({
+      ok: true,
+      id,
+      createdAt
+    }, { status: 201 });
+  } catch (error) {
+    await writeRegistrationDebug(env, type, "failed", {
+      ...debugBase,
+      stage: "exception",
+      error: error.message || "Registration could not be stored."
+    });
+    return json({ error: error.message || "Registration could not be stored." }, { status: 500 });
   }
-
-  const createdAt = new Date().toISOString();
-  const id = crypto.randomUUID();
-  const record = {
-    ...registration,
-    ...(inviteValidation.invite || {}),
-    id,
-    createdAt,
-    source: config.source,
-    crmType: config.crmType,
-    crmStatus: "new",
-    crmNotes: "",
-    crmUpdatedAt: "",
-    crmUpdatedBy: ""
-  };
-  const contactRefs = await upsertRegistrationContact(env, type, record, config);
-  const storedRecord = {
-    ...record,
-    ...contactRefs
-  };
-
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${config.legacyPrefix}${createdAt}:${id}`, JSON.stringify(storedRecord));
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${config.crmPrefix}${createdAt}:${id}`, JSON.stringify(storedRecord));
-  await markInviteCodeUsed(env, type, registration.inviteCode, storedRecord);
-
-  return json({
-    ok: true,
-    id,
-    createdAt
-  }, { status: 201 });
 }

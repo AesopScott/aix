@@ -451,6 +451,49 @@
       font-size: 1rem;
     }
 
+    .debug-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+      gap: 0.75rem;
+    }
+
+    .debug-card {
+      padding: 0.85rem;
+      border: 1px solid rgba(0, 230, 255, 0.16);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.56);
+    }
+
+    .debug-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .debug-card strong {
+      color: var(--cyan);
+      font-size: 1.5rem;
+    }
+
+    .debug-list {
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .debug-row {
+      padding: 0.8rem;
+      border: 1px solid rgba(0, 230, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.56);
+    }
+
+    .debug-row.error {
+      border-color: rgba(255, 99, 123, 0.55);
+      background: rgba(255, 99, 123, 0.08);
+    }
+
+    .debug-row strong { color: var(--white); }
+
     @media (max-width: 980px) {
       header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .invite-row { grid-template-columns: 1fr; }
       .side-nav { position: static; }
@@ -482,6 +525,7 @@
         <button type="button" data-view="partners-company">Partners by Company</button>
         <button type="button" data-view="guest">Guest Registrants</button>
         <button type="button" data-view="member">Members</button>
+        <button type="button" data-view="registration-debug">Registration Debug</button>
       </aside>
 
       <div class="crm-content">
@@ -644,6 +688,16 @@
       </form>
       <div class="invite-list" id="partnerInviteList"></div>
     </section>
+
+    <section class="invite-panel view-section" id="registrationDebugPanel" data-view-panel="registration-debug" hidden>
+      <div>
+        <p class="eyebrow">Registration diagnostics</p>
+        <h2>Registration Debug</h2>
+        <p>Review recent registration writes, failed attempts, and registrations that do not have a matching contact record.</p>
+      </div>
+      <button class="secondary" type="button" id="refreshRegistrationDebug">Refresh Debug</button>
+      <div id="registrationDebugContent" class="debug-list"></div>
+    </section>
       </div>
     </div>
   </main>
@@ -672,6 +726,8 @@
     const partnerInviteForm = document.querySelector("#partnerInviteForm");
     const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
     const partnerInviteList = document.querySelector("#partnerInviteList");
+    const registrationDebugContent = document.querySelector("#registrationDebugContent");
+    const refreshRegistrationDebug = document.querySelector("#refreshRegistrationDebug");
     const recordViewTypes = {
       contacts: "contacts",
       guest: "guest",
@@ -688,6 +744,7 @@
       registrationInviteCodes: [],
       upcomingEvents: []
     };
+    let registrationDebug = null;
     const fallbackMojoEvents = [
       { slug: "ai-executive-readiness", title: "AI Executive Readiness", date: "Friday, September 4, 2026", format: "Virtual" },
       { slug: "ai-use-cases-that-survive-finance", title: "AI Use Cases That Survive Finance", date: "Friday, September 25, 2026", format: "Virtual" },
@@ -865,6 +922,10 @@
           loadCrm();
           return;
         }
+      }
+      if (activeView === "registration-debug") {
+        loadRegistrationDebug();
+        return;
       }
       render();
     }
@@ -1156,13 +1217,78 @@
           </td>
           <td>${memberAccessCell(row)}</td>
           <td>
-            ${state.type === "contacts" ? `<span>${escapeHtml(row.updatedAt ? `Updated ${formatDate(row.updatedAt)}` : "")}</span>` : `<div class="notes-cell">
+            ${state.type === "contacts" ? `<div class="notes-cell">
+              <span>${escapeHtml(row.updatedAt ? `Updated ${formatDate(row.updatedAt)}` : "")}</span>
+              <button class="compact secondary" type="button" data-delete-contact-key="${escapeHtml(row.key)}" data-delete-contact-email="${escapeHtml(row.email)}">Delete Contact</button>
+            </div>` : `<div class="notes-cell">
               <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Follow-up notes">${escapeHtml(row.crmNotes || "")}</textarea>
               <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
             </div>`}
           </td>
         </tr>
       `).join("");
+    }
+
+    function debugStatusClass(row) {
+      return row.status === "failed" || row.status === "rejected" || row.contactExists === false ? " error" : "";
+    }
+
+    function renderRegistrationDebug() {
+      if (!registrationDebug) {
+        registrationDebugContent.innerHTML = '<p>Debug data has not been loaded yet.</p>';
+        return;
+      }
+      const counts = registrationDebug.counts || {};
+      const missing = registrationDebug.missingContacts || [];
+      const attempts = registrationDebug.debugAttempts || [];
+      const latest = registrationDebug.latestRegistrations || [];
+      registrationDebugContent.innerHTML = `
+        <div class="debug-summary">
+          <div class="debug-card"><span>Contacts</span><strong>${counts.contacts || 0}</strong></div>
+          <div class="debug-card"><span>Guest rows</span><strong>${counts.guest || 0}</strong></div>
+          <div class="debug-card"><span>Member rows</span><strong>${counts.member || 0}</strong></div>
+          <div class="debug-card"><span>Partner rows</span><strong>${counts.partner || 0}</strong></div>
+          <div class="debug-card"><span>Missing contacts</span><strong>${counts.missingContacts || 0}</strong></div>
+          <div class="debug-card"><span>Audit attempts</span><strong>${counts.debugAttempts || 0}</strong></div>
+        </div>
+        <div>
+          <h3>Missing Contact Links</h3>
+          <div class="debug-list">
+            ${missing.length ? missing.map((row) => `
+              <div class="debug-row error">
+                <strong>${escapeHtml(row.name || row.email || "Unknown registrant")}</strong>
+                <p>${escapeHtml(row.type)} | ${escapeHtml(row.email)} | ${escapeHtml(row.eventName || row.inviteCode || "")}</p>
+                <p>Expected contact key: ${escapeHtml(row.contactKey || "")}</p>
+              </div>
+            `).join("") : '<p>No stored registrations are missing contact records.</p>'}
+          </div>
+        </div>
+        <div>
+          <h3>Recent Registration Audit</h3>
+          <div class="debug-list">
+            ${attempts.length ? attempts.slice(0, 12).map((row) => `
+              <div class="debug-row${debugStatusClass(row)}">
+                <strong>${escapeHtml(formatDate(row.createdAt))} | ${escapeHtml(row.status || "unknown")} | ${escapeHtml(row.stage || "")}</strong>
+                <p>${escapeHtml(row.type)} | ${escapeHtml(row.name || "")} | ${escapeHtml(row.email || "")} | ${escapeHtml(row.company || "")}</p>
+                <p>${escapeHtml(row.eventName || "")}${row.inviteCode ? ` | Invite ${escapeHtml(row.inviteCode)}` : ""}</p>
+                ${row.error ? `<p>Error: ${escapeHtml(row.error)}</p>` : ""}
+              </div>
+            `).join("") : '<p>No registration audit entries have been stored yet. New attempts will appear here after this deploy.</p>'}
+          </div>
+        </div>
+        <div>
+          <h3>Recent Stored Registrations</h3>
+          <div class="debug-list">
+            ${latest.slice(0, 12).map((row) => `
+              <div class="debug-row${debugStatusClass(row)}">
+                <strong>${escapeHtml(formatDate(row.createdAt))} | ${escapeHtml(row.type)} | ${row.contactExists ? "contact found" : "contact missing"}</strong>
+                <p>${escapeHtml(row.name || "")} | ${escapeHtml(row.email || "")} | ${escapeHtml(row.company || "")}</p>
+                <p>${escapeHtml(row.eventName || "")}${row.inviteCode ? ` | Invite ${escapeHtml(row.inviteCode)}` : ""}</p>
+              </div>
+            `).join("") || '<p>No registration rows are stored.</p>'}
+          </div>
+        </div>
+      `;
     }
 
     function render() {
@@ -1185,6 +1311,19 @@
         setNotice(`${state.summary.total || 0} ${activeLabel()} ${noun}${state.summary.total === 1 ? "" : "s"} loaded.`, "ok");
         render();
       } catch (error) {
+        setNotice(error.message, "error");
+      }
+    }
+
+    async function loadRegistrationDebug() {
+      setNotice("Loading registration debug...");
+      registrationDebugContent.innerHTML = '<p>Loading registration debug...</p>';
+      try {
+        registrationDebug = await fetch(`${api}?debug=registration`).then(readJson);
+        renderRegistrationDebug();
+        setNotice("Registration debug loaded.", "ok");
+      } catch (error) {
+        registrationDebugContent.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
         setNotice(error.message, "error");
       }
     }
@@ -1231,6 +1370,27 @@
         renderRegistrationInvites();
         renderPartnerInvites();
         setNotice("Registration link deleted.", "ok");
+      } catch (error) {
+        setNotice(error.message, "error");
+      }
+    }
+
+    async function deleteContact(key, email) {
+      const label = email || key;
+      if (!window.confirm(`Delete ${label} from Contacts and remove that person's stored registration rows?`)) return;
+      setNotice("Deleting contact...");
+      try {
+        state = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "delete-contact",
+            key,
+            email
+          })
+        }).then(readJson);
+        setNotice(`Contact deleted: ${state.deleted?.email || label}`, "ok");
+        render();
       } catch (error) {
         setNotice(error.message, "error");
       }
@@ -1309,6 +1469,11 @@
       const key = event.target.dataset.saveKey;
       const passwordKey = event.target.dataset.passwordKey;
       const profilePath = event.target.dataset.profilePath;
+      const deleteContactKey = event.target.dataset.deleteContactKey;
+      if (deleteContactKey) {
+        await deleteContact(deleteContactKey, event.target.dataset.deleteContactEmail || "");
+        return;
+      }
       if (profilePath) {
         await copyText(`${window.location.origin}${profilePath}`);
         setNotice(`${state.type === "partner" ? "Partner" : "Member"} profile login link copied.`, "ok");
@@ -1342,6 +1507,7 @@
     });
 
     refreshButton.addEventListener("click", loadCrm);
+    refreshRegistrationDebug.addEventListener("click", loadRegistrationDebug);
     downloadButton.addEventListener("click", () => {
       window.location.href = `${api}?type=${encodeURIComponent(recordsTypeForView())}&download=csv`;
     });

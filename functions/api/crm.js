@@ -57,6 +57,7 @@ const REGISTRATION_INVITE_PREFIXES = {
   guest: "crm:guest-invite-code:"
 };
 const PARTNER_INVITE_PREFIX = "crm:partner-invite-code:";
+const REGISTRATION_DEBUG_PREFIX = "crm:registration-debug:";
 const DEFAULT_UPCOMING_EVENTS = [
   {
     slug: "ai-executive-readiness",
@@ -331,6 +332,107 @@ async function contacts(env) {
   });
 }
 
+function normalizeDebugEntry(key, record = {}) {
+  return {
+    key,
+    id: cleanString(record.id) || key,
+    createdAt: cleanString(record.createdAt) || key.split(":").slice(-2, -1)[0] || "",
+    type: cleanString(record.type),
+    status: cleanString(record.status),
+    stage: cleanString(record.stage),
+    name: cleanString(record.name),
+    email: cleanString(record.email).toLowerCase(),
+    company: cleanString(record.company),
+    inviteCode: cleanString(record.inviteCode),
+    eventName: cleanString(record.eventName),
+    eventDate: cleanString(record.eventDate),
+    contactKey: cleanString(record.contactKey),
+    registrationKeys: Array.isArray(record.registrationKeys)
+      ? record.registrationKeys.map((entry) => cleanString(entry)).filter(Boolean)
+      : [],
+    error: cleanString(record.error)
+  };
+}
+
+async function readRawRecord(env, key) {
+  return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+}
+
+async function registrationDiagnostics(env) {
+  const generatedAt = new Date().toISOString();
+  const contactKeys = await listKeys(env, registrantTypes.contacts.crmPrefix);
+  const contactEmails = new Set(contactKeys.map((key) => key.replace(registrantTypes.contacts.crmPrefix, "").toLowerCase()));
+  const registrationRows = [];
+  const counts = {
+    contacts: contactKeys.length,
+    guest: 0,
+    member: 0,
+    partner: 0,
+    missingContacts: 0,
+    debugAttempts: 0
+  };
+
+  for (const type of ["guest", "member", "partner"]) {
+    const config = registrantTypes[type];
+    const keys = [...new Set([
+      ...(await listKeys(env, config.crmPrefix)),
+      ...(await listKeys(env, config.legacyPrefix))
+    ])];
+    const seenRows = new Set();
+    for (const key of keys) {
+      const record = await readRawRecord(env, key);
+      if (!record) continue;
+      const row = normalizeRecord(key, record);
+      const rowIdentity = row.id || `${row.email}:${row.createdAt}:${row.inviteCode}`;
+      if (seenRows.has(rowIdentity)) continue;
+      seenRows.add(rowIdentity);
+      const expectedContactKey = row.email ? `${registrantTypes.contacts.crmPrefix}${row.email}` : "";
+      const contactExists = row.email ? contactEmails.has(row.email) : false;
+      registrationRows.push({
+        key,
+        type,
+        id: row.id,
+        createdAt: row.createdAt,
+        name: row.name,
+        email: row.email,
+        company: row.company,
+        title: row.title,
+        phone: row.phone,
+        inviteCode: row.inviteCode,
+        eventName: row.eventName,
+        eventDate: row.eventDate,
+        contactKey: cleanString(record.contactKey) || expectedContactKey,
+        contactExists
+      });
+    }
+    counts[type] = seenRows.size;
+  }
+
+  registrationRows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const missingContacts = registrationRows.filter((row) => row.email && !row.contactExists);
+  counts.missingContacts = missingContacts.length;
+
+  const debugKeys = await listKeys(env, REGISTRATION_DEBUG_PREFIX);
+  const debugAttempts = (await Promise.all(
+    debugKeys.map(async (key) => {
+      const record = await readRawRecord(env, key);
+      return record ? normalizeDebugEntry(key, record) : null;
+    })
+  ))
+    .filter(Boolean)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  counts.debugAttempts = debugAttempts.length;
+
+  return {
+    ok: true,
+    generatedAt,
+    counts,
+    latestRegistrations: registrationRows.slice(0, 40),
+    missingContacts: missingContacts.slice(0, 40),
+    debugAttempts: debugAttempts.slice(0, 40)
+  };
+}
+
 function summarize(rows) {
     return {
     total: rows.length,
@@ -603,6 +705,69 @@ async function deleteInviteCode(env, payload = {}) {
   throw new Error("Invite link was not found.");
 }
 
+async function removeEmailFromCompanyContacts(env, email, actor = "") {
+  const deletedFromCompanies = [];
+  const companyKeys = [
+    ...(await listKeys(env, "crm:company:")),
+    ...(await listKeys(env, "partner-company:")),
+    ...(await listKeys(env, "member-company:")),
+    ...(await listKeys(env, "guest-company:"))
+  ];
+
+  for (const key of [...new Set(companyKeys)]) {
+    const record = await readRawRecord(env, key);
+    if (!record || !Array.isArray(record.contacts)) continue;
+    const nextContacts = record.contacts.filter((entry) => cleanString(entry?.email).toLowerCase() !== email);
+    if (nextContacts.length === record.contacts.length) continue;
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+      ...record,
+      contacts: nextContacts,
+      updatedAt: new Date().toISOString(),
+      updatedBy: actor || "crm"
+    }));
+    deletedFromCompanies.push(key);
+  }
+
+  return deletedFromCompanies;
+}
+
+async function deleteContact(env, payload = {}, actor = "") {
+  const requestedKey = cleanString(payload.key);
+  const email = cleanString(
+    payload.email ||
+      (requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
+        ? requestedKey.replace(registrantTypes.contacts.crmPrefix, "")
+        : requestedKey)
+  ).toLowerCase();
+  if (!email || !email.includes("@")) throw new Error("Contact email is required before deleting a contact.");
+
+  const deletedKeys = [];
+  const contactKey = `${registrantTypes.contacts.crmPrefix}${email}`;
+  await env.MOJO_SUMMITS_SETUP_STATE.delete(contactKey);
+  deletedKeys.push(contactKey);
+
+  for (const type of ["guest", "member", "partner"]) {
+    const config = registrantTypes[type];
+    const keys = [...new Set([
+      ...(await listKeys(env, config.crmPrefix)),
+      ...(await listKeys(env, config.legacyPrefix))
+    ])];
+    for (const key of keys) {
+      const record = await readRawRecord(env, key);
+      if (cleanString(record?.email).toLowerCase() !== email) continue;
+      await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+      deletedKeys.push(key);
+    }
+  }
+
+  const deletedFromCompanies = await removeEmailFromCompanyContacts(env, email, actor);
+  return {
+    email,
+    deletedKeys: [...new Set(deletedKeys)],
+    deletedFromCompanies
+  };
+}
+
 function companySlug(value) {
   return cleanString(value, 180)
     .toLowerCase()
@@ -681,6 +846,10 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   const url = new URL(request.url);
+  if (url.searchParams.get("debug") === "registration") {
+    return json(await registrationDiagnostics(env));
+  }
+
   const type = cleanType(url.searchParams.get("type"));
   const config = registrantTypes[type];
   const isContacts = type === "contacts";
@@ -983,6 +1152,26 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Invite link could not be deleted." }, { status: 404 });
+    }
+  }
+
+  if (payload?.action === "delete-contact") {
+    try {
+      const deleted = await deleteContact(env, payload, access.email);
+      const rows = await contacts(env);
+      return json({
+        ok: true,
+        type: "contacts",
+        label: registrantTypes.contacts.label,
+        summary: summarizeContacts(rows),
+        rows,
+        deleted,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Contact could not be deleted." }, { status: 500 });
     }
   }
 
