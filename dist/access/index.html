@@ -950,6 +950,28 @@
         <button type="submit">Sign In</button>
         <p class="inline-result" id="loginResult" role="alert" aria-live="assertive"></p>
       </form>
+      <form class="auth-card" id="registerForm" novalidate>
+        <h2>Create Access</h2>
+        <p>Use this if your email has already been approved for Mojo AI Summits access.</p>
+        <label class="field" for="registerName">
+          Name optional
+          <input id="registerName" type="text" autocomplete="name">
+        </label>
+        <label class="field" for="registerEmail">
+          Email
+          <input id="registerEmail" type="email" autocomplete="email" required>
+        </label>
+        <label class="field" for="registerPassword">
+          Create password
+          <input id="registerPassword" type="password" autocomplete="new-password" required minlength="12">
+        </label>
+        <label class="field" for="registerPasswordConfirm">
+          Confirm password
+          <input id="registerPasswordConfirm" type="password" autocomplete="new-password" required minlength="12">
+        </label>
+        <button id="registerButton" type="submit">Create Account</button>
+        <p class="inline-result" id="registerResult" role="alert" aria-live="assertive"></p>
+      </form>
       <div class="auth-card hidden" id="firstOwnerInvitePanel">
         <h2>First Owner Invite</h2>
         <p>Create the initial owner invite for scott@mojoaisummits.com. Use the invite link to set your password and sign in as owner.</p>
@@ -1091,7 +1113,7 @@
   </main>
 
   <script>
-    const ACCESS_CONSOLE_BUILD = "2026.07.31.2-next-redirect";
+    const ACCESS_CONSOLE_BUILD = "2026.07.31.3-auth-prompt";
     const state = {
       config: null,
       modes: [],
@@ -1152,7 +1174,14 @@
       userInviteResult: document.querySelector("#userInviteResult"),
       userList: document.querySelector("#userList"),
       userName: document.querySelector("#userName"),
-      userPassword: document.querySelector("#userPassword")
+      userPassword: document.querySelector("#userPassword"),
+      registerButton: document.querySelector("#registerButton"),
+      registerEmail: document.querySelector("#registerEmail"),
+      registerForm: document.querySelector("#registerForm"),
+      registerName: document.querySelector("#registerName"),
+      registerPassword: document.querySelector("#registerPassword"),
+      registerPasswordConfirm: document.querySelector("#registerPasswordConfirm"),
+      registerResult: document.querySelector("#registerResult")
     };
 
     function escapeHtml(value) {
@@ -1215,6 +1244,11 @@
     function setLoginResult(message = "", type = "") {
       elements.loginResult.textContent = message;
       elements.loginResult.className = `inline-result ${type}`.trim();
+    }
+
+    function setRegisterResult(message = "", type = "") {
+      elements.registerResult.textContent = message;
+      elements.registerResult.className = `inline-result ${type}`.trim();
     }
 
     function safeNextPath() {
@@ -1539,6 +1573,7 @@
       const acceptingInvite = Boolean(state.inviteToken && !authenticated);
       elements.firstOwnerInvitePanel.classList.toggle("hidden", !firstOwnerRequired || acceptingInvite);
       elements.loginForm.classList.toggle("hidden", firstOwnerRequired || acceptingInvite);
+      elements.registerForm.classList.toggle("hidden", firstOwnerRequired || acceptingInvite);
       elements.acceptInviteForm.classList.toggle("hidden", !acceptingInvite);
       const authMessage = acceptingInvite
         ? "Create your Mojo access account."
@@ -1792,7 +1827,61 @@
         await loadSession();
       } catch (error) {
         setLoginResult(error.message || "Email or password is incorrect.", "error");
+        if (elements.loginEmail.value && !elements.registerEmail.value) {
+          elements.registerEmail.value = elements.loginEmail.value;
+        }
+        setRegisterResult("If this is your first time here, create access with your approved email.", "");
         showNotice(error.message, "error");
+      }
+    }
+
+    async function registerAccessAccount(event) {
+      event.preventDefault();
+      clearNotice();
+      setRegisterResult("");
+
+      const email = elements.registerEmail.value.trim();
+      const password = elements.registerPassword.value;
+      const confirmation = elements.registerPasswordConfirm.value;
+      if (!validEmail(email)) {
+        setRegisterResult("Enter your approved email address.", "error");
+        return;
+      }
+      if (password.length < 12) {
+        setRegisterResult("Password must be at least 12 characters.", "error");
+        return;
+      }
+      if (password !== confirmation) {
+        setRegisterResult("Passwords do not match.", "error");
+        return;
+      }
+
+      elements.registerButton.disabled = true;
+      setRegisterResult("Creating access...", "");
+      try {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          body: JSON.stringify({
+            name: elements.registerName.value.trim(),
+            email,
+            password
+          })
+        });
+        const payload = await readApiPayload(response, "Account could not be created.");
+        if (!response.ok) throw new Error(payload.error || "Account could not be created.");
+        setRegisterResult("Access created. Opening requested page...", "ok");
+        const nextPath = safeNextPath();
+        if (nextPath) {
+          location.assign(nextPath);
+          return;
+        }
+        await loadSession();
+      } catch (error) {
+        setRegisterResult(error.message, "error");
+        showNotice(error.message, "error");
+      } finally {
+        elements.registerButton.disabled = false;
       }
     }
 
@@ -2140,6 +2229,7 @@
     elements.refreshRoutesButton.addEventListener("click", refreshRoutesFromAdmin);
     elements.resetButton.addEventListener("click", resetConfig);
     elements.loginForm.addEventListener("submit", login);
+    elements.registerForm.addEventListener("submit", registerAccessAccount);
     elements.firstOwnerInviteButton.addEventListener("click", createFirstOwnerInvite);
     elements.acceptInviteForm.addEventListener("submit", acceptInvite);
     elements.logoutButton.addEventListener("click", logout);
