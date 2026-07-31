@@ -413,6 +413,30 @@
       min-width: 8.5rem;
     }
 
+    .invite-result {
+      display: none;
+      gap: 0.85rem;
+      padding: 0.95rem;
+      border: 1px solid rgba(0, 230, 255, 0.48);
+      border-radius: 6px;
+      background: rgba(0, 230, 255, 0.08);
+      color: var(--muted);
+    }
+
+    .invite-result.visible { display: grid; }
+    .invite-result strong { color: var(--ok); }
+    .invite-result a {
+      color: var(--cyan);
+      font-weight: 800;
+      word-break: break-all;
+    }
+
+    .invite-result-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+    }
+
     .company-row td {
       padding: 0.9rem 0.85rem;
       color: var(--white);
@@ -581,6 +605,7 @@
         </label>
         <button type="submit" id="registrationInviteSubmit">Generate Link</button>
       </form>
+      <div class="invite-result" id="registrationInviteResult" aria-live="polite"></div>
     </section>
 
     <section class="invite-panel view-section" id="partnerInvitePanel" data-view-panel="guest-partner-invite-links" hidden>
@@ -643,6 +668,7 @@
     const registrationInviteType = document.querySelector("#registrationInviteType");
     const registrationInviteSubmit = document.querySelector("#registrationInviteSubmit");
     const registrationInviteList = document.querySelector("#registrationInviteList");
+    const registrationInviteResult = document.querySelector("#registrationInviteResult");
     const partnerInviteForm = document.querySelector("#partnerInviteForm");
     const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
     const partnerInviteList = document.querySelector("#partnerInviteList");
@@ -689,6 +715,28 @@
     function setNotice(message, type = "") {
       notice.textContent = message;
       notice.className = `notice ${type}`.trim();
+    }
+
+    function clearRegistrationInviteResult() {
+      registrationInviteResult.classList.remove("visible");
+      registrationInviteResult.innerHTML = "";
+    }
+
+    function showRegistrationInviteResult(invite, url, copied) {
+      const role = invite.guestRegistrationType || invite.registrationRole || invite.type || "guest";
+      registrationInviteResult.innerHTML = `
+        <div>
+          <strong>Guest invite link generated.</strong>
+          <p>${copied ? "The link was copied to your clipboard." : "Copy the link below, or open the Guest Invite page to review it."}</p>
+          <p><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a></p>
+          <p>${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Invited guest")} | ${escapeHtml(role)} | ${escapeHtml(invite.eventName || "Event invite")}</p>
+        </div>
+        <div class="invite-result-actions">
+          <button class="compact" type="button" data-copy-created-registration-invite="${escapeHtml(url)}">Copy Link</button>
+          <button class="compact secondary" type="button" data-open-view="guest-invite-links">View Guest Invite Links</button>
+        </div>
+      `;
+      registrationInviteResult.classList.add("visible");
     }
 
     function formatDate(value) {
@@ -875,8 +923,12 @@
 
     async function copyText(value) {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value);
-        return true;
+        try {
+          await navigator.clipboard.writeText(value);
+          return true;
+        } catch (error) {
+          return false;
+        }
       }
       return false;
     }
@@ -1339,13 +1391,16 @@
       };
       if (!payload.eventSlug) {
         setNotice("Select an event before generating a registration code.", "error");
+        clearRegistrationInviteResult();
         return;
       }
       if (!String(payload.intendedGuestName || "").trim()) {
         setNotice("Enter the guest or user name before generating a registration code.", "error");
+        clearRegistrationInviteResult();
         return;
       }
       setNotice("Generating registration invite...");
+      clearRegistrationInviteResult();
       try {
         const data = await fetch(api, {
           method: "POST",
@@ -1357,15 +1412,28 @@
         renderEventOptions();
         renderRegistrationInvites();
         const url = registrationInviteUrl(data.invite || {});
-        await copyText(url);
-        setNotice("Registration invite link generated and copied if clipboard access is available.", "ok");
+        const copied = await copyText(url);
+        showRegistrationInviteResult(data.invite || {}, url, copied);
+        setNotice("Guest invite link generated successfully.", "ok");
       } catch (error) {
+        clearRegistrationInviteResult();
         setNotice(error.message, "error");
       }
     });
 
     registrationInviteType.addEventListener("change", updateRegistrationInviteSubmit);
     updateRegistrationInviteSubmit();
+
+    registrationInviteResult.addEventListener("click", async (event) => {
+      const copyButton = event.target.closest("[data-copy-created-registration-invite]");
+      if (copyButton) {
+        const copied = await copyText(copyButton.dataset.copyCreatedRegistrationInvite || "");
+        setNotice(copied ? "Guest invite link copied." : "Copy the visible link manually.", copied ? "ok" : "error");
+        return;
+      }
+      const viewButton = event.target.closest("[data-open-view]");
+      if (viewButton) setActiveView(viewButton.dataset.openView);
+    });
 
     registrationInviteList.addEventListener("click", async (event) => {
       const button = event.target.closest("button");
