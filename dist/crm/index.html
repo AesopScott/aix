@@ -485,7 +485,7 @@
 
     .invite-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       gap: 0.75rem;
       align-items: center;
       padding: 0.8rem;
@@ -505,6 +505,53 @@
       display: grid;
       gap: 0.45rem;
       min-width: 8.5rem;
+    }
+
+    .invite-qr {
+      display: grid;
+      gap: 0.4rem;
+      justify-items: center;
+      align-items: center;
+      width: 7.4rem;
+    }
+
+    .invite-qr img {
+      width: 6.5rem;
+      height: 6.5rem;
+      padding: 0.35rem;
+      border: 1px solid rgba(0, 230, 255, 0.24);
+      border-radius: 6px;
+      background: var(--white);
+    }
+
+    .invite-qr span {
+      color: var(--muted-blue);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .button-link {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted-blue);
+      background: rgba(22, 102, 255, 0.12);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-align: center;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .button-link.compact {
+      padding: 0.58rem 0.7rem;
+      font-size: 0.76rem;
     }
 
     .invite-result {
@@ -590,6 +637,7 @@
 
     @media (max-width: 980px) {
       header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .invite-row { grid-template-columns: 1fr; }
+      .invite-qr { width: 100%; justify-items: start; }
       .side-nav { position: static; }
       .crm-content .hero, .view-section { grid-column: 1; }
     }
@@ -614,7 +662,7 @@
     <div class="crm-shell">
       <aside class="side-nav" aria-label="CRM sections">
         <button class="active" type="button" data-view="contacts">Contacts</button>
-        <button type="button" data-view="guest-invite-links">Guest Invite</button>
+        <button type="button" data-view="guest-invite-links">Guest Invites</button>
         <button type="button" data-view="create-guest-invite-links">Create Guest Invite Links</button>
         <button type="button" data-view="guest-partner-invite-links">Guest Partner Invite Links</button>
         <button type="button" data-view="partners-company">Partners by Company</button>
@@ -924,16 +972,22 @@
 
     function showRegistrationInviteResult(invite, url, copied) {
       const role = guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type);
+      const qrUrl = qrCodeUrl(url);
       registrationInviteResult.innerHTML = `
+        <div class="invite-qr">
+          <img src="${escapeHtml(qrUrl)}" alt="QR code for generated guest invite ${escapeHtml(invite.code || "")}" loading="lazy">
+          <span>QR Code</span>
+        </div>
         <div>
           <strong>${escapeHtml(role)} invite link generated.</strong>
-          <p>${copied ? "The link was copied to your clipboard." : "Copy the link below, or open the Guest Invite page to review it."}</p>
+          <p>${copied ? "The link was copied to your clipboard." : "Copy the link below, or open the Guest Invites page to review it."}</p>
           <p><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a></p>
           <p>${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Invited guest")} | ${escapeHtml(role)} | ${escapeHtml(invite.eventName || "Event invite")}</p>
         </div>
         <div class="invite-result-actions">
           <button class="compact" type="button" data-copy-created-registration-invite="${escapeHtml(url)}">Copy Link</button>
-          <button class="compact secondary" type="button" data-open-view="guest-invite-links">View Guest Invite Links</button>
+          <a class="compact secondary button-link" href="${escapeHtml(qrCodeUrl(url, 360))}" download="${escapeHtml(qrFilename("guest-invite", invite))}" target="_blank" rel="noopener">Download QR</a>
+          <button class="compact secondary" type="button" data-open-view="guest-invite-links">View Guest Invites</button>
         </div>
       `;
       registrationInviteResult.classList.add("visible");
@@ -1216,6 +1270,16 @@
       return `${window.location.origin}${path}?invite=${encodeURIComponent(invite.code || "")}`;
     }
 
+    function qrCodeUrl(value, size = 180) {
+      const width = `${size}x${size}`;
+      return `https://api.qrserver.com/v1/create-qr-code/?size=${encodeURIComponent(width)}&margin=8&data=${encodeURIComponent(value || "")}`;
+    }
+
+    function qrFilename(prefix, invite = {}) {
+      const code = String(invite.code || "invite").replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "invite";
+      return `${prefix}-${code}-qr.png`;
+    }
+
     function inviteStatusText(invite) {
       return invite.status === "used" ? "Registered" : statusLabel(invite.status);
     }
@@ -1330,17 +1394,23 @@
       }
       partnerInviteList.innerHTML = invites.slice(0, 12).map((invite) => {
         const url = partnerRegistrationUrl(invite);
+        const qrUrl = qrCodeUrl(url);
         return `
           <div class="invite-row">
+            <div class="invite-qr">
+              <img src="${escapeHtml(qrUrl)}" alt="QR code for partner invite ${escapeHtml(invite.code || "")}" loading="lazy">
+              <span>QR Code</span>
+            </div>
             <div>
               <strong>${escapeHtml(invite.eventName || "Partner event invite")}</strong>
-              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(inviteStatusText(invite))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}</p>
+              <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(inviteStatusText(invite))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
               <p>${escapeHtml(url)}</p>
             </div>
             <div class="invite-actions">
               <button class="compact secondary" type="button" data-copy-url="${escapeHtml(url)}">Copy Link</button>
+              <a class="compact secondary button-link" href="${escapeHtml(qrCodeUrl(url, 360))}" download="${escapeHtml(qrFilename("partner-invite", invite))}" target="_blank" rel="noopener">Download QR</a>
               <button class="compact secondary" type="button" data-delete-invite-key="${escapeHtml(invite.key)}" data-delete-invite-type="partner">Delete Link</button>
             </div>
           </div>
@@ -1356,12 +1426,17 @@
       }
       registrationInviteList.innerHTML = invites.slice(0, 16).map((invite) => {
         const url = registrationInviteUrl(invite);
+        const qrUrl = qrCodeUrl(url);
         const role = guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type);
         return `
           <div class="invite-row">
+            <div class="invite-qr">
+              <img src="${escapeHtml(qrUrl)}" alt="QR code for guest invite ${escapeHtml(invite.code || "")}" loading="lazy">
+              <span>QR Code</span>
+            </div>
             <div>
               <strong>${escapeHtml(invite.eventName || "Event registration invite")}</strong>
-              <p><code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(inviteStatusText(invite))}</p>
+              <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(inviteStatusText(invite))}</p>
               <p>Invited: ${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Name not recorded")}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
@@ -1369,6 +1444,7 @@
             </div>
             <div class="invite-actions">
               <button class="compact secondary" type="button" data-copy-url="${escapeHtml(url)}">Copy Link</button>
+              <a class="compact secondary button-link" href="${escapeHtml(qrCodeUrl(url, 360))}" download="${escapeHtml(qrFilename("guest-invite", invite))}" target="_blank" rel="noopener">Download QR</a>
               <button class="compact secondary" type="button" data-delete-invite-key="${escapeHtml(invite.key)}" data-delete-invite-type="${escapeHtml(invite.type || "guest")}">Delete Link</button>
             </div>
           </div>
