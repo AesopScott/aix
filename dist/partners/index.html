@@ -109,9 +109,9 @@
     color:#051019;
     background:var(--cyan);
   }
-  .btn.primary:hover{ background:var(--white); border-color:var(--white); }
+  .btn.primary:hover{ background:var(--white); border-color:var(--white); color:#051019; }
   .btn.ghost{ color:var(--cyan); background:transparent; }
-  .btn.ghost:hover{ color:var(--white); border-color:var(--white); }
+  .btn.ghost:hover{ background:var(--white); color:#051019; border-color:var(--white); }
   .subscription-request{
     grid-column:1 / -1;
     width:100%;
@@ -469,7 +469,7 @@
   }
   .tier-ladder{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(210px,1fr));
+    grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
     gap:14px;
     align-items:stretch;
   }
@@ -498,9 +498,12 @@
   .partner-tier h3{
     margin-top:16px;
     font-family:'Fraunces', serif;
-    font-size:27px;
+    max-width:100%;
+    font-size:clamp(23px, 2.35vw, 27px);
     font-weight:500;
     line-height:1.08;
+    overflow-wrap:anywhere;
+    text-wrap:balance;
   }
   .partner-tier p{
     margin-top:14px;
