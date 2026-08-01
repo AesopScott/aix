@@ -1,13 +1,19 @@
+import { upsertRegistrationContact } from "../_registration-crm.js";
+
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store"
 };
 
-const allowedTypes = new Set(["executive", "conversation", "partner", "dallas-invite"]);
+const allowedTypes = new Set(["executive", "conversation", "partner", "partner-subscription", "dallas-invite"]);
 const maxFieldLength = 2000;
 const notificationRecipients = [
   "angel@mojoaisummits.com",
   "scott@mojoaisummits.com"
+];
+const partnerSubscriptionRecipients = [
+  "miller@mojoaisummits.com",
+  "jodi@mojoaisummits.com"
 ];
 const defaultNotificationSender = "scott@mojoaisummits.com";
 
@@ -43,6 +49,7 @@ function cleanPayload(payload) {
     type,
     name: cleanString(payload?.name),
     email: cleanString(payload?.email),
+    phone: cleanString(payload?.phone),
     company: cleanString(payload?.company),
     title: cleanString(payload?.title),
     track: cleanString(payload?.track),
@@ -76,6 +83,9 @@ function validateRequest(request) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email)) {
     return "Enter a valid email address.";
   }
+  if (request.type === "partner-subscription" && !request.phone) {
+    return "Phone is required.";
+  }
   return "";
 }
 
@@ -94,6 +104,7 @@ function requestLabel(type = "") {
     "dallas-invite": "Dallas invite request",
     executive: "Executive invite request",
     conversation: "Conversation proposal",
+    "partner-subscription": "Partner subscription information request",
     partner: "Partner access request"
   }[type] || "Invite request";
 }
@@ -104,6 +115,7 @@ function requestEmailText(record) {
     "",
     `Name: ${record.name || ""}`,
     `Email: ${record.email || ""}`,
+    record.phone ? `Phone: ${record.phone}` : "",
     `Title: ${record.title || ""}`,
     `Company: ${record.company || ""}`,
     `MojoAIstudio.com learning program member: ${record.learningProgramMember ? "True" : "False"}`,
@@ -118,6 +130,7 @@ function requestEmailHtml(record) {
   const rows = [
     ["Name", record.name],
     ["Email", record.email],
+    ["Phone", record.phone],
     ["Title", record.title],
     ["Company", record.company],
     ["MojoAIstudio.com learning program member", record.learningProgramMember ? "True" : "False"],
@@ -143,11 +156,15 @@ function requestEmailHtml(record) {
 }
 
 async function sendInviteNotification(env, record) {
-  if (!["dallas-invite", "executive"].includes(record.type)) return null;
+  const shouldNotify = ["dallas-invite", "executive", "partner-subscription"].includes(record.type);
+  if (!shouldNotify) return null;
 
   try {
     const token = await microsoftGraphAccessToken(env);
     const sender = cleanString(env.MOJO_INVITE_EMAIL_SENDER) || defaultNotificationSender;
+    const recipients = record.type === "partner-subscription"
+      ? partnerSubscriptionRecipients
+      : notificationRecipients;
     const response = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(sender)}/sendMail`, {
       method: "POST",
       headers: {
@@ -161,7 +178,7 @@ async function sendInviteNotification(env, record) {
             contentType: "HTML",
             content: requestEmailHtml(record)
           },
-          toRecipients: notificationRecipients.map((email) => ({
+          toRecipients: recipients.map((email) => ({
             emailAddress: { address: email }
           })),
           replyTo: [
@@ -221,6 +238,74 @@ async function microsoftGraphAccessToken(env) {
   return payload.access_token;
 }
 
+async function storePartnerCandidateContact(env, record) {
+  const registration = {
+    id: record.id,
+    createdAt: record.createdAt,
+    name: record.name,
+    email: record.email,
+    phone: record.phone,
+    company: record.company,
+    partnerCompany: record.company,
+    title: record.title,
+    partnerTier: "Partner Candidate",
+    source: "partner-subscription-request",
+    eventId: `partner-subscription:${record.id}`,
+    eventName: "Partner subscription information request",
+    eventDate: record.createdAt,
+    registrationRole: "partner-candidate"
+  };
+  const refs = await upsertRegistrationContact(env, "partner", registration, {
+    label: "Partner Candidate",
+    source: "partner-subscription-request",
+    updatedBy: "partner-subscription-request",
+    writeCompanyRollups: true
+  });
+
+  if (refs.contactKey) {
+    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(refs.contactKey, "json").catch(() => null);
+    const events = Array.isArray(existing?.events)
+      ? existing.events.map((event) => event.registrationId === record.id
+        ? {
+            ...event,
+            registrationType: "Partner Candidate",
+            role: "Partner Candidate",
+            roles: ["Partner Candidate"]
+          }
+        : event)
+      : [];
+    await env.MOJO_SUMMITS_SETUP_STATE.put(refs.contactKey, JSON.stringify({
+      ...(existing || {}),
+      partnerTier: "Partner Candidate",
+      contactStatus: "partner candidate",
+      registrationType: "Partner Candidate",
+      source: "partner-subscription-request",
+      crmStatus: "new",
+      events
+    }));
+  }
+
+  if (refs.profileKey) {
+    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(refs.profileKey, "json").catch(() => null);
+    if (existing) {
+      const contacts = Array.isArray(existing.contacts)
+        ? existing.contacts.map((contact) => cleanString(contact?.email).toLowerCase() === record.email
+          ? { ...contact, partnerTier: "Partner Candidate", registrationType: "Partner Candidate" }
+          : contact)
+        : [];
+      await env.MOJO_SUMMITS_SETUP_STATE.put(refs.profileKey, JSON.stringify({
+        ...existing,
+        tier: cleanString(existing.tier) || "Partner Candidate",
+        contacts,
+        updatedAt: record.createdAt,
+        updatedBy: "partner-subscription-request"
+      }));
+    }
+  }
+
+  return refs;
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: jsonHeaders });
 }
@@ -246,14 +331,17 @@ export async function onRequestPost({ request, env }) {
   };
 
   await env.MOJO_SUMMITS_SETUP_STATE.put(`invite-request:${createdAt}:${id}`, JSON.stringify(record));
+  const contact = record.type === "partner-subscription"
+    ? await storePartnerCandidateContact(env, record)
+    : null;
   const notification = await sendInviteNotification(env, record);
 
-  if (["dallas-invite", "executive"].includes(record.type) && !notification?.ok) {
+  if (["dallas-invite", "executive", "partner-subscription"].includes(record.type) && !notification?.ok) {
     return json({
       error: "Invite request was saved, but the notification email could not be sent.",
       notification
     }, { status: 502 });
   }
 
-  return json({ ok: true, id });
+  return json({ ok: true, id, contact });
 }

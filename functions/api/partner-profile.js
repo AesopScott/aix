@@ -14,10 +14,14 @@ const registrationSources = [
 ];
 const tierLabels = new Set([
   "Partner Candidate",
-  "Council Partner",
+  "Partner",
   "Intelligence Partner",
   "Summit Partner",
-  "Founding Partner"
+  "Strategic Partner"
+]);
+const legacyTierLabels = new Map([
+  ["Council Partner", "Partner"],
+  ["Founding Partner", "Strategic Partner"]
 ]);
 
 function json(data, init = {}) {
@@ -164,7 +168,8 @@ function normalizeContact(contact = {}) {
 }
 
 function normalizeProfile(record = {}, fallbackCompany = "", fallbackEmail = "") {
-  const tier = cleanText(record.tier || record.partnerTier || "Not assigned", 80);
+  const rawTier = cleanText(record.tier || record.partnerTier || "Not assigned", 80);
+  const tier = legacyTierLabels.get(rawTier) || rawTier;
   const contacts = [
     ...cleanArray(record.contacts),
     ...cleanArray(record.partnerContacts),

@@ -111,6 +111,99 @@
   .btn.primary:hover{ background:var(--white); border-color:var(--white); }
   .btn.ghost{ color:var(--cyan); background:transparent; }
   .btn.ghost:hover{ color:var(--white); border-color:var(--white); }
+  .subscription-request{ flex-basis:100%; width:fit-content; }
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    z-index:60;
+    display:none;
+    place-items:center;
+    padding:24px;
+    background:rgba(5,8,20,.78);
+    backdrop-filter:blur(14px);
+  }
+  .modal-overlay.open{ display:grid; }
+  .modal-card{
+    width:min(640px, 100%);
+    max-height:min(86vh, 760px);
+    overflow:auto;
+    position:relative;
+    padding:32px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:linear-gradient(180deg, rgba(27,35,51,.96), rgba(10,15,30,.98));
+    box-shadow:0 30px 90px rgba(0,0,0,.52), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .modal-close{
+    position:absolute;
+    top:18px;
+    right:18px;
+    width:38px;
+    height:38px;
+    border:1px solid var(--line-soft);
+    border-radius:50%;
+    color:var(--cyan);
+    background:rgba(10,15,30,.72);
+    cursor:pointer;
+    font-size:20px;
+    line-height:1;
+  }
+  .modal-card h3{
+    margin-top:18px;
+    font-family:'Fraunces', serif;
+    font-size:34px;
+    line-height:1.08;
+    font-weight:600;
+  }
+  .modal-sub{
+    margin-top:14px;
+    color:var(--ink);
+    line-height:1.62;
+  }
+  .request-form{
+    margin-top:24px;
+    display:grid;
+    gap:18px;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:16px;
+  }
+  .field{ display:grid; gap:8px; }
+  .field label{
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+  .field input{
+    width:100%;
+    min-height:48px;
+    border:1px solid var(--line-soft);
+    border-radius:3px;
+    padding:12px 14px;
+    color:var(--white);
+    background:rgba(5,8,20,.62);
+    font:500 15px/1.4 'Inter', sans-serif;
+    outline:none;
+  }
+  .field input:focus{
+    border-color:var(--cyan);
+    box-shadow:0 0 0 3px rgba(0,230,255,.10);
+  }
+  .form-message{
+    display:none;
+    margin-top:16px;
+    color:var(--cyan);
+    font-weight:700;
+    line-height:1.5;
+  }
+  .form-message.show{ display:block; }
+  .form-message.error{ color:#ffb3b3; }
+  .request-form.hide{ display:none; }
 
   header{
     position:fixed;
@@ -408,6 +501,7 @@
     color:var(--muted);
     font-size:14px;
     line-height:1.62;
+    min-height:92px;
   }
   .partner-tier ul{
     margin:20px 0 0;
@@ -553,6 +647,7 @@
     .principle,.model-step{ border-left:0; border-top:1px solid var(--line-soft); }
     .principle:first-child,.model-step:first-child{ border-top:0; }
     .partner-tier{ min-height:auto; }
+    .partner-tier p{ min-height:0; }
   }
   @media (max-width:720px){
     .wrap{ width:min(100% - 36px, 1180px); }
@@ -561,6 +656,9 @@
     .brand-mark{ height:34px; }
     .brand-primary{ font-size:20px; letter-spacing:.03em; }
     .brand-secondary{ font-size:9.5px; letter-spacing:.32em; }
+    .subscription-request{ width:100%; }
+    .form-grid{ grid-template-columns:1fr; }
+    .modal-card{ padding:28px 22px; }
     .hero{ padding-bottom:42px; }
     .proof-row{ grid-template-columns:1fr; gap:8px; }
     section{ padding:66px 0; }
@@ -599,6 +697,7 @@
         <div class="hero-actions">
           <a class="btn primary" href="#value">Understand the Network</a>
           <a class="btn ghost" href="#tiers">Review Partner Tiers</a>
+          <button class="btn ghost subscription-request" type="button" data-partner-subscription-open>Request partner subscription information</button>
         </div>
       </div>
       <div class="partner-proof" aria-label="Partner value summary">
@@ -658,7 +757,7 @@
     <div class="wrap">
       <div class="section-head center">
         <span class="eyebrow">Partner tiers</span>
-        <h2>A clear path from candidate to founding partner.</h2>
+        <h2>A clear path from candidate to strategic partner.</h2>
         <p>Organizations move through the partner model by increasing their contribution to councils, intelligence products, executive problem-solving rooms, and the long-term institution.</p>
       </div>
       <div class="tier-ladder">
@@ -674,7 +773,7 @@
         </article>
         <article class="partner-tier">
           <span class="tier-kicker">Tier 01</span>
-          <h3>Council Partner</h3>
+          <h3>Partner</h3>
           <p>A partner aligned to one or more Executive Intelligence Councils where their expertise strengthens the quality of peer discussion and practical decision-making.</p>
           <ul>
             <li>Support focused council conversations</li>
@@ -688,8 +787,10 @@
           <p>A partner contributing to the intelligence layer through research themes, private briefs, benchmark signals, field observations, and useful executive insight.</p>
           <ul>
             <li>Inform quarterly intelligence briefs</li>
+            <li>Receive editorial review of intelligence briefs</li>
             <li>Contribute market signals and adoption patterns</li>
             <li>Participate in research and editorial synthesis</li>
+            <li>Access discounts on virtual event executive subscriptions</li>
           </ul>
         </article>
         <article class="partner-tier">
@@ -699,17 +800,21 @@
           <ul>
             <li>Support annual summit programming</li>
             <li>Contribute to problem-solving rooms</li>
+            <li>Receive editorial review of summit briefs</li>
             <li>Participate in summit and yearbook outputs</li>
+            <li>Access discounts on summit executive subscriptions</li>
           </ul>
         </article>
         <article class="partner-tier featured">
-          <span class="tier-kicker">Special category</span>
-          <h3>Founding Partner</h3>
-          <p>A limited early partner designation for organizations that help build the institution, set the trust standard, and shape the long-term partner model.</p>
+          <span class="tier-kicker">Tier 04</span>
+          <h3>Strategic Partner</h3>
+          <p>A senior partner designation for organizations that help build the institution, set the trust standard, and shape the long-term partner model.</p>
           <ul>
             <li>Make an early institution-building commitment</li>
             <li>Help define the partner trust model</li>
+            <li>Receive yearbook editorial review</li>
             <li>Receive permanent founding recognition</li>
+            <li>Access discounts on all Mojo executive subscriptions and specialty events</li>
           </ul>
         </article>
       </div>
@@ -781,10 +886,126 @@
   </section>
 </main>
 
+<div class="modal-overlay" id="partnerSubscriptionModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="partnerSubscriptionTitle">
+    <button class="modal-close" type="button" data-partner-subscription-close aria-label="Close">&times;</button>
+    <span class="eyebrow">Partner subscriptions</span>
+    <h3 id="partnerSubscriptionTitle">Request partner subscription information.</h3>
+    <p class="modal-sub">Share your contact details and the Mojo team will follow up about partner subscriptions, executive event access, and strategic fit.</p>
+    <form class="request-form" id="partnerSubscriptionForm">
+      <input type="hidden" name="sourcePage" value="/partners/">
+      <div class="form-grid">
+        <div class="field">
+          <label for="partnerSubscriptionName">Name</label>
+          <input id="partnerSubscriptionName" name="name" type="text" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="partnerSubscriptionEmail">Email</label>
+          <input id="partnerSubscriptionEmail" name="email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="partnerSubscriptionPhone">Phone</label>
+          <input id="partnerSubscriptionPhone" name="phone" type="tel" autocomplete="tel" required>
+        </div>
+        <div class="field">
+          <label for="partnerSubscriptionCompany">Company</label>
+          <input id="partnerSubscriptionCompany" name="company" type="text" autocomplete="organization" required>
+        </div>
+        <div class="field">
+          <label for="partnerSubscriptionTitleField">Title</label>
+          <input id="partnerSubscriptionTitleField" name="title" type="text" autocomplete="organization-title" required>
+        </div>
+      </div>
+      <button class="btn primary" type="submit">Submit request</button>
+    </form>
+    <p class="form-message" id="partnerSubscriptionMessage"></p>
+  </div>
+</div>
+
 <footer>
   <img src="../assets/logo-badge.png" alt="MOJO AI Summits badge">
   <p>Powered by <span>MOJO AI Studio</span></p>
   <p><a href="/briefs/">Executive AI Intelligence Briefs</a></p>
 </footer>
+<script>
+  const partnerSubscriptionModal = document.getElementById("partnerSubscriptionModal");
+  const partnerSubscriptionForm = document.getElementById("partnerSubscriptionForm");
+  const partnerSubscriptionMessage = document.getElementById("partnerSubscriptionMessage");
+  const partnerSubscriptionOpenButtons = document.querySelectorAll("[data-partner-subscription-open]");
+  const partnerSubscriptionCloseButtons = document.querySelectorAll("[data-partner-subscription-close]");
+
+  function setPartnerSubscriptionMessage(message, type = "") {
+    if (!partnerSubscriptionMessage) return;
+    partnerSubscriptionMessage.textContent = message;
+    partnerSubscriptionMessage.className = `form-message${message ? " show" : ""}${type ? ` ${type}` : ""}`;
+  }
+
+  function openPartnerSubscriptionModal() {
+    if (!partnerSubscriptionModal) return;
+    partnerSubscriptionModal.classList.add("open");
+    partnerSubscriptionModal.setAttribute("aria-hidden", "false");
+    partnerSubscriptionForm?.classList.remove("hide");
+    setPartnerSubscriptionMessage("");
+    document.getElementById("partnerSubscriptionName")?.focus();
+  }
+
+  function closePartnerSubscriptionModal() {
+    if (!partnerSubscriptionModal) return;
+    partnerSubscriptionModal.classList.remove("open");
+    partnerSubscriptionModal.setAttribute("aria-hidden", "true");
+  }
+
+  partnerSubscriptionOpenButtons.forEach((button) => {
+    button.addEventListener("click", openPartnerSubscriptionModal);
+  });
+  partnerSubscriptionCloseButtons.forEach((button) => {
+    button.addEventListener("click", closePartnerSubscriptionModal);
+  });
+  partnerSubscriptionModal?.addEventListener("click", (event) => {
+    if (event.target === partnerSubscriptionModal) closePartnerSubscriptionModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && partnerSubscriptionModal?.classList.contains("open")) {
+      closePartnerSubscriptionModal();
+    }
+  });
+
+  partnerSubscriptionForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const submit = partnerSubscriptionForm.querySelector("button[type='submit']");
+    const originalText = submit?.textContent || "Submit request";
+    const payload = Object.fromEntries(new FormData(partnerSubscriptionForm).entries());
+
+    setPartnerSubscriptionMessage("");
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = "Submitting...";
+    }
+
+    try {
+      const response = await fetch("/api/invite-request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          type: "partner-subscription",
+          ...payload
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Unable to submit request.");
+
+      partnerSubscriptionForm.reset();
+      partnerSubscriptionForm.classList.add("hide");
+      setPartnerSubscriptionMessage("Received. Miller and Jodi have been notified, and this contact was added as a partner candidate.", "success");
+    } catch (error) {
+      setPartnerSubscriptionMessage(error.message || "Unable to submit request. Please try again.", "error");
+    } finally {
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = originalText;
+      }
+    }
+  });
+</script>
 </body>
 </html>

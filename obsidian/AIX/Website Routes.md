@@ -34,7 +34,8 @@
 
 - Route: `/partners/`
 - Source file: `dist/partners/index.html`
-- Purpose: public Strategic Intelligence Partners page that explains Mojo as an executive relationship and intelligence network for vendor leaders, not an event sponsorship seller, with partner tiers from Partner Candidate through Council Partner, Intelligence Partner, Summit Partner, and Founding Partner.
+- Purpose: public Strategic Intelligence Partners page that explains Mojo as an executive relationship and intelligence network for vendor leaders, not an event sponsorship seller, with partner tiers from Partner Candidate through Partner, Intelligence Partner, Summit Partner, and Strategic Partner.
+- Partner subscription request: the hero button "Request partner subscription information" opens a form for name, email, phone, company, and title. It posts to `/api/invite-request` with type `partner-subscription`, saves the request, upserts the CRM contact and partner company rollup as `Partner Candidate`, and sends the Microsoft Graph mail notification to `miller@mojoaisummits.com` and `jodi@mojoaisummits.com`.
 - Routing support: `/partners` redirects to `/partners/`; legacy `/partner`, `/partner/`, and `/partner.html` redirect to `/partners/`; no-cache headers are configured for `/partners` and `/partners/*`.
 
 ## Partner Profile
