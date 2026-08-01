@@ -143,14 +143,21 @@ function normalizePublication(publication) {
   };
 }
 
-function normalizeContribution(contribution) {
+function normalizeSubscription(subscription) {
+  const amount = cleanMoney(subscription?.amount || subscription?.value || subscription?.price || subscription?.quarterlyPrice);
+  const cadence = cleanText(subscription?.cadence || subscription?.billingCadence || subscription?.frequency || "per quarter", 80);
   return {
-    id: cleanText(contribution?.id || contribution?.date || contribution?.event, 120),
-    date: cleanText(contribution?.date || contribution?.paidAt || contribution?.pledgedAt, 80),
-    event: cleanText(contribution?.event || contribution?.eventName || contribution?.program || "Network contribution", 160),
-    category: cleanText(contribution?.category || contribution?.type || "Sponsorship", 120),
-    status: cleanText(contribution?.status || "Recorded", 80),
-    amount: cleanMoney(contribution?.amount || contribution?.value)
+    id: cleanText(subscription?.id || subscription?.date || subscription?.subscription || subscription?.program, 120),
+    date: cleanText(subscription?.date || subscription?.paidAt || subscription?.startedAt || subscription?.startDate, 80),
+    subscription: cleanText(subscription?.subscription || subscription?.program || subscription?.event || subscription?.eventName || "Executive subscription", 160),
+    tier: cleanText(subscription?.tier || subscription?.category || subscription?.type || "Partner subscription", 120),
+    status: cleanText(subscription?.status || "Recorded", 80),
+    amount,
+    cadence,
+    priceLabel: cleanText(subscription?.priceLabel || (amount ? `$${amount.toLocaleString("en-US")} ${cadence}` : ""), 120),
+    executiveSlots: Number.isFinite(Number(subscription?.executiveSlots || subscription?.executiveSlotCount || subscription?.slots))
+      ? Number(subscription?.executiveSlots || subscription?.executiveSlotCount || subscription?.slots)
+      : 0
   };
 }
 
@@ -191,9 +198,9 @@ function normalizeProfile(record = {}, fallbackCompany = "", fallbackEmail = "")
     contacts,
     events: cleanArray(record.events || record.attendedEvents).map(normalizeEvent).filter((event) => event.id || event.name),
     publications: cleanArray(record.publications).map(normalizePublication).filter((publication) => publication.title),
-    contributions: cleanArray(record.sponsorships || record.contributions || record.payments)
-      .map(normalizeContribution)
-      .filter((contribution) => contribution.amount || contribution.event)
+    subscriptions: cleanArray(record.subscriptions || record.payments || record.contributions || record.sponsorships)
+      .map(normalizeSubscription)
+      .filter((subscription) => subscription.amount || subscription.subscription)
   };
 }
 
@@ -423,7 +430,8 @@ export async function onRequestGet({ request, env, data }) {
     ...event,
     attendees: attendeesForEvent(event, registrations)
   }));
-  const totalContributed = profile.contributions.reduce((sum, contribution) => sum + contribution.amount, 0);
+  const totalSubscriptionPayments = profile.subscriptions.reduce((sum, subscription) => sum + subscription.amount, 0);
+  const executiveSlots = profile.subscriptions.reduce((sum, subscription) => sum + subscription.executiveSlots, 0);
 
   return json({
     ok: true,
@@ -432,7 +440,11 @@ export async function onRequestGet({ request, env, data }) {
       ...profile,
       contacts,
       events,
-      totalContributed
+      subscriptions: profile.subscriptions,
+      contributions: profile.subscriptions,
+      totalSubscriptionPayments,
+      totalContributed: totalSubscriptionPayments,
+      executiveSlots
     },
     schema: {
       profileKey: storedProfile?.key || `partner-company:${companySlug(profile.organizationName)}`,

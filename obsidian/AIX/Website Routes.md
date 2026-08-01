@@ -5,7 +5,7 @@
 - Route: `/admin/`
 - Source file: `dist/admin/index.html`
 - Purpose: company hub for Mojo AI Summits routes grouped by access level.
-- Public space: `/`, `/dallas/`, `/ai-executive-readiness-online/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/briefs/`, `/book/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
+- Public space: `/`, `/dallas/`, `/ai-executive-readiness-online/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/partner-pricing/`, `/briefs/`, `/book/`, `/member-registration/`, `/guest/`, `/privacy/`, and `/sms-terms/`.
 - Member space: `/member-profile/?preview=4321` for administrative review of the member profile experience.
 - Partner space: `/partner-registration/?preview=4321` for administrative review of hidden partner registration, plus `/partner-profile/` for approved partner contacts.
 - Team space: `/setup/`, `/events/`, `/crm/`, `/schedule-admin/`, `/files/` for the Storage portal, and `/storage/` as the legacy Storage route.
@@ -38,14 +38,24 @@
 - Partner subscription request: the hero button "Request partner subscription information" opens a form for name, email, phone, company, and title. It posts to `/api/invite-request` with type `partner-subscription`, saves the request, upserts the CRM contact and partner company rollup as `Partner Candidate`, and sends the Microsoft Graph mail notification to `miller@mojoaisummits.com` and `jodi@mojoaisummits.com`.
 - Routing support: `/partners` redirects to `/partners/`; legacy `/partner`, `/partner/`, and `/partner.html` redirect to `/partners/`; no-cache headers are configured for `/partners` and `/partners/*`.
 
+## Partner Pricing Structure
+
+- Route: `/partner-pricing/`
+- Source file: `dist/partner-pricing/index.html`
+- Purpose: static partner-facing HTML reference for the Executive slot subscription model tied to the four partner tiers on `/partners/`.
+- Pricing model: Tier 2 Intelligence Partner is $500 per quarter per Executive slot; Tier 3 Summit Partner is $2,500 total per quarter per Executive slot; Tier 4 Strategic Partner is $10,000 total per quarter per Executive slot under an annual subscription. Partner Candidates pay Candidate pricing until approved as Partners.
+- Terms covered: annual contract with optional quarterly payments, Candidate status meaning not-yet-approved Partner with no Partner discounts, 10% annual upfront payment discount, Have a Taste first-quarter introductory pricing for brand-new Partner Candidates, Executive slot-count discounts, Tier 3 and Tier 4 member-status discounts, SMB 50% pricing, director-level-or-above attendee requirement, and agreement details.
+- Profile linking: `/partner-profile/` links to `/partner-pricing/` from its header navigation.
+- Routing support: `/partner-pricing` redirects to `/partner-pricing/`; no-cache headers are configured for `/partner-pricing` and `/partner-pricing/*`.
+
 ## Partner Profile
 
 - Route: `/partner-profile/`
 - Source file: `dist/partner-profile/index.html`
 - API route: `/api/partner-profile`
-- Purpose: private company-level partner dashboard showing tier, company contacts, events attended by any known contact for that company, attendee relationships from those events, publication placements once the publication system is linked, and sponsorship contribution totals.
+- Purpose: private company-level partner dashboard showing tier, company contacts, events attended by any known contact for that company, attendee relationships from those events, publication placements once the publication system is linked, and partner subscription details including price and Executive slots.
 - Access workflow: partner contacts sign in with the email address from their CRM registration record and a generated password that staff manually provide. In `/crm/`, Generate Password or Reset Password on a partner registrant creates or updates the Mojo Auth login, stores the current handoff password on the CRM partner record, adds the email to the `partners` access group, and connects the canonical `crm:contact:{email}` record to `partner-company:{company-slug}`. The API refuses accounts that are not connected to a partner company profile.
-- Storage model: partner profiles are company-based, not individual-user-based. Preferred records use `partner-company:{company-slug}` or `partner-profile-company:{company-slug}` in `MOJO_SUMMITS_SETUP_STATE`; contact mapping should use `crm:contact:{email}`. Legacy `partner-contact:{email}`, `partner-profile-contact:{email}`, `partner-profile:{email}`, and `partner:{email}` records are still read as fallbacks. Profile records can include `contacts`, `events` or `attendedEvents`, `publications`, and `sponsorships`, `contributions`, or `payments`.
+- Storage model: partner profiles are company-based, not individual-user-based. Preferred records use `partner-company:{company-slug}` or `partner-profile-company:{company-slug}` in `MOJO_SUMMITS_SETUP_STATE`; contact mapping should use `crm:contact:{email}`. Legacy `partner-contact:{email}`, `partner-profile-contact:{email}`, `partner-profile:{email}`, and `partner:{email}` records are still read as fallbacks. Profile records can include `contacts`, `events` or `attendedEvents`, `publications`, and subscription/payment records.
 - Event and attendee matching: the API finds all known company contacts from profile contacts plus partner/member/guest registration rows with the same company. Events attended by any of those contacts are shown, and each event lists every known member, guest, or partner attendee whose `eventId`, `eventSlug`, `event`, or `eventName` matches the event.
 - Admin preview: `/partner-profile/?preview=4321` opens a sample company profile for visual review and page editing checks without loading live partner data.
 - Routing support: `/partner-profile` redirects to `/partner-profile/`; no-cache headers are configured for `/partner-profile` and `/partner-profile/*`.

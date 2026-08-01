@@ -326,6 +326,35 @@
     }
     .muted { color: var(--muted); }
     .money { color: var(--good); font-weight: 900; }
+    .subscription-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 220px;
+      gap: 16px;
+      align-items: stretch;
+    }
+    .executive-slot-card {
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      min-height: 116px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(27,35,51,.72), rgba(10,15,30,.52));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .executive-slot-card span {
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .executive-slot-card strong {
+      color: var(--white);
+      font-size: 48px;
+      line-height: 1;
+    }
     .empty {
       padding: 20px;
       border: 1px dashed var(--line);
@@ -343,6 +372,7 @@
       }
       nav { justify-content: start; }
       .hero { grid-template-columns: 1fr; }
+      .subscription-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 620px) {
@@ -370,10 +400,11 @@
       </a>
       <nav aria-label="Partner profile sections">
         <a href="/partners/">Partners</a>
+        <a href="/partner-pricing/">Pricing</a>
         <a href="#contacts">Contacts</a>
         <a href="#events">Events</a>
         <a href="#publications">Publications</a>
-        <a href="#contributions">Contributions</a>
+        <a href="#subscriptions">Subscriptions</a>
       </nav>
     </div>
   </header>
@@ -385,7 +416,7 @@
       <div class="hero-panel">
         <span class="eyebrow">Partner profile</span>
         <h1 id="profileTitle">Partner intelligence record.</h1>
-        <p class="lead">A private company-level view of partner status, company contacts, event participation, attendee relationships, publication involvement, and sponsorship contributions.</p>
+        <p class="lead">A private company-level view of partner status, company contacts, event participation, attendee relationships, publication involvement, and subscription record.</p>
       </div>
       <aside class="summary-card" aria-label="Partner summary">
         <span class="tier" id="partnerTier">Loading</span>
@@ -396,7 +427,7 @@
           <div class="metric"><strong id="eventCount">0</strong><span>Events attended</span></div>
           <div class="metric"><strong id="attendeeCount">0</strong><span>People visible from those events</span></div>
           <div class="metric"><strong id="publicationCount">0</strong><span>Publication placements</span></div>
-          <div class="metric"><strong id="totalContributed">$0</strong><span>Sponsorship contributions</span></div>
+          <div class="metric"><strong id="totalSubscriptionPayments">$0</strong><span>Subscription payments</span></div>
         </div>
       </aside>
     </section>
@@ -436,15 +467,15 @@
       <div class="table-wrap" id="publicationsTable"></div>
     </section>
 
-    <section class="section" id="contributions">
+    <section class="section" id="subscriptions">
       <div class="section-head">
         <div>
-          <span class="eyebrow">Sponsorship ledger</span>
-          <h2>Contributed sponsorship money</h2>
+          <span class="eyebrow">Subscription ledger</span>
+          <h2>Subscription payments</h2>
         </div>
-        <span class="count-pill" id="contributionsPill">$0 total</span>
+        <span class="count-pill" id="subscriptionsPill">$0 / quarter</span>
       </div>
-      <div class="table-wrap" id="contributionsTable"></div>
+      <div id="subscriptionsTable"></div>
     </section>
   </main>
 
@@ -566,29 +597,41 @@
       `;
     }
 
-    function renderContributions(contributions = []) {
-      const target = document.getElementById("contributionsTable");
-      const total = contributions.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-      setText("contributionsPill", `${currency.format(total)} total`);
-      if (!contributions.length) {
-        target.innerHTML = empty("No sponsorship contribution records are connected to this partner profile yet.");
+    function renderSubscriptions(subscriptions = []) {
+      const target = document.getElementById("subscriptionsTable");
+      const total = subscriptions.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const executiveSlots = subscriptions.reduce((sum, item) => sum + Number(item.executiveSlots || item.executiveSlotCount || item.slots || 0), 0);
+      setText("subscriptionsPill", `${currency.format(total)} / quarter`);
+      if (!subscriptions.length) {
+        target.innerHTML = empty("No partner subscription records are connected to this partner profile yet.");
         return;
       }
       target.innerHTML = `
-        <table>
-          <thead><tr><th>Date</th><th>Event or program</th><th>Category</th><th>Status</th><th>Amount</th></tr></thead>
-          <tbody>
-            ${contributions.map((item) => `
-              <tr>
-                <td>${escapeHtml(item.date)}</td>
-                <td>${escapeHtml(item.event)}</td>
-                <td>${escapeHtml(item.category)}</td>
-                <td>${escapeHtml(item.status)}</td>
-                <td class="money">${currency.format(Number(item.amount || 0))}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
+        <div class="subscription-grid">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Start date</th><th>Subscription</th><th>Tier</th><th>Status</th><th>Price</th></tr></thead>
+              <tbody>
+                ${subscriptions.map((item) => {
+                  const price = item.priceLabel || `${currency.format(Number(item.amount || 0))}${item.cadence ? ` ${item.cadence}` : ""}`;
+                  return `
+                    <tr>
+                      <td>${escapeHtml(item.date)}</td>
+                      <td>${escapeHtml(item.subscription || item.event)}</td>
+                      <td>${escapeHtml(item.tier || item.category)}</td>
+                      <td>${escapeHtml(item.status)}</td>
+                      <td class="money">${escapeHtml(price)}</td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+          <aside class="executive-slot-card" aria-label="Executive slots">
+            <span>Executive slots</span>
+            <strong>${executiveSlots || 0}</strong>
+          </aside>
+        </div>
       `;
     }
 
@@ -623,10 +666,20 @@
           publications: [
             { title: "Executive AI Adoption Brief", type: "Briefing", date: "November 2026", role: "Quoted contributor", url: "" }
           ],
-          contributions: [
-            { date: "2026-10-01", event: "Dallas Executive AI Summit", category: "Sponsorship", status: "Received", amount: 25000 }
+          subscriptions: [
+            {
+              date: "2026-10-01",
+              subscription: "Quarterly executive subscription",
+              tier: "Tier 3 - Sanctum Partner",
+              status: "Active",
+              amount: 2500,
+              cadence: "per quarter",
+              priceLabel: "$2,500 per quarter",
+              executiveSlots: 1
+            }
           ],
-          totalContributed: 25000
+          totalSubscriptionPayments: 2500,
+          executiveSlots: 1
         }
       };
     }
@@ -636,12 +689,12 @@
       const contacts = profile.contacts || [];
       const events = profile.events || [];
       const publications = profile.publications || [];
-      const contributions = profile.contributions || [];
+      const subscriptions = profile.subscriptions || profile.contributions || [];
       const attendeeCount = events.reduce((sum, event) => sum + (event.attendees || []).length, 0);
-      const total = Number(profile.totalContributed || 0);
+      const total = Number(profile.totalSubscriptionPayments || profile.totalContributed || 0);
 
       if (!payload.configured) {
-        showNotice("This company partner profile is inferred from registration records. Add a company profile record to enrich contacts, publications, and sponsorship contributions.");
+        showNotice("This company partner profile is inferred from registration records. Add a company profile record to enrich contacts, publications, and subscription details.");
       }
 
       setText("profileTitle", `${profile.organizationName || "Partner"} intelligence record.`);
@@ -652,12 +705,12 @@
       setText("eventCount", String(events.length));
       setText("attendeeCount", String(attendeeCount));
       setText("publicationCount", String(publications.length));
-      setText("totalContributed", currency.format(total));
+      setText("totalSubscriptionPayments", currency.format(total));
 
       renderContacts(contacts);
       renderEvents(events);
       renderPublications(publications);
-      renderContributions(contributions);
+      renderSubscriptions(subscriptions);
     }
 
     async function loadProfile() {
@@ -680,7 +733,7 @@
         renderContacts([]);
         document.getElementById("eventsList").innerHTML = empty("Profile data is protected.");
         renderPublications([]);
-        renderContributions([]);
+        renderSubscriptions([]);
         return;
       }
 
