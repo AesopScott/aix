@@ -111,7 +111,10 @@
   .btn.primary:hover{ background:var(--white); border-color:var(--white); }
   .btn.ghost{ color:var(--cyan); background:transparent; }
   .btn.ghost:hover{ color:var(--white); border-color:var(--white); }
-  .subscription-request{ flex-basis:100%; width:fit-content; }
+  .subscription-request{
+    grid-column:1 / -1;
+    width:100%;
+  }
   .modal-overlay{
     position:fixed;
     inset:0;
@@ -331,11 +334,13 @@
     line-height:1.65;
   }
   .hero-actions{
-    display:flex;
-    flex-wrap:wrap;
+    width:min(100%, 660px);
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:14px;
     margin-top:36px;
   }
+  .hero-actions .btn{ width:100%; }
   .partner-proof{
     border-top:1px solid var(--line);
     border-bottom:1px solid var(--line-soft);
@@ -656,6 +661,7 @@
     .brand-mark{ height:34px; }
     .brand-primary{ font-size:20px; letter-spacing:.03em; }
     .brand-secondary{ font-size:9.5px; letter-spacing:.32em; }
+    .hero-actions{ grid-template-columns:1fr; }
     .subscription-request{ width:100%; }
     .form-grid{ grid-template-columns:1fr; }
     .modal-card{ padding:28px 22px; }
@@ -696,7 +702,7 @@
         <p class="lead">MOJO AI Summits is not an event company selling sponsorships. We invite a limited group of vendor leaders into a trusted executive intelligence network built around contribution, insight, and long-term strategic relationships.</p>
         <div class="hero-actions">
           <a class="btn primary" href="#value">Understand the Network</a>
-          <a class="btn ghost" href="#tiers">Review Partner Tiers</a>
+          <a class="btn primary" href="#tiers">Review Partner Tiers</a>
           <button class="btn ghost subscription-request" type="button" data-partner-subscription-open>Request partner subscription information</button>
         </div>
       </div>
