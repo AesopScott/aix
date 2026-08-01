@@ -6,9 +6,10 @@ const jsonHeaders = {
 const allowedTypes = new Set(["executive", "conversation", "partner", "dallas-invite"]);
 const maxFieldLength = 2000;
 const notificationRecipients = [
-  { email: "angel@mojoaisummits.com", name: "Angel" },
-  { email: "scott@mojoaisummits.com", name: "Scott" }
+  "angel@mojoaisummits.com",
+  "scott@mojoaisummits.com"
 ];
+const defaultNotificationSender = "scott@mojoaisummits.com";
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -32,6 +33,10 @@ function cleanArray(value) {
     : [];
 }
 
+function cleanBoolean(value) {
+  return value === true || value === "true" || value === "on" || value === "1";
+}
+
 function cleanPayload(payload) {
   const type = cleanString(payload?.type);
   const request = {
@@ -50,11 +55,12 @@ function cleanPayload(payload) {
     teamSize: cleanString(payload?.teamSize),
     notes: cleanString(payload?.notes),
     sourcePage: cleanString(payload?.sourcePage),
+    learningProgramMember: cleanBoolean(payload?.learningProgramMember),
     addons: cleanArray(payload?.addons)
   };
 
   Object.keys(request).forEach((key) => {
-    if (request[key] === "" || (Array.isArray(request[key]) && request[key].length === 0)) {
+    if (request[key] === "" || request[key] === undefined || (Array.isArray(request[key]) && request[key].length === 0)) {
       delete request[key];
     }
   });
@@ -100,6 +106,7 @@ function requestEmailText(record) {
     `Email: ${record.email || ""}`,
     `Title: ${record.title || ""}`,
     `Company: ${record.company || ""}`,
+    `MojoAIstudio.com learning program member: ${record.learningProgramMember ? "True" : "False"}`,
     record.sourcePage ? `Source page: ${record.sourcePage}` : "",
     "",
     `Submitted: ${record.createdAt}`,
@@ -113,6 +120,7 @@ function requestEmailHtml(record) {
     ["Email", record.email],
     ["Title", record.title],
     ["Company", record.company],
+    ["MojoAIstudio.com learning program member", record.learningProgramMember ? "True" : "False"],
     ["Source page", record.sourcePage],
     ["Submitted", record.createdAt],
     ["Request ID", record.id]
@@ -136,24 +144,45 @@ function requestEmailHtml(record) {
 
 async function sendInviteNotification(env, record) {
   if (record.type !== "dallas-invite") return null;
-  if (!env.EMAIL?.send) {
-    return {
-      ok: false,
-      error: "Email notification is not configured."
-    };
-  }
 
   try {
-    const result = await env.EMAIL.send({
-      to: notificationRecipients,
-      from: { email: "noreply@mojoaisummits.com", name: "MOJO AI Summits" },
-      replyTo: { email: record.email, name: record.name },
-      subject: `Dallas invite request: ${record.name} at ${record.company}`,
-      text: requestEmailText(record),
-      html: requestEmailHtml(record)
+    const token = await microsoftGraphAccessToken(env);
+    const sender = cleanString(env.MOJO_INVITE_EMAIL_SENDER) || defaultNotificationSender;
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(sender)}/sendMail`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        message: {
+          subject: `Dallas invite request: ${record.name} at ${record.company}`,
+          body: {
+            contentType: "HTML",
+            content: requestEmailHtml(record)
+          },
+          toRecipients: notificationRecipients.map((email) => ({
+            emailAddress: { address: email }
+          })),
+          replyTo: [
+            {
+              emailAddress: {
+                address: record.email,
+                name: record.name
+              }
+            }
+          ]
+        },
+        saveToSentItems: false
+      })
     });
 
-    return { ok: true, result };
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error?.message || "Microsoft Graph sendMail failed.");
+    }
+
+    return { ok: true };
   } catch (error) {
     return {
       ok: false,
@@ -161,6 +190,35 @@ async function sendInviteNotification(env, record) {
       code: error?.code || ""
     };
   }
+}
+
+async function microsoftGraphAccessToken(env) {
+  const tenantId = cleanString(env.MOJO_MAIL_TENANT_ID || env.MOJO_MS_TENANT_ID || env.MICROSOFT_TENANT_ID || env.MS_TENANT_ID);
+  const clientId = cleanString(env.MOJO_MAIL_CLIENT_ID || env.MOJO_MS_CLIENT_ID || env.MICROSOFT_CLIENT_ID || env.MS_CLIENT_ID);
+  const clientSecret = String(env.MOJO_MAIL_CLIENT_SECRET || env.MOJO_MS_CLIENT_SECRET || env.MICROSOFT_CLIENT_SECRET || env.MS_CLIENT_SECRET || "");
+
+  if (!tenantId || !clientId || !clientSecret) {
+    throw new Error("Microsoft Graph mail credentials are not configured.");
+  }
+
+  const body = new URLSearchParams();
+  body.set("client_id", clientId);
+  body.set("client_secret", clientSecret);
+  body.set("scope", "https://graph.microsoft.com/.default");
+  body.set("grant_type", "client_credentials");
+
+  const response = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error_description || payload.error || "Microsoft Graph token request failed.");
+  }
+
+  return payload.access_token;
 }
 
 export async function onRequestOptions() {

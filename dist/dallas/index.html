@@ -305,6 +305,22 @@
     border-color:rgba(0,230,255,.58);
     box-shadow:0 0 0 3px rgba(0,230,255,.10);
   }
+  .invite-checkbox{
+    grid-column:1 / -1;
+    display:grid;
+    grid-template-columns:18px 1fr;
+    gap:10px;
+    align-items:start;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.45;
+  }
+  .invite-checkbox input{
+    width:18px;
+    height:18px;
+    margin:1px 0 0;
+    accent-color:var(--cyan);
+  }
   .invite-form .btn-primary{
     grid-column:1 / -1;
     width:100%;
@@ -747,6 +763,10 @@
               <label for="inviteCompany">Company</label>
               <input id="inviteCompany" name="company" autocomplete="organization" required>
             </div>
+            <label class="invite-checkbox" for="inviteLearningProgramMember">
+              <input id="inviteLearningProgramMember" name="learningProgramMember" type="checkbox" value="true">
+              <span>I am a member of the MojoAIstudio.com learning program</span>
+            </label>
             <button class="btn-primary" type="submit">Submit Invite Request</button>
           </form>
           <p class="invite-message" id="inviteRequestMessage" aria-live="polite"></p>
@@ -1023,6 +1043,7 @@
         body: JSON.stringify({
           type: "dallas-invite",
           sourcePage: "/dallas/",
+          learningProgramMember: Boolean(inviteForm.elements.learningProgramMember?.checked),
           ...formData
         })
       });
