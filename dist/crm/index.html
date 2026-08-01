@@ -772,7 +772,7 @@
         </label>
         <label>
           Guest or user name
-          <input id="registrationInviteName" name="intendedGuestName" placeholder="Invited person's name" autocomplete="name" required>
+          <input id="registrationInviteName" name="intendedGuestName" placeholder="Optional invitee name" autocomplete="name">
         </label>
         <button type="submit" id="registrationInviteSubmit">Generate Link</button>
       </form>
@@ -1986,11 +1986,6 @@
       };
       if (!payload.eventSlug) {
         setNotice("Select an event before generating a registration code.", "error");
-        clearRegistrationInviteResult();
-        return;
-      }
-      if (!String(payload.intendedGuestName || "").trim()) {
-        setNotice("Enter the guest or user name before generating a registration code.", "error");
         clearRegistrationInviteResult();
         return;
       }

@@ -771,7 +771,6 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
   );
   const guestRegistrationType = cleanGuestRegistrationType(payload.guestRegistrationType || payload.registrationRole || payload.type);
   if (!eventSlug && !eventName) throw new Error("Select an event before generating an invite code.");
-  if (!intendedGuestName) throw new Error("Enter the guest or user name before generating an invite code.");
 
   const createdAt = new Date().toISOString();
   const record = {
