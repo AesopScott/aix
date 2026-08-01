@@ -81,24 +81,6 @@ Quarterly payment does not convert the subscription into a quarter-to-quarter co
 
 If you pay the annual subscription in full at the start of the contract term, you receive a 10% annual payment discount.
 
-## Annualized Pricing Examples
-
-| Access Level | Quarterly Cost | Annual Cost | What It Covers |
-| --- | ---: | ---: | --- |
-| Tier 2 only | $500/quarter | $2,000/year | Unlimited virtual event attendance |
-| Tier 2 + Tier 3 | $2,500/quarter | $10,000/year | Unlimited virtual event attendance plus summit attendance |
-| Tier 2 + Tier 3 + Tier 4 | $10,000/quarter | $40,000/year | Unlimited virtual event attendance, summit attendance, and eligible Mojo events beyond Tier 2 and Tier 3 |
-
-## Candidate Annualized Pricing Examples
-
-Partner Candidate pricing applies while your organization remains in Candidate status.
-
-| Access Level | Candidate Quarterly Cost | Candidate Annual Cost | What It Covers |
-| --- | ---: | ---: | --- |
-| Tier 2 only | $650/quarter | $2,600/year | Unlimited virtual event attendance |
-| Tier 2 + Tier 3 | $3,250/quarter | $13,000/year | Unlimited virtual event attendance plus summit attendance |
-| Tier 2 + Tier 3 + Tier 4 | $13,000/quarter | $52,000/year | Unlimited virtual event attendance, summit attendance, and eligible Mojo events beyond Tier 2 and Tier 3 |
-
 ## Executive Slot and Executive Member Status Discounts
 
 Your first Executive slot is billed at the standard subscription price. Additional Executive slots receive a discount on that slot's subscription fee.
@@ -126,6 +108,23 @@ Annual payment discount:
 | --- | ---: | --- |
 | Quarterly payments | 0% | Standard annual contract price paid quarterly |
 | Annual payment upfront | 10% | 10% discount for paying the annual subscription in full at the start of the term |
+
+## Multi-Slot Pricing Examples
+
+These examples include the slot-count discount: first Executive slot at standard price, second Executive slot at 15% off, and third Executive slot and beyond at 30% off. Member-status discounts are not included in this table and are applied separately when eligible.
+
+| Executive Slots | Tier 2 Only Annualized | Tier 2 + Tier 3 Annualized | Tier 2 + Tier 3 + Tier 4 Annualized |
+| ---: | ---: | ---: | ---: |
+| 1 | $2,000 | $10,000 | $40,000 |
+| 2 | $3,700 | $18,500 | $74,000 |
+| 3 | $5,100 | $25,500 | $102,000 |
+
+## Member Status Discount Examples
+
+| Scenario | Standard Annual Cost | Member Discount | Discounted Annual Cost |
+| --- | ---: | ---: | ---: |
+| One Tier 3 member using a Tier 2 + Tier 3 Executive slot | $10,000 | 10% | $9,000 |
+| One Tier 4 member using a Tier 2 + Tier 3 + Tier 4 Executive slot | $40,000 | 20% | $32,000 |
 
 ## SMB Program
 
@@ -256,23 +255,6 @@ You subscribe one Executive slot to Tier 2, Tier 3, and Tier 4.
 - Quarterly cost: $10,000
 - Annualized cost: $40,000
 - Access: unlimited Mojo virtual events, summit attendance, and eligible Mojo events above and beyond Tier 2 and Tier 3
-
-## Multi-Slot Pricing Examples
-
-These examples include the slot-count discount: first Executive slot at standard price, second Executive slot at 15% off, and third Executive slot and beyond at 30% off. Member-status discounts are not included in this table and are applied separately when eligible.
-
-| Executive Slots | Tier 2 Only Annualized | Tier 2 + Tier 3 Annualized | Tier 2 + Tier 3 + Tier 4 Annualized |
-| ---: | ---: | ---: | ---: |
-| 1 | $2,000 | $10,000 | $40,000 |
-| 2 | $3,700 | $18,500 | $74,000 |
-| 3 | $5,100 | $25,500 | $102,000 |
-
-## Member Status Discount Examples
-
-| Scenario | Standard Annual Cost | Member Discount | Discounted Annual Cost |
-| --- | ---: | ---: | ---: |
-| One Tier 3 member using a Tier 2 + Tier 3 Executive slot | $10,000 | 10% | $9,000 |
-| One Tier 4 member using a Tier 2 + Tier 3 + Tier 4 Executive slot | $40,000 | 20% | $32,000 |
 
 ## Agreement Details
 

@@ -8,6 +8,8 @@
   <link rel="icon" type="image/png" href="/assets/logo-badge.png">
   <link rel="apple-touch-icon" href="/assets/logo-badge.png">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
+
     :root {
       --navy: #0A0F1E;
       --blue: #1666FF;
@@ -53,7 +55,7 @@
     a { color: inherit; }
 
     .wrap {
-      width: min(1160px, calc(100% - 40px));
+      width: min(1320px, calc(100% - 24px));
       margin: 0 auto;
       position: relative;
     }
@@ -62,67 +64,108 @@
       position: sticky;
       top: 0;
       z-index: 20;
-      border-bottom: 1px solid var(--line);
-      background: rgba(10,15,30,.88);
-      backdrop-filter: blur(18px);
+      background: linear-gradient(to bottom, rgba(10,15,30,.9), rgba(10,15,30,.72));
+      backdrop-filter: blur(10px);
     }
 
-    .nav {
+    .top-nav {
       min-height: 76px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 24px;
+      gap: 28px;
     }
 
-    .brand {
+    .brand-lockup {
       display: inline-flex;
       align-items: center;
       gap: 12px;
-      color: var(--white);
       text-decoration: none;
-      font-weight: 900;
-      letter-spacing: 0;
-      min-width: 225px;
+      cursor: pointer;
+      min-width: 240px;
     }
 
-    .brand img {
-      width: 42px;
-      height: 42px;
-    }
-
-    .brand span {
+    .brand-mark {
+      height: 39px;
+      width: auto;
       display: block;
-      color: var(--muted);
-      font-size: .82rem;
-      font-weight: 700;
+      transform-origin: center;
+      transition: transform 3.6s ease, filter 3.6s ease;
     }
 
-    nav {
+    .brand-lockup:hover .brand-mark,
+    .brand-mark:hover {
+      transform: scale(1.5);
+      filter: drop-shadow(0 0 22px rgba(0,230,255,.28));
+    }
+
+    .brand-divider {
+      width: 1px;
+      height: 35px;
+      background: linear-gradient(to bottom, transparent, rgba(0,230,255,.9), transparent);
+      box-shadow: 0 0 14px rgba(0,230,255,.24);
+    }
+
+    .brand-name {
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .brand-primary {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      background: linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 18px rgba(0,230,255,.16);
+    }
+
+    .brand-secondary {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: .38em;
+      color: rgba(222,235,255,.78);
+      padding-left: .38em;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
       flex-wrap: wrap;
       justify-content: flex-end;
       gap: 8px;
     }
 
-    nav a {
+    .nav-links a {
       display: inline-flex;
       align-items: center;
       min-height: 38px;
-      padding: 0 12px;
-      border: 1px solid transparent;
-      border-radius: 8px;
-      color: #D8E7FF;
+      padding: 0 8px;
+      color: #8b8f9c;
       text-decoration: none;
-      font-size: .9rem;
-      font-weight: 800;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12.6px;
+      font-weight: 600;
+      letter-spacing: .2em;
+      text-transform: uppercase;
       white-space: nowrap;
+      transition: color .25s;
     }
 
-    nav a:hover,
-    nav a[aria-current="page"] {
-      border-color: rgba(0,230,255,.28);
-      background: rgba(0,230,255,.08);
+    .nav-links a:hover,
+    .nav-links a[aria-current="page"] {
       color: var(--white);
     }
 
@@ -255,9 +298,9 @@
 
     .panel {
       margin-top: 18px;
-      padding: 24px;
+      padding: 20px;
       background: var(--panel-strong);
-      overflow: hidden;
+      overflow: visible;
     }
 
     .principles {
@@ -287,7 +330,7 @@
     }
 
     .table-wrap {
-      overflow-x: auto;
+      overflow: visible;
       border: 1px solid rgba(255,255,255,.12);
       border-radius: 8px;
       background: rgba(5,10,22,.38);
@@ -295,17 +338,19 @@
 
     table {
       width: 100%;
-      min-width: 780px;
+      min-width: 0;
       border-collapse: collapse;
+      table-layout: fixed;
     }
 
     th,
     td {
-      padding: 15px 16px;
+      padding: 12px 12px;
       border-bottom: 1px solid rgba(255,255,255,.10);
       text-align: left;
       vertical-align: top;
-      font-size: .94rem;
+      font-size: .9rem;
+      overflow-wrap: anywhere;
     }
 
     th {
@@ -315,7 +360,7 @@
       font-weight: 900;
       letter-spacing: .08em;
       text-transform: uppercase;
-      white-space: nowrap;
+      white-space: normal;
     }
 
     tr:last-child td { border-bottom: 0; }
@@ -345,14 +390,6 @@
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 16px;
       align-items: start;
-    }
-
-    .two-column.equal-panels {
-      align-items: stretch;
-    }
-
-    .two-column.equal-panels > .panel {
-      height: 100%;
     }
 
     .tier-grid {
@@ -403,13 +440,13 @@
     }
 
     @media (max-width: 980px) {
-      .nav {
+      .top-nav {
         align-items: flex-start;
         flex-direction: column;
         padding: 16px 0;
       }
 
-      nav { justify-content: flex-start; }
+      .nav-links { justify-content: flex-start; }
 
       .summary-grid,
       .principles,
@@ -422,26 +459,31 @@
     }
 
     @media (max-width: 640px) {
-      .wrap { width: min(100% - 28px, 1160px); }
+      .wrap { width: min(100% - 16px, 1320px); }
       .hero { padding-top: 46px; }
-      .brand { min-width: 0; }
-      nav a { padding: 0 10px; font-size: .84rem; }
+      .brand-lockup { min-width: 0; gap: 8px; }
+      .brand-mark { height: 34px; }
+      .brand-divider { height: 30px; }
+      .brand-primary { font-size: 20px; letter-spacing: .03em; }
+      .brand-secondary { font-size: 9.5px; letter-spacing: .32em; padding-left: .32em; }
+      .nav-links a { padding: 0 4px; font-size: 11px; letter-spacing: .15em; }
       .panel, .summary-card, .tier-card, .principle { padding: 18px; }
-      th, td { padding: 13px 14px; }
+      th, td { padding: 10px 8px; font-size: .8rem; }
     }
   </style>
 </head>
 <body>
   <header>
-    <div class="wrap nav">
-      <a class="brand" href="/partners/" aria-label="MOJO AI Summits partners">
-        <img src="/assets/logo-mark.svg" alt="">
-        <span>
-          MOJO AI Summits
-          <span>Partner Pricing Structure</span>
+    <div class="wrap top-nav">
+      <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+        <img class="brand-mark" src="/assets/logo-mark.png" alt="">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-name" aria-hidden="true">
+          <span class="brand-primary">MOJO AI</span>
+          <span class="brand-secondary">Summits</span>
         </span>
       </a>
-      <nav aria-label="Partner pricing sections">
+      <nav class="nav-links" aria-label="Partner pricing sections">
         <a href="/partners/">Partners</a>
         <a href="/partner-profile/">Partner Profile</a>
         <a href="#candidate-pricing">Candidate</a>
@@ -709,85 +751,6 @@
       </div>
     </section>
 
-    <section id="annualized-pricing">
-      <div class="wrap">
-        <span class="eyebrow">Annualized Examples</span>
-        <h2>Access-Level Pricing Examples</h2>
-        <div class="two-column equal-panels" style="margin-top:18px;">
-          <div class="panel">
-            <h3>Partner Pricing</h3>
-            <div class="table-wrap" style="margin-top:14px;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Access Level</th>
-                    <th>Quarterly Cost</th>
-                    <th>Annual Cost</th>
-                    <th>What It Covers</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Tier 2 only</td>
-                    <td class="price">$500/quarter</td>
-                    <td class="price">$2,000/year</td>
-                    <td>Unlimited virtual event attendance</td>
-                  </tr>
-                  <tr>
-                    <td>Tier 2 + Tier 3</td>
-                    <td class="price">$2,500/quarter</td>
-                    <td class="price">$10,000/year</td>
-                    <td>Unlimited virtual event attendance plus summit attendance</td>
-                  </tr>
-                  <tr>
-                    <td>Tier 2 + Tier 3 + Tier 4</td>
-                    <td class="price">$10,000/quarter</td>
-                    <td class="price">$40,000/year</td>
-                    <td>Unlimited virtual event attendance, summit attendance, and eligible Mojo events beyond Tier 2 and Tier 3</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div class="panel">
-            <h3>Candidate Pricing</h3>
-            <div class="table-wrap" style="margin-top:14px;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Access Level</th>
-                    <th>Candidate Quarterly Cost</th>
-                    <th>Candidate Annual Cost</th>
-                    <th>What It Covers</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Tier 2 only</td>
-                    <td class="price">$650/quarter</td>
-                    <td class="price">$2,600/year</td>
-                    <td>Unlimited virtual event attendance</td>
-                  </tr>
-                  <tr>
-                    <td>Tier 2 + Tier 3</td>
-                    <td class="price">$3,250/quarter</td>
-                    <td class="price">$13,000/year</td>
-                    <td>Unlimited virtual event attendance plus summit attendance</td>
-                  </tr>
-                  <tr>
-                    <td>Tier 2 + Tier 3 + Tier 4</td>
-                    <td class="price">$13,000/quarter</td>
-                    <td class="price">$52,000/year</td>
-                    <td>Unlimited virtual event attendance, summit attendance, and eligible Mojo events beyond Tier 2 and Tier 3</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section id="discounts">
       <div class="wrap">
         <span class="eyebrow">Discounts</span>
@@ -851,6 +814,67 @@
                     <td>Tier 4 member</td>
                     <td class="price">20%</td>
                     <td>20% discount for that Executive slot</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="multi-slot-examples">
+      <div class="wrap">
+        <span class="eyebrow">Examples</span>
+        <h2>Multi-Slot and Member Status Examples</h2>
+        <p class="section-note">
+          Multi-slot examples include the slot-count discount: first Executive slot at standard price, second Executive slot at 15% off, and third Executive slot and beyond at 30% off. Member-status discounts are applied separately when eligible.
+        </p>
+        <div class="two-column" style="margin-top:18px;">
+          <div class="panel">
+            <h3>Multi-Slot Annualized Pricing</h3>
+            <div class="table-wrap" style="margin-top:14px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Executive Slots</th>
+                    <th>Tier 2 Only</th>
+                    <th>Tier 2 + Tier 3</th>
+                    <th>Tier 2 + Tier 3 + Tier 4</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="price">1</td><td>$2,000</td><td>$10,000</td><td>$40,000</td></tr>
+                  <tr><td class="price">2</td><td>$3,700</td><td>$18,500</td><td>$74,000</td></tr>
+                  <tr><td class="price">3</td><td>$5,100</td><td>$25,500</td><td>$102,000</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Member Status Discount Examples</h3>
+            <div class="table-wrap" style="margin-top:14px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Scenario</th>
+                    <th>Standard Annual Cost</th>
+                    <th>Member Discount</th>
+                    <th>Discounted Annual Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>One Tier 3 member using a Tier 2 + Tier 3 Executive slot</td>
+                    <td>$10,000</td>
+                    <td class="price">10%</td>
+                    <td class="price">$9,000</td>
+                  </tr>
+                  <tr>
+                    <td>One Tier 4 member using a Tier 2 + Tier 3 + Tier 4 Executive slot</td>
+                    <td>$40,000</td>
+                    <td class="price">20%</td>
+                    <td class="price">$32,000</td>
                   </tr>
                 </tbody>
               </table>
@@ -957,67 +981,6 @@
               <li>Strategic relationship visibility across the subscribed Executive slot's participation history</li>
             </ul>
           </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="multi-slot-examples">
-      <div class="wrap">
-        <span class="eyebrow">Examples</span>
-        <h2>Multi-Slot and Member Status Examples</h2>
-        <p class="section-note">
-          Multi-slot examples include the slot-count discount: first Executive slot at standard price, second Executive slot at 15% off, and third Executive slot and beyond at 30% off. Member-status discounts are applied separately when eligible.
-        </p>
-        <div class="two-column" style="margin-top:18px;">
-          <div class="panel">
-            <h3>Multi-Slot Annualized Pricing</h3>
-            <div class="table-wrap" style="margin-top:14px;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Executive Slots</th>
-                    <th>Tier 2 Only</th>
-                    <th>Tier 2 + Tier 3</th>
-                    <th>Tier 2 + Tier 3 + Tier 4</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td class="price">1</td><td>$2,000</td><td>$10,000</td><td>$40,000</td></tr>
-                  <tr><td class="price">2</td><td>$3,700</td><td>$18,500</td><td>$74,000</td></tr>
-                  <tr><td class="price">3</td><td>$5,100</td><td>$25,500</td><td>$102,000</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div class="panel">
-            <h3>Member Status Discount Examples</h3>
-            <div class="table-wrap" style="margin-top:14px;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Scenario</th>
-                    <th>Standard Annual Cost</th>
-                    <th>Member Discount</th>
-                    <th>Discounted Annual Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>One Tier 3 member using a Tier 2 + Tier 3 Executive slot</td>
-                    <td>$10,000</td>
-                    <td class="price">10%</td>
-                    <td class="price">$9,000</td>
-                  </tr>
-                  <tr>
-                    <td>One Tier 4 member using a Tier 2 + Tier 3 + Tier 4 Executive slot</td>
-                    <td>$40,000</td>
-                    <td class="price">20%</td>
-                    <td class="price">$32,000</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       </div>
     </section>
