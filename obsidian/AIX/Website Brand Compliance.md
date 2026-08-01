@@ -4,20 +4,16 @@ Updated: 2026-08-01
 
 ## Summary
 
-The deployed static site now uses a central brand-compliance layer at `dist/assets/mojo-brand-compliance.css`.
+The previous central brand-compliance layer at `dist/assets/mojo-brand-compliance.css` was made intentionally non-invasive on 2026-08-01.
 
-The layer enforces the Mojo AI Summits brand guide across deployed `dist` pages:
+Do not use a global CSS override to force Montserrat, all-caps headings, hero sizing, nav styles, colors, layout, or responsive behavior across the site. That approach damaged authored page art direction, especially the homepage and partners page.
 
-- Montserrat typography for headlines, body copy, labels, and UI.
-- Approved brand palette: Deep Navy `#0A0F1E`, Electric Blue `#1666FF`, Cyan `#00E6FF`, Slate `#1B2333`, and White `#FFFFFF`.
-- Uppercase headline and UI-label treatment.
-- Approved logo asset usage and replacement of old champagne/gold mockup image references.
-- Mobile guardrails for dense grids, forms, and tables so pages do not widen past the viewport.
+Brand guidance should be applied directly in page designs and visual assets while preserving each page's existing typography and composition unless Scott explicitly asks for a page redesign.
 
 ## Verification
 
-Rendered audit on 2026-08-01 checked 40 routes at desktop and mobile viewport sizes, 80 checks total.
+Rendered audit on 2026-08-01 confirmed the homepage and partners page hero headings were restored to authored typography:
 
-Result: 0 failures for brand stylesheet presence, Montserrat usage, legacy `MoJo` or `Ai` casing, old gold/champagne assets, sampled off-brand computed colors, and horizontal overflow.
-
-The hidden partner-registration route was checked with `?preview=4321`, matching its administrative preview behavior.
+- Homepage H1: `Fraunces, serif`, no forced uppercase transform.
+- Partners H1: `Fraunces, serif`, no forced uppercase transform.
+- Brand/nav text: authored page fonts restored.
