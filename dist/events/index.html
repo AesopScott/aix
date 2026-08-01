@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/assets/logo-badge.png">
   <link rel="apple-touch-icon" href="/assets/logo-badge.png">
-  <title>MoJo Event Playbook Generator</title>
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
+  <title>MOJO Event Playbook Generator</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
 
@@ -690,7 +691,7 @@
         <form id="eventForm" class="grid">
           <div class="field" style="--span:3">
             <label for="eventName">Event name</label>
-            <input id="eventName" name="name" required placeholder="MoJo AI Summit Dallas">
+            <input id="eventName" name="name" required placeholder="MOJO AI Summit Dallas">
           </div>
           <div class="field" style="--span:3">
             <label for="eventDate">Primary date</label>
@@ -707,9 +708,9 @@
           </div>
           <div class="choice-field" style="--span:3">
             <span class="choice-label">Production</span>
-            <input id="eventProduction" name="prod" type="hidden" value="MoJo-owned">
+            <input id="eventProduction" name="prod" type="hidden" value="MOJO-owned">
             <div class="segment-controls" style="--choices:2" aria-label="Production">
-              <button class="segment-button" type="button" data-choice="prod" data-choice-value="MoJo-owned" aria-pressed="true">MoJo-owned</button>
+              <button class="segment-button" type="button" data-choice="prod" data-choice-value="MOJO-owned" aria-pressed="true">MOJO-owned</button>
               <button class="segment-button" type="button" data-choice="prod" data-choice-value="Client-produced" aria-pressed="false">Client-produced</button>
             </div>
           </div>
@@ -727,7 +728,7 @@
           </div>
           <div class="field" style="--span:2">
             <label for="eventClient">Client / brand of record</label>
-            <input id="eventClient" name="client" value="MoJo AI Summits">
+            <input id="eventClient" name="client" value="MOJO AI Summits">
           </div>
           <div class="field" style="--span:2">
             <label for="eventRegistration">Registration URL</label>
@@ -785,7 +786,7 @@
           ["target", "Target attendance", "text", 2],
           ["client", "Client / brand of record", "text", 2],
           ["reg", "Registration URL", "text", 2],
-          ["prod", "Production model", "select", 2, ["MoJo-owned", "Client-produced"]],
+          ["prod", "Production model", "select", 2, ["MOJO-owned", "Client-produced"]],
           ["promise", "Attendee promise", "area", 3],
           ["success", "What success looks like", "area", 3]
         ]
@@ -829,7 +830,7 @@
         fields: [
           ["name", "Sponsor", "text", 2],
           ["package", "Package / rights", "text", 2],
-          ["owner", "MoJo owner", "text", 1],
+          ["owner", "MOJO owner", "text", 1],
           ["status", "Status", "select", 1, STATUS],
           ["deliverables", "Deliverables and boundaries", "area", 6]
         ]
@@ -1029,7 +1030,7 @@
         addLabel: "Add deliverable",
         fields: [
           ["item", "Deliverable", "text", 2],
-          ["owner", "MoJo owner", "text", 1],
+          ["owner", "MOJO owner", "text", 1],
           ["approver", "Approver", "text", 1],
           ["due", "Due", "date", 1],
           ["status", "Status", "select", 1, STATUS],
@@ -1194,7 +1195,7 @@
         title: profile.name,
         date: profile.date,
         format: profile.format || "Hybrid",
-        production: profile.prod || "MoJo-owned",
+        production: profile.prod || "MOJO-owned",
         playbook,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -1369,7 +1370,7 @@
     function renderPlaybook() {
       const profile = app.current?.playbook?.profile || {};
       document.getElementById("appShell").classList.toggle("generator-mode", !app.current);
-      document.title = app.current ? `${profile.name || app.current.title} - Event Playbook` : "MoJo Event Playbook Generator";
+      document.title = app.current ? `${profile.name || app.current.title} - Event Playbook` : "MOJO Event Playbook Generator";
       document.getElementById("pageKicker").textContent = app.current ? `${profile.format || "Hybrid"} playbook` : "Event Factory";
       document.getElementById("pageTitle").textContent = app.current ? (profile.name || app.current.title || "Untitled event") : "Generate an Event Playbook";
       document.getElementById("pageLede").textContent = app.current
@@ -1549,5 +1550,6 @@
 
     init();
   </script>
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
 </body>
 </html>

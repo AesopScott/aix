@@ -37,3 +37,5 @@
 /virtual-events /virtual/ 301
 /events /events/ 301
 /events/* /events/index.html 200
+/walkthrough /walkthrough/ 301
+/walkthrough/ /walkthrough/index.html 200

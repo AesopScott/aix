@@ -14,6 +14,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Member registration: https://mojoaisummits.com/member-registration/
 - Guest registration: https://mojoaisummits.com/guest/
 - Internal CRM: https://mojoaisummits.com/crm/
+- Walkthrough reviews: https://mojoaisummits.com/walkthrough/
 - Setup checklist: https://mojoaisummits.com/setup/
 - Event playbook: https://mojoaisummits.com/events/
 - Internal storage portal: https://mojoaisummits.com/files/
@@ -51,6 +52,7 @@ Protected internal routes:
 - `/api/scheduling/admin`
 - `/api/scheduling/oauth`
 - `/crm/` and `/api/crm`
+- `/walkthrough/`
 - `/member-profile/` and `/api/member-profile`
 - `/partner-profile/` and `/api/partner-profile`
 - `/setup/` and `/api/setup-state`
@@ -198,3 +200,7 @@ The AWS principal needs permission for `sms-voice:SendTextMessage`; keep `sns:Pu
 The internal CRM lives at `/crm/` and reads from `/api/crm`.
 Member registrations are written to both `member-registration:*` and `crm:member-registrant:*` in `MOJO_SUMMITS_SETUP_STATE`.
 The CRM's Member Registrants section includes contact details, roles, phone verification status, CRM status, notes, and CSV export.
+
+## Walkthrough Reviews
+
+The internal walkthrough review page lives at `/walkthrough/`. It presents tabbed user stories, primary walkthrough steps, and review checks for guest registration, member registration, member profile access, partner candidate registration, partner registration, partner profile access, Mojo team invite-link creation, member-created invite links, and member copy/send behavior.

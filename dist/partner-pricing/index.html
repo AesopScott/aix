@@ -7,8 +7,9 @@
   <meta name="description" content="Partner-facing Mojo AI Summits pricing structure for Executive slots, candidate pricing, discounts, and annual subscription terms." />
   <link rel="icon" type="image/png" href="/assets/logo-badge.png">
   <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 
     :root {
       --navy: #0A0F1E;
@@ -18,9 +19,9 @@
       --white: #FFFFFF;
       --ink: #EAF6FF;
       --muted: #AEBBD0;
-      --line: rgba(255,255,255,.14);
-      --panel: rgba(18,27,47,.86);
-      --panel-strong: rgba(27,35,51,.96);
+      --line: rgba(0,230,255,.22);
+      --panel: rgba(27,35,51,.74);
+      --panel-strong: rgba(27,35,51,.9);
       --shadow: 0 24px 80px rgba(0,0,0,.34);
     }
 
@@ -31,7 +32,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Montserrat", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--ink);
       background:
         radial-gradient(circle at 18% -8%, rgba(22,102,255,.38), transparent 34rem),
@@ -46,8 +47,8 @@
       inset: 0;
       pointer-events: none;
       background-image:
-        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+        linear-gradient(rgba(0,230,255,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,230,255,.045) 1px, transparent 1px);
       background-size: 54px 54px;
       mask-image: linear-gradient(180deg, rgba(0,0,0,.78), transparent 72%);
     }
@@ -79,65 +80,47 @@
     .brand-lockup {
       display: inline-flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       text-decoration: none;
       cursor: pointer;
-      min-width: 240px;
+      min-width: 360px;
     }
 
-    .brand-mark {
-      height: 39px;
-      width: auto;
+    .brand-logo-shell {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 54px;
+      padding: 7px 12px;
+      border: 1px solid rgba(0,230,255,.24);
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: 0 0 18px rgba(0,230,255,.16);
+    }
+
+    .brand-logo {
+      width: clamp(180px, 18vw, 238px);
+      height: auto;
       display: block;
-      transform-origin: center;
-      transition: transform 3.6s ease, filter 3.6s ease;
+      filter: none !important;
     }
 
-    .brand-lockup:hover .brand-mark,
-    .brand-mark:hover {
-      transform: scale(1.5);
-      filter: drop-shadow(0 0 22px rgba(0,230,255,.28));
-    }
-
-    .brand-divider {
+    .brand-page-divider {
       width: 1px;
-      height: 35px;
+      height: 42px;
       background: linear-gradient(to bottom, transparent, rgba(0,230,255,.9), transparent);
       box-shadow: 0 0 14px rgba(0,230,255,.24);
     }
 
-    .brand-name {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      line-height: 1;
-      text-transform: uppercase;
-    }
-
-    .brand-primary {
-      font-family: 'Inter', sans-serif;
-      font-weight: 700;
-      font-size: 26px;
-      letter-spacing: .08em;
-      white-space: nowrap;
-      background: linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      text-shadow: 0 0 18px rgba(0,230,255,.16);
-    }
-
-    .brand-secondary {
-      font-family: 'Inter', sans-serif;
+    .brand-page-title {
+      color: var(--white);
+      font-size: .78rem;
       font-weight: 600;
-      font-size: 12px;
-      letter-spacing: .38em;
-      color: rgba(222,235,255,.78);
-      padding-left: .38em;
-      text-align: center;
+      letter-spacing: .18em !important;
+      line-height: 1.25;
+      text-transform: uppercase;
       white-space: nowrap;
+      text-shadow: 0 0 18px rgba(0,230,255,.22);
     }
 
     .nav-links {
@@ -153,9 +136,8 @@
       align-items: center;
       min-height: 38px;
       padding: 0 8px;
-      color: #8b8f9c;
+      color: rgba(222,235,255,.72);
       text-decoration: none;
-      font-family: 'Space Grotesk', sans-serif;
       font-size: 12.6px;
       font-weight: 600;
       letter-spacing: .2em;
@@ -173,7 +155,7 @@
 
     .hero {
       padding: 74px 0 46px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
+      border-bottom: 1px solid rgba(0,230,255,.14);
     }
 
     .eyebrow {
@@ -193,22 +175,23 @@
       color: var(--white);
       letter-spacing: 0;
       line-height: 1.08;
+      text-transform: uppercase;
     }
 
     h1 {
       max-width: 900px;
       font-size: clamp(2.4rem, 5.6vw, 5rem);
-      font-weight: 900;
+      font-weight: 800;
     }
 
     h2 {
       font-size: clamp(1.7rem, 3vw, 2.45rem);
-      font-weight: 900;
+      font-weight: 800;
     }
 
     h3 {
       font-size: 1.18rem;
-      font-weight: 900;
+      font-weight: 700;
     }
 
     p { margin: 0; }
@@ -231,12 +214,13 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: .35em;
       min-height: 44px;
       padding: 0 16px;
       border-radius: 8px;
-      border: 1px solid rgba(255,255,255,.18);
+      border: 1px solid rgba(0,230,255,.2);
       color: var(--white);
-      background: rgba(255,255,255,.06);
+      background: rgba(27,35,51,.78);
       text-decoration: none;
       font-size: .94rem;
       font-weight: 900;
@@ -331,7 +315,7 @@
 
     .table-wrap {
       overflow: visible;
-      border: 1px solid rgba(255,255,255,.12);
+      border: 1px solid rgba(0,230,255,.16);
       border-radius: 8px;
       background: rgba(5,10,22,.38);
     }
@@ -346,7 +330,7 @@
     th,
     td {
       padding: 12px 12px;
-      border-bottom: 1px solid rgba(255,255,255,.10);
+      border-bottom: 1px solid rgba(0,230,255,.12);
       text-align: left;
       vertical-align: top;
       font-size: .9rem;
@@ -434,7 +418,7 @@
 
     footer {
       padding: 44px 0 52px;
-      border-top: 1px solid rgba(255,255,255,.08);
+      border-top: 1px solid rgba(0,230,255,.14);
       color: var(--muted);
       font-size: .9rem;
     }
@@ -462,10 +446,10 @@
       .wrap { width: min(100% - 16px, 1320px); }
       .hero { padding-top: 46px; }
       .brand-lockup { min-width: 0; gap: 8px; }
-      .brand-mark { height: 34px; }
-      .brand-divider { height: 30px; }
-      .brand-primary { font-size: 20px; letter-spacing: .03em; }
-      .brand-secondary { font-size: 9.5px; letter-spacing: .32em; padding-left: .32em; }
+      .brand-logo-shell { min-height: 44px; padding: 6px 8px; }
+      .brand-logo { width: 164px; }
+      .brand-page-divider { height: 30px; }
+      .brand-page-title { font-size: .62rem; letter-spacing: .12em !important; }
       .nav-links a { padding: 0 4px; font-size: 11px; letter-spacing: .15em; }
       .panel, .summary-card, .tier-card, .principle { padding: 18px; }
       th, td { padding: 10px 8px; font-size: .8rem; }
@@ -476,12 +460,11 @@
   <header>
     <div class="wrap top-nav">
       <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
-        <img class="brand-mark" src="/assets/logo-mark.png" alt="">
-        <span class="brand-divider" aria-hidden="true"></span>
-        <span class="brand-name" aria-hidden="true">
-          <span class="brand-primary">MOJO AI</span>
-          <span class="brand-secondary">Summits</span>
+        <span class="brand-logo-shell" aria-hidden="true">
+          <img class="brand-logo" src="/assets/logo-nav.png" alt="">
         </span>
+        <span class="brand-page-divider" aria-hidden="true"></span>
+        <span class="brand-page-title">Partner Pricing Structure</span>
       </a>
       <nav class="nav-links" aria-label="Partner pricing sections">
         <a href="/partners/">Partners</a>
@@ -505,7 +488,7 @@
         <div class="actions">
           <a class="btn primary" href="#subscription-ladder">View Partner Tiers</a>
           <a class="btn" href="#candidate-pricing">View Candidate Pricing</a>
-          <a class="btn" href="#have-a-taste">View <span class="accent-text">Have a Taste</span> Program</a>
+          <a class="btn" href="#have-a-taste"><span>View</span><span class="accent-text">Have a Taste</span><span>Program</span></a>
         </div>
         <div class="summary-grid">
           <article class="summary-card">
@@ -1026,5 +1009,6 @@
       <p>Working draft: August 1, 2026. For partner agreement preparation and approval workflows.</p>
     </div>
   </footer>
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
 </body>
 </html>

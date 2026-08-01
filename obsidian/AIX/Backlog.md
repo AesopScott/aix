@@ -23,4 +23,3 @@ Order clothes for everyone on the backlog
 
 Go build epics and user stories
 
-We need to create buttons to allow people to request an invitation to the events. 

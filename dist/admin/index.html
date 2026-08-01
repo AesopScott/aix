@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/assets/logo-badge.png">
   <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
   <title>Mojo AI Summits Company Hub</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -797,6 +798,14 @@
       },
       {
         group: "Team",
+        title: "Walkthrough Reviews",
+        path: "/walkthrough/",
+        summary: "Tabbed review center for registration, profile access, and invite-link workflows.",
+        status: "Team",
+        tags: ["walkthrough", "qa", "registration"]
+      },
+      {
+        group: "Team",
         title: "Storage Portal",
         path: "/files/",
         summary: "Cloudflare R2 portal for company records, event assets, receipts, media, and archive files.",
@@ -855,6 +864,7 @@
       "/setup/",
       "/events/",
       "/crm/",
+      "/walkthrough/",
       "/files/",
       "/storage/",
       "/schedule-admin/",
@@ -1102,5 +1112,6 @@
     groupFilter.addEventListener("change", renderRoutes);
     refreshButton.addEventListener("click", refreshLinks);
   </script>
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
 </body>
 </html>

@@ -114,6 +114,17 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/crm", "mojoaisummits.com/crm/*"]
   },
   {
+    id: "walkthrough",
+    kind: "page",
+    group: "Operations",
+    label: "Walkthrough Reviews",
+    summary: "Team review center for registration, profile, and invite workflows.",
+    mode: "allowlist",
+    defaultGroupIds: ["mojo-team"],
+    matches: [{ exact: "/walkthrough" }, { prefix: "/walkthrough/" }],
+    domains: ["mojoaisummits.com/walkthrough", "mojoaisummits.com/walkthrough/*"]
+  },
+  {
     id: "storage",
     kind: "page",
     group: "Data",
