@@ -428,6 +428,7 @@
           <div class="metric"><strong id="attendeeCount">0</strong><span>People visible from those events</span></div>
           <div class="metric"><strong id="publicationCount">0</strong><span>Publication placements</span></div>
           <div class="metric"><strong id="totalSubscriptionPayments">$0</strong><span>Subscription payments</span></div>
+          <div class="metric"><strong id="executiveSlots">0</strong><span>Executive slots</span></div>
         </div>
       </aside>
     </section>
@@ -692,6 +693,7 @@
       const subscriptions = profile.subscriptions || profile.contributions || [];
       const attendeeCount = events.reduce((sum, event) => sum + (event.attendees || []).length, 0);
       const total = Number(profile.totalSubscriptionPayments || profile.totalContributed || 0);
+      const executiveSlots = Number(profile.executiveSlots || subscriptions.reduce((sum, item) => sum + Number(item.executiveSlots || item.executiveSlotCount || item.slots || 0), 0));
 
       if (!payload.configured) {
         showNotice("This company partner profile is inferred from registration records. Add a company profile record to enrich contacts, publications, and subscription details.");
@@ -706,6 +708,7 @@
       setText("attendeeCount", String(attendeeCount));
       setText("publicationCount", String(publications.length));
       setText("totalSubscriptionPayments", currency.format(total));
+      setText("executiveSlots", String(executiveSlots || 0));
 
       renderContacts(contacts);
       renderEvents(events);
