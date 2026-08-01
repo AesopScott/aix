@@ -3,8 +3,12 @@ const jsonHeaders = {
   "cache-control": "no-store"
 };
 
-const allowedTypes = new Set(["executive", "conversation", "partner"]);
+const allowedTypes = new Set(["executive", "conversation", "partner", "dallas-invite"]);
 const maxFieldLength = 2000;
+const notificationRecipients = [
+  { email: "angel@mojoaisummits.com", name: "Angel" },
+  { email: "scott@mojoaisummits.com", name: "Scott" }
+];
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -45,6 +49,7 @@ function cleanPayload(payload) {
     link: cleanString(payload?.link),
     teamSize: cleanString(payload?.teamSize),
     notes: cleanString(payload?.notes),
+    sourcePage: cleanString(payload?.sourcePage),
     addons: cleanArray(payload?.addons)
   };
 
@@ -66,6 +71,96 @@ function validateRequest(request) {
     return "Enter a valid email address.";
   }
   return "";
+}
+
+function escapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
+
+function requestLabel(type = "") {
+  return {
+    "dallas-invite": "Dallas invite request",
+    executive: "Executive invite request",
+    conversation: "Conversation proposal",
+    partner: "Partner access request"
+  }[type] || "Invite request";
+}
+
+function requestEmailText(record) {
+  return [
+    `${requestLabel(record.type)} received from mojoaisummits.com.`,
+    "",
+    `Name: ${record.name || ""}`,
+    `Email: ${record.email || ""}`,
+    `Title: ${record.title || ""}`,
+    `Company: ${record.company || ""}`,
+    record.sourcePage ? `Source page: ${record.sourcePage}` : "",
+    "",
+    `Submitted: ${record.createdAt}`,
+    `Request ID: ${record.id}`
+  ].filter(Boolean).join("\n");
+}
+
+function requestEmailHtml(record) {
+  const rows = [
+    ["Name", record.name],
+    ["Email", record.email],
+    ["Title", record.title],
+    ["Company", record.company],
+    ["Source page", record.sourcePage],
+    ["Submitted", record.createdAt],
+    ["Request ID", record.id]
+  ].filter(([, value]) => value);
+
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.5">
+      <h1 style="font-size:22px;margin:0 0 14px">${escapeHtml(requestLabel(record.type))}</h1>
+      <p style="margin:0 0 18px">A new request was submitted from mojoaisummits.com.</p>
+      <table style="border-collapse:collapse;width:100%;max-width:640px">
+        ${rows.map(([label, value]) => `
+          <tr>
+            <th style="text-align:left;vertical-align:top;padding:8px 12px;border:1px solid #d8dee9;background:#f4f7fb;width:140px">${escapeHtml(label)}</th>
+            <td style="padding:8px 12px;border:1px solid #d8dee9">${escapeHtml(value)}</td>
+          </tr>
+        `).join("")}
+      </table>
+    </div>
+  `;
+}
+
+async function sendInviteNotification(env, record) {
+  if (record.type !== "dallas-invite") return null;
+  if (!env.EMAIL?.send) {
+    return {
+      ok: false,
+      error: "Email notification is not configured."
+    };
+  }
+
+  try {
+    const result = await env.EMAIL.send({
+      to: notificationRecipients,
+      from: { email: "noreply@mojoaisummits.com", name: "MOJO AI Summits" },
+      replyTo: { email: record.email, name: record.name },
+      subject: `Dallas invite request: ${record.name} at ${record.company}`,
+      text: requestEmailText(record),
+      html: requestEmailHtml(record)
+    });
+
+    return { ok: true, result };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error?.message || "Email notification failed.",
+      code: error?.code || ""
+    };
+  }
 }
 
 export async function onRequestOptions() {
@@ -93,6 +188,14 @@ export async function onRequestPost({ request, env }) {
   };
 
   await env.MOJO_SUMMITS_SETUP_STATE.put(`invite-request:${createdAt}:${id}`, JSON.stringify(record));
+  const notification = await sendInviteNotification(env, record);
+
+  if (record.type === "dallas-invite" && !notification?.ok) {
+    return json({
+      error: "Invite request was saved, but the notification email could not be sent.",
+      notification
+    }, { status: 502 });
+  }
 
   return json({ ok: true, id });
 }
