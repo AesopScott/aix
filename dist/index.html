@@ -1773,7 +1773,7 @@
     <div class="hero-boardroom" aria-hidden="true"><img src="assets/boardroom-transparent.png" alt=""></div>
     <p class="hero-sub">Mojo AI Summits is an executive connection and intelligence network that uses immersive experiences to accelerate decisions, partnerships, and innovation.</p>
     <div class="hero-cta-row">
-      <button type="button" class="btn-primary" data-modal-open="inviteCodeModal">Register with Invite Code</button>
+      <button type="button" class="btn-primary" data-modal-open="inviteRequestModal">Request an Invite</button>
       <a href="/briefs/" class="btn-ghost">Read Executive Briefs</a>
       <a href="/virtual/" class="btn-ghost">Explore Virtual Councils</a>
     </div>
@@ -2102,20 +2102,41 @@
   </footer>
 </main>
 
-<div class="modal-overlay" id="inviteCodeModal" aria-hidden="true">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="inviteCodeModalTitle">
+<div class="modal-overlay" id="inviteRequestModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="inviteRequestModalTitle">
     <button type="button" class="modal-close" data-modal-close aria-label="Close">&#10005;</button>
-    <span class="eyebrow"><span>Member access</span></span>
-    <h3 id="inviteCodeModalTitle">Enter Your Invite Code</h3>
-    <p class="modal-sub">Member registration opens after your invite code is submitted.</p>
-    <form id="inviteCodeForm">
-      <div class="field full">
-        <label for="inviteCode">Invite code</label>
-        <input type="text" id="inviteCode" name="inviteCode" placeholder="Enter code" autocomplete="off" required>
+    <span class="eyebrow"><span>Invitation only</span></span>
+    <h3 id="inviteRequestModalTitle">Request an Invite</h3>
+    <p class="modal-sub">Tell us who you are and we will follow up about the right MOJO AI Summits room.</p>
+    <form id="inviteRequestForm">
+      <input type="hidden" name="sourcePage" value="/">
+      <div class="form-grid">
+        <div class="field">
+          <label for="inviteRequestName">Full name</label>
+          <input type="text" id="inviteRequestName" name="name" placeholder="Full name" required>
+        </div>
+        <div class="field">
+          <label for="inviteRequestEmail">Email</label>
+          <input type="email" id="inviteRequestEmail" name="email" placeholder="you@company.com" required>
+        </div>
+        <div class="field">
+          <label for="inviteRequestTitle">Title</label>
+          <input type="text" id="inviteRequestTitle" name="title" placeholder="Executive title" required>
+        </div>
+        <div class="field">
+          <label for="inviteRequestCompany">Company</label>
+          <input type="text" id="inviteRequestCompany" name="company" placeholder="Company" required>
+        </div>
+        <div class="field full">
+          <label class="checkbox-row" for="inviteRequestLearningProgramMember">
+            <input id="inviteRequestLearningProgramMember" name="learningProgramMember" type="checkbox" value="true">
+            I am a member of the MojoAIstudio.com learning program
+          </label>
+        </div>
       </div>
-      <p class="form-error" id="inviteCodeError">Enter the invite code from your invitation.</p>
-      <button type="submit" class="btn-primary">Continue to Member Registration</button>
+      <button type="submit" class="btn-primary">Submit Invite Request</button>
     </form>
+    <p class="form-success" id="inviteRequestSuccess">Received. We'll follow up with the next step.</p>
   </div>
 </div>
 
@@ -2338,6 +2359,7 @@
     });
   }
 
+  wireForm('inviteRequestForm', 'inviteRequestSuccess', 'executive');
   wireForm('pitchForm', 'pitchFormSuccess', 'conversation');
   wireForm('sponsorForm', 'sponsorFormSuccess', 'partner');
 
@@ -2361,48 +2383,6 @@
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(overlay); });
     overlay.querySelectorAll('[data-modal-close]').forEach((btn) => btn.addEventListener('click', () => closeModal(overlay)));
   });
-  const inviteCodeForm = document.getElementById('inviteCodeForm');
-  if (inviteCodeForm) {
-    inviteCodeForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const input = document.getElementById('inviteCode');
-      const error = document.getElementById('inviteCodeError');
-      const submit = inviteCodeForm.querySelector('button[type=submit]');
-      const code = (input?.value || '').replace(/\D/g, '').slice(0, 6);
-      if (input) input.value = code;
-      if (!/^\d{6}$/.test(code)) {
-        if (error) error.textContent = 'Enter the six-digit invite code from your invitation.';
-        error?.classList.add('show');
-        input?.focus();
-        return;
-      }
-      if (submit) {
-        submit.disabled = true;
-        submit.textContent = 'Checking...';
-      }
-      try {
-        const response = await fetch(`/crm/api/public/member-invite-codes/${encodeURIComponent(code)}`);
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'That invite code is invalid or has already been used.');
-      } catch (validationError) {
-        if (error) error.textContent = validationError.message || 'That invite code is invalid or has already been used.';
-        error?.classList.add('show');
-        input?.focus();
-        if (submit) {
-          submit.disabled = false;
-          submit.textContent = 'Continue to Member Registration';
-        }
-        return;
-      }
-      error?.classList.remove('show');
-      try {
-        sessionStorage.setItem('mojoMemberInviteCode', code);
-      } catch (storageError) {
-        // The query string still carries the code if private browsing blocks storage.
-      }
-      window.location.href = `/member-registration/?invite=${encodeURIComponent(code)}`;
-    });
-  }
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       document.querySelectorAll('.modal-overlay.open').forEach(closeModal);

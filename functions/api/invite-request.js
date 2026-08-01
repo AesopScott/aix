@@ -143,7 +143,7 @@ function requestEmailHtml(record) {
 }
 
 async function sendInviteNotification(env, record) {
-  if (record.type !== "dallas-invite") return null;
+  if (!["dallas-invite", "executive"].includes(record.type)) return null;
 
   try {
     const token = await microsoftGraphAccessToken(env);
@@ -156,7 +156,7 @@ async function sendInviteNotification(env, record) {
       },
       body: JSON.stringify({
         message: {
-          subject: `Dallas invite request: ${record.name} at ${record.company}`,
+          subject: `${requestLabel(record.type)}: ${record.name} at ${record.company}`,
           body: {
             contentType: "HTML",
             content: requestEmailHtml(record)
@@ -248,7 +248,7 @@ export async function onRequestPost({ request, env }) {
   await env.MOJO_SUMMITS_SETUP_STATE.put(`invite-request:${createdAt}:${id}`, JSON.stringify(record));
   const notification = await sendInviteNotification(env, record);
 
-  if (record.type === "dallas-invite" && !notification?.ok) {
+  if (["dallas-invite", "executive"].includes(record.type) && !notification?.ok) {
     return json({
       error: "Invite request was saved, but the notification email could not be sent.",
       notification
