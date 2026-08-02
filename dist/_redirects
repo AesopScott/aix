@@ -13,6 +13,9 @@
 /member-profile /member-profile/ 301
 /partner-registration /partner-registration/ 301
 /guest /guest/ 301
+/CRM /crm/ 301
+/CRM/ /crm/ 301
+/CRM/* /crm/:splat 301
 /crm /crm/index.html 200
 /crm/ /crm/index.html 200
 /privacy /privacy/ 301
