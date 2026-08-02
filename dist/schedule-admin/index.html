@@ -283,6 +283,71 @@
       color: var(--ok);
     }
 
+    .feed-diagnostic-controls {
+      display: grid;
+      grid-template-columns: minmax(12rem, 0.8fr) minmax(11rem, 0.5fr);
+      align-items: end;
+      gap: 0.5rem;
+    }
+
+    .feed-diagnostics {
+      display: grid;
+      gap: 0.45rem;
+      border: 1px solid rgba(0, 230, 255, 0.18);
+      border-radius: 8px;
+      padding: 0.7rem;
+      color: var(--muted);
+      background: rgba(10, 15, 30, 0.48);
+      font-size: 0.9rem;
+    }
+
+    .feed-diagnostics.ok {
+      border-color: rgba(106, 240, 182, 0.42);
+    }
+
+    .feed-diagnostics.error {
+      border-color: rgba(255, 111, 135, 0.42);
+      color: var(--danger);
+    }
+
+    .diagnostic-summary {
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    .diagnostic-row {
+      display: grid;
+      grid-template-columns: minmax(8rem, 1fr) minmax(7rem, auto) minmax(11rem, 1.1fr);
+      gap: 0.5rem;
+      align-items: center;
+      padding-top: 0.45rem;
+      border-top: 1px solid rgba(0, 230, 255, 0.14);
+    }
+
+    .diagnostic-tag {
+      display: inline-grid;
+      place-items: center;
+      min-height: 1.75rem;
+      border: 1px solid rgba(0, 230, 255, 0.2);
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      color: var(--cyan);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .diagnostic-tag.ok {
+      border-color: rgba(106, 240, 182, 0.42);
+      color: var(--ok);
+    }
+
+    .diagnostic-tag.error {
+      border-color: rgba(255, 111, 135, 0.42);
+      color: var(--danger);
+    }
+
     @media (max-width: 860px) {
       main,
       .grid {
@@ -290,6 +355,11 @@
       }
 
       .connection-row {
+        grid-template-columns: 1fr;
+      }
+
+      .feed-diagnostic-controls,
+      .diagnostic-row {
         grid-template-columns: 1fr;
       }
     }
@@ -366,6 +436,14 @@
           <textarea class="hidden-field" name="busyCalendarUrls"></textarea>
           <div class="connection-list" id="calendarFeedRows"></div>
           <button type="button" class="secondary" id="addCalendarFeedUrl">Add Feed URL</button>
+          <div class="feed-diagnostic-controls">
+            <label>
+              Diagnostic Date
+              <input id="calendarFeedDiagnosticDate" type="date">
+            </label>
+            <button type="button" class="secondary" id="testCalendarFeeds">Test Feed Removal</button>
+          </div>
+          <div class="feed-diagnostics" id="calendarFeedDiagnostics">No feed diagnostic run yet.</div>
         </div>
         <label>
           Title
@@ -422,7 +500,7 @@
   </main>
 
   <script>
-    const SCHEDULING_ADMIN_BUILD = "2026.07.31.9-zoom";
+    const SCHEDULING_ADMIN_BUILD = "2026.08.02.1-feed-diagnostics";
     const employeesEl = document.querySelector("#employees");
     const graphStatusEl = document.querySelector("#graphStatus");
     const buildStampEl = document.querySelector("#buildStamp");
@@ -433,6 +511,9 @@
     const addCalendarFeedUrlButton = document.querySelector("#addCalendarFeedUrl");
     const microsoftCalendarRowsEl = document.querySelector("#microsoftCalendarRows");
     const calendarFeedRowsEl = document.querySelector("#calendarFeedRows");
+    const calendarFeedDiagnosticDateEl = document.querySelector("#calendarFeedDiagnosticDate");
+    const testCalendarFeedsButton = document.querySelector("#testCalendarFeeds");
+    const calendarFeedDiagnosticsEl = document.querySelector("#calendarFeedDiagnostics");
     const bookingUrlOpenEl = document.querySelector("#bookingUrlOpen");
     let employees = [];
     let selectedSlug = "";
@@ -446,6 +527,18 @@
     function setStatus(message, kind = "") {
       statusEl.textContent = message;
       statusEl.className = `status ${kind}`.trim();
+    }
+
+    function setFeedDiagnostics(message, kind = "") {
+      calendarFeedDiagnosticsEl.textContent = message;
+      calendarFeedDiagnosticsEl.className = `feed-diagnostics ${kind}`.trim();
+    }
+
+    function localDateValue(date = new Date()) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     }
 
     async function readApiPayload(response, fallbackMessage) {
@@ -533,6 +626,52 @@
     function syncExternalCalendarFields() {
       syncAuthenticatedCalendarField();
       syncCalendarFeedField();
+    }
+
+    function renderFeedDiagnostics(payload) {
+      calendarFeedDiagnosticsEl.innerHTML = "";
+      if (!payload.feedCount) {
+        setFeedDiagnostics("No published feed URLs are saved for this profile. Save the profile, then test feed removal.", "error");
+        return;
+      }
+      calendarFeedDiagnosticsEl.className = `feed-diagnostics ${payload.slotsRemovedByFeeds > 0 ? "ok" : ""}`.trim();
+
+      const summary = document.createElement("div");
+      summary.className = "diagnostic-summary";
+      summary.textContent = `${payload.connectedFeedCount}/${payload.feedCount} feeds connected · ${payload.busyEventCount} busy events found · ${payload.slotsRemovedByFeeds} Mojo slots removed on ${payload.date}`;
+      calendarFeedDiagnosticsEl.append(summary);
+
+      const availability = document.createElement("div");
+      availability.textContent = `Availability changed from ${payload.availableBeforeFeeds} slots to ${payload.availableAfterFeeds} slots after feed busy times were applied.`;
+      calendarFeedDiagnosticsEl.append(availability);
+
+      (payload.warnings || []).forEach((warning) => {
+        const item = document.createElement("div");
+        item.textContent = warning;
+        calendarFeedDiagnosticsEl.append(item);
+      });
+
+      (payload.feeds || []).forEach((feed) => {
+        const row = document.createElement("div");
+        row.className = "diagnostic-row";
+        const label = document.createElement("span");
+        label.textContent = feed.label;
+        const tag = document.createElement("span");
+        tag.className = `diagnostic-tag ${feed.connected ? "ok" : "error"}`.trim();
+        tag.textContent = feed.connected ? "Connected" : "Error";
+        const details = document.createElement("span");
+        details.textContent = feed.connected
+          ? `${feed.busyEventCount} busy events · ${feed.slotsRemoved} slots removed`
+          : feed.error || "Unable to read feed";
+        row.append(label, tag, details);
+        calendarFeedDiagnosticsEl.append(row);
+      });
+
+      if (payload.removedSlots?.length) {
+        const removed = document.createElement("div");
+        removed.textContent = `Removed times: ${payload.removedSlots.slice(0, 8).map((slot) => slot.label).join(", ")}${payload.removedSlots.length > 8 ? "..." : ""}`;
+        calendarFeedDiagnosticsEl.append(removed);
+      }
     }
 
     function renderEmployees() {
@@ -695,6 +834,7 @@
       field("minNoticeHours").value = "4";
       field("maxDaysAhead").value = "45";
       field("photoUrl").value = "";
+      if (!calendarFeedDiagnosticDateEl.value) calendarFeedDiagnosticDateEl.value = localDateValue();
       refreshBookingLink();
       field("busyCalendarEmails").value = "";
       field("mirrorInviteEmails").value = "";
@@ -705,6 +845,7 @@
       field("durationMinutes").value = "30";
       field("meetingDescription").value = "A focused conversation with the Mojo team.";
       renderExternalCalendars(null);
+      setFeedDiagnostics("No feed diagnostic run yet.");
       renderEmployees();
       setStatus("");
     }
@@ -743,8 +884,46 @@
       field("durationMinutes").value = type.durationMinutes || 30;
       field("meetingDescription").value = type.description || "A focused conversation with the Mojo team.";
       renderExternalCalendars(employee);
+      setFeedDiagnostics("No feed diagnostic run yet.");
       renderEmployees();
       setStatus("");
+    }
+
+    async function testCalendarFeeds() {
+      syncExternalCalendarFields();
+      const slug = field("slug").value.trim().toLowerCase();
+      const date = calendarFeedDiagnosticDateEl.value || localDateValue();
+      calendarFeedDiagnosticDateEl.value = date;
+      if (!slug) {
+        setFeedDiagnostics("Save or select a profile before testing calendar feeds.", "error");
+        return;
+      }
+      if (!field("busyCalendarUrls").value.trim()) {
+        setFeedDiagnostics("No published calendar feed URLs are saved for this profile.", "error");
+        return;
+      }
+
+      testCalendarFeedsButton.disabled = true;
+      setFeedDiagnostics("Testing feed connection and slot removal...");
+      try {
+        const params = new URLSearchParams({
+          slug,
+          date,
+          type: "intro",
+          build: SCHEDULING_ADMIN_BUILD
+        });
+        const response = await fetch(`/api/scheduling/feed-diagnostics?${params.toString()}`, {
+          cache: "no-store",
+          headers: { accept: "application/json" }
+        });
+        const payload = await readApiPayload(response, "Unable to test calendar feeds.");
+        if (!response.ok) throw new Error(payload.error || "Unable to test calendar feeds.");
+        renderFeedDiagnostics(payload);
+      } catch (error) {
+        setFeedDiagnostics(error.message || "Unable to test calendar feeds.", "error");
+      } finally {
+        testCalendarFeedsButton.disabled = false;
+      }
     }
 
     async function loadAdmin() {
@@ -822,6 +1001,8 @@
       feedUrlDrafts.push("");
       renderExternalCalendars(selectedEmployee());
     });
+    testCalendarFeedsButton.addEventListener("click", testCalendarFeeds);
+    calendarFeedDiagnosticDateEl.value = localDateValue();
 
     const calendarStatus = new URLSearchParams(window.location.search).get("calendar");
     const expectedCalendar = new URLSearchParams(window.location.search).get("expected");
