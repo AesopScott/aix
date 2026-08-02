@@ -1,3 +1,5 @@
+import { sendMicrosoftGraphMail } from "./_mail.js";
+
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store"
@@ -8,6 +10,14 @@ const acceptedPhoneStatuses = new Set(["verified", "pending_sms_setup"]);
 const blockedEmailDomains = new Set(["gmail.com", "googlemail.com"]);
 const registrationObjectPrefix = "crm/registrations";
 const inviteUsageObjectPrefix = "crm/invite-usage";
+const guestConfirmationSubject = "Your Mojo AI Summits registration is confirmed";
+const guestConfirmationSenderName = "Angel Mosley";
+const guestConfirmationSenderEmail = "Angel@mojoaisummits.com";
+const guestContactEmail = "guest@mojoaisummits.com";
+const memberContactEmail = "member@mojoaisummits.com";
+const membershipUrl = "https://mojoaisummits.com/membership";
+const briefsUrl = "https://mojoaisummits.com/briefs";
+const virtualSeriesUrl = "https://mojoaisummits.com/virtual/";
 
 const registrationConfig = {
   member: {
@@ -51,6 +61,14 @@ function cleanString(value) {
   return typeof value === "string"
     ? value.trim().slice(0, maxFieldLength)
     : "";
+}
+
+function escapeHtml(value) {
+  return cleanString(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function cleanBoolean(value) {
@@ -208,6 +226,13 @@ async function writeRegistrationDebug(env, type, status, details = {}) {
     registrationKeys: Array.isArray(details.registrationKeys)
       ? details.registrationKeys.map(cleanString).filter(Boolean)
       : [],
+    confirmationEmail: details.confirmationEmail && typeof details.confirmationEmail === "object"
+      ? {
+          attempted: details.confirmationEmail.attempted === true,
+          sent: details.confirmationEmail.sent === true,
+          error: cleanString(details.confirmationEmail.error)
+        }
+      : undefined,
     error: cleanString(details.error)
   };
 
@@ -224,6 +249,10 @@ function inviteMeta(inviteRecord) {
     eventSlug: cleanString(record.eventSlug),
     eventName: cleanString(record.eventName),
     eventDate: cleanString(record.eventDate),
+    eventTime: cleanString(record.eventTime),
+    eventStart: cleanString(record.eventStart || record.eventStartDateTime),
+    eventEnd: cleanString(record.eventEnd || record.eventEndDateTime),
+    eventAccessLink: cleanString(record.eventAccessLink || record.accessLink || record.joinUrl || record.zoomUrl),
     intendedGuestName: cleanString(record.intendedGuestName || record.invitedName || record.guestName),
     invitedName: cleanString(record.invitedName || record.intendedGuestName || record.guestName),
     guestName: cleanString(record.guestName || record.intendedGuestName || record.invitedName),
@@ -236,6 +265,190 @@ function inviteMeta(inviteRecord) {
     partnerContactEmail: cleanString(record.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record.partnerTier)
   };
+}
+
+function absoluteMojoUrl(path = "") {
+  const value = cleanString(path);
+  if (/^https?:\/\//i.test(value)) return value;
+  if (!value) return virtualSeriesUrl;
+  return `https://mojoaisummits.com/${value.replace(/^\/+/, "")}`;
+}
+
+function eventPageUrl(registration = {}) {
+  const slug = cleanString(registration.eventSlug);
+  if (slug) return absoluteMojoUrl(`/virtual/${slug}.php`);
+  return virtualSeriesUrl;
+}
+
+function eventDetails(registration = {}) {
+  const name = cleanString(registration.eventName) || "Mojo AI Summits event";
+  const date = cleanString(registration.eventDate) || "To be announced";
+  const time = cleanString(registration.eventTime) || "To be announced";
+  const access = cleanString(registration.eventAccessLink);
+  return {
+    name,
+    date,
+    time,
+    pageUrl: eventPageUrl(registration),
+    accessText: access ? absoluteMojoUrl(access) : "Event access details will be sent before the session."
+  };
+}
+
+function formatIcsDateTime(date) {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function formatIcsDate(date) {
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0")
+  ].join("");
+}
+
+function addUtcDays(date, days) {
+  const next = new Date(date.getTime());
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+function parseDate(value) {
+  const timestamp = Date.parse(cleanString(value));
+  return Number.isFinite(timestamp) ? new Date(timestamp) : null;
+}
+
+function icsEscape(value) {
+  return cleanString(value)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+function base64Encode(value) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function buildGuestCalendarInvite(registration = {}) {
+  const details = eventDetails(registration);
+  const start = parseDate(registration.eventStart);
+  const end = parseDate(registration.eventEnd);
+  const dateOnly = parseDate(registration.eventDate);
+  if (!start && !dateOnly) return "";
+  const uid = `${cleanString(registration.id) || crypto.randomUUID()}@mojoaisummits.com`;
+  const timedLines = start
+    ? [
+        `DTSTART:${formatIcsDateTime(start)}`,
+        `DTEND:${formatIcsDateTime(end && end > start ? end : new Date(start.getTime() + 60 * 60 * 1000))}`
+      ]
+    : dateOnly
+      ? [
+          `DTSTART;VALUE=DATE:${formatIcsDate(dateOnly)}`,
+          `DTEND;VALUE=DATE:${formatIcsDate(addUtcDays(dateOnly, 1))}`
+        ]
+      : [];
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Mojo AI Summits//Guest Registration//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${icsEscape(uid)}`,
+    `DTSTAMP:${formatIcsDateTime(new Date())}`,
+    ...timedLines,
+    `SUMMARY:${icsEscape(`Mojo AI Summits: ${details.name}`)}`,
+    "LOCATION:Virtual event",
+    `DESCRIPTION:${icsEscape(`Registration confirmed for ${details.name}. Event page: ${details.pageUrl}. ${details.accessText}`)}`,
+    `URL:${icsEscape(details.pageUrl)}`,
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
+}
+
+function guestConfirmationText(registration = {}) {
+  const details = eventDetails(registration);
+  const name = cleanString(registration.name) || "there";
+  return [
+    `Hi ${name},`,
+    "",
+    `Your registration for ${details.name} is confirmed.`,
+    "",
+    "Event details",
+    `Event: ${details.name}`,
+    `Date: ${details.date}`,
+    `Time: ${details.time}`,
+    `Event page: ${details.pageUrl}`,
+    `Access: ${details.accessText}`,
+    "",
+    "We are looking forward to having you join the conversation. A calendar invite is attached to this email.",
+    "",
+    `Mojo AI Summits: ${membershipUrl}`,
+    "Information about membership in the Mojo AI Summits Executive Research Council, including opportunities for paid engagements.",
+    "",
+    `Mojo AI Summits: ${briefsUrl}`,
+    "Sample & previous briefs we have written with groups like the one you will be joining.",
+    "",
+    `Questions? Contact ${guestContactEmail}. Existing members may contact ${memberContactEmail}.`,
+    "",
+    guestConfirmationSenderName,
+    "Director of Engagement",
+    guestConfirmationSenderEmail,
+    "214-232-8324"
+  ].join("\n");
+}
+
+function guestConfirmationHtml(registration = {}) {
+  const details = eventDetails(registration);
+  const name = cleanString(registration.name) || "there";
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.55;max-width:680px">
+      <p>Hi ${escapeHtml(name)},</p>
+      <p>Your registration for <strong>${escapeHtml(details.name)}</strong> is confirmed.</p>
+      <h2 style="font-size:18px;margin:24px 0 10px">Event details</h2>
+      <table style="border-collapse:collapse;width:100%;margin:0 0 20px">
+        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb;width:110px">Event</th><td style="padding:8px 10px;border:1px solid #d8dee9">${escapeHtml(details.name)}</td></tr>
+        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb">Date</th><td style="padding:8px 10px;border:1px solid #d8dee9">${escapeHtml(details.date)}</td></tr>
+        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb">Time</th><td style="padding:8px 10px;border:1px solid #d8dee9">${escapeHtml(details.time)}</td></tr>
+        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb">Event page</th><td style="padding:8px 10px;border:1px solid #d8dee9"><a href="${escapeHtml(details.pageUrl)}">${escapeHtml(details.pageUrl)}</a></td></tr>
+        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb">Access</th><td style="padding:8px 10px;border:1px solid #d8dee9">${/^https?:\/\//i.test(details.accessText) ? `<a href="${escapeHtml(details.accessText)}">${escapeHtml(details.accessText)}</a>` : escapeHtml(details.accessText)}</td></tr>
+      </table>
+      <p>We are looking forward to having you join the conversation. A calendar invite is attached to this email.</p>
+      <p><strong>Mojo AI Summits:</strong> <a href="${membershipUrl}">${membershipUrl}</a><br>Information about membership in the Mojo AI Summits Executive Research Council, including opportunities for paid engagements.</p>
+      <p><strong>Mojo AI Summits:</strong> <a href="${briefsUrl}">${briefsUrl}</a><br>Sample &amp; previous briefs we have written with groups like the one you will be joining.</p>
+      <p>Questions? Contact <a href="mailto:${guestContactEmail}">${guestContactEmail}</a>. Existing members may contact <a href="mailto:${memberContactEmail}">${memberContactEmail}</a>.</p>
+      <p style="margin-top:24px">${guestConfirmationSenderName}<br>Director of Engagement<br><a href="mailto:${guestConfirmationSenderEmail}">${guestConfirmationSenderEmail}</a><br>214-232-8324</p>
+    </div>
+  `;
+}
+
+async function sendGuestRegistrationConfirmation(env, registration = {}) {
+  if (!cleanString(registration.email)) return { attempted: false, sent: false, error: "Registrant email is missing." };
+  const calendarInvite = buildGuestCalendarInvite(registration);
+
+  await sendMicrosoftGraphMail(env, {
+    sender: cleanString(env.MOJO_GUEST_REGISTRATION_EMAIL_SENDER || env.MOJO_INVITE_EMAIL_SENDER || guestConfirmationSenderEmail),
+    to: [{ address: registration.email, name: registration.name }],
+    replyTo: [
+      { address: guestContactEmail, name: "Mojo AI Summits Guest Team" },
+      { address: guestConfirmationSenderEmail, name: guestConfirmationSenderName }
+    ],
+    subject: guestConfirmationSubject,
+    text: guestConfirmationText(registration),
+    html: guestConfirmationHtml(registration),
+    attachments: calendarInvite ? [{
+      name: "mojo-ai-summits-event.ics",
+      contentType: "text/calendar; method=PUBLISH; charset=utf-8",
+      contentBytes: base64Encode(calendarInvite)
+    }] : [],
+    saveToSentItems: true
+  });
+
+  return { attempted: true, sent: true };
 }
 
 function validateRegistration(registration, type = "") {
@@ -614,19 +827,28 @@ export async function handlePublicRegistration({ request, env }, type) {
     const inviteUsageKey = await markInviteCodeUsedInR2(env, type, registration.inviteCode, storedRecord);
     const kvRefs = await mirrorRegistrationToKv(env, type, storedRecord, config).catch(() => ({}));
     const registrationKeys = [registrationKey, kvRefs.kvRegistrationKey].filter(Boolean);
+    const confirmationEmail = type === "guest"
+      ? await sendGuestRegistrationConfirmation(env, storedRecord).catch((error) => ({
+          attempted: true,
+          sent: false,
+          error: cleanString(error?.message || "Guest confirmation email failed.")
+        }))
+      : { attempted: false, sent: false };
     await writeRegistrationDebug(env, type, "stored", {
       ...debugBase,
       ...storedRecord,
       stage: "complete",
       registrationKeys,
-      inviteUsageKey
+      inviteUsageKey,
+      confirmationEmail
     });
 
     return json({
       ok: true,
       id,
       createdAt,
-      storage: "r2"
+      storage: "r2",
+      confirmationEmail
     }, { status: 201 });
   } catch (error) {
     await writeRegistrationDebug(env, type, "failed", {
