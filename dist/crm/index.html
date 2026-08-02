@@ -295,6 +295,20 @@
 
     .notice.error { border-color: rgba(255, 99, 123, 0.62); color: #ffc7d0; }
     .notice.ok { border-color: rgba(0, 230, 255, 0.56); color: var(--ok); }
+
+    .auth-notice {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .auth-login-link {
+      flex: 0 0 auto;
+      max-width: 10rem;
+    }
+
     .table-wrap {
       width: 100%;
       max-width: 100%;
@@ -947,13 +961,46 @@
 
     async function readJson(response) {
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "CRM request failed.");
+      if (!response.ok) {
+        const error = new Error(data.error || "CRM request failed.");
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
       return data;
     }
 
     function setNotice(message, type = "") {
       notice.textContent = message;
       notice.className = `notice ${type}`.trim();
+    }
+
+    function crmLoginUrl() {
+      const url = new URL("/access/", window.location.origin);
+      url.searchParams.set("next", `${window.location.pathname}${window.location.search}${window.location.hash}`);
+      return url.toString();
+    }
+
+    function isAuthError(error = {}) {
+      return error.status === 401 || /sign in/i.test(error.message || "");
+    }
+
+    function setAuthNotice(message = "Sign in with a Mojo AI Summits account to continue.") {
+      notice.innerHTML = `
+        <div class="auth-notice">
+          <span>${escapeHtml(message)}</span>
+          <a class="button-link compact auth-login-link" href="${escapeHtml(crmLoginUrl())}">Sign In</a>
+        </div>
+      `;
+      notice.className = "notice error";
+    }
+
+    function showErrorNotice(error, fallback = "CRM request failed.") {
+      if (isAuthError(error)) {
+        setAuthNotice(error.message || fallback);
+        return;
+      }
+      setNotice(error.message || fallback, "error");
     }
 
     function clearRegistrationInviteResult() {
@@ -1726,7 +1773,7 @@
         setNotice(`${state.summary.total || 0} ${activeLabel()} ${noun}${state.summary.total === 1 ? "" : "s"} loaded.`, "ok");
         render();
       } catch (error) {
-        setNotice(error.message, "error");
+        showErrorNotice(error);
       }
     }
 
@@ -1739,7 +1786,7 @@
         setNotice("Registration debug loaded.", "ok");
       } catch (error) {
         registrationDebugContent.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
-        setNotice(error.message, "error");
+        showErrorNotice(error);
       }
     }
 
@@ -1778,7 +1825,7 @@
         setNotice("CRM update saved.", "ok");
         render();
       } catch (error) {
-        setNotice(error.message, "error");
+        showErrorNotice(error);
       }
     }
 
@@ -1813,7 +1860,7 @@
       } catch (error) {
         input.checked = !input.checked;
         input.disabled = false;
-        setNotice(error.message, "error");
+        showErrorNotice(error);
       }
     }
 
@@ -1837,7 +1884,7 @@
         renderPartnerInvites();
         setNotice("Registration link deleted.", "ok");
       } catch (error) {
-        setNotice(error.message, "error");
+        showErrorNotice(error);
       }
     }
 
@@ -1871,7 +1918,7 @@
         setNotice(`Contact deleted: ${data.deleted?.email || label}`, "ok");
         render();
       } catch (error) {
-        setNotice(error.message, "error");
+        showErrorNotice(error);
       }
     }
 
@@ -1899,7 +1946,7 @@
         await copyText(data.password);
         setNotice(`Member password generated for ${data.record.email}. That CRM registration email is their login name. The password was copied if clipboard access is available.`, "ok");
       } catch (error) {
-        setNotice(error.message, "error");
+        showErrorNotice(error);
       }
     }
 
@@ -1926,7 +1973,7 @@
         await copyText(data.password);
         setNotice(`Partner password generated for ${data.record.email}. That CRM registration email is their login name. The password was copied if clipboard access is available.`, "ok");
       } catch (error) {
-        setNotice(error.message, "error");
+        showErrorNotice(error);
       }
     }
 
@@ -2039,7 +2086,7 @@
         await copyText(url);
         setNotice("Partner invite link generated and copied if clipboard access is available.", "ok");
       } catch (error) {
-        setNotice(error.message, "error");
+        showErrorNotice(error);
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
@@ -2086,7 +2133,7 @@
         setNotice(`${guestRegistrationTypeLabel(data.invite?.guestRegistrationType || data.invite?.registrationRole || payload.guestRegistrationType)} invite link generated successfully.`, "ok");
       } catch (error) {
         showRegistrationInviteError(error.message || "Registration invite link could not be generated.");
-        setNotice(error.message, "error");
+        showErrorNotice(error, "Registration invite link could not be generated.");
       } finally {
         registrationInviteSubmit.disabled = false;
         updateRegistrationInviteSubmit();
