@@ -391,6 +391,17 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/scheduling/oauth", "mojoaisummits.com/api/scheduling/oauth/*"]
   },
   {
+    id: "api-scheduling-feed-diagnostics",
+    kind: "api",
+    group: "APIs",
+    label: "Scheduling Feed Diagnostics API",
+    summary: "Protected published calendar feed diagnostics for scheduling admin.",
+    mode: "allowlist",
+    defaultGroupIds: ["mojo-team"],
+    matches: [{ exact: "/api/scheduling/feed-diagnostics" }, { prefix: "/api/scheduling/feed-diagnostics/" }],
+    domains: ["mojoaisummits.com/api/scheduling/feed-diagnostics", "mojoaisummits.com/api/scheduling/feed-diagnostics/*"]
+  },
+  {
     id: "api-scheduling-public",
     kind: "api",
     group: "APIs",

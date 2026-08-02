@@ -969,25 +969,84 @@ function busyIntervalsFromIcal(text, employee, rangeStart, rangeEnd) {
   return intervals;
 }
 
-async function calendarFeedBusyIntervals(employee, start, end) {
-  const urls = employee.busyCalendarUrls || [];
-  if (!urls.length) return [];
+function calendarFeedLabel(url, index) {
+  try {
+    const parsed = new URL(String(url || "").replace(/^webcal:/i, "https:"));
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    const pathHint = parts.length ? `/${parts.slice(0, 2).join("/")}${parts.length > 2 ? "/..." : ""}` : "";
+    return `${parsed.hostname}${pathHint}`;
+  } catch {
+    return `Calendar feed ${index + 1}`;
+  }
+}
 
-  const calendars = await Promise.all(urls.map(async (url) => {
+async function calendarFeedBusyDetails(employee, start, end) {
+  const urls = employee.busyCalendarUrls || [];
+  if (!urls.length) return { intervals: [], feeds: [] };
+
+  const calendars = await Promise.all(urls.map(async (url, index) => {
+    const base = {
+      index: index + 1,
+      label: calendarFeedLabel(url, index),
+      connected: false,
+      status: "not-checked",
+      httpStatus: null,
+      bytes: 0,
+      busyEventCount: 0,
+      error: "",
+      intervals: []
+    };
+
     try {
       const response = await fetch(url, {
         headers: { accept: "text/calendar,text/plain,*/*" }
       });
-      if (!response.ok) return [];
+      if (!response.ok) {
+        return {
+          ...base,
+          status: "fetch-failed",
+          httpStatus: response.status,
+          error: `Feed returned HTTP ${response.status}.`
+        };
+      }
       const text = await response.text();
-      if (text.length > 2000000) return [];
-      return busyIntervalsFromIcal(text, employee, start, end);
-    } catch {
-      return [];
+      if (text.length > 2000000) {
+        return {
+          ...base,
+          connected: true,
+          status: "too-large",
+          httpStatus: response.status,
+          bytes: text.length,
+          error: "Feed is larger than the scheduling safety limit."
+        };
+      }
+      const intervals = busyIntervalsFromIcal(text, employee, start, end);
+      return {
+        ...base,
+        connected: true,
+        status: intervals.length ? "busy-events-found" : "connected-no-busy-events",
+        httpStatus: response.status,
+        bytes: text.length,
+        busyEventCount: intervals.length,
+        intervals
+      };
+    } catch (error) {
+      return {
+        ...base,
+        status: "fetch-error",
+        error: error?.message || "Unable to fetch the feed."
+      };
     }
   }));
 
-  return calendars.flat();
+  return {
+    intervals: calendars.flatMap((feed) => feed.intervals),
+    feeds: calendars
+  };
+}
+
+async function calendarFeedBusyIntervals(employee, start, end) {
+  return (await calendarFeedBusyDetails(employee, start, end)).intervals;
 }
 
 async function connectedCalendarBusyIntervals(env, employee, start, end) {
@@ -1130,6 +1189,96 @@ export async function availability(env, query) {
     source,
     warning,
     slots: buildCandidateSlots(employee, dateValue, meetingType, busyIntervals)
+  };
+}
+
+export async function calendarFeedDiagnostics(env, query) {
+  const employee = await getEmployee(env, query.host || query.employee || query.slug);
+  if (!employee || employee.active === false) {
+    return { response: json({ error: "That employee booking page is not available." }, { status: 404 }) };
+  }
+
+  const meetingType = employee.meetingTypes.find((type) => type.id === cleanSlug(query.type)) || employee.meetingTypes[0];
+  const dateValue = String(query.date || "");
+  if (!validDate(dateValue)) {
+    return { response: json({ error: "Choose a date in YYYY-MM-DD format." }, { status: 400 }) };
+  }
+
+  const dayStart = zonedTimeToUtc(dateValue, employee.dayStart, employee.timezone);
+  const dayEnd = zonedTimeToUtc(dateValue, employee.dayEnd, employee.timezone);
+  const graph = graphConfig(env);
+  const sourceWarnings = [];
+  let baseBusyIntervals = [];
+
+  if (graph.configured) {
+    try {
+      const scheduleItems = await graphSchedule(env, employee, dayStart, dayEnd, meetingType.durationMinutes);
+      baseBusyIntervals = [...baseBusyIntervals, ...busyIntervalsFromSchedule(scheduleItems, employee)];
+    } catch (error) {
+      sourceWarnings.push(error?.message || "Microsoft Graph availability lookup failed.");
+    }
+  }
+
+  try {
+    baseBusyIntervals = [...baseBusyIntervals, ...(await connectedCalendarBusyIntervals(env, employee, dayStart, dayEnd))];
+  } catch (error) {
+    sourceWarnings.push(error?.message || "Connected calendar availability lookup failed.");
+  }
+
+  try {
+    baseBusyIntervals = [...baseBusyIntervals, ...(await sharedZoomBusyIntervals(env, dayStart, dayEnd))];
+  } catch (error) {
+    sourceWarnings.push(error?.message || "Shared Zoom booking lookup failed.");
+  }
+
+  const feedDetails = await calendarFeedBusyDetails(employee, dayStart, dayEnd);
+  const baselineSlots = buildCandidateSlots(employee, dateValue, meetingType, baseBusyIntervals);
+  const finalSlots = buildCandidateSlots(employee, dateValue, meetingType, [...baseBusyIntervals, ...feedDetails.intervals]);
+  const finalSlotStarts = new Set(finalSlots.map((slot) => slot.start));
+  const baseBlocked = (slot) => baseBusyIntervals.some((busy) =>
+    overlaps(new Date(slot.start), new Date(slot.end), busy.start, busy.end)
+  );
+  const feedBlocked = (slot, intervals = feedDetails.intervals) => intervals.some((busy) =>
+    overlaps(new Date(slot.start), new Date(slot.end), busy.start, busy.end)
+  );
+  const removedSlots = baselineSlots
+    .filter((slot) => !finalSlotStarts.has(slot.start) && !baseBlocked(slot) && feedBlocked(slot))
+    .map((slot) => ({
+      start: slot.start,
+      end: slot.end,
+      label: slot.label
+    }));
+
+  const feeds = feedDetails.feeds.map((feed) => ({
+    index: feed.index,
+    label: feed.label,
+    connected: feed.connected,
+    status: feed.status,
+    httpStatus: feed.httpStatus,
+    bytes: feed.bytes,
+    busyEventCount: feed.busyEventCount,
+    slotsRemoved: baselineSlots.filter((slot) =>
+      !finalSlotStarts.has(slot.start) && !baseBlocked(slot) && feedBlocked(slot, feed.intervals)
+    ).length,
+    error: feed.error
+  }));
+
+  return {
+    ok: true,
+    checkedAt: new Date().toISOString(),
+    employee: publicEmployee(employee),
+    meetingType: publicMeetingType(meetingType),
+    date: dateValue,
+    timezone: employee.timezone,
+    feedCount: feeds.length,
+    connectedFeedCount: feeds.filter((feed) => feed.connected).length,
+    busyEventCount: feeds.reduce((total, feed) => total + feed.busyEventCount, 0),
+    availableBeforeFeeds: baselineSlots.length,
+    availableAfterFeeds: finalSlots.length,
+    slotsRemovedByFeeds: removedSlots.length,
+    removedSlots,
+    feeds,
+    warnings: sourceWarnings
   };
 }
 
