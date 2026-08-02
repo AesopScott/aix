@@ -67,8 +67,30 @@ function loginRedirect(request) {
   return Response.redirect(loginUrl, 302);
 }
 
+function noStoreRedirect(location, status = 301) {
+  return new Response(null, {
+    status,
+    headers: {
+      location,
+      "cache-control": "no-store, must-revalidate, no-cache",
+      pragma: "no-cache",
+      expires: "0"
+    }
+  });
+}
+
+function canonicalCrmRedirect(request) {
+  const url = new URL(request.url);
+  if (url.pathname !== "/CRM" && !url.pathname.startsWith("/CRM/")) return null;
+  const suffix = url.pathname.slice("/CRM".length);
+  url.pathname = suffix ? `/crm${suffix}` : "/crm/";
+  return noStoreRedirect(url.toString(), 301);
+}
+
 export async function onRequest(context) {
   const url = new URL(context.request.url);
+  const crmRedirect = canonicalCrmRedirect(context.request);
+  if (crmRedirect) return crmRedirect;
 
   if (
     isPartnerRegistrationShell(url.pathname) &&
