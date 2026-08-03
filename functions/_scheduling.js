@@ -28,6 +28,36 @@ const DEFAULT_PHOTOS = {
   ron: "/assets/images/ron.png",
   scott: "/assets/images/scott-pro3-6.png"
 };
+const WINDOWS_TIMEZONE_MAP = {
+  "Dateline Standard Time": "Etc/GMT+12",
+  "UTC-11": "Etc/GMT+11",
+  "Aleutian Standard Time": "America/Adak",
+  "Hawaiian Standard Time": "Pacific/Honolulu",
+  "Alaskan Standard Time": "America/Anchorage",
+  "Pacific Standard Time": "America/Los_Angeles",
+  "US Mountain Standard Time": "America/Phoenix",
+  "Mountain Standard Time": "America/Denver",
+  "Central Standard Time": "America/Chicago",
+  "Eastern Standard Time": "America/New_York",
+  "US Eastern Standard Time": "America/Indianapolis",
+  "Atlantic Standard Time": "America/Halifax",
+  "UTC": "Etc/UTC",
+  "GMT Standard Time": "Europe/London",
+  "W. Europe Standard Time": "Europe/Berlin",
+  "Central Europe Standard Time": "Europe/Budapest",
+  "Central European Standard Time": "Europe/Warsaw",
+  "Romance Standard Time": "Europe/Paris",
+  "E. Europe Standard Time": "Europe/Chisinau",
+  "Egypt Standard Time": "Africa/Cairo",
+  "South Africa Standard Time": "Africa/Johannesburg",
+  "Israel Standard Time": "Asia/Jerusalem",
+  "Arab Standard Time": "Asia/Riyadh",
+  "India Standard Time": "Asia/Kolkata",
+  "China Standard Time": "Asia/Shanghai",
+  "Tokyo Standard Time": "Asia/Tokyo",
+  "AUS Eastern Standard Time": "Australia/Sydney",
+  "New Zealand Standard Time": "Pacific/Auckland"
+};
 
 function cleanText(value, max = 240) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, max);
@@ -546,12 +576,23 @@ function partsInZone(date, timeZone) {
   };
 }
 
+function normalizeTimeZone(value, fallback = DEFAULT_TIMEZONE) {
+  const candidate = String(value || "").trim();
+  const normalized = WINDOWS_TIMEZONE_MAP[candidate] || candidate || fallback;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: normalized }).format(new Date());
+    return normalized;
+  } catch {
+    return fallback;
+  }
+}
+
 function zonedTimeToUtc(dateValue, timeValue, timeZone) {
   const [year, month, day] = dateValue.split("-").map(Number);
   const [hour, minute] = timeValue.split(":").map(Number);
   const desiredUtc = Date.UTC(year, month - 1, day, hour, minute, 0);
   const trial = new Date(desiredUtc);
-  const actual = partsInZone(trial, timeZone);
+  const actual = partsInZone(trial, normalizeTimeZone(timeZone));
   const actualUtc = Date.UTC(actual.year, actual.month - 1, actual.day, actual.hour, actual.minute, actual.second);
   return new Date(desiredUtc + (desiredUtc - actualUtc));
 }
@@ -860,14 +901,15 @@ function parseIcalProperty(line) {
 
 function parseIcalDate(value, params = {}, fallbackTimeZone = DEFAULT_TIMEZONE) {
   const raw = String(value || "").trim();
+  const timeZone = normalizeTimeZone(params.TZID, fallbackTimeZone);
   if (/^\d{8}$/.test(raw)) {
-    return zonedTimeToUtc(`${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`, "00:00", params.TZID || fallbackTimeZone);
+    return zonedTimeToUtc(`${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`, "00:00", timeZone);
   }
   const match = raw.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?(Z)?$/);
   if (!match) return null;
   const [, year, month, day, hour, minute, second = "00", utc] = match;
   if (utc) return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)));
-  return zonedTimeToUtc(`${year}-${month}-${day}`, `${hour}:${minute}`, params.TZID || fallbackTimeZone);
+  return zonedTimeToUtc(`${year}-${month}-${day}`, `${hour}:${minute}`, timeZone);
 }
 
 function parseRrule(value) {
