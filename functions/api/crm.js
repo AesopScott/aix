@@ -950,6 +950,123 @@ async function deleteContact(env, payload = {}, actor = "") {
   };
 }
 
+function registrationEventTarget(row = {}) {
+  return {
+    id: cleanString(row.id || row.key),
+    eventId: cleanString(row.eventId),
+    eventSlug: cleanString(row.eventSlug),
+    eventName: cleanString(row.eventName),
+    eventDate: cleanString(row.eventDate),
+    inviteCode: cleanString(row.inviteCode),
+    registrationId: cleanString(row.id),
+    registeredAt: cleanString(row.createdAt)
+  };
+}
+
+async function removeContactEventForRegistrant(env, row = {}, actor = "") {
+  const email = cleanString(row.email).toLowerCase();
+  if (!email || !email.includes("@")) return { contactKey: "", removedEvents: 0, contactDeleted: false };
+
+  const contactKey = `${registrantTypes.contacts.crmPrefix}${email}`;
+  const existing = await readRawRecord(env, contactKey);
+  if (!existing) return { contactKey, removedEvents: 0, contactDeleted: false };
+
+  const events = Array.isArray(existing.events) ? existing.events : [];
+  const targetEvent = registrationEventTarget(row);
+  const nextEvents = events.filter((event) => !contactEventMatches(event, targetEvent));
+  const removedEvents = events.length - nextEvents.length;
+  if (!removedEvents) return { contactKey, removedEvents: 0, contactDeleted: false };
+
+  const now = new Date().toISOString();
+  const canDeleteContact =
+    !nextEvents.length &&
+    !cleanString(existing.crmNotes) &&
+    cleanString(existing.source).toLowerCase().includes("registration");
+
+  if (canDeleteContact) {
+    await env.MOJO_SUMMITS_SETUP_STATE.delete(contactKey);
+    return { contactKey, removedEvents, contactDeleted: true };
+  }
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(contactKey, JSON.stringify({
+    ...existing,
+    events: nextEvents,
+    updatedAt: now,
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor || "crm"
+  }));
+
+  return { contactKey, removedEvents, contactDeleted: false };
+}
+
+async function deleteGuestRegistrant(env, payload = {}, actor = "") {
+  const type = cleanType(payload.type || "guest");
+  if (type !== "guest") throw new Error("Only guest registrants can be deleted from this view.");
+
+  const key = cleanString(payload.key, 500);
+  const rows = await registrants(env, "guest");
+  const row = rows.find((entry) => entry.key === key || entry.id === key);
+  if (!row) throw new Error("Guest registrant was not found.");
+
+  const deletedKeys = [];
+  const rowId = cleanString(row.id);
+  const rowCreatedAt = cleanString(row.createdAt);
+  const rowEmail = cleanString(row.email).toLowerCase();
+  const rowInviteCode = cleanString(row.inviteCode);
+  const matchesRow = (candidateKey, record = {}) => {
+    if (candidateKey === row.key) return true;
+    if (rowId && cleanString(record.id) === rowId) return true;
+    return Boolean(
+      rowCreatedAt &&
+      rowEmail &&
+      cleanString(record.createdAt) === rowCreatedAt &&
+      cleanString(record.email).toLowerCase() === rowEmail &&
+      (!rowInviteCode || cleanString(record.inviteCode) === rowInviteCode)
+    );
+  };
+
+  const kvKeys = [...new Set([
+    ...(await listKeys(env, registrantTypes.guest.crmPrefix)),
+    ...(await listKeys(env, registrantTypes.guest.legacyPrefix))
+  ])];
+  for (const candidateKey of kvKeys) {
+    const record = await readRawRecord(env, candidateKey);
+    if (!record || !matchesRow(candidateKey, record)) continue;
+    await env.MOJO_SUMMITS_SETUP_STATE.delete(candidateKey);
+    deletedKeys.push(candidateKey);
+  }
+
+  if (env.MOJO_SUMMITS_STORAGE?.list && env.MOJO_SUMMITS_STORAGE?.get && env.MOJO_SUMMITS_STORAGE?.delete) {
+    for (const prefix of [`${R2_REGISTRATION_PREFIX}/guest/`, `${OVERFLOW_REGISTRATION_PREFIX}/guest/`]) {
+      let cursor;
+      do {
+        const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit: 1000 }).catch(() => null);
+        if (!result) break;
+        for (const object of result.objects || []) {
+          const stored = await env.MOJO_SUMMITS_STORAGE.get(object.key).catch(() => null);
+          const record = stored ? await stored.json().catch(() => null) : null;
+          if (!record || !matchesRow(object.key, record)) continue;
+          await env.MOJO_SUMMITS_STORAGE.delete(object.key);
+          deletedKeys.push(object.key);
+        }
+        cursor = result.truncated ? result.cursor : undefined;
+      } while (cursor);
+    }
+  }
+
+  if (!deletedKeys.length) throw new Error("Guest registrant storage record was not found.");
+
+  const contactCleanup = await removeContactEventForRegistrant(env, row, actor);
+  return {
+    key: row.key,
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    deletedKeys,
+    contactCleanup
+  };
+}
+
 async function updateContact(env, payload = {}, actor = "") {
   const requestedKey = cleanString(payload.key);
   const email = cleanString(
@@ -1492,6 +1609,26 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Contact could not be deleted." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "delete-guest-registrant") {
+    try {
+      const deleted = await deleteGuestRegistrant(env, payload, access.email);
+      const rows = await registrants(env, "guest");
+      return json({
+        ok: true,
+        type: "guest",
+        label: registrantTypes.guest.label,
+        summary: summarize(rows),
+        rows,
+        deleted,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Guest registrant could not be deleted." }, { status: 500 });
     }
   }
 
