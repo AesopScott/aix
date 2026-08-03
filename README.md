@@ -13,6 +13,7 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Public booking: https://mojoaisummits.com/book/
 - Member registration: https://mojoaisummits.com/member-registration/
 - Guest registration: https://mojoaisummits.com/guest/
+- Private forums: https://mojoaisummits.com/forums/
 - Internal CRM: https://mojoaisummits.com/crm/
 - Walkthrough reviews: https://mojoaisummits.com/walkthrough/
 - Setup checklist: https://mojoaisummits.com/setup/
@@ -55,6 +56,7 @@ Protected internal routes:
 - `/walkthrough/`
 - `/member-profile/` and `/api/member-profile`
 - `/partner-profile/` and `/api/partner-profile`
+- `/forums/` and `/api/forums`
 - `/setup/` and `/api/setup-state`
 - `/events/` and `/api/events`
 - `/storage/` and `/api/storage`
@@ -79,6 +81,13 @@ When there are zero users, `/access/` can create the initial owner invite for `s
 Mojo Auth uses a D1 database bound as `MOJO_AUTH_DB` when available. Until that binding exists, it stores users and sessions in the existing `MOJO_SUMMITS_SETUP_STATE` KV namespace. Apply `migrations/0001_auth.sql` to the D1 database before binding it in production.
 
 For local development only, set `MOJO_ACCESS_ALLOW_OPEN=true` or `MOJO_STORAGE_ALLOW_OPEN=true` in `.dev.vars` to bypass enforced access after the global switch is enabled.
+
+## Forums
+
+The private forum surface lives at `/forums/` and is backed by `/api/forums`.
+Threads, replies, and moderation state are stored in `MOJO_SUMMITS_SETUP_STATE` under `forums:*` keys. The default access route assigns `/forums/` and `/api/forums` to the `Admin`, `Mojo team`, and `Guests and members` groups with strict group enforcement.
+
+The `Guests and members` group is dynamic: a signed-in Mojo Auth user can participate when their email exists in CRM contacts (`crm:contact:{email}`) or in member, guest, or partner registration records. This keeps CRM contacts as the source of truth instead of requiring staff to copy every guest/member email into the access console. Owners/admins and emails in the `Admin` access group can moderate forum threads by pinning, closing, reopening, deleting, or restoring them.
 
 ## Internal Storage
 

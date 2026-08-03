@@ -38,6 +38,12 @@ export const DEFAULT_ACCESS_GROUPS = [
     label: "Members",
     summary: "Accepted members who can view their private member profile.",
     emails: []
+  },
+  {
+    id: "guests-and-members",
+    label: "Guests and members",
+    summary: "CRM contacts, guests, members, and partners who can participate in community forums.",
+    emails: []
   }
 ];
 
@@ -197,6 +203,18 @@ export const DEFAULT_ACCESS_RULES = [
     mode: "public",
     matches: [{ exact: "/member-profile" }, { prefix: "/member-profile/" }],
     domains: ["mojoaisummits.com/member-profile", "mojoaisummits.com/member-profile/*"]
+  },
+  {
+    id: "forums",
+    kind: "page",
+    group: "Community",
+    label: "Forums",
+    summary: "Private Mojo community forums for team members and CRM contacts.",
+    mode: "allowlist",
+    defaultGroupIds: ["admin", "mojo-team", "guests-and-members"],
+    strictGroups: true,
+    matches: [{ exact: "/forums" }, { prefix: "/forums/" }],
+    domains: ["mojoaisummits.com/forums", "mojoaisummits.com/forums/*"]
   },
   {
     id: "home",
@@ -462,6 +480,18 @@ export const DEFAULT_ACCESS_RULES = [
     mode: "public",
     matches: [{ exact: "/api/member-profile" }, { prefix: "/api/member-profile/" }],
     domains: ["mojoaisummits.com/api/member-profile", "mojoaisummits.com/api/member-profile/*"]
+  },
+  {
+    id: "api-forums",
+    kind: "api",
+    group: "APIs",
+    label: "Forums API",
+    summary: "Private community forum topics, replies, and moderation.",
+    mode: "allowlist",
+    defaultGroupIds: ["admin", "mojo-team", "guests-and-members"],
+    strictGroups: true,
+    matches: [{ exact: "/api/forums" }, { prefix: "/api/forums/" }],
+    domains: ["mojoaisummits.com/api/forums", "mojoaisummits.com/api/forums/*"]
   },
   {
     id: "api-storage",
@@ -889,6 +919,50 @@ export function emailsForGroups(groups = [], groupIds = []) {
       .filter((group) => requested.has(group.id))
       .flatMap((group) => parseAllowedEmails(group.emails))
   ).sort();
+}
+
+async function kvJson(env, key) {
+  return env.MOJO_SUMMITS_SETUP_STATE?.get(key, "json").catch(() => null) || null;
+}
+
+async function keyWithEmailExists(env, prefix, email) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail || !env.MOJO_SUMMITS_SETUP_STATE?.list) return false;
+
+  let cursor;
+  do {
+    const result = await env.MOJO_SUMMITS_SETUP_STATE.list({ prefix, cursor, limit: 1000 });
+    for (const entry of result.keys || []) {
+      const record = await kvJson(env, entry.name);
+      if (String(record?.email || "").trim().toLowerCase() === normalizedEmail) return true;
+    }
+    cursor = result.list_complete ? undefined : result.cursor;
+  } while (cursor);
+
+  return false;
+}
+
+export async function emailHasDynamicGroupAccess(env, email, groupIds = []) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const requested = new Set((groupIds || []).map(normalizeGroupId));
+  if (!normalizedEmail || !requested.has("guests-and-members")) return false;
+
+  if (await kvJson(env, `crm:contact:${normalizedEmail}`)) return true;
+
+  const prefixes = [
+    "crm:member-registrant:",
+    "member-registration:",
+    "crm:guest-registrant:",
+    "guest-registration:",
+    "crm:partner-registrant:",
+    "partner-registration:"
+  ];
+
+  for (const prefix of prefixes) {
+    if (await keyWithEmailExists(env, prefix, normalizedEmail)) return true;
+  }
+
+  return false;
 }
 
 function pathMatchesRule(pathname, rule) {
