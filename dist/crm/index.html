@@ -837,6 +837,10 @@
           Guest or user name
           <input id="registrationInviteName" name="intendedGuestName" placeholder="Optional invitee name" autocomplete="name">
         </label>
+        <label>
+          Guest or user email
+          <input id="registrationInviteEmail" name="intendedGuestEmail" type="email" placeholder="Optional invitee email" autocomplete="email">
+        </label>
         <button type="submit" id="registrationInviteSubmit">Generate Link</button>
       </form>
       <div class="invite-result" id="registrationInviteResult" aria-live="polite"></div>
@@ -2105,6 +2109,7 @@
           guestRegistrationType: formData.get("type") || "guest",
           eventSlug: formData.get("eventSlug") || "",
         intendedGuestName: formData.get("intendedGuestName") || "",
+        intendedGuestEmail: formData.get("intendedGuestEmail") || "",
         eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
         eventDate: selected?.dataset.eventDate || ""
       };

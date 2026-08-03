@@ -247,6 +247,15 @@
     text-decoration:underline;
     text-underline-offset:3px;
   }
+  .email-privacy-note{
+    align-self:end;
+    margin:0 0 11px;
+    color:var(--danger);
+    font-size:12px;
+    line-height:1.55;
+    border-left:1px solid rgba(0,230,255,.38);
+    padding-left:14px;
+  }
   .btn-primary,
   .btn-ghost{
     border-radius:2px;
@@ -463,6 +472,7 @@
               <label for="email">Company email</label>
               <input type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
             </div>
+            <p class="email-privacy-note">We do not share email addresses with sponsors or any other organizations.</p>
             <div class="field full">
               <label for="phone">Mobile phone</label>
               <div class="phone-row">
@@ -532,6 +542,10 @@
     return domain === 'gmail.com' || domain === 'googlemail.com';
   }
 
+  function isValidEmail(email){
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim().toLowerCase());
+  }
+
   function normalizePhone(phone){
     return String(phone || '').replace(/[^\d+]/g, '');
   }
@@ -546,6 +560,12 @@
   function applyInviteDetails(data = {}){
     const invite = data.invite || {};
     const invitedName = invite.intendedGuestName || invite.invitedName || invite.guestName || '';
+    const invitedEmail = invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || '';
+    if (isValidEmail(invitedEmail) && !emailInput.value.trim()) emailInput.value = invitedEmail;
+    if (isValidEmail(invitedName)) {
+      if (!emailInput.value.trim()) emailInput.value = invitedName;
+      return;
+    }
     if (invitedName && !fullNameInput.value.trim()) fullNameInput.value = invitedName;
   }
 

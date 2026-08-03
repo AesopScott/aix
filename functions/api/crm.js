@@ -134,6 +134,22 @@ function cleanCode(value) {
   return cleanString(value).replace(/\D/g, "").slice(0, 6);
 }
 
+function isEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanString(value).toLowerCase());
+}
+
+function invitePersonName(record = {}) {
+  const name = cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName);
+  return isEmail(name) ? "" : name;
+}
+
+function invitePersonEmail(record = {}) {
+  const email = cleanString(record?.intendedGuestEmail || record?.invitedEmail || record?.guestEmail).toLowerCase();
+  if (isEmail(email)) return email;
+  const name = cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName).toLowerCase();
+  return isEmail(name) ? name : "";
+}
+
 function cleanInviteType(value) {
   return value === "member" ? "member" : "guest";
 }
@@ -177,8 +193,10 @@ function normalizeRecord(key, record) {
     eventSlug: cleanString(record?.eventSlug),
     eventName: cleanString(record?.eventName),
     eventDate: cleanString(record?.eventDate),
-    intendedGuestName: cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName),
-    invitedName: cleanString(record?.invitedName || record?.intendedGuestName || record?.guestName),
+    intendedGuestName: invitePersonName(record),
+    intendedGuestEmail: invitePersonEmail(record),
+    invitedEmail: invitePersonEmail(record),
+    invitedName: invitePersonName(record),
     guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
     registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.guestRegistrationType),
     partnerCompany: cleanString(record?.partnerCompany),
@@ -635,9 +653,11 @@ function normalizeInviteCode(key, record) {
     eventSlug: cleanString(record?.eventSlug),
     eventName: cleanString(record?.eventName),
     eventDate: cleanString(record?.eventDate),
-    intendedGuestName: cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName),
-    invitedName: cleanString(record?.invitedName || record?.intendedGuestName || record?.guestName),
-    guestName: cleanString(record?.guestName || record?.intendedGuestName || record?.invitedName),
+    intendedGuestName: invitePersonName(record),
+    intendedGuestEmail: invitePersonEmail(record),
+    invitedEmail: invitePersonEmail(record),
+    invitedName: invitePersonName(record),
+    guestName: invitePersonName(record),
     guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
     registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.guestRegistrationType),
     partnerCompany: cleanString(record?.partnerCompany),
@@ -765,10 +785,20 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
 
   const eventSlug = cleanString(payload.eventSlug, 200);
   const eventName = cleanString(payload.eventName, 240);
-  const intendedGuestName = cleanString(
+  const rawGuestName = cleanString(
     payload.intendedGuestName || payload.invitedName || payload.guestName || payload.name,
     240
   );
+  const rawGuestEmail = cleanString(
+    payload.intendedGuestEmail || payload.invitedEmail || payload.guestEmail || payload.email,
+    240
+  ).toLowerCase();
+  const intendedGuestEmail = isEmail(rawGuestEmail)
+    ? rawGuestEmail
+    : isEmail(rawGuestName)
+      ? rawGuestName.toLowerCase()
+      : "";
+  const intendedGuestName = isEmail(rawGuestName) ? "" : rawGuestName;
   const guestRegistrationType = cleanGuestRegistrationType(payload.guestRegistrationType || payload.registrationRole || payload.type);
   if (!eventSlug && !eventName) throw new Error("Select an event before generating an invite code.");
 
@@ -782,6 +812,9 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     eventName,
     eventDate: cleanString(payload.eventDate, 120),
     intendedGuestName,
+    intendedGuestEmail,
+    invitedEmail: intendedGuestEmail,
+    guestEmail: intendedGuestEmail,
     invitedName: intendedGuestName,
     guestName: intendedGuestName,
     guestRegistrationType,
