@@ -15,6 +15,13 @@ const guestConfirmationSenderName = "Angel Mosley";
 const guestConfirmationSenderEmail = "Angel@mojoaisummits.com";
 const guestContactEmail = "guest@mojoaisummits.com";
 const memberContactEmail = "member@mojoaisummits.com";
+const defaultStaffNotificationEmails = [
+  "angel@mojoaisummits.com",
+  "scott@mojoaisummits.com",
+  "gina@mojoaisummits.com",
+  "miller@mojoaisummits.com",
+  "jodi@mojoaisummits.com"
+];
 const membershipUrl = "https://mojoaisummits.com/membership";
 const briefsUrl = "https://mojoaisummits.com/briefs";
 const virtualSeriesUrl = "https://mojoaisummits.com/virtual/";
@@ -61,6 +68,13 @@ function cleanString(value) {
   return typeof value === "string"
     ? value.trim().slice(0, maxFieldLength)
     : "";
+}
+
+function splitEmailList(value) {
+  return cleanString(value)
+    .split(/[,;\s]+/)
+    .map((email) => email.trim().toLowerCase())
+    .filter(isEmail);
 }
 
 function isEmail(value) {
@@ -247,6 +261,13 @@ async function writeRegistrationDebug(env, type, status, details = {}) {
           attempted: details.confirmationEmail.attempted === true,
           sent: details.confirmationEmail.sent === true,
           error: cleanString(details.confirmationEmail.error)
+        }
+      : undefined,
+    staffNotificationEmail: details.staffNotificationEmail && typeof details.staffNotificationEmail === "object"
+      ? {
+          attempted: details.staffNotificationEmail.attempted === true,
+          sent: details.staffNotificationEmail.sent === true,
+          error: cleanString(details.staffNotificationEmail.error)
         }
       : undefined,
     error: cleanString(details.error)
@@ -463,6 +484,99 @@ async function sendGuestRegistrationConfirmation(env, registration = {}) {
       contentType: "text/calendar; method=PUBLISH; charset=utf-8",
       contentBytes: base64Encode(calendarInvite)
     }] : [],
+    saveToSentItems: true
+  });
+
+  return { attempted: true, sent: true };
+}
+
+function staffNotificationRecipients(env = {}) {
+  const configured = splitEmailList(
+    env.MOJO_REGISTRATION_STAFF_EMAILS ||
+      env.MOJO_REGISTRATION_NOTIFICATION_RECIPIENTS ||
+      env.MOJO_REGISTRATION_NOTIFY_TO
+  );
+  const emails = configured.length ? configured : defaultStaffNotificationEmails;
+  return [...new Set(emails)].map((address) => ({ address }));
+}
+
+function staffRegistrationSubject(type, registration = {}) {
+  const label = registrationRoleLabel(type);
+  const name = cleanString(registration.name) || cleanString(registration.email) || "New registrant";
+  const eventName = cleanString(registration.eventName) || "Mojo AI Summits";
+  return `${label} registered: ${name} for ${eventName}`;
+}
+
+function staffRegistrationRows(type, registration = {}) {
+  const details = eventDetails(registration);
+  return [
+    ["Registration type", registrationRoleLabel(type)],
+    ["Role", registrationRoles(type, registration).join(", ")],
+    ["Name", registration.name],
+    ["Email", registration.email],
+    ["Phone", registration.phone],
+    ["Company", registration.company || registration.partnerCompany],
+    ["Title", registration.title],
+    ["Industry", registration.industry],
+    ["Event", details.name],
+    ["Date", details.date],
+    ["Time", details.time],
+    ["Event page", details.pageUrl],
+    ["Access", details.accessText],
+    ["Invite code", registration.inviteCode],
+    ["Registration ID", registration.id],
+    ["CRM contact key", registration.contactKey],
+    ["Registered at", registration.createdAt],
+    ["Publication name opt-in", cleanBoolean(registration.publicationUseName) ? "Yes" : "No"],
+    ["Publication company opt-in", cleanBoolean(registration.publicationUseCompany) ? "Yes" : "No"]
+  ].map(([label, value]) => [label, cleanString(value) || "Not provided"]);
+}
+
+function staffRegistrationNotificationText(type, registration = {}) {
+  const rows = staffRegistrationRows(type, registration);
+  return [
+    "A Mojo AI Summits registration has been submitted.",
+    "",
+    ...rows.map(([label, value]) => `${label}: ${value}`),
+    "",
+    "This registration has been stored in the CRM."
+  ].join("\n");
+}
+
+function staffRegistrationNotificationHtml(type, registration = {}) {
+  const rows = staffRegistrationRows(type, registration);
+  const tableRows = rows.map(([label, value]) => {
+    const cleanValue = escapeHtml(value);
+    const renderedValue = /^https?:\/\//i.test(value)
+      ? `<a href="${cleanValue}">${cleanValue}</a>`
+      : cleanValue;
+    return `<tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb;width:170px">${escapeHtml(label)}</th><td style="padding:8px 10px;border:1px solid #d8dee9">${renderedValue}</td></tr>`;
+  }).join("");
+
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.55;max-width:760px">
+      <p>A Mojo AI Summits registration has been submitted.</p>
+      <table style="border-collapse:collapse;width:100%;margin:0 0 20px">
+        ${tableRows}
+      </table>
+      <p>This registration has been stored in the CRM.</p>
+    </div>
+  `;
+}
+
+async function sendStaffRegistrationNotification(env, type, registration = {}) {
+  const recipients = staffNotificationRecipients(env);
+  if (!recipients.length) return { attempted: false, sent: false, error: "No staff notification recipients are configured." };
+
+  await sendMicrosoftGraphMail(env, {
+    sender: cleanString(env.MOJO_REGISTRATION_NOTIFICATION_SENDER || env.MOJO_INVITE_EMAIL_SENDER || guestConfirmationSenderEmail),
+    to: recipients,
+    replyTo: cleanString(registration.email)
+      ? [{ address: registration.email, name: registration.name }]
+      : [],
+    subject: staffRegistrationSubject(type, registration),
+    text: staffRegistrationNotificationText(type, registration),
+    html: staffRegistrationNotificationHtml(type, registration),
     saveToSentItems: true
   });
 
@@ -852,13 +966,19 @@ export async function handlePublicRegistration({ request, env }, type) {
           error: cleanString(error?.message || "Guest confirmation email failed.")
         }))
       : { attempted: false, sent: false };
+    const staffNotificationEmail = await sendStaffRegistrationNotification(env, type, storedRecord).catch((error) => ({
+      attempted: true,
+      sent: false,
+      error: cleanString(error?.message || "Staff registration notification email failed.")
+    }));
     await writeRegistrationDebug(env, type, "stored", {
       ...debugBase,
       ...storedRecord,
       stage: "complete",
       registrationKeys,
       inviteUsageKey,
-      confirmationEmail
+      confirmationEmail,
+      staffNotificationEmail
     });
 
     return json({
@@ -866,7 +986,8 @@ export async function handlePublicRegistration({ request, env }, type) {
       id,
       createdAt,
       storage: "r2",
-      confirmationEmail
+      confirmationEmail,
+      staffNotificationEmail
     }, { status: 201 });
   } catch (error) {
     await writeRegistrationDebug(env, type, "failed", {
