@@ -63,6 +63,22 @@ function cleanString(value) {
     : "";
 }
 
+function isEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanString(value).toLowerCase());
+}
+
+function invitePersonName(record = {}) {
+  const name = cleanString(record.intendedGuestName || record.invitedName || record.guestName);
+  return isEmail(name) ? "" : name;
+}
+
+function invitePersonEmail(record = {}) {
+  const email = cleanString(record.intendedGuestEmail || record.invitedEmail || record.guestEmail).toLowerCase();
+  if (isEmail(email)) return email;
+  const name = cleanString(record.intendedGuestName || record.invitedName || record.guestName).toLowerCase();
+  return isEmail(name) ? name : "";
+}
+
 function escapeHtml(value) {
   return cleanString(value)
     .replace(/&/g, "&amp;")
@@ -253,9 +269,11 @@ function inviteMeta(inviteRecord) {
     eventStart: cleanString(record.eventStart || record.eventStartDateTime),
     eventEnd: cleanString(record.eventEnd || record.eventEndDateTime),
     eventAccessLink: cleanString(record.eventAccessLink || record.accessLink || record.joinUrl || record.zoomUrl),
-    intendedGuestName: cleanString(record.intendedGuestName || record.invitedName || record.guestName),
-    invitedName: cleanString(record.invitedName || record.intendedGuestName || record.guestName),
-    guestName: cleanString(record.guestName || record.intendedGuestName || record.invitedName),
+    intendedGuestName: invitePersonName(record),
+    intendedGuestEmail: invitePersonEmail(record),
+    invitedEmail: invitePersonEmail(record),
+    invitedName: invitePersonName(record),
+    guestName: invitePersonName(record),
     guestRegistrationType: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole),
     registrationRole: cleanGuestRegistrationType(record.registrationRole || record.guestRegistrationType),
     isPresenter: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "presenter",

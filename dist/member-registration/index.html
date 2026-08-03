@@ -575,6 +575,10 @@
     return domain === 'gmail.com' || domain === 'googlemail.com';
   }
 
+  function isValidEmail(email){
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim().toLowerCase());
+  }
+
   function normalizePhone(phone){
     return String(phone || '').replace(/[^\d+]/g, '');
   }
@@ -589,6 +593,12 @@
   function applyInviteDetails(data = {}){
     const invite = data.invite || {};
     const invitedName = invite.intendedGuestName || invite.invitedName || invite.guestName || '';
+    const invitedEmail = invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || '';
+    if (isValidEmail(invitedEmail) && !emailInput.value.trim()) emailInput.value = invitedEmail;
+    if (isValidEmail(invitedName)) {
+      if (!emailInput.value.trim()) emailInput.value = invitedName;
+      return;
+    }
     if (invitedName && !fullNameInput.value.trim()) fullNameInput.value = invitedName;
   }
 
