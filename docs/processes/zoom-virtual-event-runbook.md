@@ -25,7 +25,7 @@ The `.php` routes are compatibility share URLs. They are rendered by Cloudflare 
 
 The public API route `/api/virtual-events/[event-slug]` returns the Zoom join URL only until 15 minutes before the event start time. After the lockout point, it returns the public event details and a locked message, but no Zoom URL.
 
-Current default start time is 10:00 AM America/Denver for each event. Update `functions/_virtual-events.js` if the final event time changes.
+Each fall 2026 virtual event runs from 1:00 PM to 2:30 PM America/Chicago. The lockout begins at 12:45 PM Central on each event date. Update `functions/_virtual-events.js` if the final event time changes.
 
 ## Local Env
 
@@ -39,7 +39,7 @@ Optional values:
 
 - `ZOOM_USER_ID`, defaults to `me`
 - `MOJO_SUMMITS_SETUP_STATE_ID`, required for `--write-kv`
-- `MOJO_VIRTUAL_EVENT_TIMEZONE`, defaults to `America/Denver`
+- `MOJO_VIRTUAL_EVENT_TIMEZONE`, defaults to `America/Chicago`
 
 ## Creation Flow
 
@@ -59,6 +59,12 @@ To store the public join URLs in the Cloudflare KV namespace used by the website
 
 ```powershell
 node scripts/create-zoom-virtual-events.mjs --write-kv
+```
+
+To update existing Zoom meetings from the generated local report after changing canonical event details:
+
+```powershell
+node scripts/create-zoom-virtual-events.mjs --update-from-report --write-kv
 ```
 
 The script writes a local generated JSON report at `docs/processes/zoom-virtual-events.generated.json`. That file is ignored because it contains operational meeting links.

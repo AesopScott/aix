@@ -14,6 +14,8 @@ MOJO AI Summits is adding a fall 2026 virtual AI event series before the 2027 in
 - Friday, November 6, 2026
 - Friday, November 27, 2026
 
+All sessions run from 1:00 PM to 2:30 PM Central.
+
 ## Working Topic Arc
 
 1. AI Executive Readiness
@@ -46,7 +48,6 @@ Each virtual event should have:
 ## Open Decisions
 
 - Final series name
-- Time of day and time zone for each session
 - Virtual platform
 - Event-specific speakers and moderators
 - Whether each event has a sponsor, partner, or editorial-only format

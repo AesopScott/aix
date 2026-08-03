@@ -47,6 +47,35 @@ function hasFlag(name) {
   return process.argv.includes(name);
 }
 
+function eventBySlug(slug) {
+  return VIRTUAL_EVENTS.find((event) => event.slug === slug);
+}
+
+function zoomStartTime(event) {
+  return event.startAt.replace(/(?:Z|[+-]\d\d:\d\d)$/u, "");
+}
+
+function zoomMeetingPayload(event) {
+  return {
+    topic: `MOJO AI Summits | ${event.title}`,
+    type: 2,
+    start_time: zoomStartTime(event),
+    duration: event.durationMinutes,
+    timezone: process.env.MOJO_VIRTUAL_EVENT_TIMEZONE || VIRTUAL_EVENT_TIMEZONE,
+    agenda: event.summary,
+    settings: {
+      approval_type: 2,
+      audio: "both",
+      auto_recording: "none",
+      host_video: true,
+      join_before_host: false,
+      mute_upon_entry: true,
+      participant_video: false,
+      waiting_room: true
+    }
+  };
+}
+
 async function zoomToken() {
   const accountId = requireEnv("ZOOM_ACCOUNT_ID");
   const clientId = requireEnv("ZOOM_CLIENT_ID");
@@ -63,35 +92,31 @@ async function zoomToken() {
 
 async function createMeeting(token, event) {
   const userId = process.env.ZOOM_USER_ID || "me";
-  const zoomStartTime = event.startAt.replace(/(?:Z|[+-]\d\d:\d\d)$/u, "");
   const response = await fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(userId)}/meetings`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${token}`,
       "content-type": "application/json"
     },
-    body: JSON.stringify({
-      topic: `MOJO AI Summits | ${event.title}`,
-      type: 2,
-      start_time: zoomStartTime,
-      duration: event.durationMinutes,
-      timezone: process.env.MOJO_VIRTUAL_EVENT_TIMEZONE || VIRTUAL_EVENT_TIMEZONE,
-      agenda: event.summary,
-      settings: {
-        approval_type: 2,
-        audio: "both",
-        auto_recording: "none",
-        host_video: true,
-        join_before_host: false,
-        mute_upon_entry: true,
-        participant_video: false,
-        waiting_room: true
-      }
-    })
+    body: JSON.stringify(zoomMeetingPayload(event))
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.message || `Zoom meeting creation failed for ${event.slug}.`);
   return payload;
+}
+
+async function updateMeeting(token, meetingId, event) {
+  const response = await fetch(`https://api.zoom.us/v2/meetings/${encodeURIComponent(meetingId)}`, {
+    method: "PATCH",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(zoomMeetingPayload(event))
+  });
+  if (response.status === 204) return;
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.message || `Zoom meeting update failed for ${event.slug}.`);
 }
 
 function kvPut(slug, meeting) {
@@ -122,8 +147,7 @@ function kvPutValue(slug, value) {
   const tempDir = fs.mkdtempSync(path.join(process.env.TEMP || root, "mojo-zoom-kv-"));
   const tempFile = path.join(tempDir, `${slug}.json`);
   fs.writeFileSync(tempFile, value);
-  const command = process.platform === "win32" ? "npx.cmd" : "npx";
-  const result = spawnSync(command, [
+  const wranglerArgs = [
     "wrangler",
     "kv",
     "key",
@@ -134,27 +158,75 @@ function kvPutValue(slug, value) {
     "--namespace-id",
     namespaceId,
     "--remote"
-  ], {
+  ];
+  const command = process.platform === "win32" ? "cmd.exe" : "npx";
+  const args = process.platform === "win32"
+    ? ["/d", "/s", "/c", ["npx.cmd", ...wranglerArgs].map(cmdQuote).join(" ")]
+    : wranglerArgs;
+  const result = spawnSync(command, args, {
     cwd: root,
     shell: false,
-    stdio: "inherit"
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
   });
   fs.rmSync(tempDir, { recursive: true, force: true });
-  if (result.status !== 0) throw new Error(`KV write failed for ${slug}.`);
+  if (result.status !== 0) {
+    const detail = [result.error?.message, result.stderr, result.stdout].filter(Boolean).join("\n").trim();
+    throw new Error(`KV write failed for ${slug}.${detail ? `\n${detail}` : ""}`);
+  }
+}
+
+function cmdQuote(value) {
+  const text = String(value);
+  if (!/[()\[\]{}^=;!'+,`~&|\s"]/u.test(text)) return text;
+  return `"${text.replace(/(\\*)"/gu, '$1$1\\"').replace(/(\\+)$/u, "$1$1")}"`;
 }
 
 function writeKvFromReport(reportPath) {
   const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
   for (const event of report.events || []) {
+    const canonicalEvent = eventBySlug(event.slug);
     kvPutValue(event.slug, JSON.stringify({
       meetingId: event.meetingId || "",
       joinUrl: event.joinUrl || "",
       passcode: event.passcode || "",
-      startAt: event.startAt || "",
+      startAt: canonicalEvent?.startAt || event.startAt || "",
+      duration: canonicalEvent?.durationMinutes || event.duration || "",
       updatedAt: new Date().toISOString()
     }));
   }
   console.log(`Wrote ${(report.events || []).length} Zoom join record(s) from ${reportPath}.`);
+}
+
+async function updateMeetingsFromReport(token, reportPath) {
+  const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  const updated = [];
+  report.events = (report.events || []).map((record) => {
+    const event = eventBySlug(record.slug);
+    if (!event) return record;
+    return {
+      ...record,
+      title: event.title,
+      startAt: event.startAt,
+      duration: event.durationMinutes
+    };
+  });
+
+  for (const record of report.events) {
+    const event = eventBySlug(record.slug);
+    if (!event || !record.meetingId) continue;
+    await updateMeeting(token, record.meetingId, event);
+    updated.push({
+      slug: record.slug,
+      meetingId: record.meetingId,
+      startAt: event.startAt,
+      duration: event.durationMinutes
+    });
+  }
+  report.updatedAt = new Date().toISOString();
+  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  console.log(`Updated ${updated.length} existing Zoom meeting(s).`);
+  return updated;
 }
 
 async function main() {
@@ -165,6 +237,12 @@ async function main() {
   }
 
   const token = await zoomToken();
+  if (hasFlag("--update-from-report")) {
+    await updateMeetingsFromReport(token, outPath);
+    if (hasFlag("--write-kv")) writeKvFromReport(outPath);
+    return;
+  }
+
   const events = arg("--event")
     ? VIRTUAL_EVENTS.filter((event) => event.slug === arg("--event"))
     : VIRTUAL_EVENTS;

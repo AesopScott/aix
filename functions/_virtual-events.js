@@ -1,4 +1,4 @@
-export const VIRTUAL_EVENT_TIMEZONE = "America/Denver";
+export const VIRTUAL_EVENT_TIMEZONE = "America/Chicago";
 export const VIRTUAL_EVENT_LOCKOUT_MINUTES = 15;
 
 export const VIRTUAL_EVENTS = [
@@ -6,8 +6,8 @@ export const VIRTUAL_EVENTS = [
     slug: "ai-executive-readiness",
     title: "AI Executive Readiness",
     dateLabel: "Friday, September 4, 2026",
-    startAt: "2026-09-04T10:00:00-06:00",
-    durationMinutes: 75,
+    startAt: "2026-09-04T13:00:00-05:00",
+    durationMinutes: 90,
     summary: "Establish the leadership baseline for adoption, value, operating ownership, and risk.",
     agenda: [
       "Executive framing keynote",
@@ -19,8 +19,8 @@ export const VIRTUAL_EVENTS = [
     slug: "ai-use-cases-that-survive-finance",
     title: "AI Use Cases That Survive Finance",
     dateLabel: "Friday, September 25, 2026",
-    startAt: "2026-09-25T10:00:00-06:00",
-    durationMinutes: 75,
+    startAt: "2026-09-25T13:00:00-05:00",
+    durationMinutes: 90,
     summary: "Compare how teams move from promising experiments to funded, measurable work.",
     agenda: [
       "ROI and use-case scoring",
@@ -32,8 +32,8 @@ export const VIRTUAL_EVENTS = [
     slug: "ai-integration-and-workflow",
     title: "AI Integration and Workflow",
     dateLabel: "Friday, October 16, 2026",
-    startAt: "2026-10-16T10:00:00-06:00",
-    durationMinutes: 75,
+    startAt: "2026-10-16T13:00:00-05:00",
+    durationMinutes: 90,
     summary: "Focus on the systems, data, automation, and vendor decisions that make AI operational.",
     agenda: [
       "Workflow case study",
@@ -45,8 +45,8 @@ export const VIRTUAL_EVENTS = [
     slug: "ai-security-governance-and-trust",
     title: "AI Security, Governance, and Trust",
     dateLabel: "Friday, November 6, 2026",
-    startAt: "2026-11-06T10:00:00-07:00",
-    durationMinutes: 75,
+    startAt: "2026-11-06T13:00:00-06:00",
+    durationMinutes: 90,
     summary: "Clarify controls, policies, and executive decision rights before AI use expands further.",
     agenda: [
       "Security leader perspective",
@@ -58,8 +58,8 @@ export const VIRTUAL_EVENTS = [
     slug: "ai-operating-model-for-2027",
     title: "AI Operating Model for 2027",
     dateLabel: "Friday, November 27, 2026",
-    startAt: "2026-11-27T10:00:00-07:00",
-    durationMinutes: 75,
+    startAt: "2026-11-27T13:00:00-06:00",
+    durationMinutes: 90,
     summary: "Translate the series into leadership priorities, summit programming, and relationship next steps.",
     agenda: [
       "2027 planning discussion",

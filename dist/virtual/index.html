@@ -440,6 +440,18 @@
       .brand-secondary { font-size: 9.5px; letter-spacing: .32em; padding-left: .32em; }
     }
   </style>
+<style>
+/* Page navigation exit indicators: show when a top-nav link leaves the current section. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
+  content: " >";
+  display: inline-block;
+  margin-left: .35em;
+  color: currentColor;
+}
+</style>
 </head>
 <body>
   <header>
@@ -472,7 +484,7 @@
         <dl>
           <div>
             <dt>Cadence</dt>
-            <dd>Five Friday sessions from September through November 2026.</dd>
+            <dd>Five Friday sessions from September through November 2026, each from 1:00 PM to 2:30 PM Central.</dd>
           </div>
           <div>
             <dt>Audience</dt>
@@ -493,7 +505,7 @@
             <span class="eyebrow">Confirmed dates</span>
             <h2>Five virtual rooms, one executive AI arc.</h2>
           </div>
-          <p>The working topics are scaffolded so the team can refine speakers, partners, invite segments, and run-of-show details without changing the date architecture.</p>
+          <p>The working topics are scaffolded so the team can refine speakers, partners, invite segments, and run-of-show details without changing the date and time architecture.</p>
         </div>
         <div class="event-list">
           <article class="event">
@@ -504,6 +516,7 @@
             </div>
             <ul>
               <li>Executive framing keynote</li>
+              <li>1:00 PM-2:30 PM Central</li>
               <li>Readiness diagnostic discussion</li>
               <li>Invite path into the summit cohort</li>
             </ul>
@@ -516,6 +529,7 @@
             </div>
             <ul>
               <li>ROI and use-case scoring</li>
+              <li>1:00 PM-2:30 PM Central</li>
               <li>Budget owner questions</li>
               <li>Sponsor-fit discovery</li>
             </ul>
@@ -528,6 +542,7 @@
             </div>
             <ul>
               <li>Workflow case study</li>
+              <li>1:00 PM-2:30 PM Central</li>
               <li>Integration constraints</li>
               <li>Peer implementation notes</li>
             </ul>
@@ -540,6 +555,7 @@
             </div>
             <ul>
               <li>Security leader perspective</li>
+              <li>1:00 PM-2:30 PM Central</li>
               <li>Governance operating model</li>
               <li>Risk and vendor boundaries</li>
             </ul>
@@ -552,6 +568,7 @@
             </div>
             <ul>
               <li>2027 planning discussion</li>
+              <li>1:00 PM-2:30 PM Central</li>
               <li>Summit track preview</li>
               <li>Member and speaker nominations</li>
             </ul>

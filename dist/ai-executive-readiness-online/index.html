@@ -34,6 +34,18 @@
     .closing{padding:86px 0;text-align:center;background:radial-gradient(circle at 50% 0,rgba(0,230,255,.16),transparent 30rem),rgba(5,9,19,.64);border-top:1px solid var(--line)}.closing h2,.closing p{margin-left:auto;margin-right:auto}.closing p{max-width:690px;margin-top:20px;color:var(--muted);font-size:18px;line-height:1.7}.closing .hero-actions{justify-content:center}footer{position:relative;z-index:1;padding:34px 0;color:var(--dim);border-top:1px solid var(--line);font-family:Space Grotesk,sans-serif;font-size:12px;letter-spacing:.12em;text-transform:uppercase}footer .wrap{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap}footer a{color:var(--cyan)}
     @media (max-width:980px){nav{align-items:flex-start;flex-direction:column;padding:18px 0}.nav-links{flex-wrap:wrap;gap:16px}.hero-grid,.section-head,.room-inner{grid-template-columns:1fr}.event-panel{min-height:460px}.metric-band,.format-grid,.run-grid{grid-template-columns:repeat(2,1fr)}}@media (max-width:720px){.wrap,nav{width:min(100% - 28px,1180px)}.hero{padding-top:58px}.brand-primary{font-size:20px}.brand-secondary{font-size:9.5px}.nav-links{font-size:10.5px;letter-spacing:.12em}h1{font-size:clamp(39px,13vw,54px)}.hero-copy{font-size:16px}.event-panel{min-height:430px;padding:20px}.event-panel:before{inset:12px}.event-panel:after{inset:22px}.date-card{width:180px}.date-card strong{font-size:62px}.seat-count{right:20px;top:20px;grid-template-columns:repeat(3,18px);gap:7px}.seat-count span{width:18px;height:18px}.panel-caption{left:20px;right:20px;bottom:20px;flex-direction:column;gap:6px}.metric-band,.format-grid,.topic-grid,.run-grid{grid-template-columns:1fr}.metric{border-right:0;border-bottom:1px solid var(--line)}.metric:last-child{border-bottom:0}.topic{grid-template-columns:1fr;gap:12px}.room-inner{padding:72px 0}.rules div{grid-template-columns:1fr;gap:8px}footer .wrap{display:grid}}
   </style>
+<style>
+/* Page navigation exit indicators: show when a top-nav link leaves the current section. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
+  content: " >";
+  display: inline-block;
+  margin-left: .35em;
+  color: currentColor;
+}
+</style>
 </head>
 <body>
   <header>
@@ -46,20 +58,20 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <span class="eyebrow">Friday 04 Sep 2026</span>
+          <span class="eyebrow">Friday 04 Sep 2026 | 1:00 PM-2:30 PM Central</span>
           <h1>AI Executive Readiness</h1>
           <p class="hero-copy">Nine executives come together in a moderated virtual roundtable to establish the leadership baseline for AI adoption, value, operating ownership, and risk.</p>
           <div class="hero-actions"><a class="btn-primary" href="/book/">Request Executive Invitation</a><a class="btn-ghost" href="#topics">Review Discussion Topics</a></div>
         </div>
         <aside class="event-panel" aria-label="AI Executive Readiness event summary">
-          <div class="date-card"><span>Friday</span><strong>04</strong><span>Sep 2026</span></div>
+          <div class="date-card"><span>Friday</span><strong>04</strong><span>Sep 2026</span><span>1:00 PM CT</span></div>
           <div class="seat-count" aria-label="Nine executive seats"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
           <img class="boardroom" src="/assets/boardroom-transparent.png" alt="Executive boardroom table with seats">
           <div class="panel-caption"><span><strong>9</strong> executive seats</span><span>Moderated roundtable</span></div>
         </aside>
       </div>
     </section>
-    <section aria-label="Event facts"><div class="metric-band"><div class="metric"><strong>01</strong><span>Executive framing keynote</span></div><div class="metric"><strong>08</strong><span>Moderated readiness questions</span></div><div class="metric"><strong>09</strong><span>Executives in the room</span></div><div class="metric"><strong>01</strong><span>Invite path into the cohort</span></div></div></section>
+    <section aria-label="Event facts"><div class="metric-band"><div class="metric"><strong>90</strong><span>Minutes from 1:00 PM to 2:30 PM Central</span></div><div class="metric"><strong>08</strong><span>Moderated readiness questions</span></div><div class="metric"><strong>09</strong><span>Executives in the room</span></div><div class="metric"><strong>01</strong><span>Invite path into the cohort</span></div></div></section>
     <section class="section-pad" id="format"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Operating format</span><h2>A working room for leaders who own the AI decision.</h2></div><p>This is not a passive webinar. The session is designed to surface what leaders are actually seeing, where decisions are stuck, and which operating questions deserve deeper summit work.</p></div><div class="format-grid"><article class="format-card"><span>Stage 01</span><h3>Executive Framing Keynote</h3><p>A concise opening view of national AI adoption momentum, business pressure, and the leadership questions executives need to settle.</p></article><article class="format-card"><span>Stage 02</span><h3>Readiness Diagnostic Discussion</h3><p>Moderated prompts let each executive compare adoption posture, governance maturity, measurement gaps, and risk tolerance.</p></article><article class="format-card"><span>Stage 03</span><h3>Summit Cohort Invitation Path</h3><p>Qualified participants can be routed into the fall series, member nominations, executive research briefs, and 2027 summit planning.</p></article></div></div></section>
     <section class="room-section"><div class="wrap room-inner"><div><span class="eyebrow">The room</span><h2>Small enough for candor. Senior enough to matter.</h2><p class="room-copy">The point is not to agree on a slogan about AI. The point is to compare where leadership teams are moving, where they are hesitating, who has real ownership, and how trust is being earned with employees, customers, boards, and regulators.</p></div><dl class="rules"><div><dt>Audience</dt><dd>Executives and senior operators accountable for AI strategy, business value, risk, technology, data, or workforce adoption.</dd></div><div><dt>Access</dt><dd>Invitation-only, capped at nine executive participants for a moderated exchange rather than broadcast attendance.</dd></div><div><dt>Outcome</dt><dd>A clearer readiness baseline and a path into the MOJO AI Summits cohort for deeper peer work.</dd></div></dl></div></section>
     <section class="section-pad" id="topics"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Moderated prompts</span><h2>The questions every AI leadership team is already carrying.</h2></div><p>The discussion is built around eight live questions. Each one is designed to expose operating reality, not produce generic optimism.</p></div><div class="topic-grid">
