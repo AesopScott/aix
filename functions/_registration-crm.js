@@ -6,7 +6,7 @@ const jsonHeaders = {
 };
 
 const maxFieldLength = 2000;
-const acceptedPhoneStatuses = new Set(["verified", "pending_sms_setup"]);
+const acceptedPhoneStatuses = new Set(["verified"]);
 const blockedEmailDomains = new Set(["gmail.com", "googlemail.com"]);
 const registrationObjectPrefix = "crm/registrations";
 const inviteUsageObjectPrefix = "crm/invite-usage";
@@ -322,7 +322,7 @@ function eventPageUrl(registration = {}) {
 function eventDetails(registration = {}) {
   const name = cleanString(registration.eventName) || "Mojo AI Summits event";
   const date = cleanString(registration.eventDate) || "To be announced";
-  const time = cleanString(registration.eventTime) || "To be announced";
+  const time = cleanString(registration.eventTime) || "1:00 p.m. Central";
   const access = cleanString(registration.eventAccessLink);
   return {
     name,
@@ -600,17 +600,6 @@ function validateRegistration(registration, type = "") {
 }
 
 function normalizeRegistrationForType(type, registration) {
-  if (
-    type === "guest" &&
-    (!registration.phoneVerificationStatus ||
-      registration.phoneVerificationStatus === "unverified" ||
-      registration.phoneVerificationStatus === "code_sent")
-  ) {
-    return {
-      ...registration,
-      phoneVerificationStatus: "pending_sms_setup"
-    };
-  }
   return registration;
 }
 
