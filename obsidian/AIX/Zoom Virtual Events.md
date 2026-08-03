@@ -1,6 +1,6 @@
 # Zoom Virtual Events
 
-Updated: 2026-07-27
+Updated: 2026-08-03
 
 MOJO AI Summits now has a Cloudflare-native scaffold for five fall 2026 Zoom-backed virtual event share pages.
 
@@ -18,7 +18,7 @@ Pretty routes without `.php` are also supported.
 
 The share page calls `/api/virtual-events/[slug]`. The API reads the stored Zoom join URL from `MOJO_SUMMITS_SETUP_STATE` and stops returning it 15 minutes before the event start time.
 
-Default start time is currently 10:00 AM America/Denver for each event until the operating schedule is finalized.
+Each fall 2026 virtual event runs from 1:00 PM to 2:30 PM America/Chicago. The share-page lockout begins 15 minutes before start time, at 12:45 PM Central.
 
 ## Zoom Creation
 
