@@ -213,7 +213,7 @@
   }
   .hero-grid{
     display:grid;
-    grid-template-columns:minmax(0, 1fr) minmax(300px, .56fr);
+    grid-template-columns:minmax(0, .94fr) minmax(420px, .72fr);
     gap:58px;
     align-items:end;
   }
@@ -239,11 +239,29 @@
     gap:14px;
     margin-top:36px;
   }
+  .hero-visual{
+    min-height:610px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    justify-content:center;
+  }
   .signal-panel{
+    width:min(420px, 100%);
     padding:28px;
     border-top:1px solid var(--line);
     border-bottom:1px solid var(--line-soft);
     background:linear-gradient(180deg, rgba(27,35,51,.38), rgba(10,15,30,.14));
+  }
+  .pathway-preview{
+    display:block;
+    width:min(560px, 44vw);
+    max-width:none;
+    margin:0 -4px 24px 0;
+    border:0;
+    border-radius:8px;
+    background:#fff;
+    box-shadow:0 28px 90px rgba(0,0,0,.34);
   }
   .signal-panel span{
     display:block;
@@ -530,7 +548,9 @@
         url('../assets/boardroom-transparent.png') center bottom / 94vw auto no-repeat;
     }
     .hero-grid,.tier,.tier-columns,.badge-grid,.impact-grid,.signal-list,.profile-stats{ grid-template-columns:1fr; }
+    .hero-visual{ min-height:auto; align-items:flex-start; justify-content:start; }
     .signal-panel{ margin-top:30px; }
+    .pathway-preview{ width:min(100%, 680px); margin:30px 0 0; }
     .impact-note{ position:relative; top:auto; }
   }
   @media (max-width:720px){
@@ -580,11 +600,14 @@
           <a class="btn ghost" href="/membership/">Back to Membership</a>
         </div>
       </div>
-      <aside class="signal-panel" aria-label="Fellowship signal">
-        <span>Institutional signal</span>
-        <strong>Distinguished Fellow should be the title people aspire to earn.</strong>
-        <p>The pathway is designed so recognition is earned through contribution, trust, intellectual leadership, and long-term executive influence.</p>
-      </aside>
+      <div class="hero-visual">
+        <img class="pathway-preview" src="../assets/mojo-ai-fellowship-pathway.png" alt="MOJO AI Summits Fellowship Pathway visual showing four levels from Fellow to Distinguished Fellow.">
+        <aside class="signal-panel" aria-label="Fellowship signal">
+          <span>Institutional signal</span>
+          <strong>Distinguished Fellow should be the title people aspire to earn.</strong>
+          <p>The pathway is designed so recognition is earned through contribution, trust, intellectual leadership, and long-term executive influence.</p>
+        </aside>
+      </div>
     </div>
   </section>
 
