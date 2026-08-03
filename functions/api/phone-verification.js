@@ -41,14 +41,19 @@ function isLikelyPhone(phone) {
 }
 
 function isSmsConfigured(env) {
-  return env.SMS_PROVIDER_CONFIGURED === "true" || env.SMS_PROVIDER === "aws-sns";
+  const config = awsConfig(env);
+  return (
+    env.SMS_PROVIDER_CONFIGURED === "true" ||
+    env.SMS_PROVIDER === "aws-sns" ||
+    (config.accessKeyId && config.secretAccessKey && config.otpSecret)
+  );
 }
 
 function awsConfig(env) {
   return {
     region: cleanEnvString(env.AWS_REGION || env.AWS_SNS_REGION || "us-east-1"),
-    accessKeyId: cleanEnvString(env.AWS_ACCESS_KEY_ID),
-    secretAccessKey: cleanEnvString(env.AWS_SECRET_ACCESS_KEY),
+    accessKeyId: cleanEnvString(env.AWS_ACCESS_KEY_ID || env.AWS_Client_Access_key || env.AWS_CLIENT_ACCESS_KEY),
+    secretAccessKey: cleanEnvString(env.AWS_SECRET_ACCESS_KEY || env.AWS_Client_Secret_Access_key || env.AWS_CLIENT_SECRET_ACCESS_KEY),
     sessionToken: cleanEnvString(env.AWS_SESSION_TOKEN),
     originationNumber: cleanString(env.AWS_SNS_SMS_ORIGINATION_NUMBER || env.AWS_MM_SMS_ORIGINATION_NUMBER),
     senderId: cleanString(env.AWS_SNS_SMS_SENDER_ID),
