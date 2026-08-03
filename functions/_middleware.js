@@ -1,5 +1,6 @@
 import {
   accessModeLabel,
+  emailHasDynamicGroupAccess,
   emailsForGroups,
   expandAccessConfig,
   isLocalRequest,
@@ -157,6 +158,7 @@ export async function onRequest(context) {
   const expanded = expandAccessConfig(config, context.env);
   const assignedRouteEmails = Array.isArray(route.allowedEmails) ? route.allowedEmails : [];
   const assignedGroupEmails = emailsForGroups(expanded.groups, route.allowedGroupIds);
+  const hasDynamicGroupAccess = await emailHasDynamicGroupAccess(context.env, user.email, route.allowedGroupIds);
   const effectiveAllowedEmails = assignedRouteEmails.length
     ? [...new Set([...assignedGroupEmails, ...assignedRouteEmails])].sort()
     : assignedGroupEmails.length
@@ -164,11 +166,13 @@ export async function onRequest(context) {
     : route.mode === "allowlist"
       ? expanded.allowedEmails
       : [];
+  const hasConfiguredEmailAccess = effectiveAllowedEmails.length > 0 && effectiveAllowedEmails.includes(user.email);
   if (
     ["authenticated", "allowlist"].includes(route.mode) &&
-    effectiveAllowedEmails.length > 0 &&
     !canManageAccess(user) &&
-    !effectiveAllowedEmails.includes(user.email)
+    !hasDynamicGroupAccess &&
+    !hasConfiguredEmailAccess &&
+    (route.strictGroups || effectiveAllowedEmails.length > 0)
   ) {
     return forbidden(route, "This account is not approved for this Mojo AI Summits route.");
   }

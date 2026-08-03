@@ -19,6 +19,9 @@ Current state:
 - Access group cards show visible membership lists with account status, backed by the editable group email lists.
 - Existing account rows include editable group checkboxes and a Save Groups action, so owner/admin users can add storage, team, partner, member, or admin access after account creation.
 - Existing account rows include Reset Password, which generates a new password, updates the Mojo Auth user record, and displays/copies the one-time handoff password for the owner/admin to give the user manually.
+- `/forums/` and `/api/forums` are protected forum surfaces. They default to the `Admin`, `Mojo team`, and `Guests and members` groups with strict group enforcement.
+- `Guests and members` is a dynamic access group for forums: signed-in Mojo Auth users qualify when their email exists in `crm:contact:{email}` or in member, guest, or partner registration records. CRM remains the source of truth for broad forum participation.
+- Forum administration uses the owner/admin Mojo Auth roles plus emails in the `Admin` access group. Forum admins can pin, close, reopen, delete, and restore threads.
 
 Operational note:
 - Owner/admin users should create additional accounts from `/access/` after the first owner signs in.
