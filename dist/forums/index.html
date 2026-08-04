@@ -225,14 +225,39 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 320px minmax(0, 1fr);
-      gap: 1.25rem;
+      grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+      grid-template-areas:
+        "composer threads"
+        "detail detail";
+      gap: 1.5rem;
       align-items: start;
     }
 
     .composer {
-      position: sticky;
-      top: 6rem;
+      grid-area: composer;
+      position: static;
+    }
+
+    .thread-list {
+      grid-area: threads;
+      min-height: 100%;
+    }
+
+    .thread-detail {
+      grid-area: detail;
+      position: relative;
+      z-index: 1;
+      width: min(1040px, 100%);
+      justify-self: center;
+      margin-top: 0.5rem;
+      scroll-margin-top: 6.5rem;
+    }
+
+    .thread-detail:not(.hidden) {
+      box-shadow:
+        0 0 0 1px rgba(0, 230, 255, 0.12),
+        0 28px 90px rgba(0, 0, 0, 0.34),
+        0 -18px 60px rgba(0, 230, 255, 0.08);
     }
 
     label {
@@ -609,7 +634,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       });
     }
 
-    function renderThreadDetail(thread) {
+    function renderThreadDetail(thread, shouldScroll = true) {
       if (!thread) {
         els.threadDetail.classList.add("hidden");
         return;
@@ -657,7 +682,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       `;
 
       els.threadDetail.classList.remove("hidden");
-      els.threadDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (shouldScroll) {
+        els.threadDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
 
       const replyForm = document.querySelector("#replyForm");
       replyForm.addEventListener("submit", async (event) => {
@@ -707,7 +734,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.selectedThreadId = id;
         hideMessage();
         renderThreads();
-        renderThreadDetail(data.thread);
+        renderThreadDetail(data.thread, true);
       } catch (error) {
         showMessage(error.message, true);
       }
@@ -747,7 +774,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.threads = data.threads || [];
         hideMessage();
         render();
-        renderThreadDetail(data.thread);
+        renderThreadDetail(data.thread, false);
       } catch (error) {
         showMessage(error.message, true);
       }
@@ -764,10 +791,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         hideMessage();
         render();
         if (moderationAction === "delete") {
-          renderThreadDetail(null);
+          renderThreadDetail(null, false);
           state.selectedThreadId = "";
         } else {
-          renderThreadDetail(data.thread);
+          renderThreadDetail(data.thread, false);
         }
       } catch (error) {
         showMessage(error.message, true);
