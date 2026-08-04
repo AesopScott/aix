@@ -423,6 +423,27 @@
       min-width: 15rem;
     }
 
+    .partner-edit-stack {
+      display: grid;
+      gap: 0.55rem;
+      min-width: 13rem;
+    }
+
+    .partner-edit-stack label {
+      gap: 0.25rem;
+      color: var(--muted-blue);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .partner-edit-stack input,
+    .partner-edit-stack select {
+      padding: 0.55rem 0.65rem;
+      font-size: 0.86rem;
+    }
+
     .contact-cell {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -539,6 +560,25 @@
       color: var(--muted-blue);
       font-size: 0.86rem;
       font-weight: 800;
+    }
+
+    .partner-pagination {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 1rem;
+      color: var(--muted-blue);
+      font-size: 0.86rem;
+      font-weight: 800;
+    }
+
+    .partner-pagination[hidden] { display: none; }
+
+    .partner-pagination button {
+      width: auto;
+      min-width: 7rem;
     }
 
     .invite-row {
@@ -761,6 +801,7 @@
           <option value="accepted">Accepted</option>
           <option value="waitlist">Waitlist</option>
           <option value="declined">Declined</option>
+          <option value="bad-fit">Bad Fit</option>
         </select>
       </label>
       <label>
@@ -818,6 +859,7 @@
         Search
         <input id="searchInput" placeholder="name, company, title, industry, email">
       </label>
+      <button id="clearFiltersButton" class="secondary" type="button">Clear Filters</button>
       <button id="refreshButton" class="secondary" type="button">Refresh CRM</button>
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
     </section>
@@ -842,6 +884,11 @@
           </thead>
           <tbody id="rows"></tbody>
         </table>
+      </div>
+      <div class="partner-pagination" id="partnerPagination" hidden>
+        <button class="compact secondary" type="button" id="partnerPagePrevious">Previous</button>
+        <span id="partnerPageSummary"></span>
+        <button class="compact secondary" type="button" id="partnerPageNext">Next</button>
       </div>
     </section>
         </div>
@@ -956,6 +1003,7 @@
             <option value="accepted">Accepted</option>
             <option value="waitlist">Waitlist</option>
             <option value="declined">Declined</option>
+            <option value="bad-fit">Bad Fit</option>
           </select>
         </label>
         <label>
@@ -1029,9 +1077,14 @@
     const attendedThresholdFilter = document.querySelector("#attendedThresholdFilter");
     const phoneFilter = document.querySelector("#phoneFilter");
     const searchInput = document.querySelector("#searchInput");
+    const clearFiltersButton = document.querySelector("#clearFiltersButton");
     const refreshButton = document.querySelector("#refreshButton");
     const downloadButton = document.querySelector("#downloadButton");
     const registrantsTitle = document.querySelector("#registrantsTitle");
+    const partnerPagination = document.querySelector("#partnerPagination");
+    const partnerPagePrevious = document.querySelector("#partnerPagePrevious");
+    const partnerPageNext = document.querySelector("#partnerPageNext");
+    const partnerPageSummary = document.querySelector("#partnerPageSummary");
     const registrationInviteForm = document.querySelector("#registrationInviteForm");
     const registrationInviteEvent = document.querySelector("#registrationInviteEvent");
     const registrationInviteType = document.querySelector("#registrationInviteType");
@@ -1057,6 +1110,8 @@
       "partners-company": "partner"
     };
     let activeView = "contacts";
+    let partnerCompanyPage = 1;
+    const partnerCompaniesPerPage = 10;
     let state = {
       type: "contacts",
       label: "Contacts",
@@ -1393,6 +1448,13 @@
       return `<span class="pill">${Number(row.attendedCount || 0)} attended</span>`;
     }
 
+    function partnerTierOptions(current = "") {
+      const selected = current || "Partner Candidate";
+      return ["Partner Candidate", "Partner", "Intelligence Partner", "Summit Partner", "Strategic Partner"]
+        .map((tier) => `<option value="${escapeHtml(tier)}" ${selected === tier ? "selected" : ""}>${escapeHtml(tier)}</option>`)
+        .join("");
+    }
+
     function activeLabel() {
       if (activeView === "guest") return "Guest";
       if (activeView === "partners-company") return "Partners by Company";
@@ -1421,6 +1483,7 @@
 
     function setActiveView(view) {
       activeView = view || "contacts";
+      if (activeView === "partners-company") partnerCompanyPage = 1;
       syncViewPanels();
       if (isRecordsView()) {
         const nextType = recordsTypeForView();
@@ -1771,6 +1834,7 @@
       registrantsTitle.textContent = "Partners by Company";
       if (!rows.length) {
         rowsElement.innerHTML = '<tr><td colspan="9">No partner company records found.</td></tr>';
+        partnerPagination.hidden = true;
         return;
       }
 
@@ -1781,32 +1845,64 @@
         groups.get(company).push(row);
       }
 
-      rowsElement.innerHTML = [...groups.entries()]
-        .sort(([left], [right]) => left.localeCompare(right))
+      const sortedGroups = [...groups.entries()]
+        .sort(([left], [right]) => left.localeCompare(right));
+      const totalCompanies = sortedGroups.length;
+      const totalPages = Math.max(1, Math.ceil(totalCompanies / partnerCompaniesPerPage));
+      partnerCompanyPage = Math.min(Math.max(1, partnerCompanyPage), totalPages);
+      const pageStart = (partnerCompanyPage - 1) * partnerCompaniesPerPage;
+      const visibleGroups = sortedGroups.slice(pageStart, pageStart + partnerCompaniesPerPage);
+
+      partnerPagination.hidden = totalCompanies <= partnerCompaniesPerPage;
+      partnerPagePrevious.disabled = partnerCompanyPage <= 1;
+      partnerPageNext.disabled = partnerCompanyPage >= totalPages;
+      partnerPageSummary.textContent = `Page ${partnerCompanyPage} of ${totalPages} | showing ${pageStart + 1}-${pageStart + visibleGroups.length} of ${totalCompanies} partner companies`;
+
+      rowsElement.innerHTML = visibleGroups
         .map(([company, companyRows]) => {
           const contacts = companyRows
             .sort((a, b) => String(a.name || a.email).localeCompare(String(b.name || b.email)))
             .map((row) => `
-              <tr>
+              <tr data-row-key="${escapeHtml(row.key)}">
                 <td>
-                  <strong>${escapeHtml(row.name)}</strong><br>
-                  <span>${escapeHtml(row.title || "")}</span><br>
-                  <span>${escapeHtml(row.partnerTier || "Partner")}</span>
+                  <div class="partner-edit-stack">
+                    <label>Name
+                      <input data-partner-key="${escapeHtml(row.key)}" data-partner-field="name" value="${escapeHtml(row.name)}" placeholder="Contact name">
+                    </label>
+                    <label>Title
+                      <input data-partner-key="${escapeHtml(row.key)}" data-partner-field="title" value="${escapeHtml(row.title || "")}" placeholder="Title">
+                    </label>
+                    <label>Tier
+                      <select data-partner-key="${escapeHtml(row.key)}" data-partner-field="partnerTier">
+                        ${partnerTierOptions(row.partnerTier)}
+                      </select>
+                    </label>
+                  </div>
                 </td>
                 <td>
-                  <strong>${escapeHtml(row.company || row.partnerCompany || "")}</strong>
+                  <div class="partner-edit-stack">
+                    <label>Company
+                      <input data-partner-key="${escapeHtml(row.key)}" data-partner-field="company" value="${escapeHtml(row.partnerCompany || row.company || "")}" placeholder="Company">
+                    </label>
+                  </div>
                   ${row.industry ? `<br><span>${escapeHtml(row.industry)}</span>` : ""}
                 </td>
                 <td>
-                  <strong>${escapeHtml(row.email)}</strong><br>
-                  <span>${escapeHtml(row.phone)}</span>
+                  <div class="partner-edit-stack">
+                    <label>Email
+                      <input data-partner-key="${escapeHtml(row.key)}" data-partner-field="email" type="email" value="${escapeHtml(row.email)}" placeholder="contact@company.com">
+                    </label>
+                    <label>Phone
+                      <input data-partner-key="${escapeHtml(row.key)}" data-partner-field="phone" type="tel" value="${escapeHtml(row.phone)}" placeholder="Phone">
+                    </label>
+                  </div>
                 </td>
                 <td>${eventBadges(row)}</td>
                 <td><div class="role-list">${roleBadges(row)}</div></td>
                 <td><div class="role-list">${publicationBadges(row)}</div></td>
                 <td>
-                  <select class="inline-select" data-status-key="${escapeHtml(row.key)}">
-                    ${["new", "contacted", "confirmed", "accepted", "waitlist", "declined"].map((status) => `
+                  <select class="inline-select" data-partner-key="${escapeHtml(row.key)}" data-partner-field="crmStatus">
+                    ${["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"].map((status) => `
                       <option value="${status}" ${row.crmStatus === status ? "selected" : ""}>${statusLabel(status)}</option>
                     `).join("")}
                   </select>
@@ -1815,7 +1911,7 @@
                 <td>
                   <div class="notes-cell">
                     <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Follow-up notes">${escapeHtml(row.crmNotes || "")}</textarea>
-                    <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
+                    <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Partner</button>
                   </div>
                 </td>
               </tr>
@@ -1837,6 +1933,7 @@
         renderPartnerCompanyRows(rows);
         return;
       }
+      partnerPagination.hidden = true;
       registrantsTitle.textContent = state.type === "contacts" ? "Contacts" : `${label} Registrants`;
       if (!rows.length) {
         rowsElement.innerHTML = `<tr><td colspan="9">No ${label.toLowerCase()} match the current filters.</td></tr>`;
@@ -1869,7 +1966,7 @@
           <td><div class="role-list">${publicationBadges(row)}</div></td>
           <td>
             ${state.type === "contacts" ? `<span class="pill">${escapeHtml(contactStatusLabel(row))}</span>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
-              ${["new", "contacted", "confirmed", "accepted", "waitlist", "declined"].map((status) => `
+              ${["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"].map((status) => `
                 <option value="${status}" ${row.crmStatus === status ? "selected" : ""}>${statusLabel(status)}</option>
               `).join("")}
             </select>`}
@@ -2017,6 +2114,13 @@
             type: state.type || "member",
             key,
             crmStatus: changes.crmStatus ?? existing.crmStatus,
+            name: changes.name ?? existing.name,
+            company: changes.company ?? existing.company ?? existing.partnerCompany,
+            partnerCompany: changes.partnerCompany ?? changes.company ?? existing.partnerCompany ?? existing.company,
+            title: changes.title ?? existing.title,
+            email: changes.email ?? existing.email,
+            phone: changes.phone ?? existing.phone,
+            partnerTier: changes.partnerTier ?? existing.partnerTier ?? "Partner Candidate",
             memberTier: changes.memberTier ?? existing.memberTier ?? "Fellow",
             crmNotes: changes.crmNotes ?? existing.crmNotes ?? ""
           })
@@ -2026,6 +2130,26 @@
       } catch (error) {
         showErrorNotice(error);
       }
+    }
+
+    function partnerEditChanges(key) {
+      const row = [...rowsElement.querySelectorAll("[data-row-key]")]
+        .find((candidate) => candidate.dataset.rowKey === key);
+      if (!row) return {};
+      const value = (field) => row.querySelector(`[data-partner-field="${field}"]`)?.value.trim() || "";
+      const notes = row.querySelector("[data-notes-key]")?.value || "";
+      const company = value("company");
+      return {
+        name: value("name"),
+        title: value("title"),
+        email: value("email"),
+        phone: value("phone"),
+        company,
+        partnerCompany: company,
+        partnerTier: value("partnerTier"),
+        crmStatus: value("crmStatus"),
+        crmNotes: notes
+      };
     }
 
     async function saveContactAttendance(input) {
@@ -2209,6 +2333,7 @@
       const key = event.target.dataset.statusKey;
       const tierKey = event.target.dataset.tierKey;
       if (!key && !tierKey) return;
+      if (activeView === "partners-company") return;
       const activeKey = key || tierKey;
       const existing = state.rows.find((row) => row.key === activeKey);
       const noteField = rowsElement.querySelector(`[data-notes-key="${CSS.escape(activeKey)}"]`);
@@ -2244,6 +2369,10 @@
         return;
       }
       if (!key) return;
+      if (activeView === "partners-company") {
+        saveRegistrant(key, partnerEditChanges(key));
+        return;
+      }
       const noteField = rowsElement.querySelector(`[data-notes-key="${CSS.escape(key)}"]`);
       saveRegistrant(key, {
         crmNotes: noteField ? noteField.value : ""
@@ -2262,18 +2391,51 @@
       phoneFilter,
       searchInput
     ].forEach((input) => {
-      input.addEventListener("input", renderRows);
-      input.addEventListener("change", renderRows);
+      input.addEventListener("input", () => {
+        if (activeView === "partners-company") partnerCompanyPage = 1;
+        renderRows();
+      });
+      input.addEventListener("change", () => {
+        if (activeView === "partners-company") partnerCompanyPage = 1;
+        renderRows();
+      });
     });
 
     typeFilter.addEventListener("change", () => {
       const nextView = typeFilter.value === "partner" ? "partners-company" : typeFilter.value;
       activeView = nextView || "contacts";
+      partnerCompanyPage = 1;
       loadCrm();
     });
 
     navButtons.forEach((button) => {
       button.addEventListener("click", () => setActiveView(button.dataset.view));
+    });
+
+    clearFiltersButton.addEventListener("click", () => {
+      partnerCompanyPage = 1;
+      statusFilter.value = "all";
+      eventFilter.value = "all";
+      roleFilter.value = "all";
+      companyFilter.value = "all";
+      publicationOperatorFilter.value = "all";
+      publicationThresholdFilter.value = "";
+      attendedOperatorFilter.value = "all";
+      attendedThresholdFilter.value = "";
+      phoneFilter.value = "all";
+      searchInput.value = "";
+      renderRows();
+      setNotice(`${activeLabel()} filters cleared.`, "ok");
+    });
+
+    partnerPagePrevious.addEventListener("click", () => {
+      partnerCompanyPage = Math.max(1, partnerCompanyPage - 1);
+      renderRows();
+    });
+
+    partnerPageNext.addEventListener("click", () => {
+      partnerCompanyPage += 1;
+      renderRows();
     });
 
     refreshButton.addEventListener("click", loadCrm);
