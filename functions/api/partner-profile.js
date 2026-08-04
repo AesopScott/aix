@@ -123,6 +123,8 @@ function normalizeEvent(event) {
 }
 
 function eventFromRegistration(registration) {
+  if (registration.manualPartner) return null;
+  if (!registration.eventId && !registration.eventSlug && !registration.eventName) return null;
   return normalizeEvent({
     id: registration.eventId,
     slug: registration.eventSlug,
@@ -220,7 +222,8 @@ function normalizeRegistration(entry, source) {
     eventName: cleanText(record.eventName || record.event, 180),
     eventDate: cleanText(record.eventDate || record.date || record.startAt, 80),
     role: cleanText(record.role || record.participation || source.label, 120),
-    createdAt: cleanText(record.createdAt, 80)
+    createdAt: cleanText(record.createdAt, 80),
+    manualPartner: record.manualPartner === true
   };
 }
 
@@ -424,7 +427,7 @@ export async function onRequestGet({ request, env, data }) {
   ]);
   const companyEvents = dedupeEvents([
     ...profile.events,
-    ...companyRows.map(eventFromRegistration)
+    ...companyRows.map(eventFromRegistration).filter(Boolean)
   ]);
   const events = companyEvents.map((event) => ({
     ...event,
