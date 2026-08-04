@@ -98,7 +98,7 @@ const DEFAULT_UPCOMING_EVENTS = [
     format: "In person"
   }
 ];
-const allowedStatuses = new Set(["new", "contacted", "confirmed", "accepted", "waitlist", "declined"]);
+const allowedStatuses = new Set(["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"]);
 const maxFieldLength = 2000;
 
 function json(data, init = {}) {
@@ -1845,11 +1845,23 @@ export async function onRequestPost({ request, env, data }) {
 
   const { key: crmKey, row: crmRow } = await ensureCrmRecord(env, row, type);
   const crmStatus = allowedStatuses.has(payload?.crmStatus) ? payload.crmStatus : crmRow.crmStatus;
+  const partnerEmail = cleanString(payload?.email, 180).toLowerCase();
+  if (type === "partner" && partnerEmail && !isEmail(partnerEmail)) {
+    return json({ error: "Enter a valid partner email." }, { status: 400 });
+  }
+  const partnerCompany = cleanString(payload?.partnerCompany || payload?.company, 240);
   const next = {
     ...crmRow,
     key: undefined,
     crmType: registrantTypes[type].crmType,
     crmStatus,
+    name: type === "partner" ? cleanString(payload?.name, 180) || crmRow.name : crmRow.name,
+    company: type === "partner" ? partnerCompany || crmRow.company || crmRow.partnerCompany : crmRow.company,
+    partnerCompany: type === "partner" ? partnerCompany || crmRow.partnerCompany || crmRow.company : crmRow.partnerCompany,
+    title: type === "partner" ? cleanString(payload?.title, 180) : crmRow.title,
+    email: type === "partner" ? partnerEmail || crmRow.email : crmRow.email,
+    phone: type === "partner" ? cleanString(payload?.phone, 80) : crmRow.phone,
+    partnerTier: type === "partner" ? cleanString(payload?.partnerTier, 120) || crmRow.partnerTier || "Partner Candidate" : crmRow.partnerTier,
     memberTier: type === "member" ? cleanString(payload?.memberTier, 120) || crmRow.memberTier || "Fellow" : crmRow.memberTier,
     crmNotes: cleanString(payload?.crmNotes),
     crmUpdatedAt: new Date().toISOString(),
@@ -1857,6 +1869,32 @@ export async function onRequestPost({ request, env, data }) {
   };
 
   await env.MOJO_SUMMITS_SETUP_STATE.put(crmKey, JSON.stringify(next));
+  if (type === "partner") {
+    const previousEmail = cleanString(crmRow.email).toLowerCase();
+    const nextEmail = cleanString(next.email).toLowerCase();
+    const previousCompany = cleanString(crmRow.partnerCompany || crmRow.company);
+    const nextCompany = cleanString(next.partnerCompany || next.company);
+    if (previousEmail && (previousEmail !== nextEmail || companySlug(previousCompany) !== companySlug(nextCompany))) {
+      await removeEmailFromCompanyContacts(env, previousEmail, access.email);
+      if (previousEmail !== nextEmail) await env.MOJO_SUMMITS_SETUP_STATE.delete(`crm:contact:${previousEmail}`);
+    }
+    const normalizedNext = normalizeRecord(crmKey, next);
+    await upsertPartnerContactProfile(env, normalizedNext, access.email);
+    if (nextEmail) {
+      await grantAccessGroupEmail(env, "partners", nextEmail, access.email);
+      if (next.partnerPassword) {
+        const authPayload = {
+          name: normalizedNext.name || nextEmail,
+          email: nextEmail,
+          password: next.partnerPassword,
+          role: "member",
+          status: "active"
+        };
+        if (await getUserByEmail(env, nextEmail)) await updateUser(env, nextEmail, authPayload, access.email);
+        else await createUser(env, authPayload, access.email);
+      }
+    }
+  }
 
   const nextRows = await registrants(env, type);
   return json({
