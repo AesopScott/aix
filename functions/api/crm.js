@@ -1118,47 +1118,71 @@ async function updateContact(env, payload = {}, actor = "") {
 
 async function createManualPartner(env, payload = {}, actor = "") {
   const company = cleanString(payload.partnerCompany || payload.company, 240);
-  const name = cleanString(payload.name || payload.contactName, 180);
-  const email = cleanString(payload.email || payload.contactEmail, 180).toLowerCase();
-  const phone = cleanString(payload.phone || payload.contactPhone, 80);
+  const rawContacts = Array.isArray(payload.contacts) && payload.contacts.length
+    ? payload.contacts
+    : [{
+      name: payload.name || payload.contactName,
+      title: payload.title || payload.contactTitle,
+      email: payload.email || payload.contactEmail,
+      phone: payload.phone || payload.contactPhone
+    }];
+  const contacts = rawContacts.map((contact = {}) => ({
+    name: cleanString(contact.name || contact.contactName, 180),
+    title: cleanString(contact.title || contact.contactTitle, 180),
+    email: cleanString(contact.email || contact.contactEmail, 180).toLowerCase(),
+    phone: cleanString(contact.phone || contact.contactPhone, 80)
+  })).filter((contact) => contact.name || contact.email || contact.phone || contact.title);
   const crmStatus = allowedStatuses.has(payload.crmStatus || payload.status) ? payload.crmStatus || payload.status : "new";
   if (!company) throw new Error("Company name is required.");
-  if (!name) throw new Error("Contact name is required.");
-  if (!isEmail(email)) throw new Error("Enter a valid contact email.");
-  if (!phone) throw new Error("Contact phone is required.");
+  if (!contacts.length) throw new Error("At least one partner contact is required.");
 
   const now = new Date().toISOString();
-  const existingManual = (await registrants(env, "partner")).find((row) =>
-    row.manualPartner === true && cleanString(row.email).toLowerCase() === email
-  );
-  const id = cleanString(existingManual?.id) || `manual-partner-${now.replace(/[^0-9]/g, "")}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
-  const key = cleanString(existingManual?.key) || `${registrantTypes.partner.crmPrefix}${now}:${id}`;
-  const existing = existingManual?.key ? await readRawRecord(env, existingManual.key) : null;
-  const record = {
-    ...(existing || {}),
-    id,
-    name,
-    company,
-    partnerCompany: company,
-    title: cleanString(payload.title, 180),
-    email,
-    phone,
-    partnerTier: cleanString(payload.partnerTier, 120) || cleanString(existing?.partnerTier, 120) || "Partner Candidate",
-    phoneVerificationStatus: cleanString(existing?.phoneVerificationStatus) || "manual",
-    crmType: registrantTypes.partner.crmType,
-    crmStatus,
-    crmNotes: cleanString(payload.crmNotes || payload.notes),
-    crmUpdatedAt: now,
-    crmUpdatedBy: actor || "crm",
-    createdAt: cleanString(existing?.createdAt) || now,
-    updatedAt: now,
-    manualPartner: true,
-    source: "manual-partner"
-  };
+  const seenEmails = new Set();
+  for (const contact of contacts) {
+    if (!contact.name) throw new Error("Contact name is required for every partner contact.");
+    if (!isEmail(contact.email)) throw new Error("Enter a valid contact email for every partner contact.");
+    if (!contact.phone) throw new Error("Contact phone is required for every partner contact.");
+    if (seenEmails.has(contact.email)) throw new Error("Each partner contact email must be unique.");
+    seenEmails.add(contact.email);
+  }
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
-  await upsertPartnerContactProfile(env, record, actor);
-  return normalizeRecord(key, record);
+  const existingRows = await registrants(env, "partner");
+  const records = [];
+  for (const contact of contacts) {
+    const existingManual = existingRows.find((row) =>
+      row.manualPartner === true && cleanString(row.email).toLowerCase() === contact.email
+    );
+    const id = cleanString(existingManual?.id) || `manual-partner-${now.replace(/[^0-9]/g, "")}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
+    const key = cleanString(existingManual?.key) || `${registrantTypes.partner.crmPrefix}${now}:${id}`;
+    const existing = existingManual?.key ? await readRawRecord(env, existingManual.key) : null;
+    const record = {
+      ...(existing || {}),
+      id,
+      name: contact.name,
+      company,
+      partnerCompany: company,
+      title: contact.title,
+      email: contact.email,
+      phone: contact.phone,
+      partnerTier: cleanString(payload.partnerTier, 120) || cleanString(existing?.partnerTier, 120) || "Partner Candidate",
+      phoneVerificationStatus: cleanString(existing?.phoneVerificationStatus) || "manual",
+      crmType: registrantTypes.partner.crmType,
+      crmStatus,
+      crmNotes: cleanString(payload.crmNotes || payload.notes),
+      crmUpdatedAt: now,
+      crmUpdatedBy: actor || "crm",
+      createdAt: cleanString(existing?.createdAt) || now,
+      updatedAt: now,
+      manualPartner: true,
+      source: "manual-partner"
+    };
+
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+    await upsertPartnerContactProfile(env, record, actor);
+    records.push(normalizeRecord(key, record));
+  }
+
+  return records;
 }
 
 function contactEventIdentity(event = {}) {
@@ -1715,7 +1739,7 @@ export async function onRequestPost({ request, env, data }) {
 
   if (payload?.action === "create-manual-partner") {
     try {
-      const record = await createManualPartner(env, payload, access.email);
+      const records = await createManualPartner(env, payload, access.email);
       const rows = await registrants(env, "partner");
       return json({
         ok: true,
@@ -1723,13 +1747,14 @@ export async function onRequestPost({ request, env, data }) {
         label: registrantTypes.partner.label,
         summary: summarize(rows),
         rows,
-        record,
+        record: records[0],
+        records,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = /required|valid contact email/i.test(error.message || "") ? 400 : 500;
+      const status = /required|valid contact email|unique|At least one/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Manual partner could not be saved." }, { status });
     }
   }
