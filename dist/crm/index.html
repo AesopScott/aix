@@ -500,6 +500,24 @@
     .manual-partner-grid .span-2 { grid-column: span 2; }
     .manual-partner-grid .span-full { grid-column: 1 / -1; }
 
+    .manual-partner-contacts {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .manual-partner-contact {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(8rem, auto);
+      gap: 0.75rem;
+      align-items: end;
+      padding: 0.85rem;
+      border: 1px solid rgba(0, 230, 255, 0.16);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.46);
+    }
+
+    .manual-partner-contact button[hidden] { display: none; }
+
     .invite-list {
       display: grid;
       gap: 0.6rem;
@@ -676,7 +694,7 @@
     .debug-row strong { color: var(--white); }
 
     @media (max-width: 980px) {
-      header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .invite-search, .invite-row { grid-template-columns: 1fr; }
+      header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .invite-search, .invite-row, .manual-partner-contact { grid-template-columns: 1fr; }
       .invite-qr { width: 100%; justify-items: start; }
       .side-nav { position: static; }
       .crm-content .hero, .view-section { grid-column: 1; }
@@ -929,18 +947,6 @@
           Company name
           <input id="manualPartnerCompany" name="company" placeholder="Partner company" autocomplete="organization" required>
         </label>
-        <label class="span-2">
-          Contact name
-          <input id="manualPartnerName" name="name" placeholder="Primary contact" autocomplete="name" required>
-        </label>
-        <label>
-          Contact email
-          <input id="manualPartnerEmail" name="email" type="email" placeholder="contact@company.com" autocomplete="email" required>
-        </label>
-        <label>
-          Contact phone
-          <input id="manualPartnerPhone" name="phone" type="tel" placeholder="Mobile or direct" autocomplete="tel" required>
-        </label>
         <label>
           Status
           <select id="manualPartnerStatus" name="crmStatus">
@@ -962,6 +968,28 @@
             <option value="Strategic Partner">Strategic Partner</option>
           </select>
         </label>
+        <div class="manual-partner-contacts span-full" id="manualPartnerContacts">
+          <div class="manual-partner-contact" data-manual-partner-contact>
+            <label>
+              Contact name
+              <input name="contactName" placeholder="Primary contact" autocomplete="name" required>
+            </label>
+            <label>
+              Title
+              <input name="contactTitle" placeholder="Chief Revenue Officer" autocomplete="organization-title">
+            </label>
+            <label>
+              Contact email
+              <input name="contactEmail" type="email" placeholder="contact@company.com" autocomplete="email" required>
+            </label>
+            <label>
+              Contact phone
+              <input name="contactPhone" type="tel" placeholder="Mobile or direct" autocomplete="tel" required>
+            </label>
+            <button class="compact secondary" type="button" data-remove-manual-partner-contact hidden>Remove</button>
+          </div>
+        </div>
+        <button class="secondary span-full" type="button" id="addManualPartnerContact">Add Another Contact</button>
         <label class="span-full">
           Notes
           <textarea id="manualPartnerNotes" name="crmNotes" placeholder="Engagement notes, next step, owner context"></textarea>
@@ -1018,6 +1046,8 @@
     const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
     const partnerInviteList = document.querySelector("#partnerInviteList");
     const manualPartnerForm = document.querySelector("#manualPartnerForm");
+    const manualPartnerContacts = document.querySelector("#manualPartnerContacts");
+    const addManualPartnerContact = document.querySelector("#addManualPartnerContact");
     const registrationDebugContent = document.querySelector("#registrationDebugContent");
     const refreshRegistrationDebug = document.querySelector("#refreshRegistrationDebug");
     const recordViewTypes = {
@@ -1323,7 +1353,7 @@
       if (row.isRoundtableLeader) roles.push("Round Table Leader");
       if (row.isFeaturedGuest) roles.push("Featured Guest");
       if (row.isFeaturedMember) roles.push("Featured Member");
-      if (row.manualPartner) roles.push("Partner Candidate");
+      if (row.manualPartner) roles.push(row.partnerTier || "Partner Candidate");
       if (!roles.length) roles.push("Attendee");
       return roles.map((role) => `<span class="pill">${escapeHtml(role)}</span>`).join("");
     }
@@ -2263,12 +2293,56 @@
       registrationInviteSearch.focus();
     });
 
+    function manualPartnerContactRows() {
+      return [...manualPartnerContacts.querySelectorAll("[data-manual-partner-contact]")];
+    }
+
+    function updateManualPartnerRemoveButtons() {
+      const rows = manualPartnerContactRows();
+      rows.forEach((row) => {
+        const button = row.querySelector("[data-remove-manual-partner-contact]");
+        if (button) button.hidden = rows.length === 1;
+      });
+    }
+
+    function createManualPartnerContactRow() {
+      const template = manualPartnerContactRows()[0];
+      const row = template.cloneNode(true);
+      row.querySelectorAll("input").forEach((input) => {
+        input.value = "";
+      });
+      manualPartnerContacts.append(row);
+      updateManualPartnerRemoveButtons();
+      row.querySelector("input")?.focus();
+    }
+
+    function manualPartnerContactsPayload() {
+      return manualPartnerContactRows().map((row) => ({
+        name: row.querySelector('[name="contactName"]')?.value.trim() || "",
+        title: row.querySelector('[name="contactTitle"]')?.value.trim() || "",
+        email: row.querySelector('[name="contactEmail"]')?.value.trim() || "",
+        phone: row.querySelector('[name="contactPhone"]')?.value.trim() || ""
+      })).filter((contact) => contact.name || contact.title || contact.email || contact.phone);
+    }
+
+    addManualPartnerContact.addEventListener("click", createManualPartnerContactRow);
+    manualPartnerContacts.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-remove-manual-partner-contact]");
+      if (!button) return;
+      if (manualPartnerContactRows().length === 1) return;
+      button.closest("[data-manual-partner-contact]")?.remove();
+      updateManualPartnerRemoveButtons();
+    });
+    updateManualPartnerRemoveButtons();
+
     manualPartnerForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const submitButton = manualPartnerForm.querySelector('button[type="submit"]');
+      const contacts = manualPartnerContactsPayload();
       const payload = {
         action: "create-manual-partner",
-        ...Object.fromEntries(new FormData(manualPartnerForm).entries())
+        ...Object.fromEntries(new FormData(manualPartnerForm).entries()),
+        contacts
       };
       setNotice("Saving partner contact...");
       if (submitButton) {
@@ -2282,11 +2356,16 @@
           body: JSON.stringify(payload)
         }).then(readJson);
         manualPartnerForm.reset();
+        while (manualPartnerContactRows().length > 1) {
+          manualPartnerContactRows().pop()?.remove();
+        }
+        updateManualPartnerRemoveButtons();
         activeView = "partners-company";
         typeFilter.value = "partner";
         state = data;
         render();
-        setNotice(`Partner contact saved for ${data.record?.company || payload.company}.`, "ok");
+        const savedCount = Array.isArray(data.records) ? data.records.length : 1;
+        setNotice(`${savedCount} partner contact${savedCount === 1 ? "" : "s"} saved for ${data.record?.company || payload.company}.`, "ok");
       } catch (error) {
         showErrorNotice(error, "Partner contact could not be saved.");
       } finally {
