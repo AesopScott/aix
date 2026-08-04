@@ -220,6 +220,7 @@ function normalizeRecord(key, record) {
     crmNotes: cleanString(record?.crmNotes),
     crmUpdatedAt: cleanString(record?.crmUpdatedAt),
     crmUpdatedBy: cleanString(record?.crmUpdatedBy),
+    manualPartner: record?.manualPartner === true,
     source: cleanString(record?.source)
   };
 }
@@ -416,6 +417,27 @@ function contactFromRegistrant(row = {}, type = "") {
   const email = cleanString(row.email).toLowerCase();
   if (!email) return null;
   const company = cleanString(row.partnerCompany || row.company);
+  if (type === "partner" && row.manualPartner) {
+    return normalizeContactRecord(`crm:contact:${email}`, {
+      id: email,
+      email,
+      name: cleanString(row.name) || email,
+      company,
+      title: cleanString(row.title),
+      industry: cleanString(row.industry),
+      phone: cleanString(row.phone),
+      source: cleanString(row.source || "manual-partner"),
+      registrationId: cleanString(row.id),
+      registrationType: "partner",
+      createdAt: cleanString(row.createdAt),
+      updatedAt: cleanString(row.crmUpdatedAt || row.updatedAt || row.createdAt),
+      crmNotes: cleanString(row.crmNotes),
+      crmUpdatedAt: cleanString(row.crmUpdatedAt),
+      crmUpdatedBy: cleanString(row.crmUpdatedBy),
+      events: []
+    });
+  }
+
   const eventId = cleanString(row.eventId || row.eventSlug || row.eventName || row.inviteCode || row.id);
   return normalizeContactRecord(`crm:contact:${email}`, {
     id: email,
@@ -1094,6 +1116,51 @@ async function updateContact(env, payload = {}, actor = "") {
   }));
 }
 
+async function createManualPartner(env, payload = {}, actor = "") {
+  const company = cleanString(payload.partnerCompany || payload.company, 240);
+  const name = cleanString(payload.name || payload.contactName, 180);
+  const email = cleanString(payload.email || payload.contactEmail, 180).toLowerCase();
+  const phone = cleanString(payload.phone || payload.contactPhone, 80);
+  const crmStatus = allowedStatuses.has(payload.crmStatus || payload.status) ? payload.crmStatus || payload.status : "new";
+  if (!company) throw new Error("Company name is required.");
+  if (!name) throw new Error("Contact name is required.");
+  if (!isEmail(email)) throw new Error("Enter a valid contact email.");
+  if (!phone) throw new Error("Contact phone is required.");
+
+  const now = new Date().toISOString();
+  const existingManual = (await registrants(env, "partner")).find((row) =>
+    row.manualPartner === true && cleanString(row.email).toLowerCase() === email
+  );
+  const id = cleanString(existingManual?.id) || `manual-partner-${now.replace(/[^0-9]/g, "")}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
+  const key = cleanString(existingManual?.key) || `${registrantTypes.partner.crmPrefix}${now}:${id}`;
+  const existing = existingManual?.key ? await readRawRecord(env, existingManual.key) : null;
+  const record = {
+    ...(existing || {}),
+    id,
+    name,
+    company,
+    partnerCompany: company,
+    title: cleanString(payload.title, 180),
+    email,
+    phone,
+    partnerTier: cleanString(payload.partnerTier, 120) || cleanString(existing?.partnerTier, 120) || "Partner Candidate",
+    phoneVerificationStatus: cleanString(existing?.phoneVerificationStatus) || "manual",
+    crmType: registrantTypes.partner.crmType,
+    crmStatus,
+    crmNotes: cleanString(payload.crmNotes || payload.notes),
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor || "crm",
+    createdAt: cleanString(existing?.createdAt) || now,
+    updatedAt: now,
+    manualPartner: true,
+    source: "manual-partner"
+  };
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  await upsertPartnerContactProfile(env, record, actor);
+  return normalizeRecord(key, record);
+}
+
 function contactEventIdentity(event = {}) {
   return cleanString(
     event.registrationId ||
@@ -1248,6 +1315,60 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
 
   const now = new Date().toISOString();
   const companyKey = `partner-company:${slug}`;
+  if (row.manualPartner === true) {
+    const contactKey = `crm:contact:${email}`;
+    const crmCompanyKey = `crm:company:${slug}`;
+    const profileContact = {
+      id: email,
+      email,
+      name: cleanString(row.name) || email,
+      company,
+      companySlug: slug,
+      companyKey: crmCompanyKey,
+      profileKey: companyKey,
+      title: cleanString(row.title),
+      phone: cleanString(row.phone),
+      registrationId: cleanString(row.id),
+      registrationType: "partner",
+      source: "Partner CRM",
+      crmNotes: cleanString(row.crmNotes),
+      crmStatus: cleanString(row.crmStatus),
+      updatedAt: now,
+      updatedBy: actor || "crm"
+    };
+    const existingContact = await env.MOJO_SUMMITS_SETUP_STATE.get(contactKey, "json").catch(() => null);
+    await env.MOJO_SUMMITS_SETUP_STATE.put(contactKey, JSON.stringify({
+      ...(existingContact || {}),
+      ...profileContact,
+      createdAt: cleanString(existingContact?.createdAt) || cleanString(row.createdAt) || now,
+      events: Array.isArray(existingContact?.events) ? existingContact.events : []
+    }));
+
+    const existingCompany = await env.MOJO_SUMMITS_SETUP_STATE.get(companyKey, "json").catch(() => null);
+    const contacts = Array.isArray(existingCompany?.contacts) ? existingCompany.contacts : [];
+    const contactMap = new Map(contacts.map((entry) => [
+      cleanString(entry?.email).toLowerCase() || cleanString(entry?.name),
+      entry
+    ]));
+    contactMap.set(email, {
+      ...(contactMap.get(email) || {}),
+      ...profileContact
+    });
+    await env.MOJO_SUMMITS_SETUP_STATE.put(companyKey, JSON.stringify({
+      ...(existingCompany || {}),
+      organizationName: cleanString(existingCompany?.organizationName || existingCompany?.company || company),
+      company,
+      companySlug: slug,
+      tier: cleanString(row.partnerTier || existingCompany?.tier, 120),
+      status: cleanString(row.crmStatus || existingCompany?.status, 80) || "new",
+      crmNotes: cleanString(row.crmNotes || existingCompany?.crmNotes),
+      contacts: [...contactMap.values()],
+      updatedAt: now,
+      updatedBy: actor || "crm"
+    }));
+    return { contactId: email, contactKey, companyKey: crmCompanyKey, profileKey: companyKey };
+  }
+
   const refs = await upsertRegistrationContact(env, "partner", {
     ...row,
     company,
@@ -1589,6 +1710,27 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Invite link could not be deleted." }, { status: 404 });
+    }
+  }
+
+  if (payload?.action === "create-manual-partner") {
+    try {
+      const record = await createManualPartner(env, payload, access.email);
+      const rows = await registrants(env, "partner");
+      return json({
+        ok: true,
+        type: "partner",
+        label: registrantTypes.partner.label,
+        summary: summarize(rows),
+        rows,
+        record,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      }, { status: 201 });
+    } catch (error) {
+      const status = /required|valid contact email/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Manual partner could not be saved." }, { status });
     }
   }
 
