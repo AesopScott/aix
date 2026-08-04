@@ -97,6 +97,8 @@ function publicReply(reply = {}) {
     id: reply.id,
     body: reply.body,
     author: reply.author,
+    parentId: reply.parentId || "",
+    depth: Number.isFinite(Number(reply.depth)) ? Number(reply.depth) : 0,
     createdAt: reply.createdAt,
     updatedAt: reply.updatedAt || reply.createdAt
   };
@@ -238,18 +240,25 @@ async function createReply(env, payload, viewer) {
   const body = cleanText(payload.body, 6000);
   if (body.length < 2) throw new Error("Add a reply before posting.");
 
+  const replies = Array.isArray(thread.replies) ? thread.replies : [];
+  const parentId = cleanText(payload.parentId || payload.parentReplyId, 80);
+  const parentReply = parentId ? replies.find((reply) => reply.id === parentId && !reply.deletedAt) : null;
+  if (parentId && !parentReply) throw new Error("Parent reply was not found.");
+  const parentDepth = Number.isFinite(Number(parentReply?.depth)) ? Number(parentReply.depth) : 0;
+
   const now = new Date().toISOString();
   const reply = {
     id: crypto.randomUUID(),
     body,
     author: publicAuthor(viewer.user),
+    parentId: parentReply?.id || "",
+    depth: parentReply ? Math.min(parentDepth + 1, 3) : 0,
     createdAt: now,
     updatedAt: now,
     deletedAt: "",
     deletedBy: ""
   };
 
-  const replies = Array.isArray(thread.replies) ? thread.replies : [];
   const next = {
     ...thread,
     replies: [...replies, reply],
