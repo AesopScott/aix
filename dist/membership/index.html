@@ -9,14 +9,16 @@
 <meta property="og:url" content="https://mojoaisummits.com/membership/">
 <meta property="og:title" content="Executive AI Intelligence Network Membership | MOJO AI Summits">
 <meta property="og:description" content="A private executive intelligence network for senior AI leaders building influence, relationships, original intelligence, and long-term community.">
-<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260731b">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+<meta property="og:image:secure_url" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="MOJO AI Summits executive intelligence network">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Executive AI Intelligence Network Membership | MOJO AI Summits">
 <meta name="twitter:description" content="A private executive intelligence network for senior AI leaders building influence, relationships, original intelligence, and long-term community.">
-<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260731b">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
 <link rel="icon" type="image/png" href="/assets/logo-badge.png">
 <link rel="apple-touch-icon" href="/assets/logo-badge.png">
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
@@ -181,11 +183,6 @@
     color:var(--muted);
   }
   .nav-links a:hover{ color:var(--white); }
-  .nav-links a.nav-highlight{
-    color:var(--cyan);
-    text-shadow:0 0 18px rgba(0,230,255,.42);
-  }
-  .nav-links a.nav-highlight:hover{ color:var(--white); }
 
   main{ position:relative; z-index:1; }
   .hero{
@@ -546,6 +543,34 @@
     letter-spacing:.2em;
     text-transform:uppercase;
   }
+  .next-step{
+    padding:0 0 90px;
+  }
+  .next-step-panel{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    gap:26px;
+    align-items:center;
+    padding:30px 34px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:
+      linear-gradient(120deg, rgba(22,102,255,.18), rgba(0,230,255,.06)),
+      rgba(27,35,51,.42);
+    box-shadow:0 24px 80px rgba(0,0,0,.28);
+  }
+  .next-step-panel h3{
+    font-family:'Fraunces', serif;
+    font-size:clamp(26px, 3vw, 40px);
+    font-weight:500;
+    line-height:1.12;
+  }
+  .next-step-panel p{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:16px;
+    line-height:1.62;
+  }
   .closing-panel{
     padding:34px;
     border:1px solid var(--line);
@@ -610,6 +635,7 @@
     .network-card{ margin-top:30px; }
     .statement{ position:relative; top:auto; }
     .value-grid,.journey,.receive-grid,.principles{ grid-template-columns:1fr; }
+    .next-step-panel{ grid-template-columns:1fr; }
     .journey-step{ border-left:0; border-top:1px solid var(--line-soft); }
     .journey-step:first-child{ border-top:0; }
     .checkboxes{ grid-template-columns:1fr; }
@@ -628,6 +654,18 @@
     *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
   }
 </style>
+<style>
+/* Page navigation exit indicators: show when a top-nav link leaves the current section. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
+  content: " >";
+  display: inline-block;
+  margin-left: .35em;
+  color: currentColor;
+}
+</style>
 </head>
 <body>
 <header>
@@ -641,10 +679,10 @@
       </span>
     </a>
     <div class="nav-links">
-      <a class="nav-highlight" href="/fellowships/">Fellowships</a>
       <a href="#journey">Journey</a>
       <a href="#receive">Receive</a>
       <a href="#principles">Principles</a>
+      <a href="/fellowships/">Fellowships</a>
     </div>
   </nav>
 </header>
@@ -663,7 +701,6 @@
         <p class="lead">A private community of senior executives collaborating year-round to shape the future of AI leadership. Membership is by invitation only from existing members.</p>
         <div class="hero-actions">
           <a class="btn primary" href="#receive">Explore Member Value</a>
-          <a class="btn ghost" href="/fellowships/">View Fellowship Levels</a>
           <a class="btn ghost" href="#journey">Learn How the Network Works</a>
         </div>
       </div>
@@ -799,6 +836,19 @@
     </div>
   </section>
 
+  <section class="next-step" aria-label="Next step after membership overview">
+    <div class="wrap">
+      <div class="next-step-panel">
+        <div>
+          <span class="eyebrow">Read next</span>
+          <h3>After the membership overview, review the fellowship pathway.</h3>
+          <p>Fellowships explain how contribution becomes peer-recognized standing over time, including contribution badges, Executive Impact signals, and quarterly member voting at summit events.</p>
+        </div>
+        <a class="btn primary" href="/fellowships/">Read Fellowships Next</a>
+      </div>
+    </div>
+  </section>
+
   <section id="invitation">
     <div class="wrap split">
       <div class="section-head">
@@ -810,7 +860,7 @@
         <h3>A leadership institution, not a transaction.</h3>
         <p>MOJO AI Summits protects the room by keeping membership relational. Each member has two invitations per month, and the expectation is that members make those invitations with care. Those introductions are part of how contribution is understood, alongside participation, research, mentorship, and leadership.</p>
         <p>Fellowship tiers are reviewed and voted on by members at quarterly summit events, so recognition is earned through peer trust and visible contribution.</p>
-        <p><a class="btn ghost" href="/fellowships/">Explore the fellowship pathway</a></p>
+        <p><a class="btn ghost" href="/fellowships/">Finish with the fellowship pathway</a></p>
         <div class="closing-list" aria-label="Membership invitation signals">
           <span>Invitation only from existing members</span>
           <span>Two member invitations per month</span>
