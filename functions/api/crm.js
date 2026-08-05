@@ -1028,11 +1028,11 @@ async function sendResendEmail(env, { to, subject, html, text, replyTo }) {
   return response.json().catch(() => ({}));
 }
 
-function inviteInvitationText({ firstName, eventName, registrationUrl }) {
+function inviteInvitationText({ firstName, eventName, eventDate, registrationUrl }) {
   return [
     `Hi ${firstName},`,
     "",
-    `We're pleased to invite you to join us for ${eventName}.`,
+    `We're pleased to invite you to join us for ${inviteReminderEventPhrase(eventName, eventDate)}.`,
     "",
     "Please use your personal registration link below to review the event details and confirm your attendance:",
     "",
@@ -1051,11 +1051,11 @@ function inviteInvitationText({ firstName, eventName, registrationUrl }) {
   ].join("\n");
 }
 
-function inviteInvitationHtml({ firstName, eventName, registrationUrl }) {
+function inviteInvitationHtml({ firstName, eventName, eventDate, registrationUrl }) {
   return `
     <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.6;font-size:15px">
       <p>Hi ${escapeHtml(firstName)},</p>
-      <p>We're pleased to invite you to join us for ${escapeHtml(eventName)}.</p>
+      <p>We're pleased to invite you to join us for ${escapeHtml(inviteReminderEventPhrase(eventName, eventDate))}.</p>
       <p>Please use your personal registration link below to review the event details and confirm your attendance:</p>
       <p><a href="${escapeHtml(registrationUrl)}" style="color:#1656d9">${escapeHtml(registrationUrl)}</a></p>
       <p>This link is unique to you, so please do not forward or share it.</p>
@@ -1077,10 +1077,11 @@ async function sendInviteInvitationEmail(env, invite, origin = "") {
   if (!isEmail(toEmail)) throw new Error("Enter a valid email address before sending the invitation.");
 
   const eventName = cleanString(invite.eventName, 240) || "our upcoming event";
+  const eventDate = cleanString(invite.eventDate, 120);
   const firstName = inviteReminderFirstName(invite);
   const registrationUrl = inviteRegistrationUrl(origin, invite);
 
-  const context = { firstName, eventName, registrationUrl };
+  const context = { firstName, eventName, eventDate, registrationUrl };
   await sendResendEmail(env, {
     to: toEmail,
     subject: `You’re Invited: ${eventName}`,
