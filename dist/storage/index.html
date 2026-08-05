@@ -70,14 +70,14 @@
     }
 
     main {
-      width: min(1180px, calc(100% - 2rem));
+      width: min(1480px, calc(100% - 1rem));
       margin: 0 auto;
       padding: 2rem 0 4rem;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.6fr);
+      grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
       gap: 1rem;
     }
 
@@ -291,7 +291,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 760px;
+      min-width: 980px;
     }
 
     th,
@@ -351,6 +351,18 @@
       }
     }
   </style>
+<style>
+/* Page navigation exit indicators: show when a top-nav link leaves the current section. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
+  content: " >";
+  display: inline-block;
+  margin-left: .35em;
+  color: currentColor;
+}
+</style>
 </head>
 <body>
   <header>
@@ -399,6 +411,7 @@
           <label>
             Receipt person
             <select name="receiptOwner">
+              <option value="" selected>&lt;none&gt;</option>
               <option value="scott">Scott</option>
               <option value="jodi">Jodi</option>
               <option value="robert">Robert</option>
@@ -410,6 +423,7 @@
           <label>
             Receipt event
             <select name="receiptEvent">
+              <option value="" selected>&lt;none&gt;</option>
               <option value="global">Global</option>
               <option value="dallas">Dallas</option>
               <option value="denver">Denver</option>
@@ -450,8 +464,8 @@
               </select>
             </label>
             <label>
-              Prefix search
-              <input id="prefixSearch" placeholder="event-assets/dallas-2027">
+              Search files
+              <input id="prefixSearch" placeholder="deck, invoice, dallas">
             </label>
           </div>
           <button class="secondary" id="refreshButton" type="button">Refresh List</button>
@@ -471,6 +485,7 @@
               <tr>
                 <th>File</th>
                 <th>Event</th>
+                <th>Submitter</th>
                 <th>Size</th>
                 <th>Uploaded</th>
                 <th>Actions</th>
@@ -494,6 +509,9 @@
     const prefixSearch = document.querySelector("#prefixSearch");
     const refreshButton = document.querySelector("#refreshButton");
     const receiptButtons = document.querySelectorAll("[data-receipts]");
+    const privateOptions = document.querySelectorAll('option[value="private"], option[value="private/"]');
+    const state = { isAdmin: false };
+    let searchTimer;
 
     function formatBytes(size) {
       if (!Number.isFinite(size)) return "";
@@ -552,9 +570,39 @@
       return data;
     }
 
+    function userCanManageAccess(user) {
+      return user?.role === "owner" || user?.role === "admin";
+    }
+
+    function applyPrivateAccessUi() {
+      privateOptions.forEach((option) => {
+        option.disabled = !state.isAdmin;
+        option.hidden = !state.isAdmin;
+
+        const select = option.closest("select");
+        if (!state.isAdmin && select?.value === option.value) {
+          const fallback = [...select.options].find((entry) => !entry.disabled && !entry.hidden);
+          if (fallback) select.value = fallback.value;
+        }
+      });
+    }
+
+    async function loadSession() {
+      try {
+        const session = await fetch("/api/auth/me", { cache: "no-store" }).then(readJson);
+        state.isAdmin = userCanManageAccess(session.user);
+      } catch {
+        state.isAdmin = false;
+      }
+      applyPrivateAccessUi();
+    }
+
     function activePrefix() {
-      const search = prefixSearch.value.trim().replace(/^\/+/, "");
-      return search || prefixFilter.value;
+      return prefixFilter.value;
+    }
+
+    function activeSearch() {
+      return prefixSearch.value.trim();
     }
 
     async function loadFiles() {
@@ -565,6 +613,8 @@
       try {
         const url = new URL(api, window.location.origin);
         url.searchParams.set("prefix", activePrefix());
+        const search = activeSearch();
+        if (search) url.searchParams.set("search", search);
         const data = await fetch(url).then(readJson);
 
         if (!data.objects.length) {
@@ -579,11 +629,13 @@
             <tr>
               <td class="file-key" title="${escapeHtml(file.key)}">${escapeHtml(displayName(file))}</td>
               <td>${escapeHtml(file.receiptEvent || file.event || "")}</td>
+              <td>${escapeHtml(file.submitter || "")}</td>
               <td>${formatBytes(file.size)}</td>
               <td>${file.uploaded ? new Date(file.uploaded).toLocaleString() : ""}</td>
               <td>
                 <div class="actions">
                   <button type="button" data-download="${encodeURIComponent(file.key)}">Download</button>
+                  <button type="button" class="secondary" data-rename="${encodeURIComponent(file.key)}" data-name="${escapeHtml(displayName(file))}">Rename</button>
                   <button type="button" class="danger" data-delete="${encodeURIComponent(file.key)}">Delete</button>
                 </div>
               </td>
@@ -630,10 +682,39 @@
 
     fileRows.addEventListener("click", async (event) => {
       const downloadKey = event.target.dataset.download;
+      const renameKey = event.target.dataset.rename;
       const deleteKey = event.target.dataset.delete;
 
       if (downloadKey) {
         window.location.href = `${api}?key=${downloadKey}`;
+      }
+
+      if (renameKey) {
+        const key = decodeURIComponent(renameKey);
+        const currentName = event.target.dataset.name || "";
+        const nextName = window.prompt("Rename file", currentName);
+        if (nextName === null) return;
+        const cleanName = nextName.trim();
+        if (!cleanName) {
+          setNotice(listNotice, "Enter a file name.", "error");
+          return;
+        }
+
+        try {
+          await fetch(api, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ key, name: cleanName })
+          }).then(readJson);
+          setNotice(listNotice, `Renamed ${currentName || "file"} to ${cleanName}.`, "ok");
+          await loadFiles();
+        } catch (error) {
+          if (/sign in/i.test(error.message)) {
+            setAuthNotice(listNotice, error.message);
+          } else {
+            setNotice(listNotice, error.message, "error");
+          }
+        }
       }
 
       if (deleteKey) {
@@ -657,6 +738,10 @@
 
     refreshButton.addEventListener("click", loadFiles);
     prefixFilter.addEventListener("change", loadFiles);
+    prefixSearch.addEventListener("input", () => {
+      window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(loadFiles, 250);
+    });
     receiptButtons.forEach((button) => {
       button.addEventListener("click", () => {
         prefixFilter.value = "receipts/";
@@ -664,7 +749,7 @@
         loadFiles();
       });
     });
-    loadFiles();
+    loadSession().finally(loadFiles);
   </script>
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
 </body>

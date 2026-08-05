@@ -1,3 +1,5 @@
+import { canManageAccess } from "../_auth.js";
+
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store"
@@ -36,12 +38,20 @@ function json(data, init = {}) {
 }
 
 function requireStorageAccess(data = {}) {
-  if (data?.auth?.email) return { email: data.auth.email };
-  if (data?.auth?.mode === "public") return { email: "public@mojoaisummits.com" };
+  if (data?.auth?.email) return { ...data.auth, email: data.auth.email };
+  if (data?.auth?.mode === "public") return { email: "public@mojoaisummits.com", role: "public" };
 
   return {
     response: json({ error: "Sign in with a Mojo AI Summits account to use storage." }, { status: 401 })
   };
+}
+
+function privateAccessError() {
+  return json({ error: "Private company records are limited to admins." }, { status: 403 });
+}
+
+function isAdminAccess(access) {
+  return canManageAccess(access);
 }
 
 function requireBucket(env) {
@@ -71,6 +81,11 @@ function safeKey(value) {
   return key;
 }
 
+function isPrivateKey(key) {
+  const value = String(key || "");
+  return value === "private" || value.startsWith("private/");
+}
+
 function displayNameFromKey(key) {
   return safeDownloadName(key).replace(
     /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9]{8}-/i,
@@ -88,6 +103,7 @@ function objectToRecord(object) {
     event: object.customMetadata?.event || "",
     receiptOwner: object.customMetadata?.receiptOwner || "",
     receiptEvent: object.customMetadata?.receiptEvent || "",
+    submitter: object.customMetadata?.uploadedBy || object.customMetadata?.submitter || "",
     size: object.size,
     uploaded: object.uploaded ? object.uploaded.toISOString() : "",
     etag: object.etag || "",
@@ -100,31 +116,85 @@ function safeDownloadName(key) {
   return (key.split("/").pop() || "download").replace(/["\r\n]/g, "");
 }
 
-async function listObjects(request, env) {
+function safeOriginalName(value) {
+  return (String(value || "").trim().replace(/["\r\n\\/]/g, "") || "download").slice(0, 180);
+}
+
+function splitKey(key) {
+  const parts = String(key || "").split("/");
+  const fileName = parts.pop() || "";
+  return {
+    directory: parts.length ? `${parts.join("/")}/` : "",
+    fileName
+  };
+}
+
+function generatedNamePrefix(fileName) {
+  return fileName.match(/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9]{8}-/i)?.[0] || "";
+}
+
+function cleanSearch(value) {
+  return String(value || "").trim().toLowerCase().slice(0, 120);
+}
+
+function recordSearchText(record) {
+  return [
+    record.key,
+    record.name,
+    record.area,
+    record.event,
+    record.receiptOwner,
+    record.receiptEvent
+  ].join(" ").toLowerCase();
+}
+
+async function listObjects(request, env, access) {
   const url = new URL(request.url);
   const rawPrefix = safeKey(url.searchParams.get("prefix") || "");
   const prefix = rawPrefix === "all" ? "" : rawPrefix;
+  const canReadPrivate = isAdminAccess(access);
+  if (isPrivateKey(prefix) && !canReadPrivate) return privateAccessError();
+
   const cursor = url.searchParams.get("cursor") || undefined;
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 100), 1), 500);
+  const search = cleanSearch(url.searchParams.get("search"));
+  const objects = [];
+  let nextCursor = cursor;
+  let truncated = false;
 
-  const result = await env.MOJO_SUMMITS_STORAGE.list({
-    prefix,
-    cursor,
-    limit
-  });
+  do {
+    const result = await env.MOJO_SUMMITS_STORAGE.list({
+      prefix,
+      cursor: nextCursor,
+      limit
+    });
+    const records = result.objects
+      .map(objectToRecord)
+      .filter((record) => canReadPrivate || !isPrivateKey(record.key));
+    objects.push(
+      ...(
+        search
+          ? records.filter((record) => recordSearchText(record).includes(search))
+          : records
+      )
+    );
+    nextCursor = result.truncated ? result.cursor : undefined;
+    truncated = Boolean(result.truncated);
+  } while (search && truncated && objects.length < limit);
 
   return json({
-    objects: result.objects.map(objectToRecord),
-    truncated: result.truncated,
-    cursor: result.cursor || "",
+    objects: objects.slice(0, limit),
+    truncated,
+    cursor: nextCursor || "",
     folders: folderLabels
   });
 }
 
-async function downloadObject(request, env) {
+async function downloadObject(request, env, access) {
   const url = new URL(request.url);
   const key = safeKey(url.searchParams.get("key"));
   if (!key) return json({ error: "Expected a file key." }, { status: 400 });
+  if (isPrivateKey(key) && !isAdminAccess(access)) return privateAccessError();
 
   const object = await env.MOJO_SUMMITS_STORAGE.get(key);
   if (!object) return json({ error: "File not found." }, { status: 404 });
@@ -133,11 +203,60 @@ async function downloadObject(request, env) {
   const headers = new Headers();
   headers.set("cache-control", "private, no-store");
   headers.set("content-type", object.httpMetadata?.contentType || "application/octet-stream");
-  headers.set("content-disposition", `${disposition}; filename="${displayNameFromKey(key)}"`);
+  headers.set("content-disposition", `${disposition}; filename="${safeOriginalName(object.customMetadata?.originalName || displayNameFromKey(key))}"`);
   if (object.size) headers.set("content-length", String(object.size));
   if (object.httpEtag) headers.set("etag", object.httpEtag);
 
   return new Response(object.body, { headers });
+}
+
+async function renameObject(request, env, access) {
+  const payload = await request.json().catch(() => null);
+  const key = safeKey(payload?.key);
+  const requestedName = safeOriginalName(payload?.name);
+  const keyName = safeSegment(requestedName, "file");
+  if (!key) return json({ error: "Expected a file key." }, { status: 400 });
+  if (isPrivateKey(key) && !isAdminAccess(access)) return privateAccessError();
+  if (!requestedName || requestedName === "download") {
+    return json({ error: "Enter a file name." }, { status: 400 });
+  }
+
+  const object = await env.MOJO_SUMMITS_STORAGE.get(key);
+  if (!object) return json({ error: "File not found." }, { status: 404 });
+
+  const { directory, fileName } = splitKey(key);
+  const nextKey = safeKey(`${directory}${generatedNamePrefix(fileName)}${keyName}`);
+  if (!nextKey) return json({ error: "Enter a valid file name." }, { status: 400 });
+
+  if (nextKey === key) {
+    await env.MOJO_SUMMITS_STORAGE.put(key, object.body, {
+      httpMetadata: object.httpMetadata,
+      customMetadata: {
+        ...(object.customMetadata || {}),
+        originalName: requestedName,
+        renamedBy: access.email,
+        renamedAt: new Date().toISOString()
+      }
+    });
+    return json({ ok: true, key, previousKey: key, name: requestedName });
+  }
+
+  const existing = await env.MOJO_SUMMITS_STORAGE.head(nextKey);
+  if (existing) return json({ error: "A file with that name already exists in this folder." }, { status: 409 });
+
+  await env.MOJO_SUMMITS_STORAGE.put(nextKey, object.body, {
+    httpMetadata: object.httpMetadata,
+    customMetadata: {
+      ...(object.customMetadata || {}),
+      originalName: requestedName,
+      renamedFrom: key,
+      renamedBy: access.email,
+      renamedAt: new Date().toISOString()
+    }
+  });
+  await env.MOJO_SUMMITS_STORAGE.delete(key);
+
+  return json({ ok: true, key: nextKey, previousKey: key, name: requestedName });
 }
 
 export async function onRequestGet({ request, env, data }) {
@@ -148,9 +267,9 @@ export async function onRequestGet({ request, env, data }) {
   if (bucketError) return bucketError;
 
   const url = new URL(request.url);
-  if (url.searchParams.has("key")) return downloadObject(request, env);
+  if (url.searchParams.has("key")) return downloadObject(request, env, access);
 
-  return listObjects(request, env);
+  return listObjects(request, env, access);
 }
 
 export async function onRequestPost({ request, env, data }) {
@@ -170,15 +289,16 @@ export async function onRequestPost({ request, env, data }) {
   const area = allowedFolders.has(String(form.get("area") || ""))
     ? String(form.get("area"))
     : "private";
-  const receiptOwner = receiptOwners.has(String(form.get("receiptOwner") || "").toLowerCase())
-    ? String(form.get("receiptOwner")).toLowerCase()
-    : "unassigned";
+  if (area === "private" && !isAdminAccess(access)) return privateAccessError();
+
+  const rawReceiptOwner = String(form.get("receiptOwner") || "").toLowerCase();
+  const receiptOwner = receiptOwners.has(rawReceiptOwner) ? rawReceiptOwner : "";
   const rawReceiptEvent = String(form.get("receiptEvent") || "").toLowerCase();
   const receiptEventKey = Object.prototype.hasOwnProperty.call(receiptEvents, rawReceiptEvent)
     ? rawReceiptEvent
-    : "global";
-  const receiptEvent = receiptEvents[receiptEventKey];
-  const event = area === "receipts" ? receiptOwner : safeSegment(form.get("event"), "company");
+    : "";
+  const receiptEvent = receiptEventKey ? receiptEvents[receiptEventKey] : "";
+  const event = area === "receipts" ? receiptOwner || "unassigned" : safeSegment(form.get("event"), "company");
   const trackedEvent = area === "receipts" ? receiptEvent : event;
   const originalName = safeSegment(file.name, "file");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -213,7 +333,18 @@ export async function onRequestDelete({ request, env, data }) {
   const url = new URL(request.url);
   const key = safeKey(url.searchParams.get("key"));
   if (!key) return json({ error: "Expected a file key." }, { status: 400 });
+  if (isPrivateKey(key) && !isAdminAccess(access)) return privateAccessError();
 
   await env.MOJO_SUMMITS_STORAGE.delete(key);
   return json({ ok: true, key });
+}
+
+export async function onRequestPatch({ request, env, data }) {
+  const access = requireStorageAccess(data);
+  if (access.response) return access.response;
+
+  const bucketError = requireBucket(env);
+  if (bucketError) return bucketError;
+
+  return renameObject(request, env, access);
 }
