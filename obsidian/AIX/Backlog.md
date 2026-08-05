@@ -23,3 +23,6 @@ Order clothes for everyone on the backlog
 
 Go build epics and user stories
 
+We need to add logic to allow vendors to add contacts to their profile page, 3 per virtual, 10 per summit
+
+You need to build a calendar for Miller. 

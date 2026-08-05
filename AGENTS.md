@@ -64,6 +64,41 @@ Preferred PowerShell flow:
 6. Verify mailbox provisioning in Exchange Online with `Connect-ExchangeOnline` and `Get-EXOMailbox` or by checking the Microsoft 365 admin center.
 
 <!-- AWS Agent Toolkit: start -->
+## AWS Account Administration
+- The AIX/Mojo AWS account used for SMS and billing review is account
+  `238043188139` named `ravenshroud`.
+- Local AWS CLI configuration normally includes profiles `default` and
+  `mojo-sms`. Use the `default` profile first unless the user explicitly
+  asks for another profile.
+- Start AWS reviews through APIs/CLI, not by manually browsing the console.
+  First run `aws sts get-caller-identity --output json` to confirm the
+  account. If the CLI reports that the session expired, run `aws login` to
+  refresh the local CLI session, let Scott complete any browser/MFA prompt,
+  then return to API/CLI commands.
+- Do not print, copy, or summarize AWS secret values. It is safe to report
+  account id, account name, region, service names, resource ids, non-secret
+  phone numbers, status values, and whether expected environment variable
+  names are present.
+- For SMS administration, use region `us-east-2` unless evidence shows the
+  resource lives elsewhere. The currently production-enabled SMS account
+  state is in `us-east-2`; `us-east-1` may still report SMS sandbox status.
+- To review whether SMS verification can be used, check:
+  `aws pinpoint-sms-voice-v2 describe-account-attributes --region us-east-2`,
+  `aws sns get-sms-sandbox-account-status --region us-east-2`,
+  `aws pinpoint-sms-voice-v2 describe-phone-numbers --region us-east-2`,
+  and `aws pinpoint-sms-voice-v2 describe-registrations --region us-east-2`.
+- For cost/billing review, use Cost Explorer APIs such as
+  `aws ce get-cost-and-usage` grouped by `SERVICE`, `USAGE_TYPE`, and
+  `RECORD_TYPE`. For SMS billing, inspect the `AWS End User Messaging`
+  service and `USE2-PhoneNumber-Tollfree` usage type.
+- If asked about an AWS Support Center case, try the API first with
+  `aws support describe-cases --display-id <case-id> --include-resolved-cases --region us-east-1`.
+  If AWS returns `SubscriptionRequiredException`, explain that this specific
+  API namespace is unavailable for the account and continue with direct
+  service, billing, and resource APIs. Use the Support Center link only when
+  the user asks for interactive case text or case updates that the API cannot
+  provide.
+
 ## AWS Guidance
 - Prefer the AWS MCP Server for AWS interactions — it provides sandboxed
   execution, observability, and audit logging. If unavailable, use the

@@ -138,6 +138,10 @@ function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanString(value).toLowerCase());
 }
 
+function cleanBoolean(value) {
+  return value === true || value === "true" || value === "on" || value === "1";
+}
+
 function invitePersonName(record = {}) {
   const name = cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName);
   return isEmail(name) ? "" : name;
@@ -905,6 +909,204 @@ async function deleteInviteCode(env, payload = {}) {
   }
 
   throw new Error("Invite link was not found.");
+}
+
+async function findInviteCodeRecord(env, payload = {}) {
+  const type = cleanString(payload.type);
+  const key = cleanString(payload.key, 300);
+  const code = cleanCode(payload.code);
+  const prefixes = type === "member" || type === "guest"
+    ? [REGISTRATION_INVITE_PREFIXES[type]]
+    : [REGISTRATION_INVITE_PREFIXES.guest, REGISTRATION_INVITE_PREFIXES.member];
+
+  const candidates = [
+    key,
+    ...prefixes.map((prefix) => code ? `${prefix}${code}` : "")
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(candidate, "json").catch(() => null);
+    if (record) return normalizeInviteCode(candidate, record);
+  }
+
+  throw new Error("Invite link was not found.");
+}
+
+function inviteRegistrationUrl(origin, invite) {
+  const path = invite.type === "member" ? "/member-registration/" : "/guest/";
+  return `${origin}${path}?invite=${encodeURIComponent(invite.code || "")}`;
+}
+
+function escapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
+
+function inviteReminderFirstName(invite) {
+  const name = cleanString(invite.intendedGuestName || invite.invitedName || invite.guestName, 240);
+  if (!name) return "there";
+  return name.split(/\s+/)[0];
+}
+
+function inviteReminderText({ firstName, eventName, registrationUrl }) {
+  return [
+    `Hi ${firstName},`,
+    "",
+    `This is a friendly reminder to complete your registration for ${eventName}.`,
+    "",
+    "Your invitation includes a personal registration link created specifically for you. Please use the link below to confirm your attendance:",
+    "",
+    registrationUrl,
+    "",
+    "We look forward to having you join us. If you have any trouble registering, please reply to this email for assistance.",
+    "",
+    "Best,",
+    "",
+    "Angel Mosley",
+    "Program Director",
+    "MOJO AI Summits",
+    "Angel@mojoaisummits.com"
+  ].join("\n");
+}
+
+function inviteReminderHtml({ firstName, eventName, registrationUrl }) {
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.6;font-size:15px">
+      <p>Hi ${escapeHtml(firstName)},</p>
+      <p>This is a friendly reminder to complete your registration for ${escapeHtml(eventName)}.</p>
+      <p>Your invitation includes a personal registration link created specifically for you. Please use the link below to confirm your attendance:</p>
+      <p><a href="${escapeHtml(registrationUrl)}" style="color:#1656d9">${escapeHtml(registrationUrl)}</a></p>
+      <p>We look forward to having you join us. If you have any trouble registering, please reply to this email for assistance.</p>
+      <p>
+        Best,<br>
+        <br>
+        Angel Mosley<br>
+        Program Director<br>
+        MOJO AI Summits<br>
+        Angel@mojoaisummits.com
+      </p>
+    </div>
+  `;
+}
+
+async function sendResendEmail(env, { to, subject, html, text, replyTo }) {
+  const apiKey = cleanString(env.RESEND_API_KEY, 400);
+  if (!apiKey) throw new Error("Resend is not configured (missing RESEND_API_KEY).");
+
+  const from = cleanString(env.MOJO_RESEND_FROM, 200) || "Angel Mosley <angel@mojoaisummits.com>";
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      html,
+      text,
+      ...(replyTo ? { reply_to: replyTo } : {})
+    })
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload?.message || "Resend could not send the reminder email.");
+  }
+
+  return response.json().catch(() => ({}));
+}
+
+function inviteInvitationText({ firstName, eventName, registrationUrl }) {
+  return [
+    `Hi ${firstName},`,
+    "",
+    `We're pleased to invite you to join us for ${eventName}.`,
+    "",
+    "Please use your personal registration link below to review the event details and confirm your attendance:",
+    "",
+    registrationUrl,
+    "",
+    "This link is unique to you, so please do not forward or share it.",
+    "",
+    "We're looking forward to having you join us and be part of the conversation.",
+    "",
+    "Best,",
+    "",
+    "Angel Mosley",
+    "Program Director",
+    "MOJO AI Summits",
+    "Angel@mojoaisummits.com"
+  ].join("\n");
+}
+
+function inviteInvitationHtml({ firstName, eventName, registrationUrl }) {
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.6;font-size:15px">
+      <p>Hi ${escapeHtml(firstName)},</p>
+      <p>We're pleased to invite you to join us for ${escapeHtml(eventName)}.</p>
+      <p>Please use your personal registration link below to review the event details and confirm your attendance:</p>
+      <p><a href="${escapeHtml(registrationUrl)}" style="color:#1656d9">${escapeHtml(registrationUrl)}</a></p>
+      <p>This link is unique to you, so please do not forward or share it.</p>
+      <p>We're looking forward to having you join us and be part of the conversation.</p>
+      <p>
+        Best,<br>
+        <br>
+        Angel Mosley<br>
+        Program Director<br>
+        MOJO AI Summits<br>
+        Angel@mojoaisummits.com
+      </p>
+    </div>
+  `;
+}
+
+async function sendInviteInvitationEmail(env, invite, origin = "") {
+  const toEmail = cleanString(invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail, 240).toLowerCase();
+  if (!isEmail(toEmail)) throw new Error("Enter a valid email address before sending the invitation.");
+
+  const eventName = cleanString(invite.eventName, 240) || "our upcoming event";
+  const firstName = inviteReminderFirstName(invite);
+  const registrationUrl = inviteRegistrationUrl(origin, invite);
+
+  const context = { firstName, eventName, registrationUrl };
+  await sendResendEmail(env, {
+    to: toEmail,
+    subject: `You’re Invited: ${eventName}`,
+    html: inviteInvitationHtml(context),
+    text: inviteInvitationText(context),
+    replyTo: "Angel@mojoaisummits.com"
+  });
+
+  return { sentTo: toEmail };
+}
+
+async function sendInviteReminderEmail(env, payload = {}, origin = "") {
+  const invite = await findInviteCodeRecord(env, payload);
+  const toEmail = cleanString(invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail, 240).toLowerCase();
+  if (!isEmail(toEmail)) throw new Error("This invite does not have a valid email address on file.");
+
+  const eventName = cleanString(invite.eventName, 240) || "your upcoming event";
+  const firstName = inviteReminderFirstName(invite);
+  const registrationUrl = inviteRegistrationUrl(cleanString(payload.origin, 200) || origin, invite);
+
+  const context = { firstName, eventName, registrationUrl };
+  await sendResendEmail(env, {
+    to: toEmail,
+    subject: `Reminder: complete your registration for ${eventName}`,
+    html: inviteReminderHtml(context),
+    text: inviteReminderText(context),
+    replyTo: "Angel@mojoaisummits.com"
+  });
+
+  return { sentTo: toEmail };
 }
 
 async function removeEmailFromCompanyContacts(env, email, actor = "") {
@@ -1712,10 +1914,21 @@ export async function onRequestPost({ request, env, data }) {
 
   if (payload?.action === "create-registration-invite") {
     try {
+      const sendEmail = cleanBoolean(payload.sendEmail);
+      if (sendEmail && !isEmail(payload.intendedGuestEmail || payload.invitedEmail || payload.guestEmail || payload.email)) {
+        throw new Error("Enter a valid email address before sending the invitation.");
+      }
       const invite = await createRegistrationInviteCode(env, payload, access.email);
+      let emailSent = null;
+      if (sendEmail) {
+        const origin = new URL(request.url).origin;
+        const result = await sendInviteInvitationEmail(env, invite, origin);
+        emailSent = result.sentTo;
+      }
       return json({
         ok: true,
         invite,
+        emailSent,
         registrationInviteCodes: [invite]
       }, { status: 201 });
     } catch (error) {
@@ -1734,6 +1947,16 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Invite link could not be deleted." }, { status: 404 });
+    }
+  }
+
+  if (payload?.action === "send-invite-reminder") {
+    try {
+      const origin = new URL(request.url).origin;
+      const result = await sendInviteReminderEmail(env, payload, origin);
+      return json({ ok: true, ...result });
+    } catch (error) {
+      return json({ error: error.message || "Reminder email could not be sent." }, { status: 502 });
     }
   }
 

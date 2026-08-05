@@ -286,6 +286,18 @@
       header, .hero, .toolbar, .grid { grid-template-columns: 1fr; }
     }
   </style>
+<style>
+/* Page navigation exit indicators: show when a top-nav link leaves the current section. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
+  content: " >";
+  display: inline-block;
+  margin-left: .35em;
+  color: currentColor;
+}
+</style>
 </head>
 <body>
   <header>
