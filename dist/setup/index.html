@@ -34,6 +34,7 @@
       --owner-charlie: var(--electric-blue);
       --owner-angel: var(--cyan);
       --owner-reggie: var(--electric-blue);
+      --owner-miller-freeman: var(--cyan);
       --owner-tel: var(--electric-blue);
       --owner-orbit-flow: var(--slate);
       --owner-photo-sound-cinema: var(--cyan);
@@ -521,6 +522,10 @@
       border-left-color: var(--owner-reggie);
     }
 
+    .owner-select.owner-miller-freeman {
+      border-left-color: var(--owner-miller-freeman);
+    }
+
     .owner-select.owner-tel {
       border-left-color: var(--owner-tel);
     }
@@ -676,6 +681,10 @@
 
     .owner-reggie {
       background: var(--owner-reggie);
+    }
+
+    .owner-miller-freeman {
+      background: var(--owner-miller-freeman);
     }
 
     .owner-tel {
@@ -914,8 +923,8 @@
 
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
-Date: 2026-08-04
-Version: 3.5
+Date: 2026-08-05
+Version: 3.6
 Category: event operations
 
 ## Purpose
@@ -996,6 +1005,7 @@ This section is reserved for decisions that do not yet have an assigned operatin
 | Ron | Curated director-and-above invites, executive relationships, keynote/executive recruitment, public face of company |
 | Charlie | Event management, venue coordination, production logistics, staffing, registration operations, on-site command center |
 | Angel | Member program direction, agenda execution, speaker/session operations, room logistics, run of show, presentation materials |
+| Miller Freeman | Assignable owner/support for setup, operating, and event execution tasks |
 | The Event Lounge (TEL) | External event lounge, experiential support, and event operations support |
 | Orbit Flow | Owner/support group for outsourced marketing execution |
 | Photography, Sound, and Cinematography Team | Placeholder owner/support group for photography, sound, video, and cinematography production; official vendor/team name TBD |
@@ -1520,6 +1530,7 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.6 - Added Miller Freeman as an assignable owner and support option.
 - 3.5 - Added company software inventory tracking as a setup responsibility.
 - 3.4 - Added fall 2026 virtual AI event series dates and a repeatable virtual event operations scaffold.
 - 3.3 - Added Scott-owned email warming service purchase and setup item.
@@ -1566,6 +1577,7 @@ The following decisions should not be made by one owner alone:
       Charlie: "owner-charlie",
       Angel: "owner-angel",
       Reggie: "owner-reggie",
+      "Miller Freeman": "owner-miller-freeman",
       "The Event Lounge (TEL)": "owner-tel",
       "Orbit Flow": "owner-orbit-flow",
       "Photography, Sound, and Cinematography Team": "owner-photo-sound-cinema",
@@ -1574,7 +1586,7 @@ The following decisions should not be made by one owner alone:
       all: "owner-all"
     };
 
-    const supportOwners = ["Scott", "Robert", "Jodi", "Ron", "Charlie", "Angel", "Reggie", "The Event Lounge (TEL)", "Orbit Flow", "Photography, Sound, and Cinematography Team"];
+    const supportOwners = ["Scott", "Robert", "Jodi", "Ron", "Charlie", "Angel", "Reggie", "Miller Freeman", "The Event Lounge (TEL)", "Orbit Flow", "Photography, Sound, and Cinematography Team"];
     const editableOwners = [...supportOwners, "I don't know"];
     const ownerFilterOptions = ["All", ...editableOwners, "Shared"];
     const ownerAliases = {
