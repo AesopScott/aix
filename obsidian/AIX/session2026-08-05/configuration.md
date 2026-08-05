@@ -40,3 +40,23 @@ npx wrangler pages secret put RESEND_API_KEY --project-name aix
 ```
 
 I didn't run this myself since it's a live credential/config change. Want me to also add the button to the one-time "invite just created" confirmation panel, or is the main invite-list view enough?
+## 2026-08-05T13:49:51-06:00
+
+- Agent: claude
+- Project: aix
+- Target: C:\Users\scott\Code\aix
+- Source: completed turn
+- Session Log: C:\Users\scott\.claude\projects\C--Users-scott-Code-aix\cc3b3677-e210-4218-8285-a27282ad74ef.jsonl
+- Turn Id: 61eab384-ded3-47bb-8dd6-2a92bb1d2d3a
+- Classification: valuable
+- Information Type: Configuration
+- Reason: durable prompt/outcome signal
+- Trigger Prompt Hash: 96d1afaf019633dc
+
+### Prompt Memory
+
+can we export all set up items into a CSV as well via a button on the page? Make sure that we export everything that's filtered. If the page is filtered, the CSV should export the filter. If the page is not filtered, the export should export everything.
+
+### Assistant Outcome
+
+What number should I send the test code to?

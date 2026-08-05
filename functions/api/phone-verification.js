@@ -261,9 +261,14 @@ async function publishSmsViaSns(config, phone, message) {
 async function publishSms(config, phone, message) {
   try {
     return await sendSmsViaSmsVoiceV2(config, phone, message);
-  } catch (error) {
-    if (config.originationNumber) throw error;
-    return publishSmsViaSns(config, phone, message);
+  } catch (v2Error) {
+    try {
+      return await publishSmsViaSns(config, phone, message);
+    } catch (snsError) {
+      throw new Error(
+        `SMS-Voice V2 failed (${v2Error?.message || v2Error}); SNS fallback also failed (${snsError?.message || snsError}).`
+      );
+    }
   }
 }
 
@@ -290,7 +295,17 @@ async function startVerification(phone, inviteCode, env) {
   const code = randomCode();
   const salt = crypto.randomUUID();
   const message = `MOJO AI Summits: Your verification code is ${code}. It expires in 10 minutes. Reply STOP to opt out or HELP for help.`;
-  const messageId = await publishSms(config, phone, message);
+
+  let messageId = "";
+  try {
+    messageId = await publishSms(config, phone, message);
+  } catch (error) {
+    return json(
+      { error: error?.message || "The SMS provider could not send the verification code." },
+      { status: 502 }
+    );
+  }
+
   const sentAt = new Date().toISOString();
   const expiresAt = new Date(now + otpTtlSeconds * 1000).toISOString();
 

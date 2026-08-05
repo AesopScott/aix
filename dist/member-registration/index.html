@@ -760,7 +760,7 @@
       emailInput.focus();
       return;
     }
-    if (payload.phoneVerificationStatus === 'unverified' || payload.phoneVerificationStatus === 'code_sent') {
+    if (payload.phoneVerificationStatus === 'unverified' || payload.phoneVerificationStatus === 'code_sent' || payload.phoneVerificationStatus === 'pending_sms_setup') {
       setMessage(formError, 'Verify the phone number first so the registration has a phone confirmation status.', 'error');
       phoneInput.focus();
       return;
