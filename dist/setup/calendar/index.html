@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
+  <title>Mojo AI Summits - Checklist Calendar</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+    :root {
+      --navy: #0A0F1E;
+      --electric-blue: #1666FF;
+      --cyan: #00E6FF;
+      --slate: #1B2333;
+      --white: #FFFFFF;
+      --ink: var(--white);
+      --muted: #9AA7C7;
+      --line: var(--slate);
+      --paper: var(--navy);
+      --panel: var(--slate);
+      --owner-scott: var(--electric-blue);
+      --owner-robert: var(--cyan);
+      --owner-jodi: var(--electric-blue);
+      --owner-ron: var(--cyan);
+      --owner-charlie: var(--electric-blue);
+      --owner-angel: var(--cyan);
+      --owner-reggie: var(--electric-blue);
+      --owner-miller-freeman: var(--cyan);
+      --owner-tel: var(--electric-blue);
+      --owner-orbit-flow: var(--slate);
+      --owner-photo-sound-cinema: var(--cyan);
+      --owner-unknown: var(--slate);
+      --radius: 8px;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    button, select { font: inherit; }
+
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px clamp(16px, 3vw, 44px) 64px;
+    }
+
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .top-nav a {
+      color: var(--cyan);
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+
+    .top-nav a:hover { text-decoration: underline; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--cyan);
+      font-family: Orbitron, "Space Grotesk", sans-serif;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(1.6rem, 2.6vw, 2.6rem);
+      line-height: 1.05;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+
+    .control-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .control-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .owner-select, .view-select {
+      min-width: 220px;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--navy);
+      color: var(--ink);
+      padding: 8px 10px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .owner-select option, .view-select option {
+      background: var(--navy);
+      color: var(--white);
+    }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .month-nav button {
+      min-height: 38px;
+      padding: 8px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--navy);
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .month-nav button:hover { border-color: var(--cyan); }
+
+    .month-label {
+      font-family: "Space Grotesk", Inter, sans-serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      min-width: 160px;
+      text-align: center;
+    }
+
+    .sync-state {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .sync-state.ok { color: var(--cyan); }
+    .sync-state.error { color: var(--electric-blue); }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .weekday {
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 6px 0;
+    }
+
+    .day-cell {
+      min-height: 120px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    .day-cell.outside {
+      opacity: 0.35;
+    }
+
+    .day-cell.today {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 1px var(--cyan) inset;
+    }
+
+    .day-number {
+      font-weight: 800;
+      font-size: 0.82rem;
+      color: var(--ink);
+    }
+
+    .day-items {
+      display: grid;
+      gap: 4px;
+      overflow-y: auto;
+      max-height: 150px;
+    }
+
+    .day-chip {
+      display: block;
+      border-radius: 6px;
+      padding: 4px 6px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      line-height: 1.25;
+      color: var(--navy);
+      text-decoration: none;
+      cursor: default;
+    }
+
+    .day-chip .chip-status {
+      display: block;
+      font-weight: 600;
+      opacity: 0.8;
+      font-size: 0.62rem;
+    }
+
+    .owner-scott { background: var(--owner-scott); }
+    .owner-robert { background: var(--owner-robert); }
+    .owner-jodi { background: var(--owner-jodi); }
+    .owner-ron { background: var(--owner-ron); }
+    .owner-charlie { background: var(--owner-charlie); }
+    .owner-angel { background: var(--owner-angel); }
+    .owner-reggie { background: var(--owner-reggie); }
+    .owner-miller-freeman { background: var(--owner-miller-freeman); color: var(--white); }
+    .owner-tel { background: var(--owner-tel); }
+    .owner-orbit-flow { background: var(--owner-orbit-flow); color: var(--white); }
+    .owner-photo-sound-cinema { background: var(--owner-photo-sound-cinema); }
+    .owner-unknown { background: var(--owner-unknown); color: var(--white); }
+    .owner-shared, .owner-all { background: var(--cyan); }
+
+    .day-cell.empty-day {
+      justify-content: center;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .unscheduled {
+      margin-top: 26px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+
+    .unscheduled h2 {
+      margin: 0 0 4px;
+      font-family: Fraunces, Georgia, serif;
+      font-size: 1.1rem;
+    }
+
+    .unscheduled p.hint {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .unscheduled-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .unscheduled-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      background: var(--navy);
+    }
+
+    .unscheduled-item .text {
+      font-size: 0.85rem;
+    }
+
+    .unscheduled-item .meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: var(--white);
+      white-space: nowrap;
+    }
+
+    .pill.status-pill {
+      background: var(--navy);
+      border: 1px solid var(--line);
+      color: var(--ink);
+    }
+
+    .empty-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 8px 0;
+    }
+
+    @media (max-width: 900px) {
+      .calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+      .day-cell { min-height: 90px; }
+    }
+
+    @media (max-width: 640px) {
+      .calendar-grid { grid-template-columns: 1fr; }
+      .weekday { display: none; }
+      .day-cell.outside { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top-nav">
+      <a href="/setup/">&larr; Back to Master Checklist</a>
+      <span class="sync-state" id="syncState" role="status">Loading checklist data...</span>
+    </div>
+
+    <p class="eyebrow">Event Operations</p>
+    <h1>Checklist Calendar</h1>
+
+    <div class="controls">
+      <div class="control-field">
+        <label class="control-label" for="ownerSelect">Show items for</label>
+        <select class="owner-select" id="ownerSelect"></select>
+      </div>
+
+      <div class="month-nav">
+        <button type="button" id="prevMonth" aria-label="Previous month">&larr;</button>
+        <span class="month-label" id="monthLabel"></span>
+        <button type="button" id="nextMonth" aria-label="Next month">&rarr;</button>
+        <button type="button" id="todayBtn">Today</button>
+      </div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="calendar-grid" id="calendarGrid"></div>
+
+    <div class="unscheduled">
+      <h2 id="unscheduledTitle">Items without a date</h2>
+      <p class="hint">These checklist items are assigned but don't have an Expected Delivery Date yet. Set one on the Master Checklist so they show up on the calendar.</p>
+      <div class="unscheduled-list" id="unscheduledList"></div>
+    </div>
+  </main>
+
+  <script>
+    const ownerColors = {
+      Scott: "owner-scott",
+      Robert: "owner-robert",
+      Jodi: "owner-jodi",
+      Ron: "owner-ron",
+      Charlie: "owner-charlie",
+      Angel: "owner-angel",
+      Reggie: "owner-reggie",
+      "Miller Freeman": "owner-miller-freeman",
+      "The Event Lounge (TEL)": "owner-tel",
+      "Orbit Flow": "owner-orbit-flow",
+      "Photography, Sound, and Cinematography Team": "owner-photo-sound-cinema",
+      "I don't know": "owner-unknown",
+      Shared: "owner-shared",
+      all: "owner-all"
+    };
+
+    const supportOwners = ["Scott", "Robert", "Jodi", "Ron", "Charlie", "Angel", "Reggie", "Miller Freeman", "The Event Lounge (TEL)", "Orbit Flow", "Photography, Sound, and Cinematography Team"];
+    const editableOwners = [...supportOwners, "I don't know"];
+    const ownerFilterOptions = ["All", ...editableOwners, "Shared"];
+    const ownerAliases = { "Pakistani Marketing Team": "Orbit Flow" };
+    const priorityOptions = [
+      "Priority 1 - 3 months out", "Priority 2 - 2 months out", "Priority 3 - 1 month out",
+      "Priority 4 - 2 weeks out", "Priority 5 - 1 week out", "Priority 6 - 2 days out",
+      "Priority 7 - 1 day out", "Priority 8 - Day of"
+    ];
+    const deliverableOptions = ["Conversation", "Document", "Contract", "Website", "Event Tracker"];
+    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered"];
+    const sharedStateEndpoint = "/api/setup-state";
+    const sharedSyncIntervalMs = 5000;
+
+    const clean = (value) => value.trim().replace(/\.$/, "");
+    const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const normalizeOwnerName = (value) => ownerAliases[value] || value;
+    const ownerClass = (owner) => ownerColors[owner] || "owner-shared";
+    const escapeHtml = (value) => String(value ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+    function parseOwner(text) {
+      const ownerMatch = text.match(/\bOwner:\s*([^.;]+)(?:\.|$)/i);
+      const supportMatch = text.match(/\bSupport:\s*([^.;]+)(?:\.|$)/i);
+      const owner = ownerMatch ? clean(ownerMatch[1]) : "";
+      const support = supportMatch ? clean(supportMatch[1]) : "";
+      const label = text
+        .replace(/\s*Owner:\s*[^.;]+(?:\.|$)/i, "")
+        .replace(/\s*Support:\s*[^.;]+(?:\.|$)/i, "")
+        .trim();
+      return { label, owner, support };
+    }
+
+    function ownerNames(value) {
+      if (!value) return [];
+      if (/all founders|full team/i.test(value)) return supportOwners;
+      if (/relevant founder|relevant owner/i.test(value)) return ["Shared"];
+      return value.split(",").map((name) => normalizeOwnerName(name.trim())).filter(Boolean);
+    }
+
+    function parseChecklistMarkdown(raw) {
+      const lines = raw.split(/\r?\n/);
+      const sections = [];
+      let current = null;
+      let currentSub = null;
+
+      function ensureSection(title) {
+        current = { title, subsections: [], type: "note" };
+        sections.push(current);
+        currentSub = null;
+        return current;
+      }
+
+      for (const line of lines) {
+        if (!line.trim() || line.startsWith("# ")) continue;
+
+        if (line.startsWith("## ")) {
+          ensureSection(line.replace(/^##\s+/, "").trim());
+          continue;
+        }
+
+        if (line.startsWith("### ")) {
+          if (!current) ensureSection("Notes");
+          current.type = "checklist";
+          currentSub = { title: line.replace(/^###\s+/, "").trim(), items: [] };
+          current.subsections.push(currentSub);
+          continue;
+        }
+
+        if (line.startsWith("- [ ] ")) {
+          if (!current) ensureSection("Checklist");
+          if (!currentSub) {
+            current.type = "checklist";
+            currentSub = { title: "Checklist", items: [] };
+            current.subsections.push(currentSub);
+          }
+          const parsed = parseOwner(line.replace("- [ ] ", ""));
+          currentSub.items.push({
+            text: parsed.label,
+            defaultOwner: parsed.owner || "Shared",
+            defaultSupport: "",
+            defaultPriority: "",
+            defaultDeliverable: "",
+            defaultDueDate: "",
+            defaultStatus: "Undefined",
+            owner: parsed.owner || "Shared",
+            support: "",
+            priority: "",
+            deliverable: "",
+            dueDate: "",
+            status: "Undefined",
+            phase: current.title,
+            subsection: currentSub.title
+          });
+        }
+      }
+
+      const checklistSections = sections.filter((section) => section.type === "checklist");
+      const allItems = checklistSections.flatMap((section) =>
+        section.subsections.flatMap((subsection) => subsection.items)
+      );
+      allItems.forEach((item, index) => {
+        item.id = `item-${index}-${slug(item.text).slice(0, 60)}`;
+      });
+      return allItems;
+    }
+
+    function normalizeAssignment(item, assignment = {}) {
+      const requestedOwner = normalizeOwnerName(assignment.owner || "");
+      const owner = ownerFilterOptions.includes(requestedOwner) && requestedOwner !== "All"
+        ? requestedOwner
+        : item.defaultOwner;
+      return {
+        owner,
+        support: ownerNames(assignment.support || "").filter((o, i, arr) => supportOwners.includes(o) && arr.indexOf(o) === i).join(", "),
+        priority: priorityOptions.includes(assignment.priority) ? assignment.priority : item.defaultPriority,
+        deliverable: deliverableOptions.includes(assignment.deliverable) ? assignment.deliverable : item.defaultDeliverable,
+        dueDate: /^\d{4}-\d{2}-\d{2}$/.test(assignment.dueDate || "") ? assignment.dueDate : item.defaultDueDate,
+        status: statusOptions.includes(assignment.status) ? assignment.status : item.defaultStatus
+      };
+    }
+
+    function applyAssignment(item, assignment) {
+      const normalized = normalizeAssignment(item, assignment);
+      item.owner = normalized.owner;
+      item.support = normalized.support;
+      item.priority = normalized.priority;
+      item.deliverable = normalized.deliverable;
+      item.dueDate = normalized.dueDate;
+      item.status = normalized.status;
+    }
+
+    let allItems = [];
+    let lastUpdatedAt = "";
+    const view = { year: null, month: null, owner: "All" };
+    const today = new Date();
+    const todayKey = today.toISOString().slice(0, 10);
+
+    function setSyncState(kind, message) {
+      const el = document.getElementById("syncState");
+      el.className = `sync-state ${kind || ""}`.trim();
+      el.textContent = message;
+    }
+
+    async function loadChecklistSource() {
+      const response = await fetch("/setup/", { cache: "no-store" });
+      if (!response.ok) throw new Error(`Checklist load failed: ${response.status}`);
+      const html = await response.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const sourceEl = doc.getElementById("source-md");
+      if (!sourceEl) throw new Error("Checklist source not found.");
+      return sourceEl.textContent.trim();
+    }
+
+    async function loadSharedAssignments() {
+      const response = await fetch(sharedStateEndpoint, { headers: { accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) throw new Error(`Shared state load failed: ${response.status}`);
+      return response.json();
+    }
+
+    function renderOwnerOptions() {
+      const select = document.getElementById("ownerSelect");
+      select.innerHTML = ownerFilterOptions.map((owner) => `
+        <option value="${escapeHtml(owner)}" ${owner === view.owner ? "selected" : ""}>${owner === "All" ? "Everyone" : owner}</option>
+      `).join("");
+    }
+
+    function renderLegend() {
+      const owners = view.owner === "All" ? editableOwners : [view.owner];
+      document.getElementById("legend").innerHTML = owners.map((owner) => `
+        <span class="legend-item"><span class="legend-dot ${ownerClass(owner)}"></span>${escapeHtml(owner)}</span>
+      `).join("");
+    }
+
+    function itemsForOwner() {
+      if (view.owner === "All") return allItems;
+      return allItems.filter((item) =>
+        ownerNames(item.owner).includes(view.owner) || ownerNames(item.support).includes(view.owner)
+      );
+    }
+
+    function itemsByDate() {
+      const map = new Map();
+      itemsForOwner().forEach((item) => {
+        if (!item.dueDate) return;
+        if (!map.has(item.dueDate)) map.set(item.dueDate, []);
+        map.get(item.dueDate).push(item);
+      });
+      return map;
+    }
+
+    function chipHtml(item) {
+      const isOwner = view.owner !== "All" && ownerNames(item.owner).includes(view.owner);
+      const badgeOwner = view.owner === "All" ? item.owner : (isOwner ? item.owner : `Support: ${item.owner}`);
+      return `
+        <span class="day-chip ${ownerClass(item.owner)}" title="${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">
+          ${escapeHtml(item.text.length > 60 ? `${item.text.slice(0, 57)}...` : item.text)}
+          <span class="chip-status">${escapeHtml(badgeOwner)} • ${escapeHtml(item.status)}</span>
+        </span>
+      `;
+    }
+
+    function renderCalendar() {
+      const { year, month } = view;
+      document.getElementById("monthLabel").textContent = new Date(year, month, 1)
+        .toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+      const dateMap = itemsByDate();
+      const firstOfMonth = new Date(year, month, 1);
+      const startOffset = firstOfMonth.getDay();
+      const gridStart = new Date(year, month, 1 - startOffset);
+      const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      const cells = [];
+      for (let i = 0; i < 42; i += 1) {
+        const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+        const key = cellDate.toISOString().slice(0, 10);
+        const isOutside = cellDate.getMonth() !== month;
+        const dayItems = dateMap.get(key) || [];
+        cells.push(`
+          <div class="day-cell ${isOutside ? "outside" : ""} ${key === todayKey ? "today" : ""}">
+            <span class="day-number">${cellDate.getDate()}</span>
+            <div class="day-items">
+              ${dayItems.map(chipHtml).join("")}
+            </div>
+          </div>
+        `);
+      }
+
+      document.getElementById("calendarGrid").innerHTML =
+        weekdayNames.map((name) => `<div class="weekday">${name}</div>`).join("") + cells.join("");
+    }
+
+    function renderUnscheduled() {
+      const items = itemsForOwner().filter((item) => !item.dueDate);
+      const title = document.getElementById("unscheduledTitle");
+      title.textContent = view.owner === "All"
+        ? "Items without a date"
+        : `Items without a date for ${view.owner}`;
+
+      const list = document.getElementById("unscheduledList");
+      if (!items.length) {
+        list.innerHTML = `<p class="empty-note">Nothing unscheduled here. Every relevant item has an Expected Delivery Date.</p>`;
+        return;
+      }
+
+      list.innerHTML = items.map((item) => `
+        <div class="unscheduled-item">
+          <span class="text">${escapeHtml(item.text)}</span>
+          <span class="meta">
+            <span class="pill ${ownerClass(item.owner)}">${escapeHtml(item.owner)}</span>
+            <span class="pill status-pill">${escapeHtml(item.status)}</span>
+          </span>
+        </div>
+      `).join("");
+    }
+
+    function refresh() {
+      renderOwnerOptions();
+      renderLegend();
+      renderCalendar();
+      renderUnscheduled();
+    }
+
+    function shiftMonth(delta) {
+      const next = new Date(view.year, view.month + delta, 1);
+      view.year = next.getFullYear();
+      view.month = next.getMonth();
+      renderCalendar();
+    }
+
+    document.getElementById("prevMonth").addEventListener("click", () => shiftMonth(-1));
+    document.getElementById("nextMonth").addEventListener("click", () => shiftMonth(1));
+    document.getElementById("todayBtn").addEventListener("click", () => {
+      view.year = today.getFullYear();
+      view.month = today.getMonth();
+      renderCalendar();
+    });
+    document.getElementById("ownerSelect").addEventListener("change", (event) => {
+      view.owner = event.target.value;
+      renderLegend();
+      renderCalendar();
+      renderUnscheduled();
+    });
+
+    async function syncAssignments(render) {
+      try {
+        const state = await loadSharedAssignments();
+        if (state.updatedAt === lastUpdatedAt) return;
+        lastUpdatedAt = state.updatedAt || lastUpdatedAt;
+        const assignments = state.assignments || {};
+        allItems.forEach((item) => {
+          if (assignments[item.id]) applyAssignment(item, assignments[item.id]);
+        });
+        setSyncState("ok", "Shared sync live. Updates refresh every 5 seconds.");
+        if (render) refresh();
+      } catch (error) {
+        setSyncState("error", "Shared sync offline. Showing last known checklist defaults.");
+        console.warn(error);
+      }
+    }
+
+    async function init() {
+      view.year = today.getFullYear();
+      view.month = today.getMonth();
+
+      try {
+        const raw = await loadChecklistSource();
+        allItems = parseChecklistMarkdown(raw);
+      } catch (error) {
+        setSyncState("error", "Could not load the master checklist. Try again shortly.");
+        console.warn(error);
+        return;
+      }
+
+      refresh();
+      await syncAssignments(true);
+      window.setInterval(() => syncAssignments(true), sharedSyncIntervalMs);
+    }
+
+    init();
+  </script>
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
+</body>
+</html>
