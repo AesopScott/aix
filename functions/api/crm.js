@@ -953,11 +953,15 @@ function inviteReminderFirstName(invite) {
   return name.split(/\s+/)[0];
 }
 
-function inviteReminderText({ firstName, eventName, registrationUrl }) {
+function inviteReminderEventPhrase(eventName, eventDate) {
+  return eventDate ? `Mojo AI Summit's ${eventName} for ${eventDate}` : `Mojo AI Summit's ${eventName}`;
+}
+
+function inviteReminderText({ firstName, eventName, eventDate, registrationUrl }) {
   return [
     `Hi ${firstName},`,
     "",
-    `This is a friendly reminder to complete your registration for ${eventName}.`,
+    `This is a friendly reminder to complete your registration for ${inviteReminderEventPhrase(eventName, eventDate)}.`,
     "",
     "Your invitation includes a personal registration link created specifically for you. Please use the link below to confirm your attendance:",
     "",
@@ -974,11 +978,11 @@ function inviteReminderText({ firstName, eventName, registrationUrl }) {
   ].join("\n");
 }
 
-function inviteReminderHtml({ firstName, eventName, registrationUrl }) {
+function inviteReminderHtml({ firstName, eventName, eventDate, registrationUrl }) {
   return `
     <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.6;font-size:15px">
       <p>Hi ${escapeHtml(firstName)},</p>
-      <p>This is a friendly reminder to complete your registration for ${escapeHtml(eventName)}.</p>
+      <p>This is a friendly reminder to complete your registration for ${escapeHtml(inviteReminderEventPhrase(eventName, eventDate))}.</p>
       <p>Your invitation includes a personal registration link created specifically for you. Please use the link below to confirm your attendance:</p>
       <p><a href="${escapeHtml(registrationUrl)}" style="color:#1656d9">${escapeHtml(registrationUrl)}</a></p>
       <p>We look forward to having you join us. If you have any trouble registering, please reply to this email for assistance.</p>
@@ -1094,10 +1098,11 @@ async function sendInviteReminderEmail(env, payload = {}, origin = "") {
   if (!isEmail(toEmail)) throw new Error("This invite does not have a valid email address on file.");
 
   const eventName = cleanString(invite.eventName, 240) || "your upcoming event";
+  const eventDate = cleanString(invite.eventDate, 120);
   const firstName = inviteReminderFirstName(invite);
   const registrationUrl = inviteRegistrationUrl(cleanString(payload.origin, 200) || origin, invite);
 
-  const context = { firstName, eventName, registrationUrl };
+  const context = { firstName, eventName, eventDate, registrationUrl };
   await sendResendEmail(env, {
     to: toEmail,
     subject: `Reminder: complete your registration for ${eventName}`,
