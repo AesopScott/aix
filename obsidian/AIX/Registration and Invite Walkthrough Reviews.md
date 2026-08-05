@@ -15,6 +15,7 @@ Key decisions captured:
 - Note that staff-created invite links are event-tied, while member-created guest/member links currently do not require event selection.
 - Preserve the production CRM ambiguity from the existing handoff as a review risk for team-created links.
 - Added a tabbed static walkthrough review page at `/walkthrough/`, classified as a Mojo team route in access-control defaults.
+- Added per-review-item `Complete` and `Update Needed` checkboxes on `/walkthrough/`, with browser-local persistence for lightweight review progress.
 
 Next useful pass:
 
