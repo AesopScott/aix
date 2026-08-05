@@ -3,21 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MOJO AI Summits: Where Executive Leaders Shape the Future of AI</title>
-<meta name="description" content="An invitation-only executive AI leadership gathering built around peer strategy, curated boardroom conversations, and high-value relationships. Dallas begins the 2027 season, followed by Denver, Raleigh, and Chicago.">
+<title>Executive Intelligence for the AI Era | MOJO AI Summits</title>
+<meta name="description" content="Mojo AI Summits is an executive connection and intelligence network that uses immersive experiences to accelerate decisions, partnerships, and innovation.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://mojoaisummits.com/">
-<meta property="og:title" content="MOJO AI Summits: Where Executive Leaders Shape the Future of AI">
-<meta property="og:description" content="An invitation-only executive AI leadership gathering built around peer strategy, curated boardroom conversations, and high-value relationships. Dallas begins the 2027 season, followed by Denver, Raleigh, and Chicago.">
-<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260731b">
+<meta property="og:title" content="Executive Intelligence for the AI Era | MOJO AI Summits">
+<meta property="og:description" content="Mojo AI Summits is an executive connection and intelligence network that uses immersive experiences to accelerate decisions, partnerships, and innovation.">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+<meta property="og:image:secure_url" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Where executive leaders shape the future of AI">
+<meta property="og:image:alt" content="Executive Intelligence for the AI Era by MOJO AI Summits">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MOJO AI Summits: Where Executive Leaders Shape the Future of AI">
-<meta name="twitter:description" content="An invitation-only executive AI leadership gathering built around peer strategy, curated boardroom conversations, and high-value relationships. Dallas begins the 2027 season, followed by Denver, Raleigh, and Chicago.">
-<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260731b">
-<meta name="twitter:image:alt" content="Where executive leaders shape the future of AI">
+<meta name="twitter:title" content="Executive Intelligence for the AI Era | MOJO AI Summits">
+<meta name="twitter:description" content="Mojo AI Summits is an executive connection and intelligence network that uses immersive experiences to accelerate decisions, partnerships, and innovation.">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+<meta name="twitter:image:alt" content="Executive Intelligence for the AI Era by MOJO AI Summits">
 <link rel="icon" type="image/png" href="/assets/logo-badge.png">
 <link rel="apple-touch-icon" href="/assets/logo-badge.png">
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
@@ -309,7 +311,7 @@
 
   .logo-stage{
     perspective: 1200px;
-    margin-bottom: 18px;
+    margin:0;
     position:relative;
     isolation:isolate;
   }
@@ -376,6 +378,40 @@
     width:100%; display:block;
     position:relative; z-index:2;
   }
+  .hero-video-lockup{
+    width:min(960px, 92vw);
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) minmax(220px, 300px);
+    align-items:center;
+    gap:clamp(24px, 5vw, 64px);
+    margin:0 auto 22px;
+  }
+  .hero-brand-aside{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:18px;
+    min-height:230px;
+  }
+  .icebreaker-line{
+    margin:0;
+    color:var(--white);
+    font-family:'Fraunces', serif;
+    font-size:clamp(22px, 2.4vw, 34px);
+    font-weight:600;
+    line-height:1.08;
+    text-align:center;
+  }
+  .icebreaker-line strong,
+  .icebreaker-line span{
+    display:block;
+  }
+  .icebreaker-line span{
+    margin-top:8px;
+    color:#cdd3e0;
+    font-style:italic;
+  }
 
   .hero h1{
     margin-top: 6px;
@@ -426,9 +462,9 @@
   }
   .hero-boardroom{
     position:relative;
-    width: min(600px, 60vw);
+    width:100%;
     height: 280px;
-    margin: 24px auto -20px;
+    margin:0;
     pointer-events:none;
     z-index:0;
   }
@@ -447,7 +483,14 @@
     filter: saturate(.5) brightness(.8) contrast(1.15) hue-rotate(160deg) drop-shadow(0 34px 60px rgba(0,0,0,.7));
   }
   @media (max-width:860px){
-    .hero-boardroom{ width:100vw; height:170px; margin:20px 0 -30px; }
+    .hero-video-lockup{
+      grid-template-columns:1fr;
+      gap:18px;
+      margin-bottom:24px;
+    }
+    .hero-brand-aside{ min-height:0; }
+    .hero-boardroom{ width:100%; height:170px; margin:0; }
+    .icebreaker-line{ font-size:clamp(21px, 7vw, 30px); }
   }
   .hero-sub, .hero-cta-row{
     opacity:0;
@@ -1683,6 +1726,18 @@
     *{ animation: none !important; transition: none !important; }
   }
 </style>
+<style>
+/* Page navigation exit indicators: show when a top-nav link leaves the current section. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
+  content: " >";
+  display: inline-block;
+  margin-left: .35em;
+  color: currentColor;
+}
+</style>
 </head>
 <body id="top">
 
@@ -1764,14 +1819,22 @@
       <span class="edge-moment left">The moment two competitors admit they have the same problem.</span>
       <span class="edge-moment right">The moment an investor spots the company everyone missed.</span>
     </div>
-    <div class="logo-stage" id="logoStage">
-      <div class="logo-tilt" id="logoTilt">
-        <img src="assets/logo-badge-dark.png" alt="MOJO AI Summits badge">
+    <div class="hero-video-lockup">
+      <div class="hero-boardroom" aria-hidden="true"><img src="assets/boardroom-transparent.png" alt=""></div>
+      <div class="hero-brand-aside">
+        <div class="logo-stage" id="logoStage">
+          <div class="logo-tilt" id="logoTilt">
+            <img src="assets/logo-badge-dark.png" alt="MOJO AI Summits badge">
+          </div>
+        </div>
+        <p class="icebreaker-line">
+          <strong>Profanity breaks the ice.</strong>
+          <span>Unity breaks barriers.</span>
+        </p>
       </div>
     </div>
     <span class="eyebrow"><span>Invitation only</span></span>
     <h1><span class="word" style="animation-delay:.05s">Where</span> <span class="word" style="animation-delay:.11s">executive</span> <span class="word" style="animation-delay:.17s">leaders</span> <span class="word" style="animation-delay:.23s">shape</span><br><span class="word grad ai-shimmer" data-text="the" style="animation-delay:.30s">the</span> <span class="word grad ai-shimmer" data-text="future" style="animation-delay:.37s">future</span> <span class="word grad ai-shimmer" data-text="of AI" style="animation-delay:.44s">of AI</span></h1>
-    <div class="hero-boardroom" aria-hidden="true"><img src="assets/boardroom-transparent.png" alt=""></div>
     <p class="hero-sub">Mojo AI Summits is an executive connection and intelligence network that uses immersive experiences to accelerate decisions, partnerships, and innovation.</p>
     <div class="hero-cta-row">
       <button type="button" class="btn-primary" data-modal-open="inviteRequestModal">Request an Invite</button>

@@ -45,8 +45,13 @@ export function renderVirtualEventPage(slug) {
   <meta property="og:type" content="website">
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(event.summary)}">
-  <meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png">
+  <meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+  <meta property="og:image:secure_url" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
   <link rel="icon" type="image/png" href="/assets/logo-badge.png">
   <link rel="apple-touch-icon" href="/assets/logo-badge.png">
   <style>

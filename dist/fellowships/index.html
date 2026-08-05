@@ -9,14 +9,16 @@
 <meta property="og:url" content="https://mojoaisummits.com/fellowships/">
 <meta property="og:title" content="Executive Fellowship Levels | MOJO AI Summits">
 <meta property="og:description" content="The contribution pathway for MOJO AI Summits members, from Fellow to Distinguished Fellow.">
-<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260731b">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+<meta property="og:image:secure_url" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="MOJO AI Summits executive fellowship pathway">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Executive Fellowship Levels | MOJO AI Summits">
 <meta name="twitter:description" content="The contribution pathway for MOJO AI Summits members, from Fellow to Distinguished Fellow.">
-<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260731b">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
 <link rel="icon" type="image/png" href="/assets/logo-badge.png">
 <link rel="apple-touch-icon" href="/assets/logo-badge.png">
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
@@ -243,7 +245,7 @@
     min-height:610px;
     display:flex;
     flex-direction:column;
-    align-items:flex-end;
+    align-items:center;
     justify-content:center;
   }
   .signal-panel{
@@ -257,7 +259,7 @@
     display:block;
     width:min(560px, 44vw);
     max-width:none;
-    margin:0 -4px 24px 0;
+    margin:0 0 24px;
     border:0;
     border-radius:8px;
     background:#fff;
@@ -550,7 +552,7 @@
     .hero-grid,.tier,.tier-columns,.badge-grid,.impact-grid,.signal-list,.profile-stats{ grid-template-columns:1fr; }
     .hero-visual{ min-height:auto; align-items:flex-start; justify-content:start; }
     .signal-panel{ margin-top:30px; }
-    .pathway-preview{ width:min(100%, 680px); margin:30px 0 0; }
+    .pathway-preview{ width:min(100%, 680px); margin:30px 0 0; transform:none; }
     .impact-note{ position:relative; top:auto; }
   }
   @media (max-width:720px){
@@ -566,6 +568,18 @@
   @media (prefers-reduced-motion:reduce){
     *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
   }
+</style>
+<style>
+/* Page navigation exit indicators: show when a top-nav link leaves the current section. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
+  content: " >";
+  display: inline-block;
+  margin-left: .35em;
+  color: currentColor;
+}
 </style>
 </head>
 <body>
