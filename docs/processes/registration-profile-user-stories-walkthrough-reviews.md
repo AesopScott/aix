@@ -6,6 +6,8 @@ This review covers the public registration paths, private profile access paths, 
 
 HTML implementation: `/walkthrough/`
 
+Review UI note: each walkthrough review check renders with `Complete` and `Update Needed` checkboxes. The HTML page stores those statuses in browser local storage for lightweight reviewer progress tracking.
+
 ## Source Surfaces
 
 - Public pages: `/guest/`, `/member-registration/`, `/partners/`, `/partner-registration/`

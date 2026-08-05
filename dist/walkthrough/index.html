@@ -393,6 +393,71 @@
       font-weight: 800;
     }
 
+    .review-checklist {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .review-check {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid rgba(0,230,255,.16);
+      border-radius: 8px;
+      background: rgba(10,15,30,.46);
+    }
+
+    .review-check + .review-check {
+      margin-top: 0;
+    }
+
+    .review-check-text {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .review-statuses {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .review-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid rgba(0,230,255,.22);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(27,35,51,.58);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      user-select: none;
+    }
+
+    .review-status input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--cyan);
+    }
+
+    .review-status:has(input:checked) {
+      color: var(--white);
+      border-color: var(--line-strong);
+      background: rgba(22,102,255,.2);
+    }
+
     .standards,
     .qa {
       display: grid;
@@ -469,6 +534,14 @@
 
       .section {
         padding: 16px;
+      }
+
+      .review-check {
+        grid-template-columns: 1fr;
+      }
+
+      .review-statuses {
+        justify-content: flex-start;
       }
     }
   </style>
@@ -781,6 +854,78 @@
       return `<${tag}>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</${tag}>`;
     }
 
+    function reviewInputId(panelId, checkIndex, status) {
+      return `${panelId}-check-${checkIndex}-${status}`;
+    }
+
+    function renderReviewChecklist(item) {
+      return `
+        <ul class="review-checklist">
+          ${item.checks.map((check, checkIndex) => {
+            const completeId = reviewInputId(item.id, checkIndex, "complete");
+            const updateId = reviewInputId(item.id, checkIndex, "update");
+            return `
+              <li class="review-check">
+                <span class="review-check-text">${escapeHtml(check)}</span>
+                <span class="review-statuses" aria-label="Review status for ${escapeHtml(check)}">
+                  <label class="review-status" for="${escapeHtml(completeId)}">
+                    <input id="${escapeHtml(completeId)}" type="checkbox" data-review-status="complete" data-review-key="${escapeHtml(item.id)}:${checkIndex}">
+                    Complete
+                  </label>
+                  <label class="review-status" for="${escapeHtml(updateId)}">
+                    <input id="${escapeHtml(updateId)}" type="checkbox" data-review-status="update" data-review-key="${escapeHtml(item.id)}:${checkIndex}">
+                    Update Needed
+                  </label>
+                </span>
+              </li>
+            `;
+          }).join("")}
+        </ul>
+      `;
+    }
+
+    function storageKeyForReview(key) {
+      return `mojo-walkthrough-review:${key}`;
+    }
+
+    function readSavedReviewStatus(key) {
+      try {
+        return localStorage.getItem(storageKeyForReview(key));
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function writeSavedReviewStatus(key, status) {
+      try {
+        if (status) localStorage.setItem(storageKeyForReview(key), status);
+        else localStorage.removeItem(storageKeyForReview(key));
+      } catch (_) {}
+    }
+
+    function reviewKeySelector(key) {
+      const escaped = window.CSS && typeof CSS.escape === "function"
+        ? CSS.escape(key)
+        : String(key).replace(/["\\]/g, "\\$&");
+      return `[data-review-key="${escaped}"]`;
+    }
+
+    function hydrateReviewStatuses() {
+      document.querySelectorAll("[data-review-key]").forEach((input) => {
+        const saved = readSavedReviewStatus(input.dataset.reviewKey);
+        input.checked = saved === input.dataset.reviewStatus;
+      });
+    }
+
+    function saveReviewStatus(input) {
+      const matchingInputs = document.querySelectorAll(reviewKeySelector(input.dataset.reviewKey));
+      matchingInputs.forEach((candidate) => {
+        if (candidate !== input) candidate.checked = false;
+      });
+
+      writeSavedReviewStatus(input.dataset.reviewKey, input.checked ? input.dataset.reviewStatus : "");
+    }
+
     function activateTab(id, updateHash = true) {
       document.querySelectorAll("[role='tab']").forEach((button) => {
         const active = button.dataset.target === id;
@@ -831,11 +976,13 @@
                 <h3>Review Checks</h3>
                 <span class="pill">${item.checks.length} checks</span>
               </div>
-              ${renderList(item.checks, false)}
+              ${renderReviewChecklist(item)}
             </section>
           </div>
         </article>
       `).join("");
+
+      hydrateReviewStatuses();
     }
 
     render();
@@ -844,6 +991,12 @@
       const button = event.target.closest("[role='tab']");
       if (!button) return;
       activateTab(button.dataset.target);
+    });
+
+    panels.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-review-key]");
+      if (!input) return;
+      saveReviewStatus(input);
     });
 
     tabs.addEventListener("keydown", (event) => {
