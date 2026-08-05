@@ -906,6 +906,7 @@
         <div class="actions">
           <div class="sync-state" id="syncState" role="status">Checking shared sync...</div>
           <a class="action-btn" href="/setup/calendar/" style="text-decoration:none;">Calendar View</a>
+          <button class="action-btn" id="exportCsv" type="button">Export CSV</button>
           <button class="action-btn" id="clearStatuses" type="button">Clear Statuses</button>
           <button class="action-btn" id="resetAssignments" type="button">Reset Assignments</button>
           <button class="action-btn" type="button" onclick="window.print()">Print</button>
@@ -2452,6 +2453,44 @@ The following decisions should not be made by one owner alone:
         closeSupportPickers();
       }
     });
+
+    function csvField(value) {
+      const text = String(value ?? "");
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function exportVisibleItemsToCsv() {
+      const csvColumns = ["Phase", "Subsection", "Item", "Owner", "Support", "Priority", "Deliverable", "Expected Delivery Date", "Status"];
+      const rows = Array.from(document.querySelectorAll(".item"))
+        .filter((row) => !row.classList.contains("hidden"))
+        .map((row) => itemById.get(row.dataset.itemId))
+        .filter(Boolean)
+        .map((item) => [
+          item.phase,
+          item.subsection,
+          item.text,
+          item.owner,
+          item.support,
+          item.priority,
+          item.deliverable,
+          item.dueDate,
+          item.status
+        ].map(csvField).join(","));
+
+      const csv = [csvColumns.map(csvField).join(","), ...rows].join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `mojo-event-checklist-${stamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("exportCsv").addEventListener("click", exportVisibleItemsToCsv);
 
     document.getElementById("clearStatuses").addEventListener("click", () => {
       allItems.forEach((item) => {
