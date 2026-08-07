@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "serve", "dist", "-l", "5050"],
       "port": 5050
+    },
+    {
+      "name": "wrangler-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "wrangler", "pages", "dev", "dist", "--port", "5051"],
+      "port": 5051
     }
   ]
 }

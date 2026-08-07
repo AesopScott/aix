@@ -14,7 +14,14 @@ const folderLabels = {
   membership: "Membership",
   marketing: "Marketing",
   receipts: "Receipts",
-  archive: "Archive"
+  archive: "Archive",
+  "leadership-os": "Leadership OS",
+  templates: "Templates",
+  legal: "Legal",
+  finance: "Finance",
+  crm: "CRM",
+  programming: "Programming",
+  operations: "Operations"
 };
 
 const allowedFolders = new Set(Object.keys(folderLabels));
@@ -24,8 +31,24 @@ const receiptEvents = {
   dallas: "Dallas",
   denver: "Denver",
   raleigh: "Raleigh",
-  chicago: "Chicago"
+  chicago: "Chicago",
+  virtual: "Virtual"
 };
+
+const fileStatuses = {
+  draft: "Draft",
+  review: "Review",
+  approved: "Approved",
+  active: "Active",
+  superseded: "Superseded",
+  archived: "Archived",
+  paid: "Paid",
+  due: "Due"
+};
+
+const allowedStatuses = new Set(Object.keys(fileStatuses));
+const DEFAULT_STATUS = "draft";
+const FOLDER_MARKER_NAME = ".folder";
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -75,6 +98,23 @@ function safeSegment(value, fallback) {
   return clean || fallback;
 }
 
+function safeFolderPath(value) {
+  const clean = String(value || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((part) => safeSegment(part, ""))
+    .filter(Boolean)
+    .join("/")
+    .slice(0, 200);
+
+  return clean;
+}
+
+function isFolderMarkerKey(key) {
+  return String(key || "").split("/").pop() === FOLDER_MARKER_NAME;
+}
+
 function safeKey(value) {
   const key = String(value || "").trim().replace(/^\/+/, "");
   if (!key || key.includes("..") || key.includes("\\") || key.length > 1024) return "";
@@ -103,6 +143,8 @@ function objectToRecord(object) {
     event: object.customMetadata?.event || "",
     receiptOwner: object.customMetadata?.receiptOwner || "",
     receiptEvent: object.customMetadata?.receiptEvent || "",
+    receiptDescription: object.customMetadata?.receiptDescription || "",
+    status: object.customMetadata?.status || DEFAULT_STATUS,
     submitter: object.customMetadata?.uploadedBy || object.customMetadata?.submitter || "",
     size: object.size,
     uploaded: object.uploaded ? object.uploaded.toISOString() : "",
@@ -144,14 +186,58 @@ function recordSearchText(record) {
     record.area,
     record.event,
     record.receiptOwner,
-    record.receiptEvent
+    record.receiptEvent,
+    record.receiptDescription,
+    record.status
   ].join(" ").toLowerCase();
+}
+
+async function listFolders(request, env, access) {
+  const url = new URL(request.url);
+  const rawPrefix = safeKey(url.searchParams.get("prefix") || "");
+  const prefix = rawPrefix === "all" ? "" : rawPrefix;
+  if (!prefix) return json({ folders: [] });
+  if (isPrivateKey(prefix) && !isAdminAccess(access)) return privateAccessError();
+
+  const normalizedPrefix = prefix.endsWith("/") ? prefix : `${prefix}/`;
+  const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix: normalizedPrefix, delimiter: "/" });
+  const folders = (result.delimitedPrefixes || [])
+    .map((entry) => entry.slice(normalizedPrefix.length).replace(/\/$/, ""))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  return json({ folders });
+}
+
+async function createFolder(request, env, access, form) {
+  const area = allowedFolders.has(String(form.get("area") || "")) ? String(form.get("area")) : "";
+  if (!area) return json({ error: "Choose a storage area." }, { status: 400 });
+  if (area === "private" && !isAdminAccess(access)) return privateAccessError();
+
+  const folderPath = safeFolderPath(form.get("folder"));
+  if (!folderPath) return json({ error: "Enter a folder name." }, { status: 400 });
+
+  const markerKey = `${area}/${folderPath}/${FOLDER_MARKER_NAME}`;
+  await env.MOJO_SUMMITS_STORAGE.put(markerKey, new Uint8Array(), {
+    customMetadata: {
+      area,
+      folderMarker: "true",
+      createdBy: access.email,
+      createdAt: new Date().toISOString()
+    }
+  });
+
+  return json({ ok: true, area, folder: folderPath });
 }
 
 async function listObjects(request, env, access) {
   const url = new URL(request.url);
   const rawPrefix = safeKey(url.searchParams.get("prefix") || "");
-  const prefix = rawPrefix === "all" ? "" : rawPrefix;
+  const areaPrefix = rawPrefix === "all" ? "" : rawPrefix;
+  const folder = safeFolderPath(url.searchParams.get("folder") || "");
+  const prefix = folder
+    ? `${areaPrefix.endsWith("/") ? areaPrefix : `${areaPrefix}/`}${folder}/`
+    : areaPrefix;
   const canReadPrivate = isAdminAccess(access);
   if (isPrivateKey(prefix) && !canReadPrivate) return privateAccessError();
 
@@ -169,6 +255,7 @@ async function listObjects(request, env, access) {
       limit
     });
     const records = result.objects
+      .filter((object) => !isFolderMarkerKey(object.key))
       .map(objectToRecord)
       .filter((record) => canReadPrivate || !isPrivateKey(record.key));
     objects.push(
@@ -186,7 +273,8 @@ async function listObjects(request, env, access) {
     objects: objects.slice(0, limit),
     truncated,
     cursor: nextCursor || "",
-    folders: folderLabels
+    folders: folderLabels,
+    statuses: fileStatuses
   });
 }
 
@@ -210,19 +298,48 @@ async function downloadObject(request, env, access) {
   return new Response(object.body, { headers });
 }
 
-async function renameObject(request, env, access) {
+async function updateObject(request, env, access) {
   const payload = await request.json().catch(() => null);
   const key = safeKey(payload?.key);
-  const requestedName = safeOriginalName(payload?.name);
-  const keyName = safeSegment(requestedName, "file");
   if (!key) return json({ error: "Expected a file key." }, { status: 400 });
   if (isPrivateKey(key) && !isAdminAccess(access)) return privateAccessError();
-  if (!requestedName || requestedName === "download") {
-    return json({ error: "Enter a file name." }, { status: 400 });
+
+  const hasName = Object.prototype.hasOwnProperty.call(payload || {}, "name");
+  const hasStatus = Object.prototype.hasOwnProperty.call(payload || {}, "status");
+  if (!hasName && !hasStatus) {
+    return json({ error: "Nothing to update." }, { status: 400 });
   }
 
   const object = await env.MOJO_SUMMITS_STORAGE.get(key);
   if (!object) return json({ error: "File not found." }, { status: 404 });
+
+  let status = object.customMetadata?.status || DEFAULT_STATUS;
+  if (hasStatus) {
+    const rawStatus = String(payload.status || "").toLowerCase();
+    if (!allowedStatuses.has(rawStatus)) {
+      return json({ error: "Enter a valid status." }, { status: 400 });
+    }
+    status = rawStatus;
+  }
+
+  if (!hasName) {
+    await env.MOJO_SUMMITS_STORAGE.put(key, object.body, {
+      httpMetadata: object.httpMetadata,
+      customMetadata: {
+        ...(object.customMetadata || {}),
+        status,
+        statusUpdatedBy: access.email,
+        statusUpdatedAt: new Date().toISOString()
+      }
+    });
+    return json({ ok: true, key, status });
+  }
+
+  const requestedName = safeOriginalName(payload?.name);
+  const keyName = safeSegment(requestedName, "file");
+  if (!requestedName || requestedName === "download") {
+    return json({ error: "Enter a file name." }, { status: 400 });
+  }
 
   const { directory, fileName } = splitKey(key);
   const nextKey = safeKey(`${directory}${generatedNamePrefix(fileName)}${keyName}`);
@@ -234,11 +351,12 @@ async function renameObject(request, env, access) {
       customMetadata: {
         ...(object.customMetadata || {}),
         originalName: requestedName,
+        status,
         renamedBy: access.email,
         renamedAt: new Date().toISOString()
       }
     });
-    return json({ ok: true, key, previousKey: key, name: requestedName });
+    return json({ ok: true, key, previousKey: key, name: requestedName, status });
   }
 
   const existing = await env.MOJO_SUMMITS_STORAGE.head(nextKey);
@@ -249,6 +367,7 @@ async function renameObject(request, env, access) {
     customMetadata: {
       ...(object.customMetadata || {}),
       originalName: requestedName,
+      status,
       renamedFrom: key,
       renamedBy: access.email,
       renamedAt: new Date().toISOString()
@@ -256,7 +375,7 @@ async function renameObject(request, env, access) {
   });
   await env.MOJO_SUMMITS_STORAGE.delete(key);
 
-  return json({ ok: true, key: nextKey, previousKey: key, name: requestedName });
+  return json({ ok: true, key: nextKey, previousKey: key, name: requestedName, status });
 }
 
 export async function onRequestGet({ request, env, data }) {
@@ -268,6 +387,7 @@ export async function onRequestGet({ request, env, data }) {
 
   const url = new URL(request.url);
   if (url.searchParams.has("key")) return downloadObject(request, env, access);
+  if (url.searchParams.get("mode") === "folders") return listFolders(request, env, access);
 
   return listObjects(request, env, access);
 }
@@ -280,7 +400,11 @@ export async function onRequestPost({ request, env, data }) {
   if (bucketError) return bucketError;
 
   const form = await request.formData().catch(() => null);
-  const file = form?.get("file");
+  if (!form) return json({ error: "Expected form data." }, { status: 400 });
+
+  if (form.get("mode") === "folder") return createFolder(request, env, access, form);
+
+  const file = form.get("file");
 
   if (!file || typeof file.name !== "string" || typeof file.stream !== "function") {
     return json({ error: "Choose a file to upload." }, { status: 400 });
@@ -298,7 +422,16 @@ export async function onRequestPost({ request, env, data }) {
     ? rawReceiptEvent
     : "";
   const receiptEvent = receiptEventKey ? receiptEvents[receiptEventKey] : "";
-  const event = area === "receipts" ? receiptOwner || "unassigned" : safeSegment(form.get("event"), "company");
+  const receiptDescription = String(form.get("receiptDescription") || "").trim().slice(0, 500);
+  if (area === "receipts" && !receiptDescription) {
+    return json({ error: "Enter a receipt description." }, { status: 400 });
+  }
+  const rawStatus = String(form.get("status") || "").toLowerCase();
+  const status = allowedStatuses.has(rawStatus) ? rawStatus : DEFAULT_STATUS;
+  const folder = safeFolderPath(form.get("folder"));
+  const event = area === "receipts"
+    ? receiptOwner || "unassigned"
+    : folder || safeFolderPath(form.get("event")) || "company";
   const trackedEvent = area === "receipts" ? receiptEvent : event;
   const originalName = safeSegment(file.name, "file");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -316,11 +449,13 @@ export async function onRequestPost({ request, env, data }) {
       event: trackedEvent,
       receiptOwner,
       receiptEvent,
-      receiptEventKey
+      receiptEventKey,
+      receiptDescription,
+      status
     }
   });
 
-  return json({ ok: true, key, name: file.name });
+  return json({ ok: true, key, name: file.name, status });
 }
 
 export async function onRequestDelete({ request, env, data }) {
@@ -346,5 +481,5 @@ export async function onRequestPatch({ request, env, data }) {
   const bucketError = requireBucket(env);
   if (bucketError) return bucketError;
 
-  return renameObject(request, env, access);
+  return updateObject(request, env, access);
 }

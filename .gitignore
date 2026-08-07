@@ -1,5 +1,6 @@
 .env
 .env.*
+.dev.vars
 repository.env
 !.env.example
 .wrangler/

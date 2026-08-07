@@ -245,6 +245,11 @@
       gap: 1rem;
     }
 
+    label.required-field span::after {
+      content: " *";
+      color: var(--cyan, #1666ff);
+    }
+
     .receipt-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -260,7 +265,7 @@
 
     .row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 0.75rem;
     }
 
@@ -406,6 +411,26 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <option value="marketing">Marketing</option>
               <option value="receipts">Receipts</option>
               <option value="archive">Archive</option>
+              <option value="leadership-os">Leadership OS</option>
+              <option value="templates">Templates</option>
+              <option value="legal">Legal</option>
+              <option value="finance">Finance</option>
+              <option value="crm">CRM</option>
+              <option value="programming">Programming</option>
+              <option value="operations">Operations</option>
+            </select>
+          </label>
+          <label>
+            Status
+            <select name="status">
+              <option value="draft" selected>Draft</option>
+              <option value="review">Review</option>
+              <option value="approved">Approved</option>
+              <option value="active">Active</option>
+              <option value="superseded">Superseded</option>
+              <option value="archived">Archived</option>
+              <option value="paid">Paid</option>
+              <option value="due">Due</option>
             </select>
           </label>
           <label>
@@ -429,10 +454,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <option value="denver">Denver</option>
               <option value="raleigh">Raleigh</option>
               <option value="chicago">Chicago</option>
+              <option value="virtual">Virtual</option>
             </select>
           </label>
           <label>
-            Event, city, or folder
+            <span>Receipt description</span>
+            <input name="receiptDescription" id="receiptDescription" placeholder="What was this for?" maxlength="500">
+          </label>
+          <label>
+            Folder
+            <select id="uploadFolder" name="folder">
+              <option value="" selected>&lt;top level&gt;</option>
+            </select>
+          </label>
+          <label>
+            Event, city, or folder (used if no folder selected above)
             <input name="event" placeholder="company, dallas-2027, sponsor-board">
           </label>
           <label>
@@ -442,6 +478,37 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button type="submit">Upload File</button>
         </form>
         <div id="uploadNotice" class="notice">Storage operations require a Mojo Auth session.</div>
+
+        <h2 style="margin-top: 1.5rem;">Create Folder</h2>
+        <form id="folderForm">
+          <label>
+            Storage area
+            <select id="folderArea" name="area">
+              <option value="private">Private company records</option>
+              <option value="event-assets">Event assets</option>
+              <option value="media">Media</option>
+              <option value="public-assets">Public assets</option>
+              <option value="partners">Partners</option>
+              <option value="membership">Membership</option>
+              <option value="marketing">Marketing</option>
+              <option value="receipts">Receipts</option>
+              <option value="archive">Archive</option>
+              <option value="leadership-os">Leadership OS</option>
+              <option value="templates">Templates</option>
+              <option value="legal">Legal</option>
+              <option value="finance">Finance</option>
+              <option value="crm">CRM</option>
+              <option value="programming">Programming</option>
+              <option value="operations">Operations</option>
+            </select>
+          </label>
+          <label>
+            Folder name or path
+            <input name="folder" placeholder="dallas-2027, sponsor-board/decks" required>
+          </label>
+          <button type="submit" class="secondary">Create Folder</button>
+        </form>
+        <div id="folderNotice" class="notice"></div>
       </section>
 
       <section class="panel">
@@ -461,6 +528,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 <option value="marketing/">Marketing</option>
                 <option value="receipts/">Receipts</option>
                 <option value="archive/">Archive</option>
+                <option value="leadership-os/">Leadership OS</option>
+                <option value="templates/">Templates</option>
+                <option value="legal/">Legal</option>
+                <option value="finance/">Finance</option>
+                <option value="crm/">CRM</option>
+                <option value="programming/">Programming</option>
+                <option value="operations/">Operations</option>
+              </select>
+            </label>
+            <label>
+              Folder
+              <select id="folderFilter">
+                <option value="" selected>All folders</option>
               </select>
             </label>
             <label>
@@ -485,6 +565,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <tr>
                 <th>File</th>
                 <th>Event</th>
+                <th>Status</th>
                 <th>Submitter</th>
                 <th>Size</th>
                 <th>Uploaded</th>
@@ -502,15 +583,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const api = "/api/storage";
     const uploadForm = document.querySelector("#uploadForm");
     const uploadNotice = document.querySelector("#uploadNotice");
+    const areaSelect = uploadForm.querySelector('select[name="area"]');
+    const receiptDescriptionInput = document.querySelector("#receiptDescription");
+    const uploadFolderSelect = document.querySelector("#uploadFolder");
+    const folderForm = document.querySelector("#folderForm");
+    const folderNotice = document.querySelector("#folderNotice");
+    const folderAreaSelect = document.querySelector("#folderArea");
     const listNotice = document.querySelector("#listNotice");
     const tableWrap = document.querySelector("#tableWrap");
     const fileRows = document.querySelector("#fileRows");
     const prefixFilter = document.querySelector("#prefixFilter");
+    const folderFilter = document.querySelector("#folderFilter");
     const prefixSearch = document.querySelector("#prefixSearch");
     const refreshButton = document.querySelector("#refreshButton");
     const receiptButtons = document.querySelectorAll("[data-receipts]");
     const privateOptions = document.querySelectorAll('option[value="private"], option[value="private/"]');
-    const state = { isAdmin: false };
+    const state = { isAdmin: false, statuses: {} };
     let searchTimer;
 
     function formatBytes(size) {
@@ -605,6 +693,53 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return prefixSearch.value.trim();
     }
 
+    function activeFolder() {
+      return folderFilter.value;
+    }
+
+    function statusLabel(key) {
+      return state.statuses[key] || key || "Draft";
+    }
+
+    function statusOptionsHtml(selected) {
+      const entries = Object.keys(state.statuses).length
+        ? Object.entries(state.statuses)
+        : [["draft", "Draft"]];
+      return entries
+        .map(([value, label]) => `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(label)}</option>`)
+        .join("");
+    }
+
+    async function loadFolders(areaPrefix, selectEl, { placeholder = "<top level>", allowCreate = false } = {}) {
+      const previous = selectEl.value;
+      selectEl.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>`;
+
+      if (!areaPrefix || areaPrefix === "all") {
+        selectEl.disabled = true;
+        return;
+      }
+
+      selectEl.disabled = false;
+
+      try {
+        const url = new URL(api, window.location.origin);
+        url.searchParams.set("mode", "folders");
+        url.searchParams.set("prefix", areaPrefix.replace(/\/$/, ""));
+        const data = await fetch(url).then(readJson);
+        (data.folders || []).forEach((folder) => {
+          const option = document.createElement("option");
+          option.value = folder;
+          option.textContent = folder;
+          selectEl.appendChild(option);
+        });
+        if ([...selectEl.options].some((option) => option.value === previous)) {
+          selectEl.value = previous;
+        }
+      } catch {
+        // Leave the top-level option as the only choice if folders can't be loaded.
+      }
+    }
+
     async function loadFiles() {
       setNotice(listNotice, "Loading files...");
       tableWrap.hidden = true;
@@ -613,9 +748,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       try {
         const url = new URL(api, window.location.origin);
         url.searchParams.set("prefix", activePrefix());
+        const folder = activeFolder();
+        if (folder) url.searchParams.set("folder", folder);
         const search = activeSearch();
         if (search) url.searchParams.set("search", search);
         const data = await fetch(url).then(readJson);
+        if (data.statuses) state.statuses = data.statuses;
 
         if (!data.objects.length) {
           setNotice(listNotice, "No files found for this storage area.");
@@ -629,6 +767,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <tr>
               <td class="file-key" title="${escapeHtml(file.key)}">${escapeHtml(displayName(file))}</td>
               <td>${escapeHtml(file.receiptEvent || file.event || "")}</td>
+              <td>
+                <select data-status="${encodeURIComponent(file.key)}">
+                  ${statusOptionsHtml(file.status)}
+                </select>
+              </td>
               <td>${escapeHtml(file.submitter || "")}</td>
               <td>${formatBytes(file.size)}</td>
               <td>${file.uploaded ? new Date(file.uploaded).toLocaleString() : ""}</td>
@@ -651,6 +794,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    function updateReceiptDescriptionRequirement() {
+      const isReceipts = areaSelect.value === "receipts";
+      receiptDescriptionInput.required = isReceipts;
+      receiptDescriptionInput.closest("label").classList.toggle("required-field", isReceipts);
+    }
+
+    function areaToPrefix(areaValue) {
+      return areaValue ? `${areaValue}/` : "";
+    }
+
+    areaSelect.addEventListener("change", () => {
+      updateReceiptDescriptionRequirement();
+      loadFolders(areaToPrefix(areaSelect.value), uploadFolderSelect, { placeholder: "<top level>" });
+    });
+    updateReceiptDescriptionRequirement();
+    loadFolders(areaToPrefix(areaSelect.value), uploadFolderSelect, { placeholder: "<top level>" });
+
     uploadForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(uploadForm);
@@ -658,6 +818,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
       if (!file || !file.name) {
         setNotice(uploadNotice, "Choose a file first.", "error");
+        return;
+      }
+
+      if (areaSelect.value === "receipts" && !String(formData.get("receiptDescription") || "").trim()) {
+        setNotice(uploadNotice, "Enter a receipt description.", "error");
+        receiptDescriptionInput.focus();
         return;
       }
 
@@ -676,6 +842,39 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           setAuthNotice(uploadNotice, error.message);
         } else {
           setNotice(uploadNotice, error.message, "error");
+        }
+      }
+    });
+
+    folderForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(folderForm);
+      formData.set("mode", "folder");
+      const folderName = String(formData.get("folder") || "").trim();
+
+      if (!folderName) {
+        setNotice(folderNotice, "Enter a folder name.", "error");
+        return;
+      }
+
+      setNotice(folderNotice, "Creating folder...");
+
+      try {
+        const data = await fetch(api, { method: "POST", body: formData }).then(readJson);
+        setNotice(folderNotice, `Created folder ${data.folder}.`, "ok");
+        folderForm.reset();
+
+        if (folderAreaSelect.value === areaSelect.value) {
+          await loadFolders(areaToPrefix(areaSelect.value), uploadFolderSelect, { placeholder: "<top level>" });
+        }
+        if (`${folderAreaSelect.value}/` === activePrefix()) {
+          await loadFolders(activePrefix(), folderFilter, { placeholder: "All folders" });
+        }
+      } catch (error) {
+        if (/sign in/i.test(error.message)) {
+          setAuthNotice(folderNotice, error.message);
+        } else {
+          setNotice(folderNotice, error.message, "error");
         }
       }
     });
@@ -736,8 +935,36 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     });
 
+    fileRows.addEventListener("change", async (event) => {
+      const statusKey = event.target.dataset.status;
+      if (!statusKey) return;
+
+      const key = decodeURIComponent(statusKey);
+      const status = event.target.value;
+
+      try {
+        await fetch(api, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ key, status })
+        }).then(readJson);
+        setNotice(listNotice, `Updated status to ${statusLabel(status)}.`, "ok");
+      } catch (error) {
+        if (/sign in/i.test(error.message)) {
+          setAuthNotice(listNotice, error.message);
+        } else {
+          setNotice(listNotice, error.message, "error");
+        }
+        await loadFiles();
+      }
+    });
+
     refreshButton.addEventListener("click", loadFiles);
-    prefixFilter.addEventListener("change", loadFiles);
+    prefixFilter.addEventListener("change", () => {
+      loadFolders(activePrefix(), folderFilter, { placeholder: "All folders" });
+      loadFiles();
+    });
+    folderFilter.addEventListener("change", loadFiles);
     prefixSearch.addEventListener("input", () => {
       window.clearTimeout(searchTimer);
       searchTimer = window.setTimeout(loadFiles, 250);
@@ -745,10 +972,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     receiptButtons.forEach((button) => {
       button.addEventListener("click", () => {
         prefixFilter.value = "receipts/";
+        loadFolders(activePrefix(), folderFilter, { placeholder: "All folders" });
         prefixSearch.value = `receipts/${button.dataset.receipts}/`;
         loadFiles();
       });
     });
+    loadFolders(activePrefix(), folderFilter, { placeholder: "All folders" });
     loadSession().finally(loadFiles);
   </script>
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
