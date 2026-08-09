@@ -9,6 +9,8 @@ const resendCooldownSeconds = 60;
 const maxAttempts = 5;
 const encoder = new TextEncoder();
 const phoneDebugPrefix = "crm:phone-verification-debug";
+const verifiedPhonePrefix = "sms:verified-phone:";
+const verifiedPhoneObjectPrefix = "sms/verified-phones";
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -130,6 +132,14 @@ async function codeHash(secret, phone, code, salt) {
 
 function verificationKey(phone) {
   return `phone-verification:${phone}`;
+}
+
+function verifiedPhoneKey(phone) {
+  return `${verifiedPhonePrefix}${phone.replace(/\D/g, "")}`;
+}
+
+function verifiedPhoneObjectKey(phone) {
+  return `${verifiedPhoneObjectPrefix}/${phone.replace(/\D/g, "")}.json`;
 }
 
 function maskPhone(phone) {
@@ -328,6 +338,38 @@ async function publishSms(config, phone, message) {
   }
 }
 
+async function upsertVerifiedPhone(env, phone, details = {}) {
+  if (!env?.MOJO_SUMMITS_STORAGE && !env?.MOJO_SUMMITS_SETUP_STATE) return;
+  const now = new Date().toISOString();
+  const r2Key = verifiedPhoneObjectKey(phone);
+  const kvKey = verifiedPhoneKey(phone);
+  const existingObject = env.MOJO_SUMMITS_STORAGE
+    ? await env.MOJO_SUMMITS_STORAGE.get(r2Key).catch(() => null)
+    : null;
+  const existing = existingObject
+    ? await existingObject.json().catch(() => null)
+    : await env.MOJO_SUMMITS_SETUP_STATE?.get(kvKey, "json").catch(() => null);
+  const record = {
+    ...(existing || {}),
+    phone,
+    status: "verified",
+    firstVerifiedAt: cleanString(existing?.firstVerifiedAt) || now,
+    lastVerifiedAt: now,
+    inviteCode: cleanString(details.inviteCode || existing?.inviteCode),
+    source: cleanString(details.source || existing?.source) || "phone-verification"
+  };
+
+  if (env.MOJO_SUMMITS_STORAGE?.put) {
+    await env.MOJO_SUMMITS_STORAGE.put(r2Key, JSON.stringify(record), {
+      httpMetadata: { contentType: "application/json; charset=utf-8" },
+      customMetadata: { area: "sms", kind: "verified-phone" }
+    });
+    return;
+  }
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(kvKey, JSON.stringify(record));
+}
+
 async function startVerification(phone, inviteCode, env) {
   const config = awsConfig(env);
   await writePhoneDebug(env, "start-received", {
@@ -514,6 +556,10 @@ async function confirmVerification(phone, code, env) {
   }
 
   await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+  await upsertVerifiedPhone(env, phone, {
+    inviteCode: record.inviteCode,
+    source: "phone-verification-confirm"
+  });
   await writePhoneDebug(env, "confirm-succeeded", {
     action: "confirm",
     phone,
