@@ -100,7 +100,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: minmax(0, 0.7fr) minmax(280px, 0.3fr);
+      grid-template-columns: minmax(240px, 0.32fr) minmax(340px, 0.43fr) minmax(260px, 0.25fr);
       gap: 1rem;
       align-items: start;
     }
@@ -149,7 +149,7 @@
     .notice.ok { color: var(--ok); }
     .notice.error { color: var(--danger); }
 
-    .recipient-list, .result-list {
+    .recipient-list, .registrant-list, .result-list {
       display: grid;
       gap: 0.55rem;
       max-height: 24rem;
@@ -166,6 +166,7 @@
     .row strong { color: var(--white); }
     .row span { color: var(--muted); font-size: 0.9rem; }
     .row.failed { border-color: rgba(255, 99, 123, 0.5); }
+    .row.not-ready { border-color: rgba(255, 99, 123, 0.36); }
 
     .checkbox-row {
       display: flex;
@@ -200,7 +201,7 @@
       <div>
         <p class="eyebrow">Verified phone sender</p>
         <h1>Send SMS updates.</h1>
-        <p>Messages go only to phone numbers that have completed registration phone verification.</p>
+        <p>Event reminders go only to verified phone numbers for the selected event. Additional event notices go to all verified registration phone numbers.</p>
       </div>
       <div class="metric">
         <strong id="recipientCount">0</strong>
@@ -209,12 +210,26 @@
     </section>
 
     <section class="grid">
+      <aside class="panel">
+        <div>
+          <p class="eyebrow">Registered for event</p>
+          <p id="eventRosterSummary">Select an event to review registrants.</p>
+        </div>
+        <div class="registrant-list" id="registrantList"></div>
+      </aside>
+
       <form class="panel" id="smsForm">
         <div class="field">
           <label for="messageType">Message type</label>
           <select id="messageType" name="type">
             <option value="event-reminder">Upcoming event reminder</option>
             <option value="additional-event-notice">Additional event notice</option>
+          </select>
+        </div>
+        <div class="field" id="eventField">
+          <label for="eventSelect">Event</label>
+          <select id="eventSelect" name="eventKey">
+            <option value="">Loading events...</option>
           </select>
         </div>
         <div class="field">
@@ -227,7 +242,7 @@
         </div>
         <label class="checkbox-row">
           <input type="checkbox" id="confirmSend">
-          <span>I understand this will send to every verified phone number listed for MOJO AI Summits registrations.</span>
+          <span id="confirmCopy">I understand this will send to verified phone numbers for the selected event.</span>
         </label>
         <button type="submit" class="danger" id="sendButton">Send SMS</button>
         <p class="notice" id="notice" aria-live="polite"></p>
@@ -263,7 +278,13 @@
     const sendButton = document.querySelector("#sendButton");
     const refreshButton = document.querySelector("#refreshButton");
     const confirmSend = document.querySelector("#confirmSend");
+    const confirmCopy = document.querySelector("#confirmCopy");
     const messageType = document.querySelector("#messageType");
+    const eventField = document.querySelector("#eventField");
+    const eventSelect = document.querySelector("#eventSelect");
+    const eventRosterSummary = document.querySelector("#eventRosterSummary");
+    const registrantList = document.querySelector("#registrantList");
+    let latestPayload = { events: [], recipients: [], registrations: [], summary: {} };
 
     function escapeHtml(value) {
       return String(value || "").replace(/[&<>"']/g, (character) => ({
@@ -296,11 +317,57 @@
         ? recipients.map((recipient) => `
             <div class="row">
               <strong>${escapeHtml(recipient.maskedPhone)}</strong>
-              <span>${escapeHtml((recipient.sources || []).join(", "))}</span>
+              <span>${escapeHtml(recipient.name || recipient.email || (recipient.sources || []).join(", "))}</span>
+              ${recipient.company ? `<span>${escapeHtml(recipient.company)}</span>` : ""}
               <span>${recipient.lastVerifiedAt ? `Verified ${escapeHtml(new Date(recipient.lastVerifiedAt).toLocaleString())}` : "Verified phone"}</span>
             </div>
           `).join("")
         : "<p>No verified phone numbers are available yet.</p>";
+    }
+
+    function renderEvents(payload) {
+      const events = payload.events || [];
+      const selectedValue = eventSelect.value;
+      eventSelect.innerHTML = [
+        '<option value="">Select an event...</option>',
+        ...events.map((event) => {
+          const label = `${event.eventName}${event.eventDate ? ` | ${event.eventDate}` : ""} (${event.verifiedPhoneCount}/${event.registeredCount} verified)`;
+          return `<option value="${escapeHtml(event.eventKey)}">${escapeHtml(label)}</option>`;
+        })
+      ].join("");
+      if (events.some((event) => event.eventKey === selectedValue)) eventSelect.value = selectedValue;
+    }
+
+    function renderRegistrants(payload) {
+      const registrations = payload.registrations || [];
+      const verifiedCount = registrations.filter((registration) => registration.phoneVerificationStatus === "verified").length;
+      eventRosterSummary.textContent = eventSelect.value
+        ? `${registrations.length} registered, ${verifiedCount} with verified phone numbers.`
+        : "Select an event to review registrants.";
+      registrantList.innerHTML = registrations.length
+        ? registrations.map((registration) => {
+            const ready = registration.phoneVerificationStatus === "verified";
+            return `
+              <div class="row ${ready ? "" : "not-ready"}">
+                <strong>${escapeHtml(registration.name || registration.email || "Unnamed registrant")}</strong>
+                <span>${escapeHtml([registration.company, registration.title].filter(Boolean).join(" | "))}</span>
+                <span>${escapeHtml(registration.role || "Guest")} | ${ready ? "SMS ready" : "No verified phone"}</span>
+              </div>
+            `;
+          }).join("")
+        : "<p>No registrants are loaded for this event yet.</p>";
+    }
+
+    function syncModeUi() {
+      const isEventReminder = messageType.value === "event-reminder";
+      eventField.style.display = isEventReminder ? "grid" : "none";
+      confirmCopy.textContent = isEventReminder
+        ? "I understand this will send to verified phone numbers for the selected event."
+        : "I understand this will send to every verified phone number listed for MOJO AI Summits registrations.";
+      if (!isEventReminder) {
+        eventRosterSummary.textContent = "Additional event notices are not limited to one event.";
+        registrantList.innerHTML = "<p>Switch to Upcoming event reminder and select an event to review registrants.</p>";
+      }
     }
 
     function renderResults(results = []) {
@@ -315,11 +382,16 @@
     }
 
     async function loadRecipients() {
-      setNotice("Loading verified phone numbers...");
+      setNotice("Loading SMS recipient data...");
       try {
-        const payload = await fetch(api).then(readJson);
+        const params = new URLSearchParams({ type: messageType.value });
+        if (messageType.value === "event-reminder" && eventSelect.value) params.set("eventKey", eventSelect.value);
+        const payload = await fetch(`${api}?${params}`).then(readJson);
+        latestPayload = payload;
+        renderEvents(payload);
+        renderRegistrants(payload);
         renderRecipients(payload);
-        setNotice("Verified phone numbers loaded.", "ok");
+        setNotice("SMS recipient data loaded.", "ok");
       } catch (error) {
         setNotice(error.message, "error");
       }
@@ -330,11 +402,23 @@
     });
 
     refreshButton.addEventListener("click", loadRecipients);
+    messageType.addEventListener("change", async () => {
+      syncModeUi();
+      await loadRecipients();
+    });
+    eventSelect.addEventListener("change", loadRecipients);
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (messageType.value === "event-reminder" && !eventSelect.value) {
+        setNotice("Select an event before sending an upcoming event reminder.", "error");
+        return;
+      }
       if (!confirmSend.checked) {
-        setNotice("Confirm that you want to send to all verified phone numbers.", "error");
+        setNotice(messageType.value === "event-reminder"
+          ? "Confirm that you want to send to verified phone numbers for the selected event."
+          : "Confirm that you want to send to all verified phone numbers.",
+        "error");
         return;
       }
       sendButton.disabled = true;
@@ -345,6 +429,7 @@
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             type: messageType.value,
+            eventKey: eventSelect.value,
             message: messageText.value
           })
         }).then(readJson);
@@ -361,6 +446,7 @@
     });
 
     renderResults();
+    syncModeUi();
     loadRecipients();
   </script>
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
