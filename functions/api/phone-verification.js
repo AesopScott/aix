@@ -32,7 +32,12 @@ function cleanEnvString(value) {
 }
 
 function cleanPhone(value) {
-  return cleanString(value).replace(/[^\d+]/g, "");
+  const normalized = cleanString(value).replace(/[^\d+]/g, "");
+  const digits = normalized.replace(/\D/g, "");
+  if (normalized.startsWith("+")) return `+${digits}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return normalized;
 }
 
 function isLikelyPhone(phone) {
@@ -51,7 +56,7 @@ function isSmsConfigured(env) {
 
 function awsConfig(env) {
   return {
-    region: cleanEnvString(env.AWS_REGION || env.AWS_SNS_REGION || "us-east-1"),
+    region: cleanEnvString(env.AWS_REGION || env.AWS_SNS_REGION || "us-east-2"),
     accessKeyId: cleanEnvString(env.AWS_ACCESS_KEY_ID || env.AWS_Client_Access_key || env.AWS_CLIENT_ACCESS_KEY),
     secretAccessKey: cleanEnvString(env.AWS_SECRET_ACCESS_KEY || env.AWS_Client_Secret_Access_key || env.AWS_CLIENT_SECRET_ACCESS_KEY),
     sessionToken: cleanEnvString(env.AWS_SESSION_TOKEN),
@@ -262,8 +267,11 @@ async function publishSms(config, phone, message) {
   try {
     return await sendSmsViaSmsVoiceV2(config, phone, message);
   } catch (v2Error) {
+    const fallbackConfig = config.originationNumber
+      ? { ...config, originationNumber: "" }
+      : config;
     try {
-      return await publishSmsViaSns(config, phone, message);
+      return await publishSmsViaSns(fallbackConfig, phone, message);
     } catch (snsError) {
       throw new Error(
         `SMS-Voice V2 failed (${v2Error?.message || v2Error}); SNS fallback also failed (${snsError?.message || snsError}).`
