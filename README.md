@@ -7,6 +7,10 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
 - AI Executive Readiness Online: https://mojoaisummits.com/ai-executive-readiness-online/
+- AI Use Cases That Survive Finance Online: https://mojoaisummits.com/ai-use-cases-that-survive-finance-online/
+- AI Integration and Workflow Online: https://mojoaisummits.com/ai-integration-and-workflow-online/
+- AI Security, Governance, and Trust Online: https://mojoaisummits.com/ai-security-governance-and-trust-online/
+- AI Operating Model for 2027 Online: https://mojoaisummits.com/ai-operating-model-for-2027-online/
 - Strategic intelligence partners: https://mojoaisummits.com/partners/
 - Partner pricing structure: https://mojoaisummits.com/partner-pricing/
 - Executive AI intelligence briefs: https://mojoaisummits.com/briefs/
@@ -136,7 +140,7 @@ Partner invite codes are generated inside the protected CRM and stored under `cr
 
 The public virtual event series route lives at `/virtual/`.
 
-The dedicated page for the first session lives at `/ai-executive-readiness-online/`. It positions the Friday, September 4, 2026 AI Executive Readiness event as an invitation-only moderated virtual roundtable for nine executives around adoption momentum, frontier model movement, AI value measurement, organizational ownership, AI output chain of custody, human review, workforce fear, and regulation.
+Dedicated public landing pages live at `/ai-executive-readiness-online/`, `/ai-use-cases-that-survive-finance-online/`, `/ai-integration-and-workflow-online/`, `/ai-security-governance-and-trust-online/`, and `/ai-operating-model-for-2027-online/`. Each positions the matching fall 2026 virtual event as an invitation-only moderated roundtable for nine executives and includes eight event-specific discussion questions.
 
 Confirmed virtual AI event dates:
 
