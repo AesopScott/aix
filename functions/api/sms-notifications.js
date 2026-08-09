@@ -65,6 +65,39 @@ function maskPhone(phone) {
   return `${"*".repeat(Math.max(0, digits.length - 4))}${digits.slice(-4)}`;
 }
 
+function cleanRole(value) {
+  const normalized = cleanString(value, 120).toLowerCase().replace(/[_-]+/g, " ");
+  if (normalized.includes("featured guest")) return "Featured Guest";
+  if (normalized.includes("presenter")) return "Presenter";
+  if (normalized.includes("round")) return "Round Table Leader";
+  if (normalized.includes("partner")) return "Partner Guest";
+  if (normalized.includes("member")) return "Member";
+  return "Guest";
+}
+
+function registrationRole(record = {}, type = "") {
+  if (record.isFeaturedGuest) return "Featured Guest";
+  if (record.isPresenter) return "Presenter";
+  if (record.isRoundtableLeader) return "Round Table Leader";
+  return cleanRole(record.registrationRole || record.guestRegistrationType || type);
+}
+
+function normalizeEventKey(record = {}) {
+  const raw = cleanString(
+    record.eventId ||
+      record.eventSlug ||
+      record.eventName ||
+      record.inviteCode ||
+      "Unassigned Event",
+    240
+  );
+  return raw.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unassigned-event";
+}
+
+function eventLabel(record = {}) {
+  return cleanString(record.eventName || record.eventId || record.eventSlug || record.inviteCode, 240) || "Unassigned Event";
+}
+
 function requireSmsAccess(data = {}) {
   if (data?.auth?.email) return { email: data.auth.email };
   return {
@@ -205,7 +238,107 @@ function addRecipient(map, phone, details = {}) {
     sources: [...new Set([...(previous.sources || []), cleanString(details.source, 120)].filter(Boolean))],
     firstVerifiedAt: cleanString(previous.firstVerifiedAt || details.firstVerifiedAt),
     lastVerifiedAt: cleanString(details.lastVerifiedAt || previous.lastVerifiedAt),
-    inviteCode: cleanString(previous.inviteCode || details.inviteCode, 80)
+    inviteCode: cleanString(previous.inviteCode || details.inviteCode, 80),
+    name: cleanString(previous.name || details.name, 180),
+    email: cleanString(previous.email || details.email, 180).toLowerCase(),
+    company: cleanString(previous.company || details.company, 180),
+    role: cleanString(previous.role || details.role, 120),
+    eventKey: cleanString(previous.eventKey || details.eventKey, 240),
+    eventName: cleanString(previous.eventName || details.eventName, 240),
+    registeredAt: cleanString(previous.registeredAt || details.registeredAt, 120)
+  });
+}
+
+function normalizeRegistration(key, record = {}, source = "") {
+  const type = cleanString(source).includes("partner")
+    ? "partner"
+    : cleanString(source).includes("member")
+      ? "member"
+      : "guest";
+  const eventKey = normalizeEventKey(record);
+  return {
+    key,
+    id: cleanString(record.id || key, 240),
+    type,
+    source,
+    name: cleanString(record.name || record.intendedGuestName || record.invitedName, 180),
+    email: cleanString(record.email, 180).toLowerCase(),
+    company: cleanString(record.company || record.partnerCompany, 180),
+    title: cleanString(record.title, 180),
+    phone: cleanPhone(record.phone),
+    maskedPhone: maskPhone(record.phone),
+    phoneVerificationStatus: cleanString(record.phoneVerificationStatus) || "unverified",
+    inviteCode: cleanString(record.inviteCode, 80),
+    eventKey,
+    eventName: eventLabel(record),
+    eventDate: cleanString(record.eventDate, 120),
+    role: registrationRole(record, type),
+    registeredAt: cleanString(record.createdAt || record.registeredAt || record.updatedAt, 120)
+  };
+}
+
+async function collectRegistrations(env) {
+  const map = new Map();
+
+  for (const prefix of registrationPrefixes) {
+    for (const key of await listKeys(env, prefix)) {
+      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      if (!record) continue;
+      const normalized = normalizeRegistration(key, record, prefix);
+      map.set(normalized.id || key, normalized);
+    }
+  }
+
+  if (env.MOJO_SUMMITS_STORAGE?.list && env.MOJO_SUMMITS_STORAGE?.get) {
+    for (const prefix of r2RegistrationPrefixes) {
+      let cursor;
+      do {
+        const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit: 1000 }).catch(() => null);
+        if (!result) break;
+        for (const object of result.objects || []) {
+          const stored = await env.MOJO_SUMMITS_STORAGE.get(object.key).catch(() => null);
+          const record = stored ? await stored.json().catch(() => null) : null;
+          if (!record) continue;
+          const normalized = normalizeRegistration(object.key, record, prefix);
+          map.set(normalized.id || object.key, normalized);
+        }
+        cursor = result.truncated ? result.cursor : undefined;
+      } while (cursor);
+    }
+  }
+
+  return [...map.values()].sort((a, b) => String(b.registeredAt).localeCompare(String(a.registeredAt)));
+}
+
+function registrationsForEvent(registrations, eventKey) {
+  const selectedEventKey = cleanString(eventKey, 240);
+  if (!selectedEventKey) return [];
+  return registrations.filter((registration) => registration.eventKey === selectedEventKey);
+}
+
+function eventSummaries(registrations) {
+  const map = new Map();
+  for (const registration of registrations) {
+    const previous = map.get(registration.eventKey) || {
+      eventKey: registration.eventKey,
+      eventName: registration.eventName,
+      eventDate: registration.eventDate,
+      registeredCount: 0,
+      verifiedPhoneCount: 0,
+      latestRegisteredAt: ""
+    };
+    previous.registeredCount += 1;
+    if (registration.phoneVerificationStatus === "verified" && isLikelyPhone(registration.phone)) {
+      previous.verifiedPhoneCount += 1;
+    }
+    if (registration.registeredAt > previous.latestRegisteredAt) previous.latestRegisteredAt = registration.registeredAt;
+    if (!previous.eventDate && registration.eventDate) previous.eventDate = registration.eventDate;
+    map.set(registration.eventKey, previous);
+  }
+  return [...map.values()].sort((a, b) => {
+    const left = cleanString(a.eventDate || a.latestRegisteredAt || a.eventName);
+    const right = cleanString(b.eventDate || b.latestRegisteredAt || b.eventName);
+    return left.localeCompare(right);
   });
 }
 
@@ -298,6 +431,27 @@ async function collectVerifiedRecipients(env) {
   return [...map.values()].sort((a, b) => String(b.lastVerifiedAt).localeCompare(String(a.lastVerifiedAt)));
 }
 
+async function collectEventRecipients(env, eventKey) {
+  const registrations = registrationsForEvent(await collectRegistrations(env), eventKey);
+  const map = new Map();
+  for (const registration of registrations) {
+    if (registration.phoneVerificationStatus !== "verified") continue;
+    addRecipient(map, registration.phone, {
+      source: "event-registration",
+      lastVerifiedAt: registration.registeredAt,
+      inviteCode: registration.inviteCode,
+      name: registration.name,
+      email: registration.email,
+      company: registration.company,
+      role: registration.role,
+      eventKey: registration.eventKey,
+      eventName: registration.eventName,
+      registeredAt: registration.registeredAt
+    });
+  }
+  return [...map.values()].sort((a, b) => String(a.name || a.email || a.maskedPhone).localeCompare(String(b.name || b.email || b.maskedPhone)));
+}
+
 function notificationType(value) {
   return value === "additional-event-notice" ? "additional-event-notice" : "event-reminder";
 }
@@ -314,6 +468,10 @@ async function sendNotification(env, payload, actor) {
   if (missing.length) throw new Error(`SMS notifications are missing configuration: ${missing.join(", ")}.`);
 
   const type = notificationType(payload?.type);
+  const eventKey = cleanString(payload?.eventKey, 240);
+  if (type === "event-reminder" && !eventKey) {
+    throw new Error("Select an event before sending an upcoming event reminder.");
+  }
   if (type === "additional-event-notice") {
     const last = await env.MOJO_SUMMITS_SETUP_STATE.get(additionalNoticeKey, "json").catch(() => null);
     if (last?.sentAt && Date.now() - Date.parse(last.sentAt) < additionalNoticeCooldownMs) {
@@ -325,7 +483,9 @@ async function sendNotification(env, payload, actor) {
   if (message.length < 12) throw new Error("Message is required.");
   if (message.length > 1300) throw new Error("Message is too long.");
 
-  const recipients = await collectVerifiedRecipients(env);
+  const recipients = type === "event-reminder"
+    ? await collectEventRecipients(env, eventKey)
+    : await collectVerifiedRecipients(env);
   if (!recipients.length) throw new Error("No verified phone numbers are available.");
 
   const now = new Date().toISOString();
@@ -348,6 +508,8 @@ async function sendNotification(env, payload, actor) {
     type,
     actor: cleanString(actor, 200),
     message,
+    eventKey: type === "event-reminder" ? eventKey : "",
+    eventName: type === "event-reminder" ? cleanString(recipients[0]?.eventName, 240) : "",
     recipientCount: recipients.length,
     sentCount,
     failedCount,
@@ -364,17 +526,32 @@ export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: jsonHeaders });
 }
 
-export async function onRequestGet({ env, data }) {
+export async function onRequestGet({ request, env, data }) {
   const access = requireSmsAccess(data);
   if (access.response) return access.response;
   if (!env.MOJO_SUMMITS_SETUP_STATE) return json({ error: "SMS storage is not configured." }, { status: 500 });
-  const recipients = await collectVerifiedRecipients(env);
+  const url = new URL(request.url);
+  const type = notificationType(url.searchParams.get("type"));
+  const eventKey = cleanString(url.searchParams.get("eventKey"), 240);
+  const registrations = await collectRegistrations(env);
+  const selectedRegistrations = type === "event-reminder" && eventKey
+    ? registrationsForEvent(registrations, eventKey)
+    : [];
+  const recipients = type === "event-reminder"
+    ? eventKey
+      ? await collectEventRecipients(env, eventKey)
+      : []
+    : await collectVerifiedRecipients(env);
   const lastAdditionalNotice = await env.MOJO_SUMMITS_SETUP_STATE.get(additionalNoticeKey, "json").catch(() => null);
   return json({
     ok: true,
     recipients,
+    events: eventSummaries(registrations),
+    registrations: selectedRegistrations,
     summary: {
       total: recipients.length,
+      selectedEventKey: eventKey,
+      selectedRegistrationCount: selectedRegistrations.length,
       lastAdditionalNoticeAt: cleanString(lastAdditionalNotice?.sentAt)
     }
   });
