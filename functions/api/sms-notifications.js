@@ -82,20 +82,36 @@ function registrationRole(record = {}, type = "") {
   return cleanRole(record.registrationRole || record.guestRegistrationType || type);
 }
 
+function isPlaceholderEventValue(value) {
+  const normalized = cleanString(value, 240).toLowerCase();
+  return !normalized || normalized === "unassigned event" || normalized === "unassigned-event";
+}
+
+function realEventValue(record = {}) {
+  const eventName = cleanString(record.eventName, 240);
+  if (!isPlaceholderEventValue(eventName)) return eventName;
+  const eventSlug = cleanString(record.eventSlug, 240);
+  if (!isPlaceholderEventValue(eventSlug)) return eventSlug;
+  const eventId = cleanString(record.eventId, 240);
+  return cleanString(record.eventDate, 120) && !isPlaceholderEventValue(eventId) ? eventId : "";
+}
+
+function hasRealEvent(record = {}) {
+  return Boolean(realEventValue(record));
+}
+
 function normalizeEventKey(record = {}) {
-  const raw = cleanString(
-    record.eventId ||
-      record.eventSlug ||
-      record.eventName ||
-      record.inviteCode ||
-      "Unassigned Event",
-    240
-  );
+  const raw = realEventValue(record);
   return raw.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unassigned-event";
 }
 
 function eventLabel(record = {}) {
-  return cleanString(record.eventName || record.eventId || record.eventSlug || record.inviteCode, 240) || "Unassigned Event";
+  const eventName = cleanString(record.eventName, 240);
+  if (!isPlaceholderEventValue(eventName)) return eventName;
+  const eventSlug = cleanString(record.eventSlug, 240);
+  if (!isPlaceholderEventValue(eventSlug)) return eventSlug;
+  const eventId = cleanString(record.eventId, 240);
+  return cleanString(record.eventDate, 120) && !isPlaceholderEventValue(eventId) ? eventId : "";
 }
 
 function requireSmsAccess(data = {}) {
@@ -269,6 +285,7 @@ function normalizeRegistration(key, record = {}, source = "") {
     maskedPhone: maskPhone(record.phone),
     phoneVerificationStatus: cleanString(record.phoneVerificationStatus) || "unverified",
     inviteCode: cleanString(record.inviteCode, 80),
+    hasEvent: hasRealEvent(record),
     eventKey,
     eventName: eventLabel(record),
     eventDate: cleanString(record.eventDate, 120),
@@ -319,6 +336,7 @@ function registrationsForEvent(registrations, eventKey) {
 function eventSummaries(registrations) {
   const map = new Map();
   for (const registration of registrations) {
+    if (!registration.hasEvent) continue;
     const previous = map.get(registration.eventKey) || {
       eventKey: registration.eventKey,
       eventName: registration.eventName,
