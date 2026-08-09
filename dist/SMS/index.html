@@ -212,7 +212,7 @@
     <section class="grid">
       <aside class="panel">
         <div>
-          <p class="eyebrow">Registered for event</p>
+          <p class="eyebrow" id="rosterEyebrow">Registered for event</p>
           <p id="eventRosterSummary">Select an event to review registrants.</p>
         </div>
         <div class="registrant-list" id="registrantList"></div>
@@ -282,6 +282,7 @@
     const messageType = document.querySelector("#messageType");
     const eventField = document.querySelector("#eventField");
     const eventSelect = document.querySelector("#eventSelect");
+    const rosterEyebrow = document.querySelector("#rosterEyebrow");
     const eventRosterSummary = document.querySelector("#eventRosterSummary");
     const registrantList = document.querySelector("#registrantList");
     let latestPayload = { events: [], recipients: [], registrations: [], summary: {} };
@@ -339,6 +340,22 @@
     }
 
     function renderRegistrants(payload) {
+      if (messageType.value !== "event-reminder") {
+        const recipients = payload.recipients || [];
+        eventRosterSummary.textContent = recipients.length
+          ? `${recipients.length} verified phone ${recipients.length === 1 ? "number" : "numbers"} available.`
+          : "No verified phone numbers are available yet.";
+        registrantList.innerHTML = recipients.length
+          ? recipients.map((recipient) => `
+              <div class="row">
+                <strong>${escapeHtml(recipient.name || recipient.email || recipient.maskedPhone || "Verified phone")}</strong>
+                <span>${escapeHtml([recipient.company, recipient.role].filter(Boolean).join(" | "))}</span>
+                <span>${escapeHtml(recipient.maskedPhone || "Verified phone")} | SMS ready</span>
+              </div>
+            `).join("")
+          : "<p>No verified phone numbers are available yet.</p>";
+        return;
+      }
       const registrations = payload.registrations || [];
       const verifiedCount = registrations.filter((registration) => registration.phoneVerificationStatus === "verified").length;
       eventRosterSummary.textContent = eventSelect.value
@@ -361,6 +378,7 @@
     function syncModeUi() {
       const isEventReminder = messageType.value === "event-reminder";
       eventField.style.display = isEventReminder ? "grid" : "none";
+      rosterEyebrow.textContent = isEventReminder ? "Registered for event" : "Verified phone numbers";
       confirmCopy.textContent = isEventReminder
         ? "I understand this will send to verified phone numbers for the selected event."
         : "I understand this will send to every verified phone number listed for MOJO AI Summits registrations.";
