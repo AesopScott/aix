@@ -862,13 +862,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button type="button" data-view="guest-invite-links">Guest Invites</button>
           <button type="button" data-view="create-guest-invite-links">Create Guest Invite Links</button>
           <button type="button" data-view="guest">Guest Registrants</button>
+          <button type="button" data-view="member">Members</button>
         </div>
         <div class="side-nav-group partner-pipeline" aria-label="Partner pipeline">
           <button type="button" data-view="guest-partner-invite-links">Guest Partner Invite Links</button>
           <button type="button" data-view="manual-partners">Add Partner</button>
           <button type="button" data-view="partners-company">Partners by Company</button>
         </div>
-        <button type="button" data-view="member">Members</button>
         <button type="button" data-view="registration-debug">Registration Debug</button>
       </aside>
 
@@ -1585,7 +1585,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function pipelineGroupForView(view = activeView) {
-      if (["guest-invite-links", "create-guest-invite-links", "guest"].includes(view)) return "guest";
+      if (["guest-invite-links", "create-guest-invite-links", "guest", "member"].includes(view)) return "guest";
       if (["guest-partner-invite-links", "manual-partners", "partners-company"].includes(view)) return "partner";
       return "";
     }
