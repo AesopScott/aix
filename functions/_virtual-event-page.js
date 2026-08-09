@@ -54,6 +54,7 @@ export function renderVirtualEventPage(slug) {
   <meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
   <link rel="icon" type="image/png" href="/assets/logo-badge.png">
   <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <link rel="stylesheet" href="/assets/mojo-home-brand.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
     :root { --navy:#0A0F1E; --slate:#1B2333; --blue:#1666FF; --cyan:#00E6FF; --white:#FFFFFF; --ink:#9aa3b8; --muted:#6f7890; --border:rgba(150,160,190,.16); }
@@ -102,11 +103,7 @@ export function renderVirtualEventPage(slug) {
 <body>
   <header>
     <nav class="wrap">
-      <a class="brand" href="/" aria-label="MOJO AI Summits home">
-        <img src="/assets/logo-mark.png" alt="">
-        <span class="brand-divider" aria-hidden="true"></span>
-        <span class="brand-name" aria-hidden="true"><strong>MOJO AI</strong><span>Summits</span></span>
-      </a>
+      <a class="mojo-home-brand" href="/" aria-label="MOJO AI Summits home"><img class="mojo-home-brand-mark" src="/assets/logo-mark.png" alt=""><span class="mojo-home-brand-divider" aria-hidden="true"></span><span class="mojo-home-brand-name" aria-hidden="true"><span class="mojo-home-brand-primary">MOJO AI</span><span class="mojo-home-brand-secondary">Summits</span></span></a>
       <a class="nav-link" href="/virtual/">Virtual</a>
     </nav>
   </header>
