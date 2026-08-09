@@ -324,19 +324,7 @@ async function publishSms(config, phone, message) {
       sendPath: config.originationNumber ? "sms-voice-v2-origination" : "sms-voice-v2"
     };
   } catch (v2Error) {
-    const fallbackConfig = config.originationNumber
-      ? { ...config, originationNumber: "" }
-      : config;
-    try {
-      return {
-        messageId: await publishSmsViaSns(fallbackConfig, phone, message),
-        sendPath: fallbackConfig.originationNumber ? "sns-origination" : "sns"
-      };
-    } catch (snsError) {
-      throw new Error(
-        `SMS-Voice V2 failed (${v2Error?.message || v2Error}); SNS fallback also failed (${snsError?.message || snsError}).`
-      );
-    }
+    throw new Error(`SMS-Voice V2 failed (${v2Error?.message || v2Error}).`);
   }
 }
 
@@ -383,7 +371,7 @@ async function startVerification(phone, inviteCode, env) {
 
   const code = randomCode();
   const salt = crypto.randomUUID();
-  const message = `MOJO AI Summits: Your verification code is ${code}. It expires in 10 minutes. Reply STOP to opt out or HELP for help.`;
+  const message = `${code} is your MOJO AI Summits verification code. It expires in 10 minutes. Reply STOP to opt out or HELP for help.`;
 
   let sendResult = { messageId: "", sendPath: "" };
   try {
