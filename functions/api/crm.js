@@ -58,6 +58,7 @@ const REGISTRATION_INVITE_PREFIXES = {
 };
 const PARTNER_INVITE_PREFIX = "crm:partner-invite-code:";
 const REGISTRATION_DEBUG_PREFIX = "crm:registration-debug:";
+const PHONE_VERIFICATION_DEBUG_PREFIX = "crm:phone-verification-debug:";
 const R2_REGISTRATION_PREFIX = "crm/registrations";
 const OVERFLOW_REGISTRATION_PREFIX = "crm-overflow/registrations";
 const DEFAULT_UPCOMING_EVENTS = [
@@ -542,6 +543,12 @@ function normalizeDebugEntry(key, record = {}) {
     eventName: cleanString(record.eventName),
     eventDate: cleanString(record.eventDate),
     contactKey: cleanString(record.contactKey),
+    action: cleanString(record.action),
+    phone: cleanString(record.phone),
+    provider: cleanString(record.provider),
+    sendPath: cleanString(record.sendPath),
+    messageId: cleanString(record.messageId),
+    config: record.config && typeof record.config === "object" ? record.config : null,
     registrationKeys: Array.isArray(record.registrationKeys)
       ? record.registrationKeys.map((entry) => cleanString(entry)).filter(Boolean)
       : [],
@@ -589,7 +596,7 @@ async function registrationDiagnostics(env) {
         inviteCode: row.inviteCode,
         eventName: row.eventName,
         eventDate: row.eventDate,
-        contactKey: cleanString(record.contactKey) || expectedContactKey,
+        contactKey: expectedContactKey,
         contactExists
       });
     }
@@ -600,7 +607,10 @@ async function registrationDiagnostics(env) {
   const missingContacts = registrationRows.filter((row) => row.email && !row.contactExists);
   counts.missingContacts = missingContacts.length;
 
-  const debugKeys = await listKeys(env, REGISTRATION_DEBUG_PREFIX);
+  const debugKeys = [
+    ...(await listKeys(env, REGISTRATION_DEBUG_PREFIX)),
+    ...(await listKeys(env, PHONE_VERIFICATION_DEBUG_PREFIX))
+  ];
   const debugAttempts = (await Promise.all(
     debugKeys.map(async (key) => {
       const record = await readRawRecord(env, key);

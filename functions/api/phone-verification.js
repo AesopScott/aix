@@ -8,6 +8,7 @@ const otpTtlSeconds = 10 * 60;
 const resendCooldownSeconds = 60;
 const maxAttempts = 5;
 const encoder = new TextEncoder();
+const phoneDebugPrefix = "crm:phone-verification-debug";
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -129,6 +130,59 @@ async function codeHash(secret, phone, code, salt) {
 
 function verificationKey(phone) {
   return `phone-verification:${phone}`;
+}
+
+function maskPhone(phone) {
+  const digits = cleanString(phone).replace(/\D/g, "");
+  if (!digits) return "";
+  return `${"*".repeat(Math.max(0, digits.length - 4))}${digits.slice(-4)}`;
+}
+
+function sanitizeError(error) {
+  return cleanString(error?.message || error || "")
+    .replace(/AKIA[0-9A-Z]{16}/g, "[aws-access-key]")
+    .replace(/\+?\d[\d\s().-]{7,}\d/g, "[phone]");
+}
+
+function configDebug(config = {}, env = {}) {
+  return {
+    region: cleanString(config.region),
+    hasAccessKeyId: Boolean(config.accessKeyId),
+    hasSecretAccessKey: Boolean(config.secretAccessKey),
+    hasSessionToken: Boolean(config.sessionToken),
+    hasOriginationNumber: Boolean(config.originationNumber),
+    hasSenderId: Boolean(config.senderId),
+    hasOtpSecret: Boolean(config.otpSecret),
+    smsProvider: cleanString(env.SMS_PROVIDER),
+    smsProviderConfigured: cleanString(env.SMS_PROVIDER_CONFIGURED),
+    hasKvBinding: Boolean(env.MOJO_SUMMITS_SETUP_STATE)
+  };
+}
+
+async function writePhoneDebug(env, stage, details = {}) {
+  const entry = {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    stage: cleanString(stage),
+    action: cleanString(details.action),
+    phone: maskPhone(details.phone),
+    inviteCode: cleanString(details.inviteCode).replace(/\D/g, "").slice(0, 6),
+    status: cleanString(details.status),
+    provider: cleanString(details.provider),
+    sendPath: cleanString(details.sendPath),
+    messageId: cleanString(details.messageId),
+    error: sanitizeError(details.error),
+    config: details.config && typeof details.config === "object" ? details.config : undefined
+  };
+
+  console.log("phone-verification", JSON.stringify(entry));
+
+  if (!env?.MOJO_SUMMITS_SETUP_STATE) return;
+  await env.MOJO_SUMMITS_SETUP_STATE.put(
+    `${phoneDebugPrefix}:${entry.createdAt}:${entry.id}`,
+    JSON.stringify(entry),
+    { expirationTtl: 7 * 24 * 60 * 60 }
+  ).catch(() => null);
 }
 
 function parseXmlTag(xml, tag) {
@@ -265,13 +319,19 @@ async function publishSmsViaSns(config, phone, message) {
 
 async function publishSms(config, phone, message) {
   try {
-    return await sendSmsViaSmsVoiceV2(config, phone, message);
+    return {
+      messageId: await sendSmsViaSmsVoiceV2(config, phone, message),
+      sendPath: config.originationNumber ? "sms-voice-v2-origination" : "sms-voice-v2"
+    };
   } catch (v2Error) {
     const fallbackConfig = config.originationNumber
       ? { ...config, originationNumber: "" }
       : config;
     try {
-      return await publishSmsViaSns(fallbackConfig, phone, message);
+      return {
+        messageId: await publishSmsViaSns(fallbackConfig, phone, message),
+        sendPath: fallbackConfig.originationNumber ? "sns-origination" : "sns"
+      };
     } catch (snsError) {
       throw new Error(
         `SMS-Voice V2 failed (${v2Error?.message || v2Error}); SNS fallback also failed (${snsError?.message || snsError}).`
@@ -282,8 +342,22 @@ async function publishSms(config, phone, message) {
 
 async function startVerification(phone, inviteCode, env) {
   const config = awsConfig(env);
+  await writePhoneDebug(env, "start-received", {
+    action: "start",
+    phone,
+    inviteCode,
+    config: configDebug(config, env)
+  });
   const missing = missingAwsConfig(config, env);
   if (missing.length) {
+    await writePhoneDebug(env, "start-rejected", {
+      action: "start",
+      phone,
+      inviteCode,
+      status: "missing-config",
+      error: `Missing configuration: ${missing.join(", ")}.`,
+      config: configDebug(config, env)
+    });
     return json(
       { error: `AWS SMS verification is missing configuration: ${missing.join(", ")}.` },
       { status: 500 }
@@ -294,6 +368,13 @@ async function startVerification(phone, inviteCode, env) {
   const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
   const now = Date.now();
   if (existing?.sentAt && now - Date.parse(existing.sentAt) < resendCooldownSeconds * 1000) {
+    await writePhoneDebug(env, "start-rejected", {
+      action: "start",
+      phone,
+      inviteCode,
+      status: "cooldown",
+      config: configDebug(config, env)
+    });
     return json(
       { error: "A verification code was just sent. Wait a minute before requesting another one." },
       { status: 429 }
@@ -304,10 +385,19 @@ async function startVerification(phone, inviteCode, env) {
   const salt = crypto.randomUUID();
   const message = `MOJO AI Summits: Your verification code is ${code}. It expires in 10 minutes. Reply STOP to opt out or HELP for help.`;
 
-  let messageId = "";
+  let sendResult = { messageId: "", sendPath: "" };
   try {
-    messageId = await publishSms(config, phone, message);
+    sendResult = await publishSms(config, phone, message);
   } catch (error) {
+    await writePhoneDebug(env, "send-failed", {
+      action: "start",
+      phone,
+      inviteCode,
+      status: "provider-error",
+      provider: "aws",
+      error,
+      config: configDebug(config, env)
+    });
     return json(
       { error: error?.message || "The SMS provider could not send the verification code." },
       { status: 502 }
@@ -328,10 +418,21 @@ async function startVerification(phone, inviteCode, env) {
       expiresAt,
       attempts: 0,
       provider: "aws-sns",
-      messageId
+      messageId: sendResult.messageId
     }),
     { expirationTtl: otpTtlSeconds }
   );
+
+  await writePhoneDebug(env, "send-succeeded", {
+    action: "start",
+    phone,
+    inviteCode,
+    status: "code_sent",
+    provider: "aws",
+    sendPath: sendResult.sendPath,
+    messageId: sendResult.messageId,
+    config: configDebug(config, env)
+  });
 
   return json({
     ok: true,
@@ -344,8 +445,20 @@ async function startVerification(phone, inviteCode, env) {
 
 async function confirmVerification(phone, code, env) {
   const config = awsConfig(env);
+  await writePhoneDebug(env, "confirm-received", {
+    action: "confirm",
+    phone,
+    config: configDebug(config, env)
+  });
   const missing = missingAwsConfig(config, env);
   if (missing.length) {
+    await writePhoneDebug(env, "confirm-rejected", {
+      action: "confirm",
+      phone,
+      status: "missing-config",
+      error: `Missing configuration: ${missing.join(", ")}.`,
+      config: configDebug(config, env)
+    });
     return json(
       { error: `AWS SMS verification is missing configuration: ${missing.join(", ")}.` },
       { status: 500 }
@@ -354,18 +467,44 @@ async function confirmVerification(phone, code, env) {
 
   const key = verificationKey(phone);
   const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
-  if (!record) return json({ error: "Verification code expired. Request a new code." }, { status: 400 });
+  if (!record) {
+    await writePhoneDebug(env, "confirm-rejected", {
+      action: "confirm",
+      phone,
+      status: "missing-record",
+      config: configDebug(config, env)
+    });
+    return json({ error: "Verification code expired. Request a new code." }, { status: 400 });
+  }
   if (Date.parse(record.expiresAt) < Date.now()) {
     await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+    await writePhoneDebug(env, "confirm-rejected", {
+      action: "confirm",
+      phone,
+      status: "expired",
+      config: configDebug(config, env)
+    });
     return json({ error: "Verification code expired. Request a new code." }, { status: 400 });
   }
   if ((record.attempts || 0) >= maxAttempts) {
     await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+    await writePhoneDebug(env, "confirm-rejected", {
+      action: "confirm",
+      phone,
+      status: "too-many-attempts",
+      config: configDebug(config, env)
+    });
     return json({ error: "Too many incorrect attempts. Request a new code." }, { status: 429 });
   }
 
   const cleanCode = cleanString(code);
   if (!/^\d{6}$/.test(cleanCode)) {
+    await writePhoneDebug(env, "confirm-rejected", {
+      action: "confirm",
+      phone,
+      status: "invalid-code-format",
+      config: configDebug(config, env)
+    });
     return json({ error: "Enter the six-digit SMS code." }, { status: 400 });
   }
 
@@ -377,10 +516,22 @@ async function confirmVerification(phone, code, env) {
       JSON.stringify({ ...record, attempts }),
       { expirationTtl: Math.max(60, Math.ceil((Date.parse(record.expiresAt) - Date.now()) / 1000)) }
     );
+    await writePhoneDebug(env, "confirm-rejected", {
+      action: "confirm",
+      phone,
+      status: "code-mismatch",
+      config: configDebug(config, env)
+    });
     return json({ error: "That code did not match. Try again." }, { status: 400 });
   }
 
   await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+  await writePhoneDebug(env, "confirm-succeeded", {
+    action: "confirm",
+    phone,
+    status: "verified",
+    config: configDebug(config, env)
+  });
   return json({
     ok: true,
     status: "verified",
@@ -398,11 +549,23 @@ export async function onRequestPost({ request, env }) {
   const phone = cleanPhone(payload?.phone);
 
   if (!isLikelyPhone(phone)) {
+    await writePhoneDebug(env, "request-rejected", {
+      action,
+      phone,
+      status: "invalid-phone"
+    });
     return json({ error: "Enter a valid mobile phone number." }, { status: 400 });
   }
 
   if (action === "start") {
     if (!isSmsConfigured(env)) {
+      await writePhoneDebug(env, "start-rejected", {
+        action: "start",
+        phone,
+        inviteCode: payload?.inviteCode,
+        status: "not-configured",
+        config: configDebug(awsConfig(env), env)
+      });
       return json({
         ok: true,
         requiresCode: false,
@@ -416,11 +579,22 @@ export async function onRequestPost({ request, env }) {
 
   if (action === "confirm") {
     if (!isSmsConfigured(env)) {
+      await writePhoneDebug(env, "confirm-rejected", {
+        action: "confirm",
+        phone,
+        status: "not-configured",
+        config: configDebug(awsConfig(env), env)
+      });
       return json({ error: "SMS code confirmation is not available until an SMS provider is configured." }, { status: 409 });
     }
 
     return confirmVerification(phone, payload?.code, env);
   }
 
+  await writePhoneDebug(env, "request-rejected", {
+    action,
+    phone,
+    status: "unknown-action"
+  });
   return json({ error: "Unknown phone verification action." }, { status: 400 });
 }

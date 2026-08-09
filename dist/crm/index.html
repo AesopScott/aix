@@ -2155,7 +2155,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function debugStatusClass(row) {
-      return row.status === "failed" || row.status === "rejected" || row.contactExists === false ? " error" : "";
+      const status = String(row.status || "");
+      return status.includes("failed") || status.includes("rejected") || status.includes("error") || row.contactExists === false ? " error" : "";
+    }
+
+    function renderDebugConfig(config) {
+      if (!config) return "";
+      const flags = [
+        `region ${config.region || "missing"}`,
+        config.hasAccessKeyId ? "access key present" : "access key missing",
+        config.hasSecretAccessKey ? "secret key present" : "secret key missing",
+        config.hasOtpSecret ? "OTP secret present" : "OTP secret missing",
+        config.hasOriginationNumber ? "origination present" : "origination missing",
+        config.hasKvBinding ? "KV bound" : "KV missing"
+      ];
+      return `<p>Config: ${escapeHtml(flags.join(" | "))}</p>`;
     }
 
     function renderRegistrationDebug() {
@@ -2195,7 +2209,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <div class="debug-row${debugStatusClass(row)}">
                 <strong>${escapeHtml(formatDate(row.createdAt))} | ${escapeHtml(row.status || "unknown")} | ${escapeHtml(row.stage || "")}</strong>
                 <p>${escapeHtml(row.type)} | ${escapeHtml(row.name || "")} | ${escapeHtml(row.email || "")} | ${escapeHtml(row.company || "")}</p>
-                <p>${escapeHtml(row.eventName || "")}${row.inviteCode ? ` | Invite ${escapeHtml(row.inviteCode)}` : ""}</p>
+                <p>${escapeHtml(row.eventName || "")}${row.inviteCode ? ` | Invite ${escapeHtml(row.inviteCode)}` : ""}${row.phone ? ` | Phone ${escapeHtml(row.phone)}` : ""}</p>
+                ${row.action || row.provider || row.sendPath || row.messageId ? `<p>${escapeHtml([row.action ? `Action ${row.action}` : "", row.provider ? `Provider ${row.provider}` : "", row.sendPath ? `Path ${row.sendPath}` : "", row.messageId ? `Message ${row.messageId}` : ""].filter(Boolean).join(" | "))}</p>` : ""}
+                ${renderDebugConfig(row.config)}
                 ${row.error ? `<p>Error: ${escapeHtml(row.error)}</p>` : ""}
               </div>
             `).join("") : '<p>No registration audit entries have been stored yet. New attempts will appear here after this deploy.</p>'}
