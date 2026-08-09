@@ -23,6 +23,8 @@
 /crm/ /crm/index.html 200
 /privacy /privacy/ 301
 /sms-terms /sms-terms/ 301
+/sms /SMS/ 301
+/sms/ /SMS/ 301
 /dallas /dallas/ 301
 /ai-executive-readiness-online /ai-executive-readiness-online/ 301
 /virtual /virtual/ 301

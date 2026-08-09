@@ -164,6 +164,18 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/budget", "mojoaisummits.com/budget/*"]
   },
   {
+    id: "sms-notifications",
+    kind: "page",
+    group: "Data",
+    label: "SMS Notifications",
+    summary: "Internal SMS sender for verified registration phone numbers.",
+    mode: "allowlist",
+    defaultGroupIds: ["admin", "mojo-team"],
+    strictGroups: true,
+    matches: [{ exact: "/SMS" }, { prefix: "/SMS/" }, { exact: "/sms" }, { prefix: "/sms/" }],
+    domains: ["mojoaisummits.com/SMS", "mojoaisummits.com/SMS/*", "mojoaisummits.com/sms", "mojoaisummits.com/sms/*"]
+  },
+  {
     id: "mockups",
     kind: "page",
     group: "Design",
@@ -514,6 +526,18 @@ export const DEFAULT_ACCESS_RULES = [
     defaultGroupIds: ["admin"],
     matches: [{ exact: "/api/budget" }, { prefix: "/api/budget/" }],
     domains: ["mojoaisummits.com/api/budget", "mojoaisummits.com/api/budget/*"]
+  },
+  {
+    id: "api-sms-notifications",
+    kind: "api",
+    group: "APIs",
+    label: "SMS Notifications API",
+    summary: "Send custom SMS notifications to verified registration phone numbers.",
+    mode: "allowlist",
+    defaultGroupIds: ["admin", "mojo-team"],
+    strictGroups: true,
+    matches: [{ exact: "/api/sms-notifications" }, { prefix: "/api/sms-notifications/" }],
+    domains: ["mojoaisummits.com/api/sms-notifications", "mojoaisummits.com/api/sms-notifications/*"]
   },
   {
     id: "api-invite-request",
