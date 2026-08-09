@@ -124,6 +124,24 @@
       transform: none;
     }
 
+    .side-nav-group {
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 7px;
+    }
+
+    .side-nav-group.guest-pipeline {
+      background: rgba(190, 255, 216, 0.18);
+      border-color: rgba(106, 240, 182, 0.34);
+    }
+
+    .side-nav-group.partner-pipeline {
+      background: rgba(255, 205, 211, 0.18);
+      border-color: rgba(255, 99, 123, 0.36);
+    }
+
     .crm-content {
       display: contents;
       min-width: 0;
@@ -147,6 +165,24 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .guest-pipeline-panel,
+    body[data-pipeline-group="guest"] .view-section[data-view-panel="records"] > .toolbar,
+    body[data-pipeline-group="guest"] .view-section[data-view-panel="records"] > .panel {
+      background:
+        linear-gradient(180deg, rgba(190, 255, 216, 0.22), rgba(10, 15, 30, 0.74)),
+        var(--slate);
+      border-color: rgba(106, 240, 182, 0.42);
+    }
+
+    .partner-pipeline-panel,
+    body[data-pipeline-group="partner"] .view-section[data-view-panel="records"] > .toolbar,
+    body[data-pipeline-group="partner"] .view-section[data-view-panel="records"] > .panel {
+      background:
+        linear-gradient(180deg, rgba(255, 205, 211, 0.22), rgba(10, 15, 30, 0.74)),
+        var(--slate);
+      border-color: rgba(255, 99, 123, 0.46);
     }
 
     .hero {
@@ -822,12 +858,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     <div class="crm-shell">
       <aside class="side-nav" aria-label="CRM sections">
         <button class="active" type="button" data-view="contacts">Contacts</button>
-        <button type="button" data-view="guest-invite-links">Guest Invites</button>
-        <button type="button" data-view="create-guest-invite-links">Create Guest Invite Links</button>
-        <button type="button" data-view="guest-partner-invite-links">Guest Partner Invite Links</button>
-        <button type="button" data-view="manual-partners">Add Partner</button>
-        <button type="button" data-view="partners-company">Partners by Company</button>
-        <button type="button" data-view="guest">Guest Registrants</button>
+        <div class="side-nav-group guest-pipeline" aria-label="Guest pipeline">
+          <button type="button" data-view="guest-invite-links">Guest Invites</button>
+          <button type="button" data-view="create-guest-invite-links">Create Guest Invite Links</button>
+          <button type="button" data-view="guest">Guest Registrants</button>
+        </div>
+        <div class="side-nav-group partner-pipeline" aria-label="Partner pipeline">
+          <button type="button" data-view="guest-partner-invite-links">Guest Partner Invite Links</button>
+          <button type="button" data-view="manual-partners">Add Partner</button>
+          <button type="button" data-view="partners-company">Partners by Company</button>
+        </div>
         <button type="button" data-view="member">Members</button>
         <button type="button" data-view="registration-debug">Registration Debug</button>
       </aside>
@@ -956,7 +996,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     </section>
         </div>
 
-    <section class="invite-panel view-section" id="guestInvitePanel" data-view-panel="guest-invite-links" hidden>
+    <section class="invite-panel view-section guest-pipeline-panel" id="guestInvitePanel" data-view-panel="guest-invite-links" hidden>
       <div>
         <p class="eyebrow">Guest invite links</p>
         <h2>Guest and member invite links</h2>
@@ -974,7 +1014,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div class="invite-list" id="registrationInviteList"></div>
     </section>
 
-    <section class="invite-panel view-section" id="registrationInvitePanel" data-view-panel="create-guest-invite-links" hidden>
+    <section class="invite-panel view-section guest-pipeline-panel" id="registrationInvitePanel" data-view-panel="create-guest-invite-links" hidden>
       <div>
         <p class="eyebrow">Guest invite links</p>
         <h2>Create event-tied guest invite links</h2>
@@ -1012,7 +1052,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div class="invite-result" id="registrationInviteResult" aria-live="polite"></div>
     </section>
 
-    <section class="invite-panel view-section" id="partnerInvitePanel" data-view-panel="guest-partner-invite-links" hidden>
+    <section class="invite-panel view-section partner-pipeline-panel" id="partnerInvitePanel" data-view-panel="guest-partner-invite-links" hidden>
       <div>
         <p class="eyebrow">Partner event invites</p>
         <h2>Create hidden partner registration links</h2>
@@ -1049,7 +1089,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div class="invite-list" id="partnerInviteList"></div>
     </section>
 
-    <section class="invite-panel view-section" id="manualPartnerPanel" data-view-panel="manual-partners" hidden>
+    <section class="invite-panel view-section partner-pipeline-panel" id="manualPartnerPanel" data-view-panel="manual-partners" hidden>
       <div>
         <p class="eyebrow">Partner directors</p>
         <h2>Add partner company contact</h2>
@@ -1544,7 +1584,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return Boolean(recordViewTypes[view]);
     }
 
+    function pipelineGroupForView(view = activeView) {
+      if (["guest-invite-links", "create-guest-invite-links", "guest"].includes(view)) return "guest";
+      if (["guest-partner-invite-links", "manual-partners", "partners-company"].includes(view)) return "partner";
+      return "";
+    }
+
     function syncViewPanels() {
+      const pipelineGroup = pipelineGroupForView();
+      if (pipelineGroup) {
+        document.body.dataset.pipelineGroup = pipelineGroup;
+      } else {
+        delete document.body.dataset.pipelineGroup;
+      }
       navButtons.forEach((button) => {
         button.classList.toggle("active", button.dataset.view === activeView);
       });
