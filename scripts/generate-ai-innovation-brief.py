@@ -329,6 +329,7 @@ def create_pdf():
     paras = [
         "The Mojo AI Summits Executive Research Council is an invitation-only forum where senior executives, selected vendor executives, and occasional policy leaders compare real implementation experience. The council is built for executives accountable for AI outcomes, not sales teams or general marketing audiences.",
         "The AI Innovation cohort focuses on where AI is becoming an operating capability: the places where models, agents, governance, data, and people combine to change organizational output. Members contribute observations from their own work, review market signals, and help turn private council discussion into executive intelligence briefs.",
+        "Mojo AI Summits professional engagements are designed to produce more than a private meeting. When a guest, member, or partner contributes useful field intelligence, that work can become cited executive brief content, summit programming, and visible proof of their operating expertise.",
         "Council members receive deeper access than public readers: the full discussion transcript, extended contributor remarks, working frameworks, and private peer follow-up opportunities. Public briefs summarize the major patterns without exposing proprietary operating detail.",
     ]
     for p in paras:
@@ -437,7 +438,7 @@ def create_pdf():
 
     pdf.new_page("Sponsor Partners")
     y = pdf.heading(54, 704, "Sponsor partners and participation model", 24)
-    pdf.para(54, y - 8, "Executive Research Council partners are invited because their executive leaders can contribute useful field intelligence to the conversation. Participation is limited to executive voices with operating knowledge. Sales and marketing teams do not sit in the council session.", 82, 10.5, 15)
+    pdf.para(54, y - 8, "Executive Research Council partners are invited because their executive leaders can contribute useful field intelligence to the conversation. Participation is limited to executive voices with operating knowledge. Sales and marketing teams do not sit in the council session. The point is publication-quality insight: professional engagements can turn into cited briefs, summit discussion, and credible visibility for guests, members, and partners who help the market understand what is actually working.", 82, 10.5, 15)
     y = 514
     for sponsor in SPONSORS:
         desc_lines = wrap(sponsor["description"], 78)
@@ -470,7 +471,7 @@ def create_pdf():
         pdf.new_page("Sponsor Partners Continued")
         y = 704
     pdf.text(54, y, "Call to action", 14, WHITE, "Helvetica-Bold")
-    pdf.para(54, y - 22, "To become part of the Mojo AI Summits Executive AI Intelligence Network, executives must be invited by an existing member or selected for a specific council contribution. Quarterly Mojo AI Summits around the United States bring council intelligence, member discussion, and partner insight into live executive rooms.", 82, 10.5, 15, WHITE)
+    pdf.para(54, y - 22, "To become part of the Mojo AI Summits Executive AI Intelligence Network, executives must be invited by an existing member or selected for a specific council contribution. Quarterly Mojo AI Summits around the United States bring council intelligence, member discussion, partner insight, and published visibility into live executive rooms.", 82, 10.5, 15, WHITE)
     pdf.text(54, 82, "Legal, privacy, and redistribution", 10, CYAN, "Helvetica-Bold")
     pdf.para(54, 66, "This sample brief is for informational purposes only and is not legal, financial, technical, security, or investment advice. Do not redistribute without written permission. Copyright 2026 Mojo AI Summits. All rights reserved.", 95, 7.8, 10, DIM)
 
@@ -546,6 +547,30 @@ def write_html():
     @media(max-width:780px){.grid,.meta,.brief-card,.two-col,.toc,.matrix{grid-template-columns:1fr}.top{align-items:flex-start;gap:22px;flex-direction:column}.nav{display:none}.brand-lockup{gap:10px}.brand-mark{height:42px}.brand-divider{height:36px}.brand-primary{font-size:23px;letter-spacing:.05em}.brand-secondary{font-size:10px;letter-spacing:.32em;padding-left:.32em}.download-dock .wrap{align-items:flex-start;flex-direction:column}.report-page{min-height:auto;padding:30px}.contributor-table{display:block;overflow-x:auto}.framework div{grid-template-columns:1fr}.visual-bars{height:190px}.sponsor-head{align-items:flex-start;flex-direction:column}.sponsor-head img{max-width:100%;width:240px}}
     """
 
+    nav_exit_css = """
+<style>
+/* Page navigation exit link wrappers: keep label and indicator on one line. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup),
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup),
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup),
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup) {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+/* Page navigation exit indicators: show when a top-nav link leaves the current section. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup)::after,
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
+  content: ">";
+  display: inline-block;
+  margin-left: .35em;
+  color: currentColor;
+  white-space: nowrap;
+}
+</style>"""
+
     archive = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -553,13 +578,16 @@ def write_html():
 <title>Executive AI Intelligence Briefs | MOJO AI Summits</title>
 <meta name="description" content="Sample Executive AI Intelligence Briefs from Mojo AI Summits Executive Research Councils.">
 <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
 <style>{shared_css}</style>
+{nav_exit_css}
 </head>
 <body><main class="shell"><div class="wrap">
 <header class="top"><a class="brand-lockup" href="/" aria-label="MOJO AI Summits home"><img class="brand-mark" src="/assets/logo-mark.png" alt=""><span class="brand-divider" aria-hidden="true"></span><span class="brand-name" aria-hidden="true"><span class="brand-primary">MOJO AI</span><span class="brand-secondary">Summits</span></span></a><nav class="nav"><a href="/">Home</a><a href="/membership/">Membership</a><a href="/partners/">Partners</a></nav></header>
 <section class="hero"><span class="eyebrow">Executive AI Intelligence Briefs</span><h1>Signal from the rooms where AI strategy becomes operating reality.</h1><p class="lead">Each brief is synthesized from an invitation-only Executive Research Council conversation and augmented with public sources, frameworks, visuals, and practical actions for senior leaders.</p></section>
 <section class="brief-card"><div><span class="eyebrow">Sample brief | Innovation cohort</span><h2>AI Innovation at Operating Scale</h2><p>How executive leaders are converting AI adoption into measurable organizational output across strategy, automation, enterprise adoption, workforce impact, and market intelligence.</p></div><div class="actions"><a class="btn primary" href="/briefs/ai-innovation-at-operating-scale/">Read HTML Brief</a><a class="btn" href="/assets/briefs/{PDF_NAME}" download>Download PDF</a></div></section>
-</div><footer><div class="wrap">&copy; 2026 MOJO AI Summits. <a href="/briefs/">Executive AI Intelligence Briefs</a></div></footer></main></body></html>"""
+</div><footer><div class="wrap">&copy; 2026 MOJO AI Summits. <a href="/briefs/">Executive AI Intelligence Briefs</a></div></footer></main><link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
+</body></html>"""
 
     detail = f"""<!doctype html>
 <html lang="en">
@@ -568,7 +596,9 @@ def write_html():
 <title>AI Innovation at Operating Scale | MOJO AI Summits</title>
 <meta name="description" content="A sample Mojo AI Summits Executive Research Council intelligence brief on AI innovation and organizational productivity.">
 <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
 <style>{shared_css}</style>
+{nav_exit_css}
 </head>
 <body><main class="shell"><div class="wrap">
 <header class="top"><a class="brand-lockup" href="/" aria-label="MOJO AI Summits home"><img class="brand-mark" src="/assets/logo-mark.png" alt=""><span class="brand-divider" aria-hidden="true"></span><span class="brand-name" aria-hidden="true"><span class="brand-primary">MOJO AI</span><span class="brand-secondary">Summits</span></span></a><nav class="nav"><a href="/briefs/">Briefs</a><a href="/membership/">Membership</a><a href="/partners/">Partners</a></nav></header>
@@ -590,6 +620,7 @@ def write_html():
     <h2>What the Executive Research Council is</h2>
     <p>The Mojo AI Summits Executive Research Council is an invitation-only forum where senior executives, selected vendor executives, and occasional policy leaders compare real implementation experience. The council is built for executives accountable for AI outcomes, not sales teams or general marketing audiences.</p>
     <p>The AI Innovation cohort focuses on where AI is becoming an operating capability: the places where models, agents, governance, data, and people combine to change organizational output. Members contribute observations from their own work, review market signals, and help turn private council discussion into executive intelligence briefs.</p>
+    <p>Mojo AI Summits professional engagements are designed to produce more than a private meeting. When a guest, member, or partner contributes useful field intelligence, that work can become cited executive brief content, summit programming, and visible proof of their operating expertise.</p>
     <p>Council members receive deeper access than public readers: the full discussion transcript, extended contributor remarks, working frameworks, and private peer follow-up opportunities. Public briefs summarize the major patterns without exposing proprietary operating detail.</p>
     <table class="contributor-table"><thead><tr><th>Name</th><th>Title</th><th>Organization</th><th>Role</th><th>Lens</th></tr></thead><tbody>{contributor_rows}</tbody></table>
   </section>
@@ -617,13 +648,14 @@ def write_html():
   <section class="report-page" id="page-12">
     <div class="page-kicker">Sponsor Partners <span>Page 12</span></div>
     <h2>Sponsor partners and participation model</h2>
-    <p>Executive Research Council partners are invited because their executive leaders can contribute useful field intelligence to the conversation. Participation is limited to executive voices with operating knowledge. Sales and marketing teams do not sit in the council session.</p>
+    <p>Executive Research Council partners are invited because their executive leaders can contribute useful field intelligence to the conversation. Participation is limited to executive voices with operating knowledge. Sales and marketing teams do not sit in the council session. The point is publication-quality insight: professional engagements can turn into cited briefs, summit discussion, and credible visibility for guests, members, and partners who help the market understand what is actually working.</p>
     {sponsor_html}
-    <div class="summary-band"><strong>Call to action</strong><p>To become part of the Mojo AI Summits Executive AI Intelligence Network, executives must be invited by an existing member or selected for a specific council contribution. Quarterly Mojo AI Summits around the United States bring council intelligence, member discussion, and partner insight into live executive rooms.</p></div>
+    <div class="summary-band"><strong>Call to action</strong><p>To become part of the Mojo AI Summits Executive AI Intelligence Network, executives must be invited by an existing member or selected for a specific council contribution. Quarterly Mojo AI Summits around the United States bring council intelligence, member discussion, partner insight, and published visibility into live executive rooms.</p></div>
     <p class="legal">This sample brief is for informational purposes only and is not legal, financial, technical, security, or investment advice. Do not redistribute without written permission. Copyright 2026 Mojo AI Summits. All rights reserved.</p>
   </section>
 </section>
-</main><footer><div class="wrap">&copy; 2026 MOJO AI Summits. <a href="/briefs/">Executive AI Intelligence Briefs</a></div></footer></body></html>"""
+</main><footer><div class="wrap">&copy; 2026 MOJO AI Summits. <a href="/briefs/">Executive AI Intelligence Briefs</a></div></footer><link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
+</body></html>"""
 
     (brief_dir / "index.html").write_text(archive, encoding="utf-8")
     (detail_dir / "index.html").write_text(detail, encoding="utf-8")
