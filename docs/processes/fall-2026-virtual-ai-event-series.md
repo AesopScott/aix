@@ -9,9 +9,13 @@ MOJO AI Summits is adding a fall 2026 virtual AI event series before the 2027 in
 ## Confirmed Dates
 
 - Friday, September 4, 2026
+- Friday, September 18, 2026
 - Friday, September 25, 2026
+- Friday, October 9, 2026
 - Friday, October 16, 2026
+- Friday, October 30, 2026
 - Friday, November 6, 2026
+- Friday, November 20, 2026
 - Friday, November 27, 2026
 
 All sessions run from 1:00 PM to 2:30 PM Central.
@@ -19,10 +23,14 @@ All sessions run from 1:00 PM to 2:30 PM Central.
 ## Working Topic Arc
 
 1. AI Executive Readiness
-2. AI Use Cases That Survive Finance
-3. AI Integration and Workflow
-4. AI Security, Governance, and Trust
-5. AI Operating Model for 2027
+2. AI Data Readiness and Knowledge Strategy
+3. AI Use Cases That Survive Finance
+4. AI Agents, Automation, and Human Handoffs
+5. AI Integration and Workflow
+6. AI Vendor Strategy and Platform Decisions
+7. AI Security, Governance, and Trust
+8. AI Workforce, Talent, and Change Adoption
+9. AI Operating Model for 2027
 
 ## Repeatable Scaffold
 

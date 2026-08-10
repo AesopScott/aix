@@ -69,9 +69,21 @@ const DEFAULT_UPCOMING_EVENTS = [
     format: "Virtual"
   },
   {
+    slug: "ai-data-readiness-and-knowledge-strategy",
+    title: "AI Data Readiness and Knowledge Strategy",
+    date: "Friday, September 18, 2026",
+    format: "Virtual"
+  },
+  {
     slug: "ai-use-cases-that-survive-finance",
     title: "AI Use Cases That Survive Finance",
     date: "Friday, September 25, 2026",
+    format: "Virtual"
+  },
+  {
+    slug: "ai-agents-automation-and-human-handoffs",
+    title: "AI Agents, Automation, and Human Handoffs",
+    date: "Friday, October 9, 2026",
     format: "Virtual"
   },
   {
@@ -81,9 +93,21 @@ const DEFAULT_UPCOMING_EVENTS = [
     format: "Virtual"
   },
   {
+    slug: "ai-vendor-strategy-and-platform-decisions",
+    title: "AI Vendor Strategy and Platform Decisions",
+    date: "Friday, October 30, 2026",
+    format: "Virtual"
+  },
+  {
     slug: "ai-security-governance-and-trust",
     title: "AI Security, Governance, and Trust",
     date: "Friday, November 6, 2026",
+    format: "Virtual"
+  },
+  {
+    slug: "ai-workforce-talent-and-change-adoption",
+    title: "AI Workforce, Talent, and Change Adoption",
+    date: "Friday, November 20, 2026",
     format: "Virtual"
   },
   {

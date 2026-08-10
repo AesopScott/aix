@@ -10,12 +10,20 @@ Each event has two share route forms:
 
 - `/virtual/ai-executive-readiness`
 - `/virtual/ai-executive-readiness.php`
+- `/virtual/ai-data-readiness-and-knowledge-strategy`
+- `/virtual/ai-data-readiness-and-knowledge-strategy.php`
 - `/virtual/ai-use-cases-that-survive-finance`
 - `/virtual/ai-use-cases-that-survive-finance.php`
+- `/virtual/ai-agents-automation-and-human-handoffs`
+- `/virtual/ai-agents-automation-and-human-handoffs.php`
 - `/virtual/ai-integration-and-workflow`
 - `/virtual/ai-integration-and-workflow.php`
+- `/virtual/ai-vendor-strategy-and-platform-decisions`
+- `/virtual/ai-vendor-strategy-and-platform-decisions.php`
 - `/virtual/ai-security-governance-and-trust`
 - `/virtual/ai-security-governance-and-trust.php`
+- `/virtual/ai-workforce-talent-and-change-adoption`
+- `/virtual/ai-workforce-talent-and-change-adoption.php`
 - `/virtual/ai-operating-model-for-2027`
 - `/virtual/ai-operating-model-for-2027.php`
 
