@@ -540,6 +540,24 @@
       text-transform: uppercase;
     }
 
+    .contact-photo-preview {
+      display: grid;
+      grid-template-columns: 4.5rem 1fr;
+      gap: 0.75rem;
+      align-items: center;
+      color: var(--muted-blue);
+      font-size: 0.86rem;
+    }
+
+    .contact-photo-preview img {
+      width: 4.5rem;
+      height: 4.5rem;
+      border: 1px solid rgba(0, 230, 255, 0.22);
+      border-radius: 6px;
+      object-fit: cover;
+      background: rgba(10, 15, 30, 0.64);
+    }
+
     .crm-compact-stack {
       display: grid;
       gap: 0.4rem;
@@ -2256,6 +2274,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.lastName,
           row.company,
           row.title,
+          row.photoUrl,
+          row.bio,
           row.executiveFunction,
           row.industry,
           row.companySize,
@@ -2342,9 +2362,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       `;
     }
 
+    function contactPhotoPreview(row = {}) {
+      const photoUrl = String(row.photoUrl || "").trim();
+      if (!photoUrl) return "";
+      return `
+        <div class="contact-photo-preview">
+          <img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(row.name || row.email || "Contact")} photo" loading="lazy">
+          <span>Photo assigned</span>
+        </div>
+      `;
+    }
+
     function qualificationEditor(row = {}) {
       return `
         <div class="crm-detail-panel">
+          ${contactPhotoPreview(row)}
           ${qualificationSummary(row)}
           <details>
             <summary>Edit qualification</summary>
@@ -2352,6 +2384,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <label>First Name<input data-contact-field="firstName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.firstName || "")}"></label>
               <label>Last Name<input data-contact-field="lastName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastName || "")}"></label>
               <label>Job Title<input data-contact-field="title" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.title || "")}"></label>
+              <label>Photo URL<input data-contact-field="photoUrl" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.photoUrl || "")}" placeholder="https://..."></label>
               <label>Function<select data-contact-field="executiveFunction" data-contact-key="${escapeHtml(row.key)}">${optionList(executiveFunctionOptions, row.executiveFunction || "")}</select></label>
               <label>Industry<input data-contact-field="industry" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.industry || "")}"></label>
               <label>Company Size<select data-contact-field="companySize" data-contact-key="${escapeHtml(row.key)}">${optionList(companySizeOptions, row.companySize || "")}</select></label>
@@ -2359,6 +2392,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <label>City<input data-contact-field="city" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.city || "")}"></label>
               <label>State<input data-contact-field="state" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.state || "")}"></label>
               <label>Time Zone<input data-contact-field="timeZone" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.timeZone || "")}"></label>
+              <label class="span-full">Bio<textarea data-contact-field="bio" data-contact-key="${escapeHtml(row.key)}" placeholder="Short executive bio">${escapeHtml(row.bio || "")}</textarea></label>
               <label class="span-full">Topic / Track Interest<select multiple size="6" data-contact-field="topicInterests" data-contact-key="${escapeHtml(row.key)}">${multiOptionList(topicTrackOptions, row.topicInterests || [])}</select></label>
               <button class="compact secondary span-full" type="button" data-save-contact-key="${escapeHtml(row.key)}">Save Contact</button>
             </div>
@@ -2751,6 +2785,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               firstName: changes.firstName ?? existing.firstName ?? "",
               lastName: changes.lastName ?? existing.lastName ?? "",
               title: changes.title ?? existing.title ?? "",
+              photoUrl: changes.photoUrl ?? existing.photoUrl ?? "",
+              bio: changes.bio ?? existing.bio ?? "",
               industry: changes.industry ?? existing.industry ?? "",
               executiveFunction: changes.executiveFunction ?? existing.executiveFunction ?? "",
               companySize: changes.companySize ?? existing.companySize ?? "",
