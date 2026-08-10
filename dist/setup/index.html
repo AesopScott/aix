@@ -209,7 +209,8 @@
       text-transform: uppercase;
     }
 
-    .search {
+    .search,
+    .quick-add-input {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -219,8 +220,42 @@
       outline: none;
     }
 
-    .search:focus {
+    .search:focus,
+    .quick-add-input:focus {
       border-color: var(--teal);
+    }
+
+    .quick-add-form {
+      display: grid;
+      gap: 8px;
+    }
+
+    .quick-add-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px;
+    }
+
+    .quick-add-btn {
+      min-height: 42px;
+      border: 1px solid var(--electric-blue);
+      border-radius: var(--radius);
+      background: var(--electric-blue);
+      color: var(--white);
+      cursor: pointer;
+      font-weight: 900;
+      padding: 0 12px;
+    }
+
+    .quick-add-btn:hover {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: var(--navy);
+    }
+
+    .quick-add-help {
+      color: var(--muted);
+      font-size: 0.76rem;
     }
 
     .filter-select,
@@ -876,6 +911,15 @@
           <input class="search" id="search" type="search" placeholder="Filter checklist items">
         </div>
 
+        <form class="control-group quick-add-form" id="quickAddForm">
+          <label class="control-label" for="quickAddText">Quick Add</label>
+          <div class="quick-add-row">
+            <input class="quick-add-input" id="quickAddText" type="text" maxlength="240" placeholder="Add setup item">
+            <button class="quick-add-btn" type="submit">Add</button>
+          </div>
+          <p class="quick-add-help">Adds to Setup Tracker Inbox for owner, support, dates, and deliverables later.</p>
+        </form>
+
         <div class="control-group">
           <div class="control-label">Phase</div>
           <div class="segmented" id="phaseFilters"></div>
@@ -926,8 +970,8 @@
 
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
-Date: 2026-08-05
-Version: 3.6
+Date: 2026-08-10
+Version: 3.7
 Category: event operations
 
 ## Purpose
@@ -1533,6 +1577,7 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.7 - Added quick-add inbox support for setup tracker items that can be populated later.
 - 3.6 - Added Miller Freeman as an assignable owner and support option.
 - 3.5 - Added company software inventory tracking as a setup responsibility.
 - 3.4 - Added fall 2026 virtual AI event series dates and a repeatable virtual event operations scaffold.
@@ -1608,6 +1653,9 @@ The following decisions should not be made by one owner alone:
     const deliverableOptions = ["Conversation", "Document", "Contract", "Website", "Event Tracker"];
     const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered"];
     const assignmentStoragePrefix = "mojo-event-assignment:";
+    const customItemsStorageKey = "mojo-event-custom-items";
+    const customInboxPhase = "Setup Tracker Inbox";
+    const customInboxSubsection = "Quick Adds";
     const sharedStateEndpoint = "/api/setup-state";
     const sharedSyncIntervalMs = 5000;
     let lastSharedUpdatedAt = "";
@@ -1760,13 +1808,121 @@ The following decisions should not be made by one owner alone:
     }
 
     const checklistSections = sections.filter((section) => section.type === "checklist");
-    const allItems = checklistSections.flatMap((section) =>
+    const staticItems = checklistSections.flatMap((section) =>
       section.subsections.flatMap((subsection) => subsection.items)
     );
-    allItems.forEach((item, index) => {
+    staticItems.forEach((item, index) => {
       item.id = `item-${index}-${slug(item.text).slice(0, 60)}`;
     });
+    let allItems = [...staticItems];
+    let customItems = [];
     const itemById = new Map(allItems.map((item) => [item.id, item]));
+
+    function storedCustomItem(item) {
+      return {
+        id: item.id,
+        text: item.text,
+        phase: item.phase,
+        subsection: item.subsection
+      };
+    }
+
+    function cacheCustomItems() {
+      localStorage.setItem(customItemsStorageKey, JSON.stringify(customItems.map(storedCustomItem)));
+    }
+
+    function createCustomItem(data = {}) {
+      const text = clean(String(data.text || "")).slice(0, 240);
+      if (!text) return null;
+      const id = String(data.id || `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${slug(text).slice(0, 40)}`).slice(0, 120);
+      const item = {
+        id,
+        text,
+        defaultOwner: "Shared",
+        defaultSupport: "",
+        defaultPriority: "",
+        defaultDeliverable: "",
+        defaultDueDate: "",
+        defaultStatus: "Undefined",
+        owner: data.owner || "Shared",
+        support: data.support || "",
+        priority: data.priority || "",
+        deliverable: data.deliverable || "",
+        dueDate: data.dueDate || "",
+        status: data.status || "Undefined",
+        phase: data.phase || customInboxPhase,
+        subsection: data.subsection || customInboxSubsection,
+        custom: true
+      };
+      applyAssignment(item, item);
+      return item;
+    }
+
+    function ensureChecklistSubsection(phase, subsection) {
+      let section = checklistSections.find((candidate) => candidate.title === phase);
+      if (!section) {
+        section = { title: phase, subsections: [], notes: [], type: "checklist", custom: true };
+        checklistSections.push(section);
+        sections.push(section);
+      }
+
+      let sub = section.subsections.find((candidate) => candidate.title === subsection);
+      if (!sub) {
+        sub = { title: subsection, items: [] };
+        section.subsections.push(sub);
+      }
+
+      return sub;
+    }
+
+    function clearCustomItems() {
+      customItems.forEach((item) => itemById.delete(item.id));
+      allItems = allItems.filter((item) => !item.custom);
+      checklistSections.forEach((section) => {
+        section.subsections.forEach((subsection) => {
+          subsection.items = subsection.items.filter((item) => !item.custom);
+        });
+        section.subsections = section.subsections.filter((subsection) => subsection.items.length > 0);
+      });
+      for (let index = checklistSections.length - 1; index >= 0; index -= 1) {
+        const section = checklistSections[index];
+        if (!section.custom || section.subsections.length > 0) continue;
+        checklistSections.splice(index, 1);
+        const sectionIndex = sections.indexOf(section);
+        if (sectionIndex >= 0) sections.splice(sectionIndex, 1);
+      }
+      customItems = [];
+    }
+
+    function addCustomItems(items = []) {
+      items.forEach((data) => {
+        const item = createCustomItem(data);
+        if (!item || itemById.has(item.id)) return;
+        const subsection = ensureChecklistSubsection(item.phase, item.subsection);
+        subsection.items.push(item);
+        allItems.push(item);
+        customItems.push(item);
+        itemById.set(item.id, item);
+        cacheAssignment(item);
+      });
+      cacheCustomItems();
+    }
+
+    function applyCustomItems(items = []) {
+      clearCustomItems();
+      addCustomItems(items);
+    }
+
+    function loadCachedCustomItems() {
+      const saved = localStorage.getItem(customItemsStorageKey);
+      if (!saved) return;
+      try {
+        const items = JSON.parse(saved);
+        if (Array.isArray(items)) addCustomItems(items);
+      } catch {
+        localStorage.removeItem(customItemsStorageKey);
+      }
+    }
 
     function assignmentStorageKey(item) {
       return `${assignmentStoragePrefix}${item.id}`;
@@ -1929,12 +2085,33 @@ The following decisions should not be made by one owner alone:
         const response = await fetch(sharedStateEndpoint, {
           method: "PUT",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ assignments: assignmentSnapshot() })
+          body: JSON.stringify({
+            assignments: assignmentSnapshot(),
+            customItems: customItems.map(storedCustomItem)
+          })
         });
         if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
         const state = await response.json();
         lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
         setSyncState("ok", "Shared sync live. All changes saved.");
+      } catch (error) {
+        setSyncState("error", describeSharedError(error));
+        console.warn(error);
+      }
+    }
+
+    async function saveSharedCustomItem(item) {
+      try {
+        setSyncState("warn", "Saving quick-add item...");
+        const response = await fetch(sharedStateEndpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ customItem: storedCustomItem(item) })
+        });
+        if (!response.ok) throw new Error(`Shared custom item save failed: ${response.status}`);
+        const state = await response.json();
+        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
+        setSyncState("ok", "Shared sync live. Quick-add item saved.");
       } catch (error) {
         setSyncState("error", describeSharedError(error));
         console.warn(error);
@@ -1959,10 +2136,17 @@ The following decisions should not be made by one owner alone:
       try {
         const state = await fetchSharedState();
         setSyncState("ok", "Shared sync live. Updates refresh every 5 seconds.");
+        const sharedCustomItems = Array.isArray(state.customItems) ? state.customItems : [];
         const assignments = state.assignments || {};
         const hasSharedAssignments = Object.keys(assignments).length > 0;
+        const hasSharedCustomItems = sharedCustomItems.length > 0;
+        const cachedCustomItems = customItems.map(storedCustomItem);
 
         if (state.updatedAt && state.updatedAt === lastSharedUpdatedAt) return;
+
+        if (hasSharedCustomItems || state.updatedAt) {
+          applyCustomItems(sharedCustomItems);
+        }
 
         if (hasSharedAssignments) {
           const savedLocalAssignments = localAssignments();
@@ -1986,7 +2170,8 @@ The following decisions should not be made by one owner alone:
           return;
         }
 
-        if (migrateLocalIfEmpty && Object.keys(localAssignments()).length > 0) {
+        if (migrateLocalIfEmpty && (Object.keys(localAssignments()).length > 0 || cachedCustomItems.length > 0)) {
+          if (cachedCustomItems.length > 0 && !hasSharedCustomItems) applyCustomItems(cachedCustomItems);
           await saveAllSharedAssignments();
           return;
         }
@@ -2017,6 +2202,7 @@ The following decisions should not be made by one owner alone:
       applyFilters();
     }
 
+    loadCachedCustomItems();
     loadCachedAssignments();
 
     function countByOwner(owner) {
@@ -2416,6 +2602,26 @@ The following decisions should not be made by one owner alone:
 
       document.getElementById("emptyState").classList.toggle("visible", visibleCount === 0);
     }
+
+    document.getElementById("quickAddForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const input = document.getElementById("quickAddText");
+      const text = input.value.trim();
+      if (!text) {
+        input.focus();
+        return;
+      }
+
+      const item = createCustomItem({ text });
+      if (!item) return;
+      addCustomItems([item]);
+      input.value = "";
+      state.phase = customInboxPhase;
+      state.query = "";
+      document.getElementById("search").value = "";
+      refreshView();
+      saveSharedCustomItem(item);
+    });
 
     document.getElementById("search").addEventListener("input", (event) => {
       state.query = event.target.value;
