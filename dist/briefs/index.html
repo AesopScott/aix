@@ -19,6 +19,15 @@
     @media(max-width:780px){.grid,.meta,.brief-card,.two-col,.toc,.matrix{grid-template-columns:1fr}.top{align-items:flex-start;gap:22px;flex-direction:column}.nav{display:none}.brand-lockup{gap:10px}.brand-mark{height:42px}.brand-divider{height:36px}.brand-primary{font-size:23px;letter-spacing:.05em}.brand-secondary{font-size:10px;letter-spacing:.32em;padding-left:.32em}.download-dock .wrap{align-items:flex-start;flex-direction:column}.report-page{min-height:auto;padding:30px}.contributor-table{display:block;overflow-x:auto}.framework div{grid-template-columns:1fr}.visual-bars{height:190px}.sponsor-head{align-items:flex-start;flex-direction:column}.sponsor-head img{max-width:100%;width:240px}}
     </style>
 <style>
+/* Page navigation exit link wrappers: keep label and indicator on one line. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup),
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup),
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup),
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup) {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
 /* Page navigation exit indicators: show when a top-nav link leaves the current section. */
 header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
 header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,

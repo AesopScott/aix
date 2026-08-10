@@ -583,6 +583,15 @@
     }
   </style>
 <style>
+/* Page navigation exit link wrappers: keep label and indicator on one line. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup),
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup),
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup),
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup) {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
 /* Page navigation exit indicators: show when a top-nav link leaves the current section. */
 header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
 header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
