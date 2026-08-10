@@ -37,6 +37,15 @@
     @media (max-width:980px){nav{align-items:flex-start;flex-direction:column;padding:18px 0}.nav-links{flex-wrap:wrap;gap:16px}.hero-grid,.section-head,.room-inner{grid-template-columns:1fr}.event-panel{min-height:460px}.metric-band,.format-grid,.run-grid{grid-template-columns:repeat(2,1fr)}}@media (max-width:720px){.wrap,nav{width:min(100% - 28px,1180px)}.hero{padding-top:58px}.brand-primary{font-size:20px}.brand-secondary{font-size:9.5px}.nav-links{font-size:10.5px;letter-spacing:.12em}h1{font-size:clamp(39px,13vw,54px)}.hero-copy{font-size:16px}.event-panel{min-height:430px;padding:20px}.event-panel:before{inset:12px}.event-panel:after{inset:22px}.date-card{width:180px}.date-card strong{font-size:62px}.seat-count{right:20px;top:20px;grid-template-columns:repeat(3,18px);gap:7px}.seat-count span{width:18px;height:18px}.panel-caption{left:20px;right:20px;bottom:20px;flex-direction:column;gap:6px}.metric-band,.format-grid,.topic-grid,.run-grid{grid-template-columns:1fr}.metric{border-right:0;border-bottom:1px solid var(--line)}.metric:last-child{border-bottom:0}.topic{grid-template-columns:1fr;gap:12px}.room-inner{padding:72px 0}.rules div{grid-template-columns:1fr;gap:8px}footer .wrap{display:grid}}
   </style>
 <style>
+/* Page navigation exit link wrappers: keep label and indicator on one line. */
+header nav a[href]:not([href^="#"]):not(.brand-lockup),
+header .nav-links a[href]:not([href^="#"]):not(.brand-lockup),
+header .nav-actions a[href]:not([href^="#"]):not(.brand-lockup),
+header .top-nav a[href]:not([href^="#"]):not(.brand-lockup) {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
 /* Page navigation exit indicators: show when a top-nav link leaves the current section. */
 header nav a[href]:not([href^="#"]):not(.brand-lockup)::after,
 header .nav-links a[href]:not([href^="#"]):not(.brand-lockup)::after,
