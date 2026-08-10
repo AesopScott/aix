@@ -6,6 +6,7 @@ const jsonHeaders = {
 };
 
 const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status"];
+const customItemFields = ["id", "text", "phase", "subsection"];
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -21,7 +22,7 @@ async function readState(env) {
   const stored = await env.MOJO_SUMMITS_SETUP_STATE.get(STATE_KEY, "json");
   return stored && typeof stored === "object"
     ? stored
-    : { assignments: {}, updatedAt: null };
+    : { assignments: {}, customItems: [], updatedAt: null };
 }
 
 function sanitizeAssignment(value) {
@@ -30,9 +31,37 @@ function sanitizeAssignment(value) {
   return Object.fromEntries(assignmentFields.map((field) => [field, String(value[field] || "")]));
 }
 
+function sanitizeCustomItem(value) {
+  if (!value || typeof value !== "object") return null;
+  const text = String(value.text || "").trim();
+  const id = String(value.id || "").trim();
+  if (!id || !text) return null;
+
+  const item = Object.fromEntries(customItemFields.map((field) => [field, String(value[field] || "").trim()]));
+  item.id = id;
+  item.text = text.slice(0, 240);
+  item.phase = item.phase || "Setup Tracker Inbox";
+  item.subsection = item.subsection || "Quick Adds";
+  return item;
+}
+
+function sanitizeCustomItems(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  const items = [];
+  value.forEach((entry) => {
+    const item = sanitizeCustomItem(entry);
+    if (!item || seen.has(item.id)) return;
+    seen.add(item.id);
+    items.push(item);
+  });
+  return items;
+}
+
 async function writeState(env, state) {
   const next = {
     assignments: state.assignments || {},
+    customItems: sanitizeCustomItems(state.customItems),
     updatedAt: new Date().toISOString()
   };
   await env.MOJO_SUMMITS_SETUP_STATE.put(STATE_KEY, JSON.stringify(next));
@@ -40,7 +69,12 @@ async function writeState(env, state) {
 }
 
 export async function onRequestGet({ env }) {
-  return json(await readState(env));
+  const state = await readState(env);
+  return json({
+    assignments: state.assignments || {},
+    customItems: sanitizeCustomItems(state.customItems),
+    updatedAt: state.updatedAt || null
+  });
 }
 
 export async function onRequestPatch({ request, env }) {
@@ -66,6 +100,24 @@ export async function onRequestPatch({ request, env }) {
   return json(await writeState(env, state));
 }
 
+export async function onRequestPost({ request, env }) {
+  const payload = await request.json().catch(() => null);
+  const item = sanitizeCustomItem(payload?.customItem);
+
+  if (!item) {
+    return json({ error: "Expected a custom item with id and text." }, { status: 400 });
+  }
+
+  const state = await readState(env);
+  const customItems = sanitizeCustomItems(state.customItems).filter((existing) => existing.id !== item.id);
+  customItems.push(item);
+  state.customItems = customItems;
+  state.assignments = state.assignments || {};
+  state.assignments[item.id] = sanitizeAssignment(item);
+
+  return json(await writeState(env, state));
+}
+
 export async function onRequestPut({ request, env }) {
   const payload = await request.json().catch(() => null);
   const incoming = payload?.assignments;
@@ -81,9 +133,14 @@ export async function onRequestPut({ request, env }) {
     if (clean) assignments[id] = clean;
   }
 
-  return json(await writeState(env, { assignments }));
+  const state = await readState(env);
+  return json(await writeState(env, {
+    assignments,
+    customItems: payload?.customItems === undefined ? state.customItems : payload.customItems
+  }));
 }
 
 export async function onRequestDelete({ env }) {
-  return json(await writeState(env, { assignments: {} }));
+  const state = await readState(env);
+  return json(await writeState(env, { assignments: {}, customItems: state.customItems }));
 }

@@ -33,6 +33,8 @@
       --owner-orbit-flow: var(--slate);
       --owner-photo-sound-cinema: var(--cyan);
       --owner-unknown: var(--slate);
+      --complete-green: #18A058;
+      --overdue-red: #E5484D;
       --radius: 8px;
       color-scheme: dark;
     }
@@ -273,6 +275,8 @@
     .owner-photo-sound-cinema { background: var(--owner-photo-sound-cinema); }
     .owner-unknown { background: var(--owner-unknown); color: var(--white); }
     .owner-shared, .owner-all { background: var(--cyan); }
+    .day-chip.complete { background: var(--complete-green); color: var(--white); }
+    .day-chip.overdue { background: var(--overdue-red); color: var(--white); }
 
     .day-cell.empty-day {
       justify-content: center;
@@ -551,6 +555,41 @@
       item.status = normalized.status;
     }
 
+    function createCustomItem(data = {}) {
+      const text = clean(String(data.text || "")).slice(0, 240);
+      const id = String(data.id || "").slice(0, 120);
+      if (!id || !text) return null;
+      const item = {
+        id,
+        text,
+        defaultOwner: "Shared",
+        defaultSupport: "",
+        defaultPriority: "",
+        defaultDeliverable: "",
+        defaultDueDate: "",
+        defaultStatus: "Undefined",
+        owner: data.owner || "Shared",
+        support: data.support || "",
+        priority: data.priority || "",
+        deliverable: data.deliverable || "",
+        dueDate: data.dueDate || "",
+        status: data.status || "Undefined",
+        phase: data.phase || "Setup Tracker Inbox",
+        subsection: data.subsection || "Quick Adds",
+        custom: true
+      };
+      applyAssignment(item, item);
+      return item;
+    }
+
+    function applyCustomItems(items = []) {
+      allItems = allItems.filter((item) => !item.custom);
+      items.forEach((data) => {
+        const item = createCustomItem(data);
+        if (item) allItems.push(item);
+      });
+    }
+
     let allItems = [];
     let lastUpdatedAt = "";
     const view = { year: null, month: null, owner: "All" };
@@ -610,11 +649,18 @@
       return map;
     }
 
+    function calendarStateClass(item) {
+      if (item.status === "Delivered") return "complete";
+      if (item.dueDate && item.dueDate < todayKey) return "overdue";
+      return "";
+    }
+
     function chipHtml(item) {
       const isOwner = view.owner !== "All" && ownerNames(item.owner).includes(view.owner);
       const badgeOwner = view.owner === "All" ? item.owner : (isOwner ? item.owner : `Support: ${item.owner}`);
+      const stateClass = calendarStateClass(item);
       return `
-        <span class="day-chip ${ownerClass(item.owner)}" title="${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">
+        <span class="day-chip ${ownerClass(item.owner)} ${stateClass}" title="${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">
           ${escapeHtml(item.text.length > 60 ? `${item.text.slice(0, 57)}...` : item.text)}
           <span class="chip-status">${escapeHtml(badgeOwner)} • ${escapeHtml(item.status)}</span>
         </span>
@@ -709,6 +755,7 @@
         const state = await loadSharedAssignments();
         if (state.updatedAt === lastUpdatedAt) return;
         lastUpdatedAt = state.updatedAt || lastUpdatedAt;
+        applyCustomItems(Array.isArray(state.customItems) ? state.customItems : []);
         const assignments = state.assignments || {};
         allItems.forEach((item) => {
           if (assignments[item.id]) applyAssignment(item, assignments[item.id]);
