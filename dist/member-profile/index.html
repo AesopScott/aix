@@ -377,8 +377,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <div class="metric-grid">
             <div class="metric"><strong id="sessionCount">0</strong><span>Sessions attended</span></div>
             <div class="metric"><strong id="summitCount">0</strong><span>Summits attended</span></div>
-            <div class="metric"><strong id="documentedContributionCount">0</strong><span>Documented contributions</span></div>
+            <div class="metric"><strong id="publicationCount">0</strong><span>Publications contributed to</span></div>
+            <div class="metric"><strong id="guestInviteCount">0</strong><span>Guest invite links created</span></div>
             <div class="metric"><strong id="fellowshipNominationCount">0</strong><span>Fellowship nominations received</span></div>
+            <div class="metric"><strong id="documentedContributionCount">0</strong><span>Documented contributions</span></div>
           </div>
         </aside>
       </section>
@@ -397,6 +399,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <div class="metric-grid" style="margin-top:14px;">
               <div class="metric"><strong id="goodStandingStatus">-</strong><span>Good standing</span></div>
               <div class="metric"><strong id="profileCompleteStatus">-</strong><span>Profile complete</span></div>
+              <div class="metric"><strong id="totalAttendanceCount">0</strong><span>Total sessions or summits</span></div>
+              <div class="metric"><strong id="trackedPublicationCount">0</strong><span>Tracked publications</span></div>
               <div class="metric"><strong id="fellowshipYesVotes">0</strong><span>Yes votes received</span></div>
               <div class="metric"><strong id="fellowshipNoVotes">0</strong><span>No votes received</span></div>
             </div>
@@ -528,11 +532,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <div class="section-head">
           <div>
             <span class="eyebrow">Tier commitments</span>
-            <h2>Minimum levels, commitments, and contributions</h2>
+            <h2>System-counted minimums and member approval</h2>
           </div>
-          <span class="pill warn">Formal minimums are member-voted quarterly</span>
+          <span class="pill warn">No minimum time requirement</span>
         </div>
-        <p>These thresholds are operating guidance while the network formalizes the minimum levels by member vote at quarterly summit events.</p>
+        <p>Attendance, publications, and guest invites are the hard technical counts. Judgment, influence, and leadership quality belong in nomination evidence and member voting.</p>
         <div class="grid-2" id="tierGuide" style="margin-top:16px;"></div>
       </section>
     </div>
@@ -568,6 +572,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           intelligenceSessions: 9,
           summitsAttended: 2,
           documentedContributions: 6,
+          publicationsContributedTo: 2,
           fellowshipNominationsReceived: 3,
           guestInviteLinksCreated: 4,
           memberNominationsCreated: 2,
@@ -579,6 +584,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             goodStanding: true,
             profileComplete: true,
             openToFellowshipNomination: true,
+            totalAttendance: 11,
+            publicationsContributedTo: 2,
+            guestInviteLinksCreated: 4,
+            nominationsReceived: 3,
             yesVotes: 8,
             noVotes: 1
           },
@@ -598,20 +607,27 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               technicallyEligible: true,
               approvalLabel: "Current tier",
               requirements: [
-                { label: "Sessions attended", current: 9, required: 3, met: true },
-                { label: "Documented contributions", current: 6, required: 2, met: true }
+                { label: "Good standing", current: 1, required: 1, met: true },
+                { label: "Complete profile", current: 1, required: 1, met: true },
+                { label: "Sessions or summits attended", current: 11, required: 1, met: true },
+                { label: "Publications contributed to", current: 2, required: 2, met: true },
+                { label: "Guest invite links created", current: 4, required: 1, met: true },
+                { label: "Peer nominations received", current: 3, required: 1, met: true }
               ]
             },
             {
-              tier: "Executive Fellow",
+              tier: "Senior Fellow",
               currentOrPast: false,
-              promotionEligible: true,
-              technicallyEligible: true,
-              approvalLabel: "Eligible for member nomination",
+              promotionEligible: false,
+              technicallyEligible: false,
+              approvalLabel: "Two-thirds approval",
               requirements: [
-                { label: "Sessions attended", current: 9, required: 6, met: true },
-                { label: "Documented contributions", current: 6, required: 5, met: true },
-                { label: "Member nominations", current: 3, required: 2, met: true }
+                { label: "Good standing", current: 1, required: 1, met: true },
+                { label: "Complete profile", current: 1, required: 1, met: true },
+                { label: "Sessions or summits attended", current: 11, required: 3, met: true },
+                { label: "Publications contributed to", current: 2, required: 4, met: false },
+                { label: "Guest invite links created", current: 4, required: 2, met: true },
+                { label: "Peer nominations received", current: 3, required: 2, met: true }
               ]
             }
           ],
@@ -619,7 +635,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             {
               name: "Priya Shah",
               email: "priya.shah@example.com",
-              targetTier: "Executive Fellow",
+              targetTier: "Senior Fellow",
               requiresLevelFourEvidence: false
             },
             {
@@ -634,7 +650,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               id: "preview-nomination-1",
               candidateName: "Priya Shah",
               candidateEmail: "priya.shah@example.com",
-              targetTier: "Executive Fellow",
+              targetTier: "Senior Fellow",
               nominationReason: "Consistent research contribution, strong peer facilitation, and active mentorship.",
               yesVotes: 11,
               noVotes: 1,
@@ -702,21 +718,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           },
           {
             tier: "Contributing Fellow",
-            minimum: "Active participation across multiple sessions or research efforts.",
-            approval: "Member-voted quarterly at summit events.",
-            contribution: "Visible participation, research interviews, guest introductions, and private discussion involvement."
+            minimum: "1 session or summit attended, 2 publications contributed to, 1 guest invite created, and 1 peer nomination.",
+            approval: "Majority approval.",
+            contribution: "Only attendance, publication, and guest-invite counts define technical eligibility. Judgment is evaluated through nomination evidence and member voting."
           },
           {
             tier: "Senior Fellow",
-            minimum: "Help create the network's intellectual property.",
-            approval: "Member-voted quarterly with contribution review.",
-            contribution: "Lead discussions, review briefs, write commentary, host sessions, and become eligible for paid speaking opportunities."
+            minimum: "3 sessions or summits attended, 4 publications contributed to, 2 guest invites created, and 2 peer nominations.",
+            approval: "Two-thirds approval.",
+            contribution: "Only attendance, publication, and guest-invite counts define technical eligibility. Senior Fellows are eligible for paid speaking opportunities after member approval."
           },
           {
             tier: "Distinguished Fellow",
-            minimum: "Sustained executive influence and multi-year contribution.",
-            approval: "Enhanced evidence review and member vote.",
-            contribution: "Chair initiatives, guide strategy, help define the community's direction, and receive priority consideration for paid speaking opportunities."
+            minimum: "6 sessions or summits attended, 6 publications contributed to, 3 guest invites created, and 3 peer nominations.",
+            approval: "Three-fourths approval with Distinguished Fellow evidence fields.",
+            contribution: "Only attendance, publication, and guest-invite counts define technical eligibility. Distinguished Fellows receive priority consideration for paid speaking opportunities after member approval."
           }
         ]
       };
@@ -792,6 +808,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const nextWindow = windowState.next || {};
       setText("goodStandingStatus", stats.goodStanding ? "Yes" : "No");
       setText("profileCompleteStatus", stats.profileComplete ? "Yes" : "No");
+      setText("totalAttendanceCount", String(stats.totalAttendance || 0));
+      setText("trackedPublicationCount", String(stats.publicationsContributedTo || 0));
       setText("fellowshipYesVotes", String(stats.yesVotes || 0));
       setText("fellowshipNoVotes", String(stats.noVotes || 0));
       document.querySelector("#openToNomination").checked = Boolean(stats.openToFellowshipNomination);
@@ -930,9 +948,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       setText("memberContact", [profile.title, profile.company, profile.email].filter(Boolean).join(" | "));
       setText("sessionCount", String(impact.intelligenceSessions || 0));
       setText("summitCount", String(impact.summitsAttended || 0));
+      setText("publicationCount", String(impact.publicationsContributedTo || 0));
+      setText("guestInviteCount", String(impact.guestInviteLinksCreated || 0));
       setText("documentedContributionCount", String(impact.documentedContributions || 0));
       setText("fellowshipNominationCount", String(impact.fellowshipNominationsReceived || 0));
-      setText("guestInviteCount", String(impact.guestInviteLinksCreated || 0));
       setText("nominationCount", String(impact.memberNominationsCreated || 0));
       setText("monthlyNominations", `${impact.memberNominationsThisMonth || 0} / ${state.monthlyMemberInviteLimit || 2}`);
       setText("yearsMember", String(impact.yearsOfMembership || 0));

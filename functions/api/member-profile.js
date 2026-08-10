@@ -3,6 +3,7 @@ import { json } from "../_access-control.js";
 
 const MEMBER_PREFIX = "crm:member-registrant:";
 const MEMBER_LEGACY_PREFIX = "member-registration:";
+const CONTACT_PREFIX = "crm:contact:";
 const GUEST_INVITE_PREFIX = "crm:guest-invite-code:";
 const MEMBER_INVITE_PREFIX = "crm:member-invite-code:";
 const FELLOWSHIP_NOMINATION_PREFIX = "crm:fellowship-nomination:";
@@ -12,7 +13,8 @@ const FELLOWSHIP_LEVELS = [
     tier: "Fellow",
     level: 1,
     minAttendance: 0,
-    minContributions: 0,
+    minPublications: 0,
+    minGuestInvites: 0,
     minNominations: 0,
     approvalThreshold: 0,
     approvalLabel: "Accepted member in good standing"
@@ -20,8 +22,9 @@ const FELLOWSHIP_LEVELS = [
   {
     tier: "Contributing Fellow",
     level: 2,
-    minAttendance: 2,
-    minContributions: 2,
+    minAttendance: 1,
+    minPublications: 2,
+    minGuestInvites: 1,
     minNominations: 1,
     approvalThreshold: 0.5,
     approvalLabel: "Majority approval"
@@ -29,8 +32,9 @@ const FELLOWSHIP_LEVELS = [
   {
     tier: "Senior Fellow",
     level: 3,
-    minAttendance: 4,
-    minContributions: 4,
+    minAttendance: 3,
+    minPublications: 4,
+    minGuestInvites: 2,
     minNominations: 2,
     approvalThreshold: 2 / 3,
     approvalLabel: "Two-thirds approval"
@@ -39,7 +43,8 @@ const FELLOWSHIP_LEVELS = [
     tier: "Distinguished Fellow",
     level: 4,
     minAttendance: 6,
-    minContributions: 6,
+    minPublications: 6,
+    minGuestInvites: 3,
     minNominations: 3,
     approvalThreshold: 3 / 4,
     approvalLabel: "Three-fourths approval"
@@ -144,6 +149,11 @@ function normalizeMember(entry) {
     ["documentedContributions", "contributionCount"],
     ["contributions", "contributionRecords", "documentedContributionRecords"]
   );
+  const publicationsContributedTo = recordCount(
+    record,
+    ["publicationsContributedTo", "publicationCount", "publishedContributionCount"],
+    ["publications", "publicationRecords", "publishedContributions", "publicationContributions"]
+  );
   return {
     key: entry.key,
     id: cleanString(record.id) || entry.key,
@@ -167,6 +177,7 @@ function normalizeMember(entry) {
     sessionsAttended: sessionsAttended || (record.eventName ? 1 : 0),
     summitsAttended,
     documentedContributions,
+    publicationsContributedTo,
     contributionRecords: Array.isArray(record.contributionRecords)
       ? record.contributionRecords.slice(0, 20).map((item) => ({
         type: cleanString(item?.type, 120),
@@ -184,9 +195,32 @@ async function members(env) {
   const legacyRows = (await recordsForPrefix(env, MEMBER_LEGACY_PREFIX)).filter(
     (entry) => !ids.has(cleanString(entry.record?.id))
   );
+  const contactRows = await recordsForPrefix(env, CONTACT_PREFIX);
+  const contactsByEmail = new Map(contactRows.map((entry) => [
+    cleanEmail(entry.record?.email || entry.key.replace(CONTACT_PREFIX, "")),
+    entry.record || {}
+  ]));
   return [...crmRows, ...legacyRows]
     .map(normalizeMember)
     .filter((member) => member.email)
+    .map((member) => {
+      const contact = contactsByEmail.get(member.email);
+      if (!contact) return member;
+      const attendedEvents = Array.isArray(contact.events)
+        ? contact.events.filter((event) => event?.attended === true).length
+        : 0;
+      const contactAttendance = recordCount(contact, ["attendedCount"], []) || attendedEvents;
+      const contactPublications = recordCount(
+        contact,
+        ["publicationsContributedTo", "publicationCount", "publishedContributionCount"],
+        ["publications", "publicationRecords", "publishedContributions", "publicationContributions"]
+      );
+      return {
+        ...member,
+        sessionsAttended: Math.max(member.sessionsAttended || 0, contactAttendance),
+        publicationsContributedTo: Math.max(member.publicationsContributedTo || 0, contactPublications)
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -239,6 +273,9 @@ function publicInvite(entry, requestUrl) {
     eventDate: cleanString(record.eventDate),
     nomineeName: cleanString(record.nomineeName),
     nomineeEmail: cleanEmail(record.nomineeEmail),
+    createdByMemberEmail: cleanEmail(record.createdByMemberEmail),
+    createdByMemberName: cleanString(record.createdByMemberName),
+    createdByMemberTier: normalizeTier(record.createdByMemberTier),
     createdAt: cleanString(record.createdAt),
     usedAt: cleanString(record.usedAt),
     usedBy: cleanString(record.usedBy),
@@ -290,10 +327,16 @@ function nominationWindow(env, today = new Date()) {
 }
 
 async function memberInvites(env, email, requestUrl) {
+  const entries = await allMemberInvites(env, requestUrl);
+  return entries
+    .filter((invite) => invite.createdByMemberEmail === email)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+async function allMemberInvites(env, requestUrl) {
   const prefixes = [GUEST_INVITE_PREFIX, MEMBER_INVITE_PREFIX];
   const entries = (await Promise.all(prefixes.map((prefix) => recordsForPrefix(env, prefix)))).flat();
   return entries
-    .filter((entry) => cleanEmail(entry.record?.createdByMemberEmail) === email)
     .map((entry) => publicInvite(entry, requestUrl))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
@@ -357,11 +400,14 @@ function profileComplete(profile) {
   return Boolean(profile.name && profile.company && profile.title && profile.email);
 }
 
-function fellowshipStats(profile, nominations) {
+function fellowshipStats(profile, nominations, invites = []) {
   const received = nominations.filter((nomination) => nomination.candidateEmail === profile.email);
   const yesVotes = received.reduce((sum, nomination) => sum + nomination.yesVotes, 0);
   const noVotes = received.reduce((sum, nomination) => sum + nomination.noVotes, 0);
   const totalAttendance = (profile.sessionsAttended || 0) + (profile.summitsAttended || 0);
+  const guestInviteLinksCreated = invites.filter(
+    (invite) => invite.type === "guest" && invite.createdByMemberEmail === profile.email
+  ).length;
   return {
     currentTier: normalizeTier(profile.tier),
     level: levelForTier(profile.tier).level,
@@ -372,6 +418,8 @@ function fellowshipStats(profile, nominations) {
     summitsAttended: profile.summitsAttended || 0,
     totalAttendance,
     documentedContributions: profile.documentedContributions || 0,
+    publicationsContributedTo: profile.publicationsContributedTo || 0,
+    guestInviteLinksCreated,
     nominationsReceived: received.length,
     yesVotes,
     noVotes,
@@ -379,15 +427,16 @@ function fellowshipStats(profile, nominations) {
   };
 }
 
-function eligibilityFor(profile, nominations) {
-  const stats = fellowshipStats(profile, nominations);
+function eligibilityFor(profile, nominations, invites = []) {
+  const stats = fellowshipStats(profile, nominations, invites);
   return FELLOWSHIP_LEVELS.map((level) => {
     const currentOrPast = level.level <= stats.level;
     const requirements = [
       { label: "Good standing", current: stats.goodStanding ? 1 : 0, required: 1, met: stats.goodStanding },
       { label: "Complete profile", current: stats.profileComplete ? 1 : 0, required: 1, met: stats.profileComplete },
       { label: "Sessions or summits attended", current: stats.totalAttendance, required: level.minAttendance, met: stats.totalAttendance >= level.minAttendance },
-      { label: "Documented contributions", current: stats.documentedContributions, required: level.minContributions, met: stats.documentedContributions >= level.minContributions },
+      { label: "Publications contributed to", current: stats.publicationsContributedTo, required: level.minPublications, met: stats.publicationsContributedTo >= level.minPublications },
+      { label: "Guest invite links created", current: stats.guestInviteLinksCreated, required: level.minGuestInvites, met: stats.guestInviteLinksCreated >= level.minGuestInvites },
       { label: "Peer nominations received", current: stats.nominationsReceived, required: level.minNominations, met: stats.nominationsReceived >= level.minNominations }
     ];
     return {
@@ -400,14 +449,14 @@ function eligibilityFor(profile, nominations) {
   });
 }
 
-function eligibleNominationTargets(allMembers, currentEmail, nominations, window) {
+function eligibleNominationTargets(allMembers, currentEmail, nominations, window, invites = []) {
   if (!window.open) return [];
   return allMembers
     .filter((member) => member.email !== currentEmail)
     .map((member) => {
       const next = nextLevel(member.tier);
       if (!next) return null;
-      const eligibility = eligibilityFor(member, nominations).find((level) => level.tier === next.tier);
+      const eligibility = eligibilityFor(member, nominations, invites).find((level) => level.tier === next.tier);
       const existingActive = nominations.some(
         (nomination) =>
           nomination.status === "active" &&
@@ -431,11 +480,12 @@ function eligibleNominationTargets(allMembers, currentEmail, nominations, window
 function memberImpact(profile, invites, nominations) {
   const memberCodes = invites.filter((invite) => invite.type === "member");
   const guestCodes = invites.filter((invite) => invite.type === "guest");
-  const stats = fellowshipStats(profile, nominations);
+  const stats = fellowshipStats(profile, nominations, invites);
   return {
     intelligenceSessions: profile.sessionsAttended || 0,
     summitsAttended: profile.summitsAttended || 0,
     documentedContributions: profile.documentedContributions || 0,
+    publicationsContributedTo: profile.publicationsContributedTo || 0,
     guestInviteLinksCreated: guestCodes.length,
     memberNominationsCreated: memberCodes.length,
     fellowshipNominationsReceived: stats.nominationsReceived,
@@ -443,7 +493,6 @@ function memberImpact(profile, invites, nominations) {
     fellowshipNoVotesReceived: stats.noVotes,
     memberNominationsThisMonth: memberCodes.filter((invite) => invite.createdAt.startsWith(monthKey())).length,
     roundtablesLed: profile.isRoundtableLeader ? 1 : 0,
-    publicationsContributedTo: 0,
     mentorshipEngagements: 0,
     yearsOfMembership: profile.memberSince
       ? Math.max(0, new Date().getFullYear() - new Date(profile.memberSince).getFullYear())
@@ -478,13 +527,13 @@ function tierGuide() {
     tier: level.tier,
     minimum: level.level === 1
       ? "Accepted member in good standing with a complete profile."
-      : `${level.minAttendance} sessions or summits attended, ${level.minContributions} documented contributions, and ${level.minNominations} peer nomination${level.minNominations === 1 ? "" : "s"}.`,
+      : `${level.minAttendance} sessions or summits attended, ${level.minPublications} publication${level.minPublications === 1 ? "" : "s"} contributed to, ${level.minGuestInvites} guest invite${level.minGuestInvites === 1 ? "" : "s"} created, and ${level.minNominations} peer nomination${level.minNominations === 1 ? "" : "s"}.`,
     approval: level.approvalLabel,
     contribution: level.level === 3
-      ? "Only website-trackable counts define technical eligibility. Senior Fellows are eligible for paid speaking opportunities after member approval."
+      ? "Only attendance, publication, and guest-invite counts define technical eligibility. Senior Fellows are eligible for paid speaking opportunities after member approval."
       : level.level === 4
-        ? "Only website-trackable counts define technical eligibility. Distinguished Fellows receive priority consideration for paid speaking opportunities after member approval."
-        : "Only website-trackable counts define technical eligibility. Judgment, influence, and leadership quality are evaluated through nomination evidence and member voting."
+        ? "Only attendance, publication, and guest-invite counts define technical eligibility. Distinguished Fellows receive priority consideration for paid speaking opportunities after member approval."
+        : "Only attendance, publication, and guest-invite counts define technical eligibility. Judgment, influence, and leadership quality are evaluated through nomination evidence and member voting."
   }));
 }
 
@@ -514,7 +563,8 @@ export async function onRequestGet({ request, env }) {
   const access = await authenticatedMember(request, env);
   if (access.response) return access.response;
 
-  const invites = await memberInvites(env, access.profile.email, request.url);
+  const allInvites = await allMemberInvites(env, request.url);
+  const invites = allInvites.filter((invite) => invite.createdByMemberEmail === access.profile.email);
   const nominations = await fellowshipNominations(env);
   const window = nominationWindow(env);
   return json({
@@ -524,10 +574,10 @@ export async function onRequestGet({ request, env }) {
     invites,
     impact: memberImpact(access.profile, invites, nominations),
     fellowship: {
-      stats: fellowshipStats(access.profile, nominations),
-      eligibility: eligibilityFor(access.profile, nominations),
+      stats: fellowshipStats(access.profile, nominations, invites),
+      eligibility: eligibilityFor(access.profile, nominations, invites),
       nominationWindow: window,
-      nominationTargets: eligibleNominationTargets(access.allMembers, access.profile.email, nominations, window),
+      nominationTargets: eligibleNominationTargets(access.allMembers, access.profile.email, nominations, window, allInvites),
       receivedNominations: nominations.filter((nomination) => nomination.candidateEmail === access.profile.email),
       openNominations: nominations.filter((nomination) => nomination.status === "active")
     },
@@ -564,7 +614,8 @@ export async function onRequestPost({ request, env }) {
       return json({ error: "Fellowship nominations are currently closed." }, { status: 403 });
     }
     const nominations = await fellowshipNominations(env);
-    const targets = eligibleNominationTargets(access.allMembers, access.profile.email, nominations, window);
+    const allInvites = await allMemberInvites(env, request.url);
+    const targets = eligibleNominationTargets(access.allMembers, access.profile.email, nominations, window, allInvites);
     const targetEmail = cleanEmail(payload?.candidateEmail);
     const target = targets.find((candidate) => candidate.email === targetEmail);
     if (!target) {
