@@ -7,9 +7,13 @@ Static Cloudflare Pages site for Mojo AI Summits.
 - Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/
 - AI Executive Readiness Online: https://mojoaisummits.com/ai-executive-readiness-online/
+- AI Data Readiness and Knowledge Strategy Online: https://mojoaisummits.com/ai-data-readiness-and-knowledge-strategy-online/
 - AI Use Cases That Survive Finance Online: https://mojoaisummits.com/ai-use-cases-that-survive-finance-online/
+- AI Agents, Automation, and Human Handoffs Online: https://mojoaisummits.com/ai-agents-automation-and-human-handoffs-online/
 - AI Integration and Workflow Online: https://mojoaisummits.com/ai-integration-and-workflow-online/
+- AI Vendor Strategy and Platform Decisions Online: https://mojoaisummits.com/ai-vendor-strategy-and-platform-decisions-online/
 - AI Security, Governance, and Trust Online: https://mojoaisummits.com/ai-security-governance-and-trust-online/
+- AI Workforce, Talent, and Change Adoption Online: https://mojoaisummits.com/ai-workforce-talent-and-change-adoption-online/
 - AI Operating Model for 2027 Online: https://mojoaisummits.com/ai-operating-model-for-2027-online/
 - Strategic intelligence partners: https://mojoaisummits.com/partners/
 - Partner pricing structure: https://mojoaisummits.com/partner-pricing/
@@ -140,15 +144,19 @@ Partner invite codes are generated inside the protected CRM and stored under `cr
 
 The public virtual event series route lives at `/virtual/`.
 
-Dedicated public landing pages live at `/ai-executive-readiness-online/`, `/ai-use-cases-that-survive-finance-online/`, `/ai-integration-and-workflow-online/`, `/ai-security-governance-and-trust-online/`, and `/ai-operating-model-for-2027-online/`. Each positions the matching fall 2026 virtual event as an invitation-only moderated roundtable for nine executives and includes eight event-specific discussion questions.
+Dedicated public landing pages live for all nine Fall 2026 virtual events: `/ai-executive-readiness-online/`, `/ai-data-readiness-and-knowledge-strategy-online/`, `/ai-use-cases-that-survive-finance-online/`, `/ai-agents-automation-and-human-handoffs-online/`, `/ai-integration-and-workflow-online/`, `/ai-vendor-strategy-and-platform-decisions-online/`, `/ai-security-governance-and-trust-online/`, `/ai-workforce-talent-and-change-adoption-online/`, `/ai-operating-model-for-2027-online/`. Each positions the matching event as an invitation-only moderated roundtable for nine executives and includes eight event-specific discussion questions.
 
 Confirmed virtual AI event dates:
 
-- September 4, 2026
-- September 25, 2026
-- October 16, 2026
-- November 6, 2026
-- November 27, 2026
+- September 4, 2026: AI Executive Readiness
+- September 18, 2026: AI Data Readiness and Knowledge Strategy
+- September 25, 2026: AI Use Cases That Survive Finance
+- October 9, 2026: AI Agents, Automation, and Human Handoffs
+- October 16, 2026: AI Integration and Workflow
+- October 30, 2026: AI Vendor Strategy and Platform Decisions
+- November 6, 2026: AI Security, Governance, and Trust
+- November 20, 2026: AI Workforce, Talent, and Change Adoption
+- November 27, 2026: AI Operating Model for 2027
 
 Shareable Zoom room pages are rendered by Pages Functions at `/virtual/[event-slug]` and `/virtual/[event-slug].php`. The `.php` route exists for share-link compatibility; Cloudflare serves it through the Function runtime rather than a PHP server. The page calls `/api/virtual-events/[event-slug]`, which reads the stored Zoom join URL from `MOJO_SUMMITS_SETUP_STATE` and stops returning it 15 minutes before the event start time.
 

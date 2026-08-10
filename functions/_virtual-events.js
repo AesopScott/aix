@@ -16,6 +16,19 @@ export const VIRTUAL_EVENTS = [
     ]
   },
   {
+    slug: "ai-data-readiness-and-knowledge-strategy",
+    title: "AI Data Readiness and Knowledge Strategy",
+    dateLabel: "Friday, September 18, 2026",
+    startAt: "2026-09-18T13:00:00-05:00",
+    durationMinutes: 90,
+    summary: "Clarify whether the organization has the data, knowledge, permissions, and retrieval foundations required for useful AI.",
+    agenda: [
+      "Data readiness diagnostic",
+      "Knowledge and retrieval strategy",
+      "Permission and quality gaps"
+    ]
+  },
+  {
     slug: "ai-use-cases-that-survive-finance",
     title: "AI Use Cases That Survive Finance",
     dateLabel: "Friday, September 25, 2026",
@@ -26,6 +39,19 @@ export const VIRTUAL_EVENTS = [
       "ROI and use-case scoring",
       "Budget owner questions",
       "Sponsor-fit discovery"
+    ]
+  },
+  {
+    slug: "ai-agents-automation-and-human-handoffs",
+    title: "AI Agents, Automation, and Human Handoffs",
+    dateLabel: "Friday, October 9, 2026",
+    startAt: "2026-10-09T13:00:00-05:00",
+    durationMinutes: 90,
+    summary: "Define where agentic automation is ready, where it must stop, and how human escalation should work.",
+    agenda: [
+      "Agent workflow briefing",
+      "Automation boundary discussion",
+      "Handoff and escalation design"
     ]
   },
   {
@@ -42,6 +68,19 @@ export const VIRTUAL_EVENTS = [
     ]
   },
   {
+    slug: "ai-vendor-strategy-and-platform-decisions",
+    title: "AI Vendor Strategy and Platform Decisions",
+    dateLabel: "Friday, October 30, 2026",
+    startAt: "2026-10-30T13:00:00-05:00",
+    durationMinutes: 90,
+    summary: "Compare build, buy, partner, platform, procurement, interoperability, and lock-in decisions before AI sprawl hardens.",
+    agenda: [
+      "Platform decision briefing",
+      "Build-buy-partner comparison",
+      "Procurement and lock-in review"
+    ]
+  },
+  {
     slug: "ai-security-governance-and-trust",
     title: "AI Security, Governance, and Trust",
     dateLabel: "Friday, November 6, 2026",
@@ -52,6 +91,19 @@ export const VIRTUAL_EVENTS = [
       "Security leader perspective",
       "Governance operating model",
       "Risk and vendor boundaries"
+    ]
+  },
+  {
+    slug: "ai-workforce-talent-and-change-adoption",
+    title: "AI Workforce, Talent, and Change Adoption",
+    dateLabel: "Friday, November 20, 2026",
+    startAt: "2026-11-20T13:00:00-06:00",
+    durationMinutes: 90,
+    summary: "Address employee adoption, role redesign, manager expectations, skills, resistance, and talent planning for AI-enabled work.",
+    agenda: [
+      "Workforce adoption briefing",
+      "Role redesign discussion",
+      "2027 talent readiness"
     ]
   },
   {
