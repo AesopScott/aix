@@ -111,6 +111,7 @@ const allowedEmailPermissions = new Set(["unknown", "opted-in", "transactional-o
 const allowedActivityTypes = new Set(["note", "call", "email", "meeting", "sms", "follow-up", "qualification"]);
 const allowedTopicTracks = new Set(["ai-strategy", "ai-use-cases", "workflow-integration", "security-governance", "operating-model", "executive-readiness"]);
 const maxFieldLength = 2000;
+const guestInviteEmailCc = ["angel@mojoaisummits.com", "scott@mojoaisummits.com"];
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -180,6 +181,19 @@ function cleanCode(value) {
 
 function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanString(value).toLowerCase());
+}
+
+function cleanEmailList(values = [], exclude = []) {
+  const excluded = new Set(exclude.map((value) => cleanString(value).toLowerCase()).filter(Boolean));
+  const seen = new Set();
+  return values
+    .map((value) => cleanString(value, 240).toLowerCase())
+    .filter((value) => isEmail(value) && !excluded.has(value))
+    .filter((value) => {
+      if (seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
 }
 
 function cleanBoolean(value) {
@@ -1103,11 +1117,12 @@ function inviteReminderHtml({ firstName, eventName, eventDate, registrationUrl }
   `;
 }
 
-async function sendResendEmail(env, { to, subject, html, text, replyTo }) {
+async function sendResendEmail(env, { to, subject, html, text, replyTo, cc = [] }) {
   const apiKey = cleanString(env.RESEND_API_KEY, 400);
   if (!apiKey) throw new Error("Resend is not configured (missing RESEND_API_KEY).");
 
   const from = cleanString(env.MOJO_RESEND_FROM, 200) || "Angel Mosley <angel@mojoaisummits.com>";
+  const ccList = cleanEmailList(cc, [to]);
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -1121,6 +1136,7 @@ async function sendResendEmail(env, { to, subject, html, text, replyTo }) {
       subject,
       html,
       text,
+      ...(ccList.length ? { cc: ccList } : {}),
       ...(replyTo ? { reply_to: replyTo } : {})
     })
   });
@@ -1192,7 +1208,8 @@ async function sendInviteInvitationEmail(env, invite, origin = "") {
     subject: `You’re Invited: ${eventName}`,
     html: inviteInvitationHtml(context),
     text: inviteInvitationText(context),
-    replyTo: "Angel@mojoaisummits.com"
+    replyTo: "Angel@mojoaisummits.com",
+    cc: guestInviteEmailCc
   });
 
   return { sentTo: toEmail };
@@ -1214,7 +1231,8 @@ async function sendInviteReminderEmail(env, payload = {}, origin = "") {
     subject: `Reminder: complete your registration for ${eventName}`,
     html: inviteReminderHtml(context),
     text: inviteReminderText(context),
-    replyTo: "Angel@mojoaisummits.com"
+    replyTo: "Angel@mojoaisummits.com",
+    cc: guestInviteEmailCc
   });
 
   return { sentTo: toEmail };
