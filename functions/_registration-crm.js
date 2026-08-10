@@ -235,6 +235,13 @@ function cleanPayload(payload, type = "") {
   };
 }
 
+function splitName(name = "") {
+  const parts = cleanString(name).split(/\s+/).filter(Boolean);
+  if (!parts.length) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts.slice(0, -1).join(" "), lastName: parts.slice(-1)[0] };
+}
+
 async function writeRegistrationDebug(env, type, status, details = {}) {
   if (env?.MOJO_REGISTRATION_DEBUG_WRITES !== "true") return;
   if (!env?.MOJO_SUMMITS_SETUP_STATE) return;
@@ -800,10 +807,13 @@ export async function upsertRegistrationContact(env, type, registration, config 
   const companyKey = `crm:company:${companySlug}`;
   const partnerCompanyKey = `partner-company:${companySlug}`;
   const updatedBy = cleanString(config.updatedBy) || "registration";
+  const nameParts = splitName(registration.name);
   const contact = {
     id: email,
     email,
     name: cleanString(registration.name) || email,
+    firstName: nameParts.firstName,
+    lastName: nameParts.lastName,
     invitedName: cleanString(registration.invitedName || registration.intendedGuestName || registration.guestName),
     intendedGuestName: cleanString(registration.intendedGuestName || registration.invitedName || registration.guestName),
     guestRegistrationType: cleanGuestRegistrationType(registration.guestRegistrationType || registration.registrationRole),
@@ -816,6 +826,8 @@ export async function upsertRegistrationContact(env, type, registration, config 
     phone: cleanString(registration.phone),
     registrationId: cleanString(registration.id),
     registrationType: cleanString(config.label || type),
+    lifecycleStage: "registered",
+    emailPermission: "transactional-only",
     source: cleanString(config.source || registration.source || `${type}-registration`),
     updatedAt: now,
     updatedBy

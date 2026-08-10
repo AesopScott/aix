@@ -459,6 +459,51 @@
       min-width: 15rem;
     }
 
+    .crm-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(8rem, 1fr));
+      gap: 0.5rem;
+      min-width: 24rem;
+    }
+
+    .crm-detail-grid label,
+    .activity-entry label {
+      display: grid;
+      gap: 0.25rem;
+      color: var(--muted-blue);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .crm-detail-grid .span-full,
+    .activity-entry .span-full {
+      grid-column: 1 / -1;
+    }
+
+    .activity-list {
+      display: grid;
+      gap: 0.45rem;
+      max-height: 13rem;
+      overflow: auto;
+    }
+
+    .activity-item {
+      padding: 0.55rem;
+      border: 1px solid rgba(0, 230, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.42);
+    }
+
+    .activity-item strong { color: var(--white); }
+
+    .activity-entry {
+      display: grid;
+      grid-template-columns: minmax(8rem, 0.8fr) minmax(8rem, 0.8fr);
+      gap: 0.5rem;
+    }
+
     .partner-edit-stack {
       display: grid;
       gap: 0.55rem;
@@ -638,6 +683,33 @@
       border: 1px solid rgba(0, 230, 255, 0.18);
       border-radius: 6px;
       background: rgba(10, 15, 30, 0.44);
+    }
+
+    .invite-status-filter {
+      display: grid;
+      gap: 0.4rem;
+      padding: 0.85rem;
+      border: 1px solid rgba(0, 230, 255, 0.18);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.44);
+    }
+
+    .invite-status-filter-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .invite-status-filter-buttons button {
+      width: auto;
+      min-width: 8rem;
+    }
+
+    .invite-status-filter-buttons button.active {
+      color: var(--white);
+      border-color: rgba(106, 240, 182, 0.7);
+      background: rgba(106, 240, 182, 0.2);
+      box-shadow: 0 0 18px rgba(106, 240, 182, 0.18);
     }
 
     .invite-search-summary,
@@ -904,9 +976,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         </select>
       </label>
       <label>
-        Status
+        Lifecycle / Status
         <select id="statusFilter">
           <option value="all">All statuses</option>
+          <option value="prospect">Prospect</option>
+          <option value="invited">Invited</option>
+          <option value="registered">Registered</option>
+          <option value="attended">Attended</option>
+          <option value="no-show">No-Show</option>
+          <option value="member-candidate">Member Candidate</option>
+          <option value="member">Member</option>
+          <option value="partner-candidate">Partner Candidate</option>
+          <option value="partner">Partner</option>
           <option value="new">New</option>
           <option value="contacted">Contacted</option>
           <option value="confirmed">Confirmed</option>
@@ -988,9 +1069,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <th>Event</th>
               <th>Role</th>
               <th>Publication</th>
-              <th>Status</th>
+              <th>Lifecycle / Status</th>
               <th>Events Attended</th>
-              <th>CRM Notes</th>
+              <th>Qualification</th>
+              <th>Follow-Up / Activity</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
@@ -1018,6 +1100,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <button type="submit">Search Invites</button>
         <button class="secondary" type="button" id="registrationInviteSearchClear">Clear</button>
       </form>
+      <div class="invite-status-filter" aria-label="Filter guest and member invites by registration status">
+        <p class="eyebrow">Named invite status</p>
+        <div class="invite-status-filter-buttons" id="registrationInviteStatusFilter">
+          <button class="compact secondary active" type="button" data-registration-invite-status-filter="all">All Named</button>
+          <button class="compact secondary" type="button" data-registration-invite-status-filter="registered">Registered</button>
+          <button class="compact secondary" type="button" data-registration-invite-status-filter="unregistered">Unregistered</button>
+        </div>
+      </div>
       <div class="invite-search-summary" id="registrationInviteSearchSummary"></div>
       <div class="invite-list" id="registrationInviteList"></div>
     </section>
@@ -1207,6 +1297,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const registrationInviteSearchForm = document.querySelector("#registrationInviteSearchForm");
     const registrationInviteSearch = document.querySelector("#registrationInviteSearch");
     const registrationInviteSearchClear = document.querySelector("#registrationInviteSearchClear");
+    const registrationInviteStatusButtons = [...document.querySelectorAll("[data-registration-invite-status-filter]")];
     const registrationInviteSearchSummary = document.querySelector("#registrationInviteSearchSummary");
     const registrationInviteList = document.querySelector("#registrationInviteList");
     const registrationInviteResult = document.querySelector("#registrationInviteResult");
@@ -1225,6 +1316,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       "partners-company": "partner"
     };
     let activeView = "contacts";
+    let registrationInviteStatusFilter = "all";
     let partnerCompanyPage = 1;
     let activePartnerAddCompany = "";
     const partnerCompaniesPerPage = 10;
@@ -1245,6 +1337,88 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       { slug: "ai-security-governance-and-trust", title: "AI Security, Governance, and Trust", date: "Friday, November 6, 2026", format: "Virtual" },
       { slug: "ai-operating-model-for-2027", title: "AI Operating Model for 2027", date: "Friday, November 27, 2026", format: "Virtual" },
       { slug: "dallas-2027", title: "Dallas 2027 Summit", date: "January 2027", format: "In person" }
+    ];
+    const lifecycleStageOptions = [
+      ["prospect", "Prospect"],
+      ["invited", "Invited"],
+      ["registered", "Registered"],
+      ["attended", "Attended"],
+      ["no-show", "No-Show"],
+      ["member-candidate", "Member Candidate"],
+      ["member", "Member"],
+      ["partner-candidate", "Partner Candidate"],
+      ["partner", "Partner"],
+      ["inactive", "Inactive"],
+      ["do-not-contact", "Do Not Contact"]
+    ];
+    const executiveFunctionOptions = [
+      ["", "Unassigned"],
+      ["ceo", "CEO / Founder"],
+      ["finance", "Finance"],
+      ["operations", "Operations"],
+      ["technology", "Technology"],
+      ["security", "Security"],
+      ["ai-data", "AI / Data"],
+      ["strategy", "Strategy"],
+      ["marketing-sales", "Marketing / Sales"],
+      ["hr-people", "HR / People"],
+      ["legal-compliance", "Legal / Compliance"],
+      ["other", "Other"]
+    ];
+    const companySizeOptions = [
+      ["", "Unassigned"],
+      ["1-50", "1-50"],
+      ["51-200", "51-200"],
+      ["201-1000", "201-1,000"],
+      ["1001-5000", "1,001-5,000"],
+      ["5001-10000", "5,001-10,000"],
+      ["10000-plus", "10,000+"]
+    ];
+    const organizationTypeOptions = [
+      ["", "Unassigned"],
+      ["enterprise", "Enterprise"],
+      ["vendor-provider", "Vendor / Provider"],
+      ["investor", "Investor"],
+      ["nonprofit", "Nonprofit"],
+      ["government", "Government"],
+      ["partner", "Partner"],
+      ["media", "Media"],
+      ["other", "Other"]
+    ];
+    const nextActionOptions = [
+      ["none", "None"],
+      ["call", "Call"],
+      ["send-invitation", "Send Invitation"],
+      ["confirm-role", "Confirm Role"],
+      ["follow-up", "Follow Up"],
+      ["introduce", "Introduce"],
+      ["schedule-call", "Schedule Call"],
+      ["send-brief", "Send Brief"],
+      ["membership-outreach", "Membership Outreach"],
+      ["partner-outreach", "Partner Outreach"]
+    ];
+    const emailPermissionOptions = [
+      ["unknown", "Unknown"],
+      ["opted-in", "Opted In"],
+      ["transactional-only", "Transactional Only"],
+      ["opted-out", "Opted Out"]
+    ];
+    const topicTrackOptions = [
+      ["ai-strategy", "AI Strategy"],
+      ["ai-use-cases", "AI Use Cases"],
+      ["workflow-integration", "Workflow Integration"],
+      ["security-governance", "Security / Governance"],
+      ["operating-model", "Operating Model"],
+      ["executive-readiness", "Executive Readiness"]
+    ];
+    const activityTypeOptions = [
+      ["note", "Note"],
+      ["call", "Call"],
+      ["email", "Email"],
+      ["meeting", "Meeting"],
+      ["sms", "SMS"],
+      ["follow-up", "Follow-Up"],
+      ["qualification", "Qualification"]
     ];
 
     function escapeHtml(value) {
@@ -1355,6 +1529,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return String(value || "new").replace(/-/g, " ");
     }
 
+    function optionList(options, current = "") {
+      return options.map(([value, label]) =>
+        `<option value="${escapeHtml(value)}" ${String(current || "") === value ? "selected" : ""}>${escapeHtml(label)}</option>`
+      ).join("");
+    }
+
+    function multiOptionList(options, selected = []) {
+      const selectedSet = new Set(Array.isArray(selected) ? selected : []);
+      return options.map(([value, label]) =>
+        `<option value="${escapeHtml(value)}" ${selectedSet.has(value) ? "selected" : ""}>${escapeHtml(label)}</option>`
+      ).join("");
+    }
+
+    function labelForOption(options, value = "") {
+      return options.find(([candidate]) => candidate === value)?.[1] || titleCaseLabel(value);
+    }
+
     function titleCaseLabel(value) {
       return String(value || "")
         .replace(/-/g, " ")
@@ -1380,6 +1571,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function roleLabelFromEvent(event = {}) {
+      const strategicRole = String(event.strategicRole || "").toLowerCase();
+      if (strategicRole === "speaker") return "Speaker";
+      if (strategicRole === "moderator") return "Moderator";
+      if (strategicRole === "roundtable-leader") return "Round Table Leader";
+      if (strategicRole === "research-contributor") return "Research Contributor";
+      if (strategicRole === "sponsor-representative") return "Sponsor Representative";
+      if (strategicRole === "partner") return "Partner";
       const registrationRole = String(event.registrationRole || event.guestRegistrationType || "").toLowerCase();
       if (registrationRole === "featured-guest") return "Featured Guest";
       if (registrationRole === "presenter") return "Presenter";
@@ -1393,6 +1591,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (role.includes("partner")) return "Partner Guest";
       if (role.includes("member")) return "Member";
       return titleCaseLabel(event.registrationType || "Guest");
+    }
+
+    function renderActivityList(row = {}) {
+      const activity = row.activity || [];
+      return activity.length
+        ? `<div class="activity-list">${activity.slice(0, 5).map((entry) => `
+          <div class="activity-item">
+            <strong>${escapeHtml(labelForOption(activityTypeOptions, entry.type))} | ${escapeHtml(formatDate(entry.createdAt))}</strong>
+            <p>${escapeHtml(entry.text || "")}</p>
+            ${entry.owner || entry.nextAction || entry.dueDate ? `<p>${escapeHtml([entry.owner, entry.nextAction ? `Next: ${labelForOption(nextActionOptions, entry.nextAction)}` : "", entry.dueDate ? `Due: ${entry.dueDate}` : ""].filter(Boolean).join(" | "))}</p>` : ""}
+          </div>
+        `).join("")}</div>`
+        : '<p>No dated activity yet.</p>';
     }
 
     function filterKey(value) {
@@ -1485,6 +1696,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <div>
                 <span class="event-attendance-name">${escapeHtml(label)}</span>
                 ${event.eventDate ? `<span class="event-attendance-date">${escapeHtml(event.eventDate)}</span>` : ""}
+                <span class="event-attendance-date">${escapeHtml(labelForOption([["invited", "Invited"], ["opened", "Invitation Opened"], ["started", "Registration Started"], ["confirmed", "Confirmed"], ["declined", "Declined"], ["canceled", "Canceled"], ["waitlisted", "Waitlisted"]], event.registrationStatus || event.status || "confirmed"))}</span>
               </div>
               <label class="attendance-toggle">
                 <input
@@ -1779,27 +1991,57 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ].map((value) => String(value || "").toLowerCase()).join(" ");
     }
 
+    function registrationInviteAttachedName(invite) {
+      return String(invite.intendedGuestName || invite.invitedName || invite.guestName || invite.usedByName || "").trim();
+    }
+
+    function isRegistrationInviteRegistered(invite) {
+      const status = String(invite.status || "").toLowerCase();
+      return status === "used" || status === "registered" || Boolean(invite.usedAt || invite.usedByName || invite.usedByEmail || invite.usedBy);
+    }
+
+    function registrationInviteStatusFilterLabel(value = registrationInviteStatusFilter) {
+      if (value === "registered") return "registered";
+      if (value === "unregistered") return "unregistered";
+      return "all named";
+    }
+
+    function syncRegistrationInviteStatusButtons() {
+      registrationInviteStatusButtons.forEach((button) => {
+        const active = button.dataset.registrationInviteStatusFilter === registrationInviteStatusFilter;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    }
+
     function filteredRegistrationInvites(invites) {
       const query = registrationInviteSearch?.value.trim().toLowerCase() || "";
-      if (!query) return invites;
+      const statusFilter = registrationInviteStatusFilter || "all";
       const terms = query.split(/\s+/).filter(Boolean);
       return invites.filter((invite) => {
+        const isRegistered = isRegistrationInviteRegistered(invite);
+        if (statusFilter === "registered" && !isRegistered) return false;
+        if (statusFilter === "unregistered" && isRegistered) return false;
+        if (!terms.length) return true;
         const haystack = registrationInviteSearchText(invite);
         return terms.every((term) => haystack.includes(term));
       });
     }
 
-    function renderRegistrationInviteSearchSummary(total, filtered, rendered, query) {
+    function renderRegistrationInviteSearchSummary(total, filtered, rendered, query, statusFilter = registrationInviteStatusFilter) {
       if (!registrationInviteSearchSummary) return;
       if (!total) {
         registrationInviteSearchSummary.textContent = "";
         return;
       }
-      if (!query) {
-        registrationInviteSearchSummary.textContent = `Showing the newest ${rendered} of ${total} guest and member invites. Use search to find older links.`;
+      const statusLabel = registrationInviteStatusFilterLabel(statusFilter);
+      if (!query && statusFilter === "all") {
+        registrationInviteSearchSummary.textContent = `Showing the newest ${rendered} of ${total} named guest and member invites. Use search or status filters to find older links.`;
         return;
       }
-      registrationInviteSearchSummary.textContent = `Found ${filtered} of ${total} guest and member invites for "${query}". Showing ${rendered}.`;
+      const searchText = query ? ` for "${query}"` : "";
+      const statusText = statusFilter === "all" ? "" : ` in ${statusLabel}`;
+      registrationInviteSearchSummary.textContent = `Found ${filtered} of ${total} named guest and member invites${searchText}${statusText}. Showing ${rendered}.`;
     }
 
     async function copyText(value) {
@@ -1853,13 +2095,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         registrationInviteList.innerHTML = '<p>No guest or member invite codes created yet.</p>';
         return;
       }
+      syncRegistrationInviteStatusButtons();
       const query = registrationInviteSearch?.value.trim() || "";
-      const filteredInvites = filteredRegistrationInvites(invites);
-      const visibleLimit = query ? 100 : 16;
+      const namedInvites = invites.filter(registrationInviteAttachedName);
+      if (!namedInvites.length) {
+        renderRegistrationInviteSearchSummary(0, 0, 0, query);
+        registrationInviteList.innerHTML = '<p>No guest or member invite links have a name attached yet.</p>';
+        return;
+      }
+      const filteredInvites = filteredRegistrationInvites(namedInvites);
+      const visibleLimit = query || registrationInviteStatusFilter !== "all" ? 100 : 16;
       const visibleInvites = filteredInvites.slice(0, visibleLimit);
-      renderRegistrationInviteSearchSummary(invites.length, filteredInvites.length, visibleInvites.length, query);
+      renderRegistrationInviteSearchSummary(namedInvites.length, filteredInvites.length, visibleInvites.length, query);
       if (!visibleInvites.length) {
-        registrationInviteList.innerHTML = '<p>No guest or member invite links match that search.</p>';
+        const statusLabel = registrationInviteStatusFilterLabel();
+        const statusPrefix = registrationInviteStatusFilter === "all" ? "named" : `named ${statusLabel}`;
+        registrationInviteList.innerHTML = `<p>No ${escapeHtml(statusPrefix)} guest or member invite links match the current filters.</p>`;
         return;
       }
       const rows = visibleInvites.map((invite) => {
@@ -1917,6 +2168,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (!passesNumberThreshold(row.attendedCount || 0, attendedOperator, attendedThreshold)) return false;
 
         if (state.type === "contacts") {
+          if (status !== "all" && row.lifecycleStage !== status) return false;
           if (phone === "verified" && !row.phone) return false;
           if (phone === "pending" && row.phone) return false;
         } else {
@@ -1927,9 +2179,25 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (!search) return true;
         return [
           row.name,
+          row.firstName,
+          row.lastName,
           row.company,
           row.title,
+          row.executiveFunction,
           row.industry,
+          row.companySize,
+          row.organizationType,
+          row.city,
+          row.state,
+          row.timeZone,
+          row.invitationSource,
+          row.relationshipOwner,
+          row.lifecycleStage,
+          row.lastContactDate,
+          row.nextAction,
+          row.nextActionDueDate,
+          row.emailPermission,
+          ...(row.topicInterests || []),
           row.email,
           row.phone,
           row.inviteCode,
@@ -1937,7 +2205,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.eventDate,
           row.latestEventName,
           row.latestEventDate,
-          ...(row.events || []).flatMap((event) => [event.eventName, event.eventDate, event.role, roleLabelFromEvent(event)]),
+          ...(row.events || []).flatMap((event) => [event.eventName, event.eventDate, event.role, event.registrationStatus, event.strategicRole, roleLabelFromEvent(event)]),
+          ...(row.activity || []).flatMap((entry) => [entry.type, entry.owner, entry.text, entry.nextAction, entry.dueDate]),
           row.partnerTier,
           row.crmNotes
         ].some((value) => String(value || "").toLowerCase().includes(search));
@@ -2114,7 +2383,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       partnerPagination.hidden = true;
       registrantsTitle.textContent = state.type === "contacts" ? "Contacts" : `${label} Registrants`;
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="9">No ${label.toLowerCase()} match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="10">No ${label.toLowerCase()} match the current filters.</td></tr>`;
         return;
       }
 
@@ -2143,20 +2412,54 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <td><div class="role-list">${roleBadges(row)}</div></td>
           <td><div class="role-list">${publicationBadges(row)}</div></td>
           <td>
-            ${state.type === "contacts" ? `<span class="pill">${escapeHtml(contactStatusLabel(row))}</span>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
+            ${state.type === "contacts" ? `<select class="inline-select" data-contact-field="lifecycleStage" data-contact-key="${escapeHtml(row.key)}">
+              ${optionList(lifecycleStageOptions, row.lifecycleStage || "prospect")}
+            </select>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
               ${crmStatusOptions(row.crmStatus)}
             </select>`}
           </td>
           <td>${memberAccessCell(row)}</td>
           <td>
-            ${state.type === "contacts" ? `<div class="notes-cell">
-              <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Contact notes">${escapeHtml(row.crmNotes || "")}</textarea>
-              <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
-              <span>${escapeHtml(row.crmUpdatedAt ? `Updated ${formatDate(row.crmUpdatedAt)}` : "")}</span>
+            ${state.type === "contacts" ? `<div class="crm-detail-grid">
+              <label>First Name<input data-contact-field="firstName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.firstName || "")}"></label>
+              <label>Last Name<input data-contact-field="lastName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastName || "")}"></label>
+              <label>Job Title<input data-contact-field="title" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.title || "")}"></label>
+              <label>Function<select data-contact-field="executiveFunction" data-contact-key="${escapeHtml(row.key)}">${optionList(executiveFunctionOptions, row.executiveFunction || "")}</select></label>
+              <label>Industry<input data-contact-field="industry" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.industry || "")}"></label>
+              <label>Company Size<select data-contact-field="companySize" data-contact-key="${escapeHtml(row.key)}">${optionList(companySizeOptions, row.companySize || "")}</select></label>
+              <label>Org Type<select data-contact-field="organizationType" data-contact-key="${escapeHtml(row.key)}">${optionList(organizationTypeOptions, row.organizationType || "")}</select></label>
+              <label>City<input data-contact-field="city" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.city || "")}"></label>
+              <label>State<input data-contact-field="state" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.state || "")}"></label>
+              <label>Time Zone<input data-contact-field="timeZone" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.timeZone || "")}"></label>
+              <label class="span-full">Topic / Track Interest<select multiple size="6" data-contact-field="topicInterests" data-contact-key="${escapeHtml(row.key)}">${multiOptionList(topicTrackOptions, row.topicInterests || [])}</select></label>
+              <button class="compact secondary span-full" type="button" data-save-contact-key="${escapeHtml(row.key)}">Save Contact</button>
             </div>` : `<div class="notes-cell">
               <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Follow-up notes">${escapeHtml(row.crmNotes || "")}</textarea>
               <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
             </div>`}
+          </td>
+          <td>
+            ${state.type === "contacts" ? `<div class="notes-cell">
+              <div class="crm-detail-grid">
+                <label>Invitation Source<input data-contact-field="invitationSource" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.invitationSource || "")}"></label>
+                <label>Relationship Owner<input data-contact-field="relationshipOwner" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.relationshipOwner || "")}"></label>
+                <label>Last Contact<input type="date" data-contact-field="lastContactDate" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastContactDate || "")}"></label>
+                <label>Next Action<select data-contact-field="nextAction" data-contact-key="${escapeHtml(row.key)}">${optionList(nextActionOptions, row.nextAction || "none")}</select></label>
+                <label>Due Date<input type="date" data-contact-field="nextActionDueDate" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.nextActionDueDate || "")}"></label>
+                <label>Email Permission<select data-contact-field="emailPermission" data-contact-key="${escapeHtml(row.key)}">${optionList(emailPermissionOptions, row.emailPermission || "unknown")}</select></label>
+                <button class="compact secondary span-full" type="button" data-save-contact-key="${escapeHtml(row.key)}">Save Follow-Up</button>
+              </div>
+              ${renderActivityList(row)}
+              <div class="activity-entry" data-activity-row="${escapeHtml(row.key)}">
+                <label>Type<select data-activity-field="type">${optionList(activityTypeOptions, "note")}</select></label>
+                <label>Owner<input data-activity-field="owner" value="${escapeHtml(row.relationshipOwner || "")}"></label>
+                <label class="span-full">Activity<textarea data-activity-field="text" placeholder="Dated activity entry"></textarea></label>
+                <label>Next Action<select data-activity-field="nextAction">${optionList(nextActionOptions, row.nextAction || "none")}</select></label>
+                <label>Due Date<input type="date" data-activity-field="dueDate" value="${escapeHtml(row.nextActionDueDate || "")}"></label>
+                <button class="compact secondary span-full" type="button" data-add-activity-key="${escapeHtml(row.key)}">Add Activity</button>
+                <span>${escapeHtml(row.crmUpdatedAt ? `Updated ${formatDate(row.crmUpdatedAt)}` : "")}</span>
+              </div>
+            </div>` : ""}
           </td>
         </tr>
       `).join("");
@@ -2291,10 +2594,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               action: "save-contact",
               key,
               email: existing.email,
+              firstName: changes.firstName ?? existing.firstName ?? "",
+              lastName: changes.lastName ?? existing.lastName ?? "",
+              title: changes.title ?? existing.title ?? "",
+              industry: changes.industry ?? existing.industry ?? "",
+              executiveFunction: changes.executiveFunction ?? existing.executiveFunction ?? "",
+              companySize: changes.companySize ?? existing.companySize ?? "",
+              organizationType: changes.organizationType ?? existing.organizationType ?? "",
+              city: changes.city ?? existing.city ?? "",
+              state: changes.state ?? existing.state ?? "",
+              timeZone: changes.timeZone ?? existing.timeZone ?? "",
+              invitationSource: changes.invitationSource ?? existing.invitationSource ?? "",
+              relationshipOwner: changes.relationshipOwner ?? existing.relationshipOwner ?? "",
+              lifecycleStage: changes.lifecycleStage ?? existing.lifecycleStage ?? "prospect",
+              lastContactDate: changes.lastContactDate ?? existing.lastContactDate ?? "",
+              nextAction: changes.nextAction ?? existing.nextAction ?? "none",
+              nextActionDueDate: changes.nextActionDueDate ?? existing.nextActionDueDate ?? "",
+              emailPermission: changes.emailPermission ?? existing.emailPermission ?? "unknown",
+              topicInterests: changes.topicInterests ?? existing.topicInterests ?? [],
               crmNotes: changes.crmNotes ?? existing.crmNotes ?? ""
             })
           }).then(readJson);
-          setNotice("Contact notes saved.", "ok");
+          setNotice("Contact CRM fields saved.", "ok");
           render();
           return;
         }
@@ -2319,6 +2640,53 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }).then(readJson);
         setNotice("CRM update saved.", "ok");
         render();
+      } catch (error) {
+        showErrorNotice(error);
+      }
+    }
+
+    function contactEditChanges(key) {
+      const fields = [...rowsElement.querySelectorAll(`[data-contact-key="${CSS.escape(key)}"]`)];
+      const changes = {};
+      for (const field of fields) {
+        const name = field.dataset.contactField;
+        if (!name) continue;
+        changes[name] = field.multiple
+          ? [...field.selectedOptions].map((option) => option.value)
+          : field.value.trim();
+      }
+      return changes;
+    }
+
+    function activityPayload(key) {
+      const row = rowsElement.querySelector(`[data-activity-row="${CSS.escape(key)}"]`);
+      if (!row) return null;
+      const value = (field) => row.querySelector(`[data-activity-field="${field}"]`)?.value.trim() || "";
+      const existing = state.rows.find((contact) => contact.key === key);
+      return {
+        action: "add-contact-activity",
+        key,
+        email: existing?.email || "",
+        activityType: value("type") || "note",
+        owner: value("owner"),
+        text: value("text"),
+        nextAction: value("nextAction") || existing?.nextAction || "none",
+        dueDate: value("dueDate")
+      };
+    }
+
+    async function addContactActivity(key) {
+      const payload = activityPayload(key);
+      if (!payload) return;
+      setNotice("Saving contact activity...");
+      try {
+        state = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(readJson);
+        render();
+        setNotice("Contact activity saved.", "ok");
       } catch (error) {
         showErrorNotice(error);
       }
@@ -2608,6 +2976,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const profilePath = event.target.dataset.profilePath;
       const deleteContactKey = event.target.dataset.deleteContactKey;
       const deleteGuestRegistrantKey = event.target.dataset.deleteGuestRegistrantKey;
+      const saveContactKey = event.target.dataset.saveContactKey;
+      const addActivityKey = event.target.dataset.addActivityKey;
       const addContactCompany = event.target.dataset.addContactCompany;
       const cancelContactCompany = event.target.dataset.cancelCompanyContact;
       const saveContactCompany = event.target.dataset.saveCompanyContact;
@@ -2632,6 +3002,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
       if (deleteContactKey) {
         await deleteContact(deleteContactKey, event.target.dataset.deleteContactEmail || "");
+        return;
+      }
+      if (saveContactKey) {
+        await saveRegistrant(saveContactKey, contactEditChanges(saveContactKey));
+        return;
+      }
+      if (addActivityKey) {
+        await addContactActivity(addActivityKey);
         return;
       }
       if (profilePath) {
@@ -2724,6 +3102,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       registrationInviteSearch.value = "";
       renderRegistrationInvites();
       registrationInviteSearch.focus();
+    });
+
+    registrationInviteStatusButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        registrationInviteStatusFilter = button.dataset.registrationInviteStatusFilter || "all";
+        renderRegistrationInvites();
+      });
     });
 
     function manualPartnerContactRows() {

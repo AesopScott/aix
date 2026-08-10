@@ -100,6 +100,16 @@ const DEFAULT_UPCOMING_EVENTS = [
   }
 ];
 const allowedStatuses = new Set(["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"]);
+const allowedLifecycleStages = new Set(["prospect", "invited", "registered", "attended", "no-show", "member-candidate", "member", "partner-candidate", "partner", "inactive", "do-not-contact"]);
+const allowedRegistrationStatuses = new Set(["invited", "opened", "started", "confirmed", "declined", "canceled", "waitlisted"]);
+const allowedStrategicRoles = new Set(["attendee", "speaker", "moderator", "roundtable-leader", "research-contributor", "sponsor-representative", "partner"]);
+const allowedNextActions = new Set(["none", "call", "send-invitation", "confirm-role", "follow-up", "introduce", "schedule-call", "send-brief", "membership-outreach", "partner-outreach"]);
+const allowedExecutiveFunctions = new Set(["", "ceo", "finance", "operations", "technology", "security", "ai-data", "strategy", "marketing-sales", "hr-people", "legal-compliance", "other"]);
+const allowedCompanySizes = new Set(["", "1-50", "51-200", "201-1000", "1001-5000", "5001-10000", "10000-plus"]);
+const allowedOrganizationTypes = new Set(["", "enterprise", "vendor-provider", "investor", "nonprofit", "government", "partner", "media", "other"]);
+const allowedEmailPermissions = new Set(["unknown", "opted-in", "transactional-only", "opted-out"]);
+const allowedActivityTypes = new Set(["note", "call", "email", "meeting", "sms", "follow-up", "qualification"]);
+const allowedTopicTracks = new Set(["ai-strategy", "ai-use-cases", "workflow-integration", "security-governance", "operating-model", "executive-readiness"]);
 const maxFieldLength = 2000;
 
 function json(data, init = {}) {
@@ -129,6 +139,39 @@ function cleanString(value, max = maxFieldLength) {
 
 function cleanType(value) {
   return registrantTypes[value] ? value : "member";
+}
+
+function cleanAllowed(value, allowed, fallback = "") {
+  const cleaned = cleanString(value, 120).toLowerCase();
+  return allowed.has(cleaned) ? cleaned : fallback;
+}
+
+function splitName(name = "") {
+  const parts = cleanString(name, 240).split(/\s+/).filter(Boolean);
+  if (!parts.length) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts.slice(0, -1).join(" "), lastName: parts.slice(-1)[0] };
+}
+
+function cleanTopicTracks(value) {
+  const raw = Array.isArray(value) ? value : cleanString(value, 800).split(",");
+  return raw
+    .map((item) => cleanAllowed(item, allowedTopicTracks, ""))
+    .filter(Boolean)
+    .filter((item, index, list) => list.indexOf(item) === index)
+    .slice(0, 12);
+}
+
+function normalizeActivity(entry = {}) {
+  return {
+    id: cleanString(entry.id, 120) || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
+    createdAt: cleanString(entry.createdAt) || new Date().toISOString(),
+    type: cleanAllowed(entry.type, allowedActivityTypes, "note"),
+    owner: cleanString(entry.owner, 180),
+    text: cleanString(entry.text || entry.note || entry.body),
+    nextAction: cleanAllowed(entry.nextAction, allowedNextActions, ""),
+    dueDate: cleanString(entry.dueDate, 40)
+  };
 }
 
 function cleanCode(value) {
@@ -232,6 +275,9 @@ function normalizeRecord(key, record) {
 
 function normalizeContactRecord(key, record = {}) {
   const events = Array.isArray(record.events) ? record.events : [];
+  const activity = (Array.isArray(record.activity) ? record.activity : [])
+    .map(normalizeActivity)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   const sortedEvents = [...events].sort((a, b) => {
     const left = cleanString(b.eventDate || b.registeredAt || b.updatedAt);
     const right = cleanString(a.eventDate || a.registeredAt || a.updatedAt);
@@ -240,21 +286,43 @@ function normalizeContactRecord(key, record = {}) {
   const latestEvent = sortedEvents[0] || {};
   const email = cleanString(record.email || key.replace(/^crm:contact:/, "")).toLowerCase();
   const contactStatus = contactStatusFromRegistration(latestEvent.registrationType || record.registrationType || record.source);
+  const fullName = cleanString(record.name) || email;
+  const fallbackName = splitName(fullName);
   return {
     key,
     id: email,
     createdAt: cleanString(record.createdAt),
     updatedAt: cleanString(record.updatedAt),
-    name: cleanString(record.name) || email,
+    name: fullName,
+    firstName: cleanString(record.firstName || fallbackName.firstName, 120),
+    lastName: cleanString(record.lastName || fallbackName.lastName, 120),
     company: cleanString(record.company),
     title: cleanString(record.title),
+    executiveFunction: cleanAllowed(record.executiveFunction, allowedExecutiveFunctions, ""),
     industry: cleanString(record.industry),
+    companySize: cleanAllowed(record.companySize, allowedCompanySizes, ""),
+    organizationType: cleanAllowed(record.organizationType, allowedOrganizationTypes, ""),
+    city: cleanString(record.city, 120),
+    state: cleanString(record.state, 80),
+    timeZone: cleanString(record.timeZone, 120),
+    location: cleanString(record.location, 180) || [cleanString(record.city, 120), cleanString(record.state, 80)].filter(Boolean).join(", "),
     email,
     phone: cleanString(record.phone),
     source: cleanString(record.source),
+    invitationSource: cleanString(record.invitationSource || record.source, 180),
+    relationshipOwner: cleanString(record.relationshipOwner, 180),
+    lifecycleStage: cleanAllowed(record.lifecycleStage, allowedLifecycleStages, latestEvent.registrationType ? "registered" : "prospect"),
+    nextAction: cleanAllowed(record.nextAction, allowedNextActions, "none"),
+    nextActionDueDate: cleanString(record.nextActionDueDate || record.dueDate, 40),
+    lastContactDate: cleanString(record.lastContactDate, 40),
+    emailPermission: cleanAllowed(record.emailPermission, allowedEmailPermissions, "unknown"),
+    emailOptOut: record.emailOptOut === true || cleanAllowed(record.emailPermission, allowedEmailPermissions, "unknown") === "opted-out",
+    topicInterests: cleanTopicTracks(record.topicInterests || record.topicTrackInterest),
     registrationId: cleanString(record.registrationId),
     registrationType: cleanString(record.registrationType),
     crmNotes: cleanString(record.crmNotes),
+    activity,
+    latestActivityAt: cleanString(activity[0]?.createdAt),
     crmUpdatedAt: cleanString(record.crmUpdatedAt),
     crmUpdatedBy: cleanString(record.crmUpdatedBy),
     contactStatus,
@@ -281,6 +349,9 @@ function normalizeContactRecord(key, record = {}) {
       registrationId: cleanString(event?.registrationId),
       registrationType: cleanString(event?.registrationType),
       role: cleanString(event?.role),
+      strategicRole: cleanAllowed(event?.strategicRole || event?.role || event?.registrationRole, allowedStrategicRoles, "attendee"),
+      registrationStatus: cleanAllowed(event?.registrationStatus || event?.status || event?.crmStatus, allowedRegistrationStatuses, "confirmed"),
+      status: cleanAllowed(event?.status || event?.registrationStatus || event?.crmStatus, allowedRegistrationStatuses, "confirmed"),
       attended: event?.attended === true,
       attendanceStatus: cleanString(event?.attendanceStatus) || "not_recorded",
       registeredAt: cleanString(event?.registeredAt)
@@ -508,10 +579,30 @@ function mergeContactRows(storedRows, derivedRows) {
       ...previous,
       ...row,
       name: cleanString(row.name) || cleanString(previous.name) || email,
+      firstName: cleanString(row.firstName) || cleanString(previous.firstName),
+      lastName: cleanString(row.lastName) || cleanString(previous.lastName),
       company: cleanString(row.company) || cleanString(previous.company),
       title: cleanString(row.title) || cleanString(previous.title),
+      executiveFunction: cleanString(row.executiveFunction) || cleanString(previous.executiveFunction),
       industry: cleanString(row.industry) || cleanString(previous.industry),
+      companySize: cleanString(row.companySize) || cleanString(previous.companySize),
+      organizationType: cleanString(row.organizationType) || cleanString(previous.organizationType),
+      city: cleanString(row.city) || cleanString(previous.city),
+      state: cleanString(row.state) || cleanString(previous.state),
+      timeZone: cleanString(row.timeZone) || cleanString(previous.timeZone),
+      location: cleanString(row.location) || cleanString(previous.location),
       phone: cleanString(row.phone) || cleanString(previous.phone),
+      invitationSource: cleanString(row.invitationSource) || cleanString(previous.invitationSource),
+      relationshipOwner: cleanString(row.relationshipOwner) || cleanString(previous.relationshipOwner),
+      lifecycleStage: cleanString(row.lifecycleStage) || cleanString(previous.lifecycleStage),
+      nextAction: cleanString(row.nextAction) || cleanString(previous.nextAction),
+      nextActionDueDate: cleanString(row.nextActionDueDate) || cleanString(previous.nextActionDueDate),
+      lastContactDate: cleanString(row.lastContactDate) || cleanString(previous.lastContactDate),
+      emailPermission: cleanString(row.emailPermission) || cleanString(previous.emailPermission),
+      emailOptOut: row.emailOptOut === true || previous.emailOptOut === true,
+      topicInterests: Array.isArray(row.topicInterests) && row.topicInterests.length ? row.topicInterests : previous.topicInterests,
+      activity: Array.isArray(row.activity) && row.activity.length ? row.activity : previous.activity,
+      crmNotes: cleanString(row.crmNotes) || cleanString(previous.crmNotes),
       events: [...eventMap.values()]
     }));
   }
@@ -1320,6 +1411,71 @@ async function updateContact(env, payload = {}, actor = "") {
   const key = `${registrantTypes.contacts.crmPrefix}${email}`;
   const existing = await readRawRecord(env, key);
   const now = new Date().toISOString();
+  const firstName = cleanString(payload.firstName ?? existing?.firstName, 120);
+  const lastName = cleanString(payload.lastName ?? existing?.lastName, 120);
+  const existingName = cleanString(existing?.name) || email;
+  const name = cleanString(payload.name) || [firstName, lastName].filter(Boolean).join(" ") || existingName;
+  const topicInterests = cleanTopicTracks(payload.topicInterests ?? existing?.topicInterests);
+  const emailPermission = cleanAllowed(payload.emailPermission ?? existing?.emailPermission, allowedEmailPermissions, "unknown");
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+    ...(existing || {}),
+    id: email,
+    email,
+    name,
+    firstName,
+    lastName,
+    source: cleanString(existing?.source) || "crm-contact-overlay",
+    createdAt: cleanString(existing?.createdAt) || now,
+    executiveFunction: cleanAllowed(payload.executiveFunction ?? existing?.executiveFunction, allowedExecutiveFunctions, ""),
+    industry: cleanString(payload.industry ?? existing?.industry),
+    companySize: cleanAllowed(payload.companySize ?? existing?.companySize, allowedCompanySizes, ""),
+    organizationType: cleanAllowed(payload.organizationType ?? existing?.organizationType, allowedOrganizationTypes, ""),
+    city: cleanString(payload.city ?? existing?.city, 120),
+    state: cleanString(payload.state ?? existing?.state, 80),
+    timeZone: cleanString(payload.timeZone ?? existing?.timeZone, 120),
+    location: cleanString(payload.location ?? existing?.location, 180),
+    invitationSource: cleanString(payload.invitationSource ?? existing?.invitationSource, 180),
+    relationshipOwner: cleanString(payload.relationshipOwner ?? existing?.relationshipOwner, 180),
+    lifecycleStage: cleanAllowed(payload.lifecycleStage ?? existing?.lifecycleStage, allowedLifecycleStages, "prospect"),
+    nextAction: cleanAllowed(payload.nextAction ?? existing?.nextAction, allowedNextActions, "none"),
+    nextActionDueDate: cleanString(payload.nextActionDueDate ?? payload.dueDate ?? existing?.nextActionDueDate, 40),
+    lastContactDate: cleanString(payload.lastContactDate ?? existing?.lastContactDate, 40),
+    emailPermission,
+    emailOptOut: payload.emailOptOut === true || emailPermission === "opted-out",
+    topicInterests,
+    crmNotes: cleanString(payload.crmNotes),
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor || "crm"
+  }));
+}
+
+async function addContactActivity(env, payload = {}, actor = "") {
+  const requestedKey = cleanString(payload.key);
+  const email = cleanString(
+    payload.email ||
+      (requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
+        ? requestedKey.replace(registrantTypes.contacts.crmPrefix, "")
+        : requestedKey)
+  ).toLowerCase();
+  if (!email || !email.includes("@")) throw new Error("Contact email is required before adding activity.");
+  const text = cleanString(payload.text || payload.activityText);
+  if (!text) throw new Error("Activity text is required.");
+
+  const key = `${registrantTypes.contacts.crmPrefix}${email}`;
+  const existing = await readRawRecord(env, key);
+  const now = new Date().toISOString();
+  const entry = normalizeActivity({
+    type: payload.activityType || payload.type,
+    owner: payload.owner || actor,
+    text,
+    nextAction: payload.nextAction,
+    dueDate: payload.dueDate || payload.nextActionDueDate,
+    createdAt: now
+  });
+  const activity = [entry, ...(Array.isArray(existing?.activity) ? existing.activity : [])]
+    .map(normalizeActivity)
+    .slice(0, 100);
 
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
     ...(existing || {}),
@@ -1328,7 +1484,10 @@ async function updateContact(env, payload = {}, actor = "") {
     name: cleanString(existing?.name) || email,
     source: cleanString(existing?.source) || "crm-contact-overlay",
     createdAt: cleanString(existing?.createdAt) || now,
-    crmNotes: cleanString(payload.crmNotes),
+    activity,
+    lastContactDate: cleanString(payload.lastContactDate) || now.slice(0, 10),
+    nextAction: cleanAllowed(payload.nextAction ?? existing?.nextAction, allowedNextActions, cleanString(existing?.nextAction) || "none"),
+    nextActionDueDate: cleanString(payload.dueDate || payload.nextActionDueDate || existing?.nextActionDueDate, 40),
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
   }));
@@ -1664,11 +1823,28 @@ export async function onRequestGet({ request, env, data }) {
     const headings = isContacts
       ? [
         "Contact ID",
+        "First Name",
+        "Last Name",
         "Name",
         "Company",
         "Title",
+        "Executive Function",
         "Email",
         "Phone",
+        "Industry",
+        "Company Size",
+        "Organization Type",
+        "City",
+        "State",
+        "Time Zone",
+        "Invitation Source",
+        "Relationship Owner",
+        "Lifecycle Stage",
+        "Last Contact Date",
+        "Next Action",
+        "Next Action Due Date",
+        "Email Permission",
+        "Topic Interests",
         "Last Updated",
         "Latest Registration",
         "Latest Event",
@@ -1703,11 +1879,28 @@ export async function onRequestGet({ request, env, data }) {
     const csvRows = isContacts
       ? rows.map((row) => [
         row.id,
+        row.firstName,
+        row.lastName,
         row.name,
         row.company,
         row.title,
+        row.executiveFunction,
         row.email,
         row.phone,
+        row.industry,
+        row.companySize,
+        row.organizationType,
+        row.city,
+        row.state,
+        row.timeZone,
+        row.invitationSource,
+        row.relationshipOwner,
+        row.lifecycleStage,
+        row.lastContactDate,
+        row.nextAction,
+        row.nextActionDueDate,
+        row.emailPermission,
+        (row.topicInterests || []).join("; "),
         row.updatedAt,
         row.latestRegisteredAt,
         row.latestEventName,
@@ -2054,6 +2247,25 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Contact could not be updated." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "add-contact-activity") {
+    try {
+      await addContactActivity(env, payload, access.email);
+      const rows = await contacts(env);
+      return json({
+        ok: true,
+        type: "contacts",
+        label: registrantTypes.contacts.label,
+        summary: summarizeContacts(rows),
+        rows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Contact activity could not be saved." }, { status: 500 });
     }
   }
 
