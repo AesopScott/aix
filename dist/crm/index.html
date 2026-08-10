@@ -504,6 +504,42 @@
       gap: 0.5rem;
     }
 
+    .crm-expanded-row td {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .crm-record-details {
+      display: grid;
+      grid-template-columns: minmax(18rem, 1fr) minmax(18rem, 1fr);
+      gap: 1rem;
+      padding: 0 0 1.15rem;
+    }
+
+    .crm-detail-panel {
+      display: grid;
+      align-content: start;
+      gap: 0.8rem;
+      padding: 0.95rem;
+      border: 1px solid rgba(0, 230, 255, 0.16);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.34);
+    }
+
+    .crm-detail-panel details {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .crm-detail-panel summary {
+      cursor: pointer;
+      color: var(--cyan);
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
     .crm-compact-stack {
       display: grid;
       gap: 0.4rem;
@@ -535,6 +571,12 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.35rem;
+    }
+
+    @media (max-width: 920px) {
+      .crm-record-details {
+        grid-template-columns: 1fr;
+      }
     }
 
     .partner-edit-stack {
@@ -1104,8 +1146,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <th>Publication</th>
               <th>Lifecycle / Status</th>
               <th>Events Attended</th>
-              <th>Qualification</th>
-              <th>Follow-Up / Activity</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
@@ -2302,6 +2342,94 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       `;
     }
 
+    function qualificationEditor(row = {}) {
+      return `
+        <div class="crm-detail-panel">
+          ${qualificationSummary(row)}
+          <details>
+            <summary>Edit qualification</summary>
+            <div class="crm-detail-grid">
+              <label>First Name<input data-contact-field="firstName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.firstName || "")}"></label>
+              <label>Last Name<input data-contact-field="lastName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastName || "")}"></label>
+              <label>Job Title<input data-contact-field="title" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.title || "")}"></label>
+              <label>Function<select data-contact-field="executiveFunction" data-contact-key="${escapeHtml(row.key)}">${optionList(executiveFunctionOptions, row.executiveFunction || "")}</select></label>
+              <label>Industry<input data-contact-field="industry" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.industry || "")}"></label>
+              <label>Company Size<select data-contact-field="companySize" data-contact-key="${escapeHtml(row.key)}">${optionList(companySizeOptions, row.companySize || "")}</select></label>
+              <label>Org Type<select data-contact-field="organizationType" data-contact-key="${escapeHtml(row.key)}">${optionList(organizationTypeOptions, row.organizationType || "")}</select></label>
+              <label>City<input data-contact-field="city" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.city || "")}"></label>
+              <label>State<input data-contact-field="state" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.state || "")}"></label>
+              <label>Time Zone<input data-contact-field="timeZone" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.timeZone || "")}"></label>
+              <label class="span-full">Topic / Track Interest<select multiple size="6" data-contact-field="topicInterests" data-contact-key="${escapeHtml(row.key)}">${multiOptionList(topicTrackOptions, row.topicInterests || [])}</select></label>
+              <button class="compact secondary span-full" type="button" data-save-contact-key="${escapeHtml(row.key)}">Save Contact</button>
+            </div>
+          </details>
+        </div>
+      `;
+    }
+
+    function followUpEditor(row = {}) {
+      return `
+        <div class="crm-detail-panel">
+          ${followUpSummary(row)}
+          <details>
+            <summary>Edit follow-up</summary>
+            <div class="crm-detail-grid">
+              <label>Invitation Source<input data-contact-field="invitationSource" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.invitationSource || "")}"></label>
+              <label>Relationship Owner<input data-contact-field="relationshipOwner" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.relationshipOwner || "")}"></label>
+              <label>Last Contact<input type="date" data-contact-field="lastContactDate" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastContactDate || "")}"></label>
+              <label>Next Action<select data-contact-field="nextAction" data-contact-key="${escapeHtml(row.key)}">${optionList(nextActionOptions, row.nextAction || "none")}</select></label>
+              <label>Due Date<input type="date" data-contact-field="nextActionDueDate" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.nextActionDueDate || "")}"></label>
+              <label>Email Permission<select data-contact-field="emailPermission" data-contact-key="${escapeHtml(row.key)}">${optionList(emailPermissionOptions, row.emailPermission || "unknown")}</select></label>
+              <button class="compact secondary span-full" type="button" data-save-contact-key="${escapeHtml(row.key)}">Save Follow-Up</button>
+            </div>
+          </details>
+          <details>
+            <summary>Activity</summary>
+            ${renderActivityList(row)}
+            <div class="activity-entry" data-activity-row="${escapeHtml(row.key)}">
+              <label>Type<select data-activity-field="type">${optionList(activityTypeOptions, "note")}</select></label>
+              <label>Owner<input data-activity-field="owner" value="${escapeHtml(row.relationshipOwner || "")}"></label>
+              <label class="span-full">Activity<textarea data-activity-field="text" placeholder="Dated activity entry"></textarea></label>
+              <label>Next Action<select data-activity-field="nextAction">${optionList(nextActionOptions, row.nextAction || "none")}</select></label>
+              <label>Due Date<input type="date" data-activity-field="dueDate" value="${escapeHtml(row.nextActionDueDate || "")}"></label>
+              <button class="compact secondary span-full" type="button" data-add-activity-key="${escapeHtml(row.key)}">Add Activity</button>
+              <span>${escapeHtml(row.crmUpdatedAt ? `Updated ${formatDate(row.crmUpdatedAt)}` : "")}</span>
+            </div>
+          </details>
+        </div>
+      `;
+    }
+
+    function contactDetailsRow(row = {}) {
+      return `
+        <tr class="crm-expanded-row">
+          <td colspan="8">
+            <div class="crm-record-details">
+              ${qualificationEditor(row)}
+              ${followUpEditor(row)}
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function notesDetailsRow(row = {}) {
+      return `
+        <tr class="crm-expanded-row">
+          <td colspan="8">
+            <div class="crm-record-details">
+              <div class="crm-detail-panel">
+                <div class="notes-cell">
+                  <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Follow-up notes">${escapeHtml(row.crmNotes || "")}</textarea>
+                  <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
     function renderPartnerCompanyRows(rows) {
       registrantsTitle.textContent = "Partners by Company";
       if (!rows.length) {
@@ -2450,7 +2578,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       partnerPagination.hidden = true;
       registrantsTitle.textContent = state.type === "contacts" ? "Contacts" : `${label} Registrants`;
       if (!rows.length) {
-        rowsElement.innerHTML = `<tr><td colspan="10">No ${label.toLowerCase()} match the current filters.</td></tr>`;
+        rowsElement.innerHTML = `<tr><td colspan="8">No ${label.toLowerCase()} match the current filters.</td></tr>`;
         return;
       }
 
@@ -2486,62 +2614,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             </select>`}
           </td>
           <td>${memberAccessCell(row)}</td>
-          <td>
-            ${state.type === "contacts" ? `<div class="crm-compact-stack">
-              ${qualificationSummary(row)}
-              <details>
-                <summary>Edit qualification</summary>
-                <div class="crm-detail-grid">
-                  <label>First Name<input data-contact-field="firstName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.firstName || "")}"></label>
-                  <label>Last Name<input data-contact-field="lastName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastName || "")}"></label>
-                  <label>Job Title<input data-contact-field="title" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.title || "")}"></label>
-                  <label>Function<select data-contact-field="executiveFunction" data-contact-key="${escapeHtml(row.key)}">${optionList(executiveFunctionOptions, row.executiveFunction || "")}</select></label>
-                  <label>Industry<input data-contact-field="industry" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.industry || "")}"></label>
-                  <label>Company Size<select data-contact-field="companySize" data-contact-key="${escapeHtml(row.key)}">${optionList(companySizeOptions, row.companySize || "")}</select></label>
-                  <label>Org Type<select data-contact-field="organizationType" data-contact-key="${escapeHtml(row.key)}">${optionList(organizationTypeOptions, row.organizationType || "")}</select></label>
-                  <label>City<input data-contact-field="city" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.city || "")}"></label>
-                  <label>State<input data-contact-field="state" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.state || "")}"></label>
-                  <label>Time Zone<input data-contact-field="timeZone" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.timeZone || "")}"></label>
-                  <label class="span-full">Topic / Track Interest<select multiple size="6" data-contact-field="topicInterests" data-contact-key="${escapeHtml(row.key)}">${multiOptionList(topicTrackOptions, row.topicInterests || [])}</select></label>
-                  <button class="compact secondary span-full" type="button" data-save-contact-key="${escapeHtml(row.key)}">Save Contact</button>
-                </div>
-              </details>
-            </div>` : `<div class="notes-cell">
-              <textarea data-notes-key="${escapeHtml(row.key)}" placeholder="Follow-up notes">${escapeHtml(row.crmNotes || "")}</textarea>
-              <button class="compact secondary" type="button" data-save-key="${escapeHtml(row.key)}">Save Notes</button>
-            </div>`}
-          </td>
-          <td>
-            ${state.type === "contacts" ? `<div class="crm-compact-stack">
-              ${followUpSummary(row)}
-              <details>
-                <summary>Edit follow-up</summary>
-                <div class="crm-detail-grid">
-                  <label>Invitation Source<input data-contact-field="invitationSource" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.invitationSource || "")}"></label>
-                  <label>Relationship Owner<input data-contact-field="relationshipOwner" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.relationshipOwner || "")}"></label>
-                  <label>Last Contact<input type="date" data-contact-field="lastContactDate" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastContactDate || "")}"></label>
-                  <label>Next Action<select data-contact-field="nextAction" data-contact-key="${escapeHtml(row.key)}">${optionList(nextActionOptions, row.nextAction || "none")}</select></label>
-                  <label>Due Date<input type="date" data-contact-field="nextActionDueDate" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.nextActionDueDate || "")}"></label>
-                  <label>Email Permission<select data-contact-field="emailPermission" data-contact-key="${escapeHtml(row.key)}">${optionList(emailPermissionOptions, row.emailPermission || "unknown")}</select></label>
-                  <button class="compact secondary span-full" type="button" data-save-contact-key="${escapeHtml(row.key)}">Save Follow-Up</button>
-                </div>
-              </details>
-              <details>
-                <summary>Activity</summary>
-                ${renderActivityList(row)}
-                <div class="activity-entry" data-activity-row="${escapeHtml(row.key)}">
-                  <label>Type<select data-activity-field="type">${optionList(activityTypeOptions, "note")}</select></label>
-                  <label>Owner<input data-activity-field="owner" value="${escapeHtml(row.relationshipOwner || "")}"></label>
-                  <label class="span-full">Activity<textarea data-activity-field="text" placeholder="Dated activity entry"></textarea></label>
-                  <label>Next Action<select data-activity-field="nextAction">${optionList(nextActionOptions, row.nextAction || "none")}</select></label>
-                  <label>Due Date<input type="date" data-activity-field="dueDate" value="${escapeHtml(row.nextActionDueDate || "")}"></label>
-                  <button class="compact secondary span-full" type="button" data-add-activity-key="${escapeHtml(row.key)}">Add Activity</button>
-                  <span>${escapeHtml(row.crmUpdatedAt ? `Updated ${formatDate(row.crmUpdatedAt)}` : "")}</span>
-                </div>
-              </details>
-            </div>` : ""}
-          </td>
         </tr>
+        ${state.type === "contacts" ? contactDetailsRow(row) : notesDetailsRow(row)}
       `).join("");
     }
 
