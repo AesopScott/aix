@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Executive Intelligence for the AI Era | MOJO AI Summits</title>
-<meta name="description" content="Mojo AI Summits is an executive connection and intelligence network that uses immersive experiences to accelerate decisions, partnerships, and innovation.">
+<meta name="description" content="Mojo AI Summits is an executive AI intelligence network where leaders don’t just attend, they contribute. We turn peer conversations into published briefs, summit books, and professional visibility, while connecting CxOs and Owners in no-sales, cross-functional discussions.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://mojoaisummits.com/">
 <meta property="og:title" content="Executive Intelligence for the AI Era | MOJO AI Summits">
-<meta property="og:description" content="Mojo AI Summits is an executive connection and intelligence network that uses immersive experiences to accelerate decisions, partnerships, and innovation.">
+<meta property="og:description" content="Mojo AI Summits is an executive AI intelligence network where leaders don’t just attend, they contribute. We turn peer conversations into published briefs, summit books, and professional visibility, while connecting CxOs and Owners in no-sales, cross-functional discussions.">
 <meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
 <meta property="og:image:secure_url" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
 <meta property="og:image:type" content="image/png">
@@ -17,7 +17,7 @@
 <meta property="og:image:alt" content="Executive Intelligence for the AI Era by MOJO AI Summits">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Executive Intelligence for the AI Era | MOJO AI Summits">
-<meta name="twitter:description" content="Mojo AI Summits is an executive connection and intelligence network that uses immersive experiences to accelerate decisions, partnerships, and innovation.">
+<meta name="twitter:description" content="Mojo AI Summits is an executive AI intelligence network where leaders don’t just attend, they contribute. We turn peer conversations into published briefs, summit books, and professional visibility, while connecting CxOs and Owners in no-sales, cross-functional discussions.">
 <meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
 <meta name="twitter:image:alt" content="Executive Intelligence for the AI Era by MOJO AI Summits">
 <link rel="icon" type="image/png" href="/assets/logo-badge.png">
@@ -152,12 +152,14 @@
     padding: 20px clamp(18px, 2.6vw, 38px);
     display:flex;
     align-items:center;
+    gap:24px;
     justify-content:space-between;
     position:relative;
   }
   .brand-lockup{
     display:inline-flex;
     align-items:center;
+    flex:0 0 auto;
     gap:12px;
     cursor:pointer;
   }
@@ -215,9 +217,12 @@
     display:flex;
     align-items:center;
     justify-content:flex-end;
+    flex:1 1 auto;
+    flex-wrap:wrap;
     gap: clamp(16px, 2vw, 26px);
     margin-left:auto;
     min-width:0;
+    row-gap:8px;
   }
   .nav-links a,
   .nav-links button{
@@ -237,6 +242,47 @@
   }
   .nav-links a:hover,
   .nav-links button:hover{ color: var(--white); }
+
+  @media (max-width: 1120px){
+    nav{
+      align-items:flex-start;
+      gap:18px;
+      padding-inline:clamp(16px, 2vw, 28px);
+    }
+    .brand-mark{ height:35px; }
+    .brand-divider{ height:31px; }
+    .brand-primary{
+      font-size:22px;
+      letter-spacing:.055em;
+    }
+    .brand-secondary{
+      font-size:10.5px;
+      letter-spacing:.3em;
+      padding-left:.3em;
+    }
+    .nav-links{
+      max-width:calc(100vw - 330px);
+      gap:14px 18px;
+      padding-top:4px;
+    }
+    .nav-links a,
+    .nav-links button{
+      font-size:11.2px;
+      letter-spacing:.16em;
+    }
+  }
+
+  @media (max-width: 960px){
+    .nav-links{
+      max-width:calc(100vw - 285px);
+      gap:10px 14px;
+    }
+    .nav-links a,
+    .nav-links button{
+      font-size:10.4px;
+      letter-spacing:.12em;
+    }
+  }
 
   /* ---------- hero ---------- */
   .hero{
@@ -274,7 +320,7 @@
     max-width:310px;
     color:rgba(240,248,255,.74);
     font-family:'Space Grotesk', sans-serif;
-    font-size:12px;
+    font-size:14.4px;
     font-weight:600;
     line-height:1.45;
     letter-spacing:.08em;
@@ -1795,9 +1841,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       </div>
     </div>
     <span class="eyebrow"><span>Invitation only</span></span>
-    <h1><span class="word" style="animation-delay:.05s">Where</span> <span class="word" style="animation-delay:.11s">executive</span> <span class="word" style="animation-delay:.17s">leaders</span> <span class="word" style="animation-delay:.23s">shape</span><br><span class="word grad ai-shimmer" data-text="the" style="animation-delay:.30s">the</span> <span class="word grad ai-shimmer" data-text="future" style="animation-delay:.37s">future</span> <span class="word grad ai-shimmer" data-text="of AI" style="animation-delay:.44s">of AI</span></h1>
+    <h1><span class="word" style="animation-delay:.05s">Where</span> <span class="word" style="animation-delay:.11s">executive</span> <span class="word" style="animation-delay:.17s">leaders</span><br><span class="word" style="animation-delay:.23s">shape</span> <span class="word grad ai-shimmer" data-text="the" style="animation-delay:.30s">the</span> <span class="word grad ai-shimmer" data-text="future" style="animation-delay:.37s">future</span> <span class="word grad ai-shimmer" data-text="of AI" style="animation-delay:.44s">of AI</span></h1>
     <div class="hero-boardroom" aria-hidden="true"><img src="assets/boardroom-transparent.png" alt=""></div>
-    <p class="hero-sub">Mojo AI Summits is an executive connection and intelligence network that uses immersive experiences to accelerate decisions, partnerships, and innovation.</p>
+    <p class="hero-sub">Mojo AI Summits is an executive AI intelligence network where leaders don’t just attend, they contribute. We turn peer conversations into published briefs, summit books, and professional visibility, while connecting CxOs and Owners in no-sales, cross-functional discussions.</p>
     <div class="hero-cta-row">
       <button type="button" class="btn-primary" data-modal-open="inviteRequestModal">Request an Invite</button>
       <a href="/briefs/" class="btn-ghost">Read Executive Briefs</a>
