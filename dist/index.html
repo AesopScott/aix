@@ -146,9 +146,10 @@
     backdrop-filter: blur(6px);
   }
   nav{
-    max-width:1180px;
+    width:100%;
+    max-width:none;
     margin:0 auto;
-    padding: 20px 32px;
+    padding: 20px clamp(18px, 2.6vw, 38px);
     display:flex;
     align-items:center;
     justify-content:space-between;
@@ -213,11 +214,10 @@
   .nav-links{
     display:flex;
     align-items:center;
-    gap: 30px;
-    position:absolute;
-    left:50%;
-    top:50%;
-    transform: translate(-50%,-50%);
+    justify-content:flex-end;
+    gap: clamp(16px, 2vw, 26px);
+    margin-left:auto;
+    min-width:0;
   }
   .nav-links a,
   .nav-links button{
