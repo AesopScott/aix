@@ -2,6 +2,7 @@ from pathlib import Path
 from textwrap import wrap
 from html import escape
 import shutil
+import re
 
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import letter
@@ -17,6 +18,7 @@ PDF_NAME = "ai-innovation-at-operating-scale.pdf"
 PDF_PATH = PDF_DIR / PDF_NAME
 OUT_PDF_PATH = OUT_DIR / PDF_NAME
 SPONSOR_ASSET_DIR = DIST / "assets" / "sponsors"
+PORTRAIT_ASSET_DIR = DIST / "assets" / "brief-portraits"
 
 NAVY = "#0A0F1E"
 NAVY_2 = "#10192C"
@@ -178,8 +180,121 @@ SPONSORS = [
 ]
 
 
+PORTRAIT_STYLES = {
+    "Celeste Marrow": {"skin": (132, 84, 62), "hair": (35, 25, 28), "accent": CYAN, "sector": "moderator"},
+    "Maya Serrano": {"skin": (168, 101, 78), "hair": (38, 28, 32), "accent": "#37F2C5", "sector": "healthcare"},
+    "Darius Holt": {"skin": (98, 65, 46), "hair": (24, 22, 23), "accent": "#7FB2FF", "sector": "finance"},
+    "Elena Kovacs": {"skin": (206, 162, 130), "hair": (126, 86, 58), "accent": "#00E6FF", "sector": "manufacturing"},
+    "Victor Reed": {"skin": (156, 108, 82), "hair": (56, 48, 44), "accent": "#1666FF", "sector": "government"},
+    "Priya Natarajan": {"skin": (142, 82, 54), "hair": (28, 20, 22), "accent": "#9EEBFF", "sector": "legal"},
+    "Name withheld": {"skin": (72, 76, 86), "hair": (19, 24, 34), "accent": "#00E6FF", "sector": "confidential"},
+    "Kenji Watanabe": {"skin": (196, 142, 102), "hair": (24, 24, 26), "accent": "#52D7FF", "sector": "logistics"},
+    "Simone Alvarez": {"skin": (190, 116, 83), "hair": (45, 28, 29), "accent": "#5CEBFF", "sector": "vendor"},
+    "Rowan Blake": {"skin": (182, 139, 112), "hair": (70, 62, 58), "accent": "#8AA8FF", "sector": "security"},
+}
+
+
 def asset_path(path):
     return "/" + str(path.relative_to(DIST)).replace("\\", "/")
+
+
+def slugify(text):
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return slug or "executive"
+
+
+def speaker_from_cite(cite):
+    return str(cite).split(",", 1)[0]
+
+
+def portrait_asset_for(cite):
+    return PORTRAIT_ASSET_DIR / f"{slugify(speaker_from_cite(cite))}.png"
+
+
+def make_contributor_portraits():
+    PORTRAIT_ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    font_bold = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 20)
+    W, H = 360, 440
+    for name, *_ in contributors:
+        style = PORTRAIT_STYLES.get(name, PORTRAIT_STYLES["Name withheld"])
+        path = portrait_asset_for(name)
+        img = Image.new("RGBA", (W, H), (10, 15, 30, 255))
+        draw = ImageDraw.Draw(img)
+        accent = tuple(int(style["accent"].lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+
+        for y in range(H):
+            shade = int(15 + y * 0.035)
+            draw.line((0, y, W, y), fill=(8, 13 + shade // 5, 30 + shade, 255))
+
+        draw.rounded_rectangle((14, 14, W - 14, H - 14), radius=26, outline=accent + (160,), width=3)
+        draw.rounded_rectangle((25, 25, W - 25, H - 25), radius=20, outline=(255, 255, 255, 32), width=1)
+        draw.ellipse((W - 220, -90, W + 90, 225), fill=(accent[0], accent[1], accent[2], 24))
+        draw.ellipse((-100, 210, 168, 500), fill=(22, 102, 255, 22))
+
+        sector = style["sector"]
+        set_color = accent + (90,)
+        if sector == "healthcare":
+            draw.rounded_rectangle((52, 74, 126, 92), 5, fill=set_color)
+            draw.rounded_rectangle((80, 46, 98, 120), 5, fill=set_color)
+        elif sector == "finance":
+            for i, h in enumerate([48, 76, 108]):
+                x = 52 + i * 34
+                draw.rectangle((x, 132 - h, x + 18, 132), fill=set_color)
+        elif sector == "manufacturing":
+            draw.ellipse((46, 54, 132, 140), outline=set_color, width=7)
+            for i in range(8):
+                x = 89 + int(52 * (i % 4 - 1.5) / 1.5)
+                y = 97 + int(52 * (i // 4 - 0.5))
+                draw.line((89, 97, x, y), fill=set_color, width=4)
+        elif sector == "government":
+            draw.polygon([(54, 118), (90, 72), (126, 118)], outline=set_color)
+            for x in [62, 84, 106]:
+                draw.line((x, 118, x, 158), fill=set_color, width=6)
+        elif sector == "legal":
+            draw.line((74, 56, 74, 142), fill=set_color, width=6)
+            draw.line((42, 84, 106, 84), fill=set_color, width=4)
+            draw.arc((36, 84, 74, 128), 0, 180, fill=set_color, width=4)
+            draw.arc((74, 84, 112, 128), 0, 180, fill=set_color, width=4)
+        elif sector == "logistics":
+            draw.line((44, 88, 138, 88), fill=set_color, width=6)
+            draw.line((112, 60, 138, 88, 112, 116), fill=set_color, width=6)
+        elif sector == "security":
+            draw.rounded_rectangle((54, 54, 128, 142), 18, outline=set_color, width=7)
+            draw.line((72, 98, 88, 116, 114, 76), fill=(255, 255, 255, 120), width=6)
+        else:
+            for i in range(3):
+                draw.line((52, 80 + i * 24, 136, 62 + i * 22), fill=set_color, width=4)
+
+        cx = W // 2 + 30
+        face_box = (cx - 62, 108, cx + 62, 232)
+        if name == "Name withheld":
+            draw.ellipse(face_box, fill=(24, 29, 42, 255), outline=accent + (120,), width=2)
+            draw.rounded_rectangle((cx - 106, 222, cx + 106, 392), radius=36, fill=(16, 22, 34, 255), outline=accent + (95,), width=2)
+            draw.polygon([(cx - 90, 392), (cx + 90, 392), (cx + 54, 246), (cx - 54, 246)], fill=(12, 18, 30, 255))
+        else:
+            draw.ellipse((cx - 72, 88, cx + 72, 172), fill=style["hair"] + (255,))
+            draw.ellipse(face_box, fill=style["skin"] + (255,))
+            draw.pieslice((cx - 78, 96, cx - 18, 232), 105, 265, fill=style["hair"] + (255,))
+            draw.pieslice((cx + 18, 96, cx + 78, 232), 275, 75, fill=style["hair"] + (255,))
+            eye = (28, 22, 26, 190)
+            draw.ellipse((cx - 33, 158, cx - 24, 166), fill=eye)
+            draw.ellipse((cx + 24, 158, cx + 33, 166), fill=eye)
+            draw.arc((cx - 13, 168, cx + 14, 194), 278, 82, fill=(92, 58, 48, 120), width=2)
+            draw.arc((cx - 24, 194, cx + 24, 216), 18, 162, fill=(76, 42, 44, 150), width=3)
+            draw.ellipse((cx - 34, 174, cx - 18, 188), fill=(255, 255, 255, 22))
+            draw.ellipse((cx + 18, 174, cx + 34, 188), fill=(255, 255, 255, 22))
+            draw.rounded_rectangle((cx - 108, 228, cx + 108, 404), radius=38, fill=(20, 32, 52, 255), outline=accent + (90,), width=2)
+            draw.polygon([(cx - 48, 244), (cx, 326), (cx + 48, 244)], fill=(238, 245, 255, 235))
+            draw.polygon([(cx - 92, 404), (cx - 20, 278), (cx, 326), (cx + 20, 278), (cx + 92, 404)], fill=(11, 17, 30, 255))
+
+        initials = "".join(part[0] for part in name.split()[:2] if part[0].isalpha()).upper()
+        if name == "Name withheld":
+            initials = "NW"
+        bbox = draw.textbbox((0, 0), initials, font=font_bold)
+        draw.rounded_rectangle((28, H - 70, 96, H - 32), radius=10, fill=(10, 15, 30, 210), outline=accent + (130,), width=1)
+        draw.text((62 - (bbox[2] - bbox[0]) / 2, H - 62), initials, font=font_bold, fill=(255, 255, 255, 230))
+
+        img.save(path)
 
 
 def make_sponsor_logos():
@@ -481,6 +596,7 @@ def create_pdf():
 
 def write_html():
     make_sponsor_logos()
+    make_contributor_portraits()
     brief_dir = DIST / "briefs"
     detail_dir = brief_dir / "ai-innovation-at-operating-scale"
     brief_dir.mkdir(parents=True, exist_ok=True)
@@ -491,6 +607,12 @@ def write_html():
 
     def list_items(items):
         return "".join(f"<li>{h(item)}</li>" for item in items)
+
+    def quote_card(name, quote):
+        speaker = speaker_from_cite(name)
+        alt = "Confidential executive portrait-style image" if speaker == "Name withheld" else f"Portrait-style image representing {speaker}"
+        image_src = asset_path(portrait_asset_for(name)) + "?v=20260811"
+        return f"""<blockquote class="quote-card"><div class="quote-copy"><cite>{h(name)}</cite><p>&quot;{h(quote)}&quot;</p></div><div class="quote-portrait-frame"><img src="{h(image_src)}" alt="{h(alt)}" loading="lazy"></div></blockquote>"""
 
     contributor_rows = "\n".join(
         f"""<tr><td><strong>{h(name)}</strong></td><td>{h(title)}</td><td>{h(company)}</td><td>{h(sector)}</td><td>{h(geo)}</td></tr>"""
@@ -505,7 +627,7 @@ def write_html():
     section_pages = []
     for idx, section in enumerate(sections, start=4):
         quotes = "\n".join(
-            f"""<blockquote><cite>{h(name)}</cite><p>&quot;{h(quote)}&quot;</p></blockquote>"""
+            quote_card(name, quote)
             for name, quote in section["quotes"]
         )
         section_pages.append(
@@ -543,8 +665,8 @@ def write_html():
     .hero{padding:78px 0 46px}.eyebrow{font:700 10px/1 Space Grotesk;letter-spacing:.34em;text-transform:uppercase;color:var(--cyan)}h1{font-family:Fraunces,serif;font-size:clamp(42px,7vw,86px);line-height:.98;margin:22px 0 20px;max-width:970px}p{color:var(--muted);line-height:1.7}.lead{font-size:19px;max-width:720px}.actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:34px}.btn{border:1px solid var(--cyan);padding:14px 19px;font:700 11px/1 Space Grotesk;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan)}.btn.primary{background:var(--cyan);color:#04101b}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin:54px 0;background:rgba(255,255,255,.09)}.meta div{background:rgba(10,15,30,.76);padding:22px}.meta span{display:block;font:700 10px/1 Space Grotesk;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}.meta strong{font-size:18px}
     .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;padding:24px 0 80px}.panel{border:1px solid var(--border);background:rgba(27,35,51,.58);padding:28px;border-radius:6px}.panel h2,.panel h3{font-family:Fraunces,serif;margin:0 0 16px}.panel li{color:var(--muted);line-height:1.6;margin:10px 0}.brief-card{display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center;border-top:1px solid var(--border);padding:28px 0}.brief-card h2{font-family:Fraunces,serif;margin:0 0 10px}
     .download-dock{position:sticky;top:0;z-index:20;border-block:1px solid rgba(0,230,255,.16);background:rgba(10,15,30,.92);backdrop-filter:blur(14px)}.download-dock .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-block:13px}.download-dock p{font:700 11px/1.3 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}.download-dock .actions{margin:0}
-    .report-pages{width:min(1480px,calc(100% - 32px));padding:14px 0 64px}.report-page{position:relative;min-height:680px;margin:0 auto 22px;padding:40px;border:1px solid rgba(0,230,255,.16);background:linear-gradient(145deg,rgba(10,15,30,.96),rgba(16,25,44,.94));box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}.report-page.question-page{border:1px solid rgba(0,230,255,.34);box-shadow:0 28px 90px rgba(0,0,0,.28),0 0 0 1px rgba(22,102,255,.14) inset,0 0 34px rgba(0,230,255,.08)}.report-page.question-page::before{content:"";position:absolute;inset:12px;border:1px solid rgba(22,102,255,.22);pointer-events:none;z-index:1}.report-page::after{content:"";position:absolute;right:-120px;top:-130px;width:340px;height:340px;border-radius:50%;background:rgba(27,35,51,.72);z-index:0}.report-page>*{position:relative;z-index:2}.report-page.cover{display:flex;flex-direction:column;justify-content:center}.page-kicker{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px solid rgba(0,230,255,.28);font:700 10px/1 Space Grotesk;letter-spacing:.28em;text-transform:uppercase;color:var(--cyan)}.report-page h2{font-family:Fraunces,serif;font-size:clamp(30px,4.2vw,52px);line-height:1.02;margin:0 0 18px}.report-page h3{font:700 12px/1.2 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin:0 0 10px}.summary-band{border-left:2px solid var(--cyan);padding:12px 0 12px 18px;margin:16px 0 20px}.summary-band strong{display:block;margin-bottom:7px;color:var(--white)}.moderator{font-weight:700;color:var(--white)}.quote-stack{display:grid;gap:12px;margin:18px 0}.quote-stack blockquote{margin:0;padding:18px;border:1px solid rgba(255,255,255,.08);background:rgba(27,35,51,.54)}.quote-stack blockquote p{color:var(--white);font-size:16px}.quote-stack cite{display:block;margin-bottom:12px;color:var(--cyan);font:700 13.2px/1.4 Space Grotesk;text-transform:uppercase;letter-spacing:.08em}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.action-strip{margin-top:18px;padding:18px;background:rgba(0,230,255,.07);border:1px solid rgba(0,230,255,.18)}ul{margin:0;padding-left:18px;color:var(--muted)}li{line-height:1.55;margin:6px 0}.contributor-table{width:100%;border-collapse:collapse;margin-top:18px}.contributor-table th,.contributor-table td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;color:var(--muted);font-size:13px;vertical-align:top}.contributor-table th{color:var(--cyan);font:700 10px/1 Space Grotesk;letter-spacing:.16em;text-transform:uppercase}.toc{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:22px}.toc a{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:12px;border:1px solid rgba(255,255,255,.08);color:var(--muted)}.toc span{color:var(--cyan);font-weight:700}.framework{display:grid;gap:10px}.framework div{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:12px;border-bottom:1px solid rgba(255,255,255,.08)}.framework strong{color:var(--cyan)}.visual-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:end;height:220px;margin:24px 0}.visual-bars div{display:flex;align-items:end;justify-content:center;background:linear-gradient(180deg,var(--cyan),var(--blue));color:#06101c;font-weight:800;padding:10px;min-height:70px}.visual-bars div:nth-child(1){height:34%}.visual-bars div:nth-child(2){height:52%}.visual-bars div:nth-child(3){height:68%}.visual-bars div:nth-child(4){height:58%}.visual-bars div:nth-child(5){height:82%}.matrix{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid rgba(255,255,255,.14)}.matrix div{min-height:96px;padding:16px;border:1px solid rgba(255,255,255,.08)}.sources-list{padding:0;list-style:none}.sources-list li{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}.sources-list a{display:block;color:var(--cyan);font-size:12px;word-break:break-word}.sponsor{padding:20px;margin:14px 0;background:rgba(27,35,51,.72);border:1px solid rgba(0,230,255,.16)}.sponsor-head{display:flex;align-items:center;gap:18px;margin-bottom:16px}.sponsor-head img{width:220px;max-width:42%;height:auto;display:block}.sponsor-head h3{margin:0 0 6px}.sponsor-head p{margin:0;color:var(--cyan);font:700 11px/1.35 Space Grotesk;text-transform:uppercase;letter-spacing:.14em}.sponsor-invited{border-left:2px solid rgba(0,230,255,.45);padding-left:14px}.sponsor-use-cases{margin-top:14px;padding:16px;border:1px solid rgba(255,255,255,.08);background:rgba(10,15,30,.42)}.sponsor-use-cases li{color:rgba(222,235,255,.82)}.legal{font-size:13px;color:var(--dim)}footer{padding:42px 0;color:var(--dim);text-align:center;border-top:1px solid rgba(255,255,255,.08)}footer a{color:var(--cyan)}
-    @media(max-width:780px){.grid,.meta,.brief-card,.two-col,.toc,.matrix{grid-template-columns:1fr}.top{align-items:flex-start;gap:22px;flex-direction:column}.nav{display:none}.brand-lockup{gap:10px}.brand-mark{height:42px}.brand-divider{height:36px}.brand-primary{font-size:23px;letter-spacing:.05em}.brand-secondary{font-size:10px;letter-spacing:.32em;padding-left:.32em}.download-dock .wrap{align-items:flex-start;flex-direction:column}.report-page{min-height:auto;padding:30px}.contributor-table{display:block;overflow-x:auto}.framework div{grid-template-columns:1fr}.visual-bars{height:190px}.sponsor-head{align-items:flex-start;flex-direction:column}.sponsor-head img{max-width:100%;width:240px}}
+    .report-pages{width:min(1480px,calc(100% - 32px));padding:14px 0 64px}.report-page{position:relative;min-height:680px;margin:0 auto 22px;padding:40px;border:1px solid rgba(0,230,255,.16);background:linear-gradient(145deg,rgba(10,15,30,.96),rgba(16,25,44,.94));box-shadow:0 28px 90px rgba(0,0,0,.28);overflow:hidden}.report-page.question-page{border:1px solid rgba(0,230,255,.34);box-shadow:0 28px 90px rgba(0,0,0,.28),0 0 0 1px rgba(22,102,255,.14) inset,0 0 34px rgba(0,230,255,.08)}.report-page.question-page::before{content:"";position:absolute;inset:12px;border:1px solid rgba(22,102,255,.22);pointer-events:none;z-index:1}.report-page::after{content:"";position:absolute;right:-120px;top:-130px;width:340px;height:340px;border-radius:50%;background:rgba(27,35,51,.72);z-index:0}.report-page>*{position:relative;z-index:2}.report-page.cover{display:flex;flex-direction:column;justify-content:center}.page-kicker{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px solid rgba(0,230,255,.28);font:700 10px/1 Space Grotesk;letter-spacing:.28em;text-transform:uppercase;color:var(--cyan)}.report-page h2{font-family:Fraunces,serif;font-size:clamp(30px,4.2vw,52px);line-height:1.02;margin:0 0 18px}.report-page h3{font:700 12px/1.2 Space Grotesk;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin:0 0 10px}.summary-band{border-left:2px solid var(--cyan);padding:12px 0 12px 18px;margin:16px 0 20px}.summary-band strong{display:block;margin-bottom:7px;color:var(--white)}.moderator{font-weight:700;color:var(--white)}.quote-stack{display:grid;gap:14px;margin:18px 0}.quote-stack blockquote{margin:0;padding:20px;border:1px solid rgba(0,230,255,.18);background:linear-gradient(135deg,rgba(27,35,51,.62),rgba(10,15,30,.58));box-shadow:0 14px 34px rgba(0,0,0,.18)}.quote-card{display:grid;grid-template-columns:minmax(0,1fr) 188px;gap:22px;align-items:stretch}.quote-copy{min-width:0}.quote-stack blockquote p{color:var(--white);font-size:16px}.quote-stack cite{display:block;margin-bottom:12px;color:var(--cyan);font:700 13.2px/1.4 Space Grotesk;text-transform:uppercase;letter-spacing:.08em}.quote-portrait-frame{position:relative;min-height:176px;padding:6px;border:1px solid rgba(0,230,255,.38);background:linear-gradient(145deg,rgba(0,230,255,.13),rgba(22,102,255,.08) 48%,rgba(255,255,255,.04));box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 0 24px rgba(0,230,255,.08)}.quote-portrait-frame::before{content:"";position:absolute;inset:11px;border:1px solid rgba(255,255,255,.13);pointer-events:none}.quote-portrait-frame img{width:100%;height:100%;min-height:164px;object-fit:cover;display:block;filter:saturate(1.05) contrast(1.04)}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.action-strip{margin-top:18px;padding:18px;background:rgba(0,230,255,.07);border:1px solid rgba(0,230,255,.18)}ul{margin:0;padding-left:18px;color:var(--muted)}li{line-height:1.55;margin:6px 0}.contributor-table{width:100%;border-collapse:collapse;margin-top:18px}.contributor-table th,.contributor-table td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;color:var(--muted);font-size:13px;vertical-align:top}.contributor-table th{color:var(--cyan);font:700 10px/1 Space Grotesk;letter-spacing:.16em;text-transform:uppercase}.toc{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:22px}.toc a{display:grid;grid-template-columns:42px 1fr;gap:12px;padding:12px;border:1px solid rgba(255,255,255,.08);color:var(--muted)}.toc span{color:var(--cyan);font-weight:700}.framework{display:grid;gap:10px}.framework div{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:12px;border-bottom:1px solid rgba(255,255,255,.08)}.framework strong{color:var(--cyan)}.visual-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:end;height:220px;margin:24px 0}.visual-bars div{display:flex;align-items:end;justify-content:center;background:linear-gradient(180deg,var(--cyan),var(--blue));color:#06101c;font-weight:800;padding:10px;min-height:70px}.visual-bars div:nth-child(1){height:34%}.visual-bars div:nth-child(2){height:52%}.visual-bars div:nth-child(3){height:68%}.visual-bars div:nth-child(4){height:58%}.visual-bars div:nth-child(5){height:82%}.matrix{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid rgba(255,255,255,.14)}.matrix div{min-height:96px;padding:16px;border:1px solid rgba(255,255,255,.08)}.sources-list{padding:0;list-style:none}.sources-list li{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}.sources-list a{display:block;color:var(--cyan);font-size:12px;word-break:break-word}.sponsor{padding:20px;margin:14px 0;background:rgba(27,35,51,.72);border:1px solid rgba(0,230,255,.16)}.sponsor-head{display:flex;align-items:center;gap:18px;margin-bottom:16px}.sponsor-head img{width:220px;max-width:42%;height:auto;display:block}.sponsor-head h3{margin:0 0 6px}.sponsor-head p{margin:0;color:var(--cyan);font:700 11px/1.35 Space Grotesk;text-transform:uppercase;letter-spacing:.14em}.sponsor-invited{border-left:2px solid rgba(0,230,255,.45);padding-left:14px}.sponsor-use-cases{margin-top:14px;padding:16px;border:1px solid rgba(255,255,255,.08);background:rgba(10,15,30,.42)}.sponsor-use-cases li{color:rgba(222,235,255,.82)}.legal{font-size:13px;color:var(--dim)}footer{padding:42px 0;color:var(--dim);text-align:center;border-top:1px solid rgba(255,255,255,.08)}footer a{color:var(--cyan)}
+    @media(max-width:780px){.grid,.meta,.brief-card,.two-col,.toc,.matrix,.quote-card{grid-template-columns:1fr}.top{align-items:flex-start;gap:22px;flex-direction:column}.nav{display:none}.brand-lockup{gap:10px}.brand-mark{height:42px}.brand-divider{height:36px}.brand-primary{font-size:23px;letter-spacing:.05em}.brand-secondary{font-size:10px;letter-spacing:.32em;padding-left:.32em}.download-dock .wrap{align-items:flex-start;flex-direction:column}.report-page{min-height:auto;padding:30px}.contributor-table{display:block;overflow-x:auto}.framework div{grid-template-columns:1fr}.visual-bars{height:190px}.quote-portrait-frame{order:-1;width:min(240px,100%);height:220px}.sponsor-head{align-items:flex-start;flex-direction:column}.sponsor-head img{max-width:100%;width:240px}}
     """
 
     nav_exit_css = """
