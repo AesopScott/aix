@@ -118,6 +118,11 @@ function requestEmailText(record) {
     record.phone ? `Phone: ${record.phone}` : "",
     `Title: ${record.title || ""}`,
     `Company: ${record.company || ""}`,
+    record.sessionTitle ? `Conversation title: ${record.sessionTitle}` : "",
+    record.track ? `Track: ${record.track}` : "",
+    record.format ? `Role: ${record.format}` : "",
+    record.story ? `Real value: ${record.story}` : "",
+    record.link ? `LinkedIn or site: ${record.link}` : "",
     `MojoAIstudio.com learning program member: ${record.learningProgramMember ? "True" : "False"}`,
     record.sourcePage ? `Source page: ${record.sourcePage}` : "",
     "",
@@ -133,6 +138,11 @@ function requestEmailHtml(record) {
     ["Phone", record.phone],
     ["Title", record.title],
     ["Company", record.company],
+    ["Conversation title", record.sessionTitle],
+    ["Track", record.track],
+    ["Role", record.format],
+    ["Real value", record.story],
+    ["LinkedIn or site", record.link],
     ["MojoAIstudio.com learning program member", record.learningProgramMember ? "True" : "False"],
     ["Source page", record.sourcePage],
     ["Submitted", record.createdAt],
@@ -156,7 +166,7 @@ function requestEmailHtml(record) {
 }
 
 async function sendInviteNotification(env, record) {
-  const shouldNotify = ["dallas-invite", "executive", "partner-subscription"].includes(record.type);
+  const shouldNotify = ["dallas-invite", "executive", "conversation", "partner-subscription"].includes(record.type);
   if (!shouldNotify) return null;
 
   try {
@@ -336,7 +346,7 @@ export async function onRequestPost({ request, env }) {
     : null;
   const notification = await sendInviteNotification(env, record);
 
-  if (["dallas-invite", "executive", "partner-subscription"].includes(record.type) && !notification?.ok) {
+  if (["dallas-invite", "executive", "conversation", "partner-subscription"].includes(record.type) && !notification?.ok) {
     return json({
       error: "Invite request was saved, but the notification email could not be sent.",
       notification
