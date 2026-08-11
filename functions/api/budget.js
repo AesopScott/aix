@@ -609,7 +609,7 @@ export async function onRequestGet({ request, env, data }) {
   if (bucketError) return bucketError;
 
   const url = new URL(request.url);
-  const ledger = await syncLedger(env);
+  const ledger = await syncLedger(env, { extract: false });
   const payload = budgetPayload(ledger);
 
   if (url.searchParams.get("download") === "csv") {
