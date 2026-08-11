@@ -962,7 +962,7 @@
 
         <div class="control-group">
           <div class="control-label">Support</div>
-          <div class="segmented" id="supportFilters"></div>
+          <div class="status-toggle-list" id="supportFilters"></div>
         </div>
 
         <div class="control-group">
@@ -1007,7 +1007,7 @@
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
 Date: 2026-08-11
-Version: 3.11
+Version: 3.12
 Category: event operations
 
 ## Purpose
@@ -1613,6 +1613,7 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.12 - Changed support filtering to checkbox toggles for multi-person support assignments.
 - 3.11 - Added support-person filtering alongside owner filtering.
 - 3.10 - Added Delete as a confirmation-based status that removes setup items.
 - 3.9 - Added Issue/problem as a setup item status.
@@ -1714,10 +1715,10 @@ The following decisions should not be made by one owner alone:
     const state = {
       phase: "All",
       owner: "All",
-      support: "All",
       priority: "All",
       dueDate: "",
       status: "All",
+      visibleSupportOwners: {},
       visibleStatuses: Object.fromEntries(statusOptions.map((status) => [status, true])),
       query: ""
     };
@@ -2337,9 +2338,32 @@ The following decisions should not be made by one owner alone:
     }
 
     function countBySupport(owner) {
-      if (owner === "All") return allItems.length;
       if (owner === "No support") return allItems.filter((item) => ownerNames(item.support).length === 0).length;
       return allItems.filter((item) => ownerNames(item.support).includes(owner)).length;
+    }
+
+    function supportFilterOptions() {
+      return ["All support", "No support", ...supportOwners];
+    }
+
+    function selectedSupportFilters() {
+      const options = supportFilterOptions().filter((owner) => owner !== "All support");
+      return options.filter((owner) => state.visibleSupportOwners[owner] === true);
+    }
+
+    function syncSupportFilterState() {
+      const options = supportFilterOptions();
+      options.forEach((owner) => {
+        if (state.visibleSupportOwners[owner] === undefined) {
+          state.visibleSupportOwners[owner] = owner === "All support";
+        }
+      });
+      Object.keys(state.visibleSupportOwners).forEach((owner) => {
+        if (!options.includes(owner)) delete state.visibleSupportOwners[owner];
+      });
+
+      const selected = selectedSupportFilters();
+      state.visibleSupportOwners["All support"] = selected.length === 0;
     }
 
     function countByPhase(phase) {
@@ -2679,9 +2703,10 @@ The following decisions should not be made by one owner alone:
 
     function renderFilters() {
       const phaseOptions = ["All", ...checklistSections.map((section) => section.title)];
-      const supportFilterOptions = ["All", "No support", ...supportOwners];
       const priorityFilterOptions = ["All", "No priority", ...priorityOptions];
       const statusFilterOptions = ["All", ...statusOptions];
+      const supportOptions = supportFilterOptions();
+      syncSupportFilterState();
 
       document.getElementById("phaseFilters").innerHTML = phaseOptions.map((phase) => `
         <button class="filter-btn ${phase === state.phase ? "active" : ""}" data-filter-type="phase" data-value="${phase}" type="button">
@@ -2695,10 +2720,11 @@ The following decisions should not be made by one owner alone:
         </button>
       `).join("");
 
-      document.getElementById("supportFilters").innerHTML = supportFilterOptions.map((owner) => `
-        <button class="filter-btn ${owner === state.support ? "active" : ""}" data-filter-type="support" data-value="${escapeHtml(owner)}" type="button">
-          <span>${escapeHtml(owner)}</span><span class="filter-count">${countBySupport(owner)}</span>
-        </button>
+      document.getElementById("supportFilters").innerHTML = supportOptions.map((owner) => `
+        <label class="status-toggle-option ${state.visibleSupportOwners[owner] ? "" : "off"}">
+          <span>${escapeHtml(owner)} <span class="filter-count">${owner === "All support" ? allItems.length : countBySupport(owner)}</span></span>
+          <input type="checkbox" data-support-toggle="${escapeHtml(owner)}" ${state.visibleSupportOwners[owner] ? "checked" : ""} aria-label="Show ${escapeHtml(owner)} support items">
+        </label>
       `).join("");
 
       document.getElementById("priorityFilter").innerHTML = priorityFilterOptions.map((priority) => `
@@ -2733,6 +2759,24 @@ The following decisions should not be made by one owner alone:
           applyFilters();
         });
       });
+
+      document.querySelectorAll("input[data-support-toggle]").forEach((input) => {
+        input.addEventListener("change", () => {
+          const owner = input.dataset.supportToggle;
+          if (owner === "All support") {
+            Object.keys(state.visibleSupportOwners).forEach((key) => {
+              state.visibleSupportOwners[key] = false;
+            });
+            state.visibleSupportOwners["All support"] = input.checked;
+          } else {
+            state.visibleSupportOwners[owner] = input.checked;
+            state.visibleSupportOwners["All support"] = false;
+          }
+          syncSupportFilterState();
+          renderFilters();
+          applyFilters();
+        });
+      });
     }
 
     function applyFilters() {
@@ -2742,10 +2786,12 @@ The following decisions should not be made by one owner alone:
       document.querySelectorAll(".item").forEach((item) => {
         const itemOwners = ownerNames(item.dataset.owner);
         const itemSupportOwners = ownerNames(item.dataset.support);
+        const activeSupportFilters = selectedSupportFilters();
         const phaseOk = state.phase === "All" || item.dataset.phase === state.phase;
         const ownerOk = state.owner === "All" || itemOwners.includes(state.owner);
-        const supportOk = state.support === "All" ||
-          (state.support === "No support" ? itemSupportOwners.length === 0 : itemSupportOwners.includes(state.support));
+        const supportOk = activeSupportFilters.length === 0 || activeSupportFilters.some((owner) =>
+          owner === "No support" ? itemSupportOwners.length === 0 : itemSupportOwners.includes(owner)
+        );
         const priorityOk = state.priority === "All" ||
           (state.priority === "No priority" ? !item.dataset.priority : item.dataset.priority === state.priority);
         const dateOk = !state.dueDate || item.dataset.dueDate === state.dueDate;
