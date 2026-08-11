@@ -253,7 +253,7 @@ export const DEFAULT_ACCESS_RULES = [
     kind: "page",
     group: "Public",
     label: "Virtual Events",
-    summary: "Public Fall 2026 virtual event series page.",
+    summary: "Public 2026-2027 virtual event series page.",
     mode: "public",
     matches: [{ exact: "/virtual" }, { prefix: "/virtual/" }],
     domains: ["mojoaisummits.com/virtual", "mojoaisummits.com/virtual/*"]

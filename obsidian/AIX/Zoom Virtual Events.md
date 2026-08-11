@@ -2,7 +2,7 @@
 
 Updated: 2026-08-03
 
-MOJO AI Summits now has a Cloudflare-native scaffold for five fall 2026 Zoom-backed virtual event share pages.
+MOJO AI Summits now has a Cloudflare-native scaffold for twelve 2026-2027 Zoom-backed virtual event share pages.
 
 ## Event Share Routes
 
@@ -11,6 +11,9 @@ MOJO AI Summits now has a Cloudflare-native scaffold for five fall 2026 Zoom-bac
 - `/virtual/ai-integration-and-workflow.php`
 - `/virtual/ai-security-governance-and-trust.php`
 - `/virtual/ai-operating-model-for-2027.php`
+- `/virtual/ai-budgeting-and-investment-priorities.php`
+- `/virtual/ai-workforce-readiness-and-change-leadership.php`
+- `/virtual/ai-executive-operating-agenda-for-2027.php`
 
 Pretty routes without `.php` are also supported.
 
@@ -18,7 +21,7 @@ Pretty routes without `.php` are also supported.
 
 The share page calls `/api/virtual-events/[slug]`. The API reads the stored Zoom join URL from `MOJO_SUMMITS_SETUP_STATE` and stops returning it 15 minutes before the event start time.
 
-Each fall 2026 virtual event runs from 1:00 PM to 2:30 PM America/Chicago. The share-page lockout begins 15 minutes before start time, at 12:45 PM Central.
+Each 2026-2027 virtual event runs from 1:00 PM to 2:30 PM America/Chicago. The share-page lockout begins 15 minutes before start time, at 12:45 PM Central.
 
 ## Zoom Creation
 

@@ -118,6 +118,26 @@ const DEFAULT_UPCOMING_EVENTS = [
   },
   {
     slug: "dallas-2027",
+  {
+    slug: "ai-budgeting-and-investment-priorities",
+    title: "AI Budgeting and Investment Priorities",
+    date: "Friday, December 4, 2026",
+    format: "Virtual"
+  },
+  {
+    slug: "ai-workforce-readiness-and-change-leadership",
+    title: "AI Workforce Readiness and Change Leadership",
+    date: "Friday, December 18, 2026",
+    format: "Virtual"
+  },
+  {
+    slug: "ai-executive-operating-agenda-for-2027",
+    title: "AI Executive Operating Agenda for 2027",
+    date: "Friday, January 8, 2027",
+    format: "Virtual"
+  },
+  {
+    slug: "dallas-2027",
     title: "Dallas 2027 Summit",
     date: "January 2027",
     format: "In person"

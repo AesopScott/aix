@@ -2,7 +2,7 @@
 
 Date created: 2026-07-27
 
-MOJO AI Summits uses Zoom Server-to-Server OAuth to create the fall 2026 virtual event rooms and Cloudflare Pages Functions to serve shareable event pages.
+MOJO AI Summits uses Zoom Server-to-Server OAuth to create the 2026-2027 virtual event rooms and Cloudflare Pages Functions to serve shareable event pages.
 
 ## Share Routes
 
@@ -26,6 +26,12 @@ Each event has two share route forms:
 - `/virtual/ai-workforce-talent-and-change-adoption.php`
 - `/virtual/ai-operating-model-for-2027`
 - `/virtual/ai-operating-model-for-2027.php`
+- `/virtual/ai-budgeting-and-investment-priorities`
+- `/virtual/ai-budgeting-and-investment-priorities.php`
+- `/virtual/ai-workforce-readiness-and-change-leadership`
+- `/virtual/ai-workforce-readiness-and-change-leadership.php`
+- `/virtual/ai-executive-operating-agenda-for-2027`
+- `/virtual/ai-executive-operating-agenda-for-2027.php`
 
 The `.php` routes are compatibility share URLs. They are rendered by Cloudflare Pages Functions, not by a PHP runtime.
 
@@ -33,7 +39,7 @@ The `.php` routes are compatibility share URLs. They are rendered by Cloudflare 
 
 The public API route `/api/virtual-events/[event-slug]` returns the Zoom join URL only until 15 minutes before the event start time. After the lockout point, it returns the public event details and a locked message, but no Zoom URL.
 
-Each fall 2026 virtual event runs from 1:00 PM to 2:30 PM America/Chicago. The lockout begins at 12:45 PM Central on each event date. Update `functions/_virtual-events.js` if the final event time changes.
+Each 2026-2027 virtual event runs from 1:00 PM to 2:30 PM America/Chicago. The lockout begins at 12:45 PM Central on each event date. Update `functions/_virtual-events.js` if the final event time changes.
 
 ## Local Env
 
