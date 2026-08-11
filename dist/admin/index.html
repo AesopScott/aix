@@ -675,11 +675,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       Public: "No Mojo account required. These pages can be opened by visitors, invitees, and policy reviewers.",
       Member: "Member-facing profile and fellowship experience links.",
       Partner: "Requires an approved partner account when access control is enabled.",
+      Community: "Shared member, guest, team, and CRM-contact collaboration spaces.",
       Team: "Requires a Mojo team account when access control is enabled.",
       Admin: "Reserved for owners and admins who manage access or company operations."
     };
 
-    const accessOrder = ["Public", "Member", "Partner", "Team", "Admin"];
+    const accessOrder = ["Public", "Member", "Partner", "Community", "Team", "Admin"];
 
     const routes = [
       {
@@ -708,6 +709,110 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       },
       {
         group: "Public",
+        title: "Event Calendar",
+        path: "/calendar/",
+        summary: "Public attendee-facing calendar for upcoming virtual rooms, live summits, and intelligence brief events.",
+        status: "Public",
+        tags: ["calendar", "events", "public"]
+      },
+      {
+        group: "Public",
+        title: "AI Executive Readiness Online",
+        path: "/ai-executive-readiness-online/",
+        summary: "Public virtual roundtable page for executive AI adoption, frontier models, ROI, governance, fear, and regulation.",
+        status: "Public",
+        tags: ["virtual", "roundtable", "readiness"]
+      },
+      {
+        group: "Public",
+        title: "AI Data Readiness and Knowledge Strategy Online",
+        path: "/ai-data-readiness-and-knowledge-strategy-online/",
+        summary: "Public virtual roundtable page on data quality, knowledge architecture, permissions, and retrieval practices for AI at scale.",
+        status: "Public",
+        tags: ["virtual", "data", "knowledge"]
+      },
+      {
+        group: "Public",
+        title: "AI Use Cases That Survive Finance Online",
+        path: "/ai-use-cases-that-survive-finance-online/",
+        summary: "Public virtual roundtable page on finance-tested AI use cases, ROI, budget ownership, risk, and measurable value.",
+        status: "Public",
+        tags: ["virtual", "finance", "use cases"]
+      },
+      {
+        group: "Public",
+        title: "AI Agents, Automation, and Human Handoffs Online",
+        path: "/ai-agents-automation-and-human-handoffs-online/",
+        summary: "Public virtual roundtable page on agentic AI, automation, escalation, and human review without losing accountability.",
+        status: "Public",
+        tags: ["virtual", "agents", "automation"]
+      },
+      {
+        group: "Public",
+        title: "AI Integration and Workflow Online",
+        path: "/ai-integration-and-workflow-online/",
+        summary: "Public virtual roundtable page on AI integration, workflow redesign, data, vendors, agents, and operating adoption.",
+        status: "Public",
+        tags: ["virtual", "workflow", "integration"]
+      },
+      {
+        group: "Public",
+        title: "AI Vendor Strategy and Platform Decisions Online",
+        path: "/ai-vendor-strategy-and-platform-decisions-online/",
+        summary: "Public virtual roundtable page on AI platform choices, vendor strategy, procurement, interoperability, and partner decisions.",
+        status: "Public",
+        tags: ["virtual", "vendors", "platforms"]
+      },
+      {
+        group: "Public",
+        title: "AI Security, Governance, and Trust Online",
+        path: "/ai-security-governance-and-trust-online/",
+        summary: "Public virtual roundtable page on AI security controls, governance models, policy boundaries, and trust signals.",
+        status: "Public",
+        tags: ["virtual", "security", "governance"]
+      },
+      {
+        group: "Public",
+        title: "AI Operating Model for 2027 Online",
+        path: "/ai-operating-model-for-2027-online/",
+        summary: "Public virtual roundtable page on 2027 AI operating models, decision rights, talent, governance, and budget.",
+        status: "Public",
+        tags: ["virtual", "operating model", "2027"]
+      },
+      {
+        group: "Public",
+        title: "AI Workforce, Talent, and Change Adoption Online",
+        path: "/ai-workforce-talent-and-change-adoption-online/",
+        summary: "Public virtual roundtable page on employees, managers, skills, resistance, role design, and 2027 talent commitments.",
+        status: "Public",
+        tags: ["virtual", "workforce", "talent"]
+      },
+      {
+        group: "Public",
+        title: "AI Budgeting and Investment Priorities Online",
+        path: "/ai-budgeting-and-investment-priorities-online/",
+        summary: "Public virtual roundtable page on AI budgeting, investment priorities, portfolio decisions, and 2027 funding choices.",
+        status: "Public",
+        tags: ["virtual", "budgeting", "investment"]
+      },
+      {
+        group: "Public",
+        title: "AI Workforce Readiness and Change Leadership Online",
+        path: "/ai-workforce-readiness-and-change-leadership-online/",
+        summary: "Public virtual roundtable page on workforce readiness, managers, policy, training, incentives, and culture change.",
+        status: "Public",
+        tags: ["virtual", "workforce", "change"]
+      },
+      {
+        group: "Public",
+        title: "AI Executive Operating Agenda for 2027 Online",
+        path: "/ai-executive-operating-agenda-for-2027-online/",
+        summary: "Public virtual roundtable page for the 2027 AI operating agenda across governance, budgets, ownership, and risk.",
+        status: "Public",
+        tags: ["virtual", "agenda", "2027"]
+      },
+      {
+        group: "Public",
         title: "Membership",
         path: "/membership/",
         summary: "Public Executive Intelligence Network membership page for year-round executive community positioning.",
@@ -732,11 +837,35 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       },
       {
         group: "Public",
+        title: "Executive AI Intelligence Briefs",
+        path: "/briefs/",
+        summary: "Public archive of Executive AI Intelligence Briefs synthesized from Mojo research council conversations.",
+        status: "Public",
+        tags: ["briefs", "research", "public"]
+      },
+      {
+        group: "Public",
+        title: "AI Innovation at Operating Scale Brief",
+        path: "/briefs/ai-innovation-at-operating-scale/",
+        summary: "Public sample Executive Research Council intelligence brief with HTML report and PDF download actions.",
+        status: "Public",
+        tags: ["briefs", "innovation", "pdf"]
+      },
+      {
+        group: "Public",
         title: "Book Time",
         path: "/book/",
         summary: "Public employee booking page for Mojo AI Summits conversations.",
         status: "Public",
         tags: ["booking", "calendar", "scheduling"]
+      },
+      {
+        group: "Partner",
+        title: "Partner Pricing Structure",
+        path: "/partner-pricing/",
+        summary: "Partner-facing pricing reference for Executive slots, candidate pricing, discounts, and annual subscription terms.",
+        status: "Partner",
+        tags: ["partner", "pricing", "subscription"]
       },
       {
         group: "Partner",
@@ -761,6 +890,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         summary: "Administrative preview of the private member profile experience with sample tier, invite, directory, and fellowship data.",
         status: "Member",
         tags: ["member", "profile", "preview", "membership"]
+      },
+      {
+        group: "Community",
+        title: "Forums",
+        path: "/forums/",
+        summary: "Private Mojo community forums for team members, guests, members, partners, and CRM contacts.",
+        status: "Community",
+        tags: ["forums", "community", "members"]
       },
       {
         group: "Public",
@@ -804,6 +941,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       },
       {
         group: "Team",
+        title: "Checklist Calendar",
+        path: "/setup/calendar/",
+        summary: "Calendar view of setup checklist work for date-based planning and operational review.",
+        status: "Team",
+        tags: ["checklist", "calendar", "operations"]
+      },
+      {
+        group: "Team",
         title: "Event Playbook",
         path: "/events/",
         summary: "Per-event playbook builder for agenda, speaker, sponsor, venue, production, and post-event work.",
@@ -833,6 +978,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         summary: "Tabbed review center for registration, profile access, and invite-link workflows.",
         status: "Team",
         tags: ["walkthrough", "qa", "registration"]
+      },
+      {
+        group: "Team",
+        title: "Virtual Call Prototype",
+        path: "/virtual-call-prototype/",
+        summary: "Cloudflare Calls room prototype for testing browser-based virtual event calls.",
+        status: "Team",
+        tags: ["virtual", "prototype", "calls"]
       },
       {
         group: "Team",
@@ -880,21 +1033,40 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       "/",
       "/dallas/",
       "/virtual/",
+      "/calendar/",
+      "/ai-executive-readiness-online/",
+      "/ai-data-readiness-and-knowledge-strategy-online/",
+      "/ai-use-cases-that-survive-finance-online/",
+      "/ai-agents-automation-and-human-handoffs-online/",
+      "/ai-integration-and-workflow-online/",
+      "/ai-vendor-strategy-and-platform-decisions-online/",
+      "/ai-security-governance-and-trust-online/",
+      "/ai-operating-model-for-2027-online/",
+      "/ai-workforce-talent-and-change-adoption-online/",
+      "/ai-budgeting-and-investment-priorities-online/",
+      "/ai-workforce-readiness-and-change-leadership-online/",
+      "/ai-executive-operating-agenda-for-2027-online/",
       "/membership/",
       "/fellowships/",
       "/partners/",
+      "/partner-pricing/",
+      "/briefs/",
+      "/briefs/ai-innovation-at-operating-scale/",
       "/book/",
       "/partner-registration/",
       "/partner-profile/",
       "/member-profile/",
+      "/forums/",
       "/member-registration/",
       "/guest/",
       "/privacy/",
       "/sms-terms/",
       "/setup/",
+      "/setup/calendar/",
       "/events/",
       "/crm/",
       "/walkthrough/",
+      "/virtual-call-prototype/",
       "/files/",
       "/storage/",
       "/schedule-admin/",
