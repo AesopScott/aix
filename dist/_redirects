@@ -26,6 +26,7 @@
 /sms /SMS/ 301
 /sms/ /SMS/ 301
 /dallas /dallas/ 301
+/calendar /calendar/ 301
 /ai-executive-readiness-online /ai-executive-readiness-online/ 301
 /ai-use-cases-that-survive-finance-online /ai-use-cases-that-survive-finance-online/ 301
 /ai-integration-and-workflow-online /ai-integration-and-workflow-online/ 301
@@ -40,6 +41,7 @@
 /ai-workforce-talent-and-change-adoption-online /ai-workforce-talent-and-change-adoption-online/ 301
 /virtual /virtual/ 301
 /virtual/ /virtual/index.html 200
+/calendar/ /calendar/index.html 200
 /ai-workforce-talent-and-change-adoption-online/ /ai-workforce-talent-and-change-adoption-online/index.html 200
 /ai-vendor-strategy-and-platform-decisions-online/ /ai-vendor-strategy-and-platform-decisions-online/index.html 200
 /ai-agents-automation-and-human-handoffs-online/ /ai-agents-automation-and-human-handoffs-online/index.html 200

@@ -104,6 +104,7 @@ export function renderVirtualEventPage(slug) {
   <header>
     <nav class="wrap">
       <a class="mojo-home-brand" href="/" aria-label="MOJO AI Summits home"><img class="mojo-home-brand-mark" src="/assets/logo-mark.png" alt=""><span class="mojo-home-brand-divider" aria-hidden="true"></span><span class="mojo-home-brand-name" aria-hidden="true"><span class="mojo-home-brand-primary">MOJO AI</span><span class="mojo-home-brand-secondary">Summits</span></span></a>
+      <a class="nav-link" href="/calendar/">Calendar</a>
       <a class="nav-link" href="/virtual/">Virtual</a>
     </nav>
   </header>

@@ -158,6 +158,16 @@
   Pragma: no-cache
   Expires: 0
 
+/calendar
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/calendar/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
 /virtual
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache

@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upcoming Events | MOJO AI Summits</title>
+  <meta name="description" content="Upcoming MOJO AI Summits virtual and live events for executive AI leaders.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mojoaisummits.com/calendar/">
+  <meta property="og:title" content="Upcoming Events | MOJO AI Summits">
+  <meta property="og:description" content="Browse the MOJO AI Summits calendar for upcoming executive AI leadership sessions.">
+  <meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+  <meta property="og:image:secure_url" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="MOJO AI Summits upcoming events">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Upcoming Events | MOJO AI Summits">
+  <meta name="twitter:description" content="Browse the MOJO AI Summits calendar for upcoming executive AI leadership sessions.">
+  <meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+    :root {
+      --navy: #0A0F1E;
+      --slate: #1B2333;
+      --blue: #1666FF;
+      --cyan: #00E6FF;
+      --white: #FFFFFF;
+      --page: #e7e7e7;
+      --card: #ffffff;
+      --ink: #10131a;
+      --muted: #7d828a;
+      --line: #e1e2e5;
+      --soft: #f4f5f7;
+      --shadow: 0 22px 44px rgba(10, 15, 30, .12);
+      --ease: cubic-bezier(.22, 1, .36, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page);
+      font-family: Inter, sans-serif;
+      letter-spacing: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    p, h1, h2, h3 { margin: 0; }
+
+    .wrap {
+      width: min(1728px, calc(100% - 64px));
+      margin: 0 auto;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(10, 15, 30, .94);
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      backdrop-filter: blur(12px);
+    }
+    nav {
+      min-height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--white);
+    }
+    .brand-mark {
+      height: 39px;
+      width: auto;
+      display: block;
+      transform-origin: center;
+      transition: transform 3.6s var(--ease), filter 3.6s var(--ease);
+    }
+    .brand-lockup:hover .brand-mark {
+      transform: scale(1.5);
+      filter: drop-shadow(0 0 22px rgba(0, 230, 255, .28));
+    }
+    .brand-divider {
+      width: 1px;
+      height: 35px;
+      background: linear-gradient(to bottom, transparent, rgba(0, 230, 255, .9), transparent);
+      box-shadow: 0 0 14px rgba(0, 230, 255, .24);
+    }
+    .brand-name {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .brand-primary {
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      background: linear-gradient(90deg, var(--blue) 0%, var(--cyan) 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .brand-secondary {
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: .38em;
+      color: rgba(255, 255, 255, .82);
+      padding-left: .38em;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: clamp(14px, 2vw, 26px);
+      flex-wrap: wrap;
+    }
+    .nav-actions a {
+      color: rgba(255, 255, 255, .62);
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      transition: color .22s var(--ease);
+    }
+    .nav-actions a:hover,
+    .nav-actions a[aria-current="page"] { color: var(--white); }
+
+    .hero {
+      padding: clamp(42px, 6vw, 86px) 0 clamp(28px, 4vw, 46px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 28px;
+      align-items: end;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #59606b;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin-top: 12px;
+      max-width: 760px;
+      color: var(--ink);
+      font-size: clamp(36px, 5vw, 78px);
+      font-weight: 900;
+      line-height: .95;
+      text-transform: uppercase;
+    }
+    .hero p {
+      max-width: 650px;
+      margin-top: 18px;
+      color: #646a73;
+      font-size: 17px;
+      line-height: 1.62;
+    }
+    .attendee-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .attendee-tabs a {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #b7bbc2;
+      border-radius: 999px;
+      padding: 0 20px;
+      color: #4f5662;
+      background: rgba(255, 255, 255, .46);
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .attendee-tabs a.active,
+    .attendee-tabs a:hover {
+      border-color: var(--navy);
+      color: var(--white);
+      background: var(--navy);
+    }
+
+    .event-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 36px;
+      padding-bottom: clamp(56px, 8vw, 112px);
+    }
+    .event-card {
+      min-width: 0;
+      overflow: hidden;
+      border-radius: 10px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-rows: auto minmax(336px, 1fr) auto;
+    }
+    .event-art {
+      position: relative;
+      min-height: 265px;
+      overflow: hidden;
+      background:
+        linear-gradient(145deg, rgba(10, 15, 30, .96), rgba(27, 35, 51, .92)),
+        radial-gradient(circle at 76% 18%, rgba(0, 230, 255, .26), transparent 34%);
+    }
+    .event-art::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, transparent 0 22%, rgba(255, 255, 255, .06) 22% 23%, transparent 23% 31%, rgba(255, 255, 255, .07) 31% 32%, transparent 32%),
+        radial-gradient(circle at 50% 116%, rgba(0, 230, 255, .3), transparent 38%);
+      opacity: .78;
+    }
+    .event-art::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 24px;
+      width: 42%;
+      height: 18px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      border: 1px solid rgba(0, 230, 255, .36);
+      box-shadow: 0 0 38px rgba(0, 230, 255, .18);
+    }
+    .image-slot {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: rgba(255, 255, 255, .7);
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      z-index: 1;
+    }
+    .brand-chip {
+      position: absolute;
+      left: 0;
+      top: 16px;
+      z-index: 2;
+      width: 72px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--white);
+      font-size: 25px;
+      font-weight: 900;
+      letter-spacing: -.08em;
+    }
+    .track-chip {
+      position: absolute;
+      top: 31px;
+      left: 72px;
+      z-index: 2;
+      min-width: 156px;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: rgba(214, 214, 214, .86);
+      color: var(--white);
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .event-body {
+      padding: 28px 36px 34px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .format-pill {
+      width: fit-content;
+      min-width: 130px;
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #74777c;
+      border-radius: 999px;
+      padding: 0 22px;
+      color: #5e636b;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .event-card h2 {
+      margin-top: 31px;
+      color: #070a10;
+      font-size: clamp(26px, 1.85vw, 32px);
+      font-weight: 900;
+      line-height: 1.24;
+      text-transform: uppercase;
+      overflow-wrap: anywhere;
+    }
+    .event-meta {
+      margin-top: 32px;
+      display: grid;
+      gap: 13px;
+      color: var(--muted);
+      font-size: 24px;
+      line-height: 1.22;
+    }
+    .event-meta span {
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .event-meta svg {
+      width: 22px;
+      height: 22px;
+      margin-top: 2px;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      fill: none;
+    }
+    .event-action {
+      min-height: 98px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding: 20px 36px 28px;
+    }
+    .learn-more {
+      color: #070a10;
+      font-size: 23px;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+    .partner-slot {
+      min-width: 150px;
+      min-height: 58px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed #d8dbe0;
+      background: var(--soft);
+      color: #8b9099;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .partner-slot.empty {
+      visibility: hidden;
+    }
+
+    footer {
+      border-top: 1px solid #d4d6da;
+      padding: 28px 0 36px;
+      color: #717782;
+      font-size: 13px;
+    }
+    footer .wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    footer a {
+      color: var(--navy);
+      font-weight: 800;
+    }
+
+    @media (max-width: 1280px) {
+      .event-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .event-card { grid-template-rows: auto minmax(300px, 1fr) auto; }
+    }
+    @media (max-width: 860px) {
+      .wrap {
+        width: min(354px, calc(100vw - 36px));
+        margin-left: 18px;
+        margin-right: auto;
+      }
+      nav { align-items: flex-start; padding: 18px 0; }
+      .brand-mark { height: 34px; }
+      .brand-divider { height: 30px; }
+      .brand-primary { font-size: 20px; letter-spacing: .03em; }
+      .brand-secondary { font-size: 9.5px; letter-spacing: .32em; padding-left: .32em; }
+      .nav-actions { gap: 10px 14px; padding-top: 4px; }
+      .nav-actions a { font-size: 10px; letter-spacing: .12em; }
+      .hero { display: block; }
+      .attendee-tabs { justify-content: flex-start; margin-top: 24px; }
+      .event-grid { grid-template-columns: 1fr; gap: 26px; }
+      .event-body { padding: 24px 24px 30px; }
+      .event-action { padding: 18px 24px 24px; }
+      .event-meta { font-size: 19px; }
+    }
+    @media (max-width: 540px) {
+      nav { flex-wrap: wrap; gap: 14px; }
+      .nav-actions {
+        width: 100%;
+        display: flex;
+        justify-content: flex-start;
+      }
+      .event-card { border-radius: 8px; }
+      .event-art { min-height: 205px; }
+      .track-chip { left: 58px; min-width: 138px; font-size: 14px; }
+      .brand-chip { width: 58px; font-size: 22px; }
+      .event-action { grid-template-columns: 1fr; }
+      .partner-slot { width: 100%; }
+      .partner-slot.empty { display: none; }
+      h1 { font-size: clamp(34px, 12vw, 48px); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="wrap" aria-label="Attendee navigation">
+      <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+        <img class="brand-mark" src="/assets/logo-mark.png" alt="">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-name" aria-hidden="true">
+          <span class="brand-primary">MOJO AI</span>
+          <span class="brand-secondary">Summits</span>
+        </span>
+      </a>
+      <div class="nav-actions">
+        <a href="/calendar/" aria-current="page">Calendar</a>
+        <a href="/virtual/">Virtual</a>
+        <a href="/membership/">Membership</a>
+        <a href="/partners/">Partners</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <div>
+        <span class="eyebrow">Upcoming events</span>
+        <h1>Executive AI calendar</h1>
+        <p>Browse the current MOJO AI Summits schedule for invitation-only virtual rooms, city summits, and intelligence brief events.</p>
+      </div>
+      <div class="attendee-tabs" aria-label="Calendar categories">
+        <a class="active" href="#all-events">All</a>
+        <a href="#virtual-events">Virtual</a>
+        <a href="#live-events">Live</a>
+        <a href="#brief-events">Briefs</a>
+      </div>
+    </section>
+
+    <section class="event-grid wrap" id="all-events" aria-label="All upcoming events">
+
+      <article class="event-card" id="virtual-events">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Executive Readiness</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>4 September 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-executive-readiness-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Data Readiness and Knowledge Strategy</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>18 September 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-data-readiness-and-knowledge-strategy-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Use Cases That Survive Finance</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>25 September 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-use-cases-that-survive-finance-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Agents, Automation, and Human Handoffs</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>9 October 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-agents-automation-and-human-handoffs-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Integration and Workflow</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>16 October 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-integration-and-workflow-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Vendor Strategy and Platform Decisions</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>30 October 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-vendor-strategy-and-platform-decisions-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Security, Governance, and Trust</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>6 November 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-security-governance-and-trust-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Workforce, Talent, and Change Adoption</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>20 November 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-workforce-talent-and-change-adoption-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Operating Model for 2027</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>27 November 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-operating-model-for-2027-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Budgeting and Investment Priorities</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>4 December 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-budgeting-and-investment-priorities-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Workforce Readiness and Change Leadership</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>18 December 2026</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-workforce-readiness-and-change-leadership-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Roundtable</span>
+          <h2>AI Executive Operating Agenda for 2027</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>8 January 2027</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>1:00 pm - 2:30 pm CT</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/ai-executive-operating-agenda-for-2027-online/">Learn more</a>
+          <span class="partner-slot">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card" id="live-events">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Live</span>
+          <h2>Q1 Intelligence Brief Summit: Dallas</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>January 2027</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Invitation-only</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 0 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2"></circle></svg>Dallas</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/dallas/">Learn more</a>
+          <span class="partner-slot empty" aria-hidden="true">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card" id="brief-events">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Live</span>
+          <h2>Q2 Intelligence Brief Summit</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>April 2027</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Invitation-only</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 0 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2"></circle></svg>Denver</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/briefs/">Learn more</a>
+          <span class="partner-slot empty" aria-hidden="true">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Live</span>
+          <h2>Q3 Intelligence Brief Summit</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>July 2027</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Invitation-only</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 0 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2"></circle></svg>Raleigh</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/briefs/">Learn more</a>
+          <span class="partner-slot empty" aria-hidden="true">Partner logo</span>
+        </div>
+      </article>
+
+
+
+      <article class="event-card">
+        <div class="event-art">
+          <span class="brand-chip">mojo</span>
+          <span class="track-chip">Business</span>
+          <span class="image-slot">Image placeholder</span>
+        </div>
+        <div class="event-body">
+          <span class="format-pill">Live</span>
+          <h2>Q4 Intelligence Brief Summit</h2>
+          <div class="event-meta">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>October 2027</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Invitation-only</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 0 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2"></circle></svg>Chicago</span>
+          </div>
+        </div>
+        <div class="event-action">
+          <a class="learn-more" href="/briefs/">Learn more</a>
+          <span class="partner-slot empty" aria-hidden="true">Partner logo</span>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>© 2026 MOJO AI Summits. Executive AI events.</span>
+      <a href="/virtual/">Virtual event series</a>
+    </div>
+  </footer>
+  <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
+</body>
+</html>

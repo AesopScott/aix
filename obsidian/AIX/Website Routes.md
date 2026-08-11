@@ -111,3 +111,13 @@
 - Storage model: deployed Pages Functions store generated playbooks in `MOJO_SUMMITS_SETUP_STATE`; local static previews fall back to browser `localStorage`.
 - Event registrants: event detail API responses include matching CRM member, guest, and partner registrants whose `eventSlug`, `eventId`, `eventName`, or `eventDate` matches the event page. The page renders those records in an Event registrants section.
 - Relationship to `/setup/`: `/setup/` remains the master operating checklist and ownership tracker; `/events/` is the event-specific execution/playbook artifact.
+
+## Attendee Event Calendar
+
+- Route: `/calendar/`
+- Source file: `dist/calendar/index.html`
+- Purpose: public attendee-facing calendar page that lists upcoming MOJO AI Summits virtual rooms, live city summits, and intelligence brief events in a card grid modeled after the provided reference.
+- Image model: every card uses an image placeholder area and optional partner-logo placeholder so real event photos and sponsor marks can be dropped in later.
+- Routing support: `/calendar` redirects to `/calendar/`; `/calendar/` serves `dist/calendar/index.html`; no-cache headers are configured for `/calendar` and `/calendar/*`.
+- Navigation: public home, `/virtual/`, generated virtual event pages, individual virtual event landing pages, and `/dallas/` now expose a Calendar link for attendee movement back to the full schedule.
+- Access control: route id `calendar` is registered as a public page in `functions/_access-control.js`.
