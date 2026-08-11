@@ -131,7 +131,7 @@ export function renderVirtualEventPage(slug) {
         </section>
       </section>
       <aside>
-        <span>Fall 2026 series</span>
+        <span>2026-2027 series</span>
         <h2>Virtual Events</h2>
         <nav aria-label="Virtual event pages">${eventOptions(event.slug)}</nav>
       </aside>

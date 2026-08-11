@@ -1,10 +1,10 @@
-# Fall 2026 Virtual AI Event Series
+# 2026-2027 Virtual AI Event Series
 
 Date created: 2026-07-27
 
 ## Purpose
 
-MOJO AI Summits is adding a fall 2026 virtual AI event series before the 2027 in-person city summit season. The series should build executive trust, test topic demand, identify speaker and sponsor fit, and warm qualified attendees for Dallas and later city events.
+MOJO AI Summits is adding a 2026-2027 virtual AI event series before the 2027 in-person city summit season. The series should build executive trust, test topic demand, identify speaker and sponsor fit, and warm qualified attendees for Dallas and later city events.
 
 ## Confirmed Dates
 
@@ -17,6 +17,9 @@ MOJO AI Summits is adding a fall 2026 virtual AI event series before the 2027 in
 - Friday, November 6, 2026
 - Friday, November 20, 2026
 - Friday, November 27, 2026
+- Friday, December 4, 2026
+- Friday, December 18, 2026
+- Friday, January 8, 2027
 
 All sessions run from 1:00 PM to 2:30 PM Central.
 

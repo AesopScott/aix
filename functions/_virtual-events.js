@@ -118,6 +118,45 @@ export const VIRTUAL_EVENTS = [
       "Summit track preview",
       "Member and speaker nominations"
     ]
+  },
+  {
+    slug: "ai-budgeting-and-investment-priorities",
+    title: "AI Budgeting and Investment Priorities",
+    dateLabel: "Friday, December 4, 2026",
+    startAt: "2026-12-04T13:00:00-06:00",
+    durationMinutes: 90,
+    summary: "Help executives decide what AI work gets funded, paused, scaled, or killed going into 2027.",
+    agenda: [
+      "Investment portfolio briefing",
+      "Budget and value tradeoff exchange",
+      "2027 funding-priority signal"
+    ]
+  },
+  {
+    slug: "ai-workforce-readiness-and-change-leadership",
+    title: "AI Workforce Readiness and Change Leadership",
+    dateLabel: "Friday, December 18, 2026",
+    startAt: "2026-12-18T13:00:00-06:00",
+    durationMinutes: 90,
+    summary: "Prepare teams, managers, policies, and culture for AI becoming part of daily work.",
+    agenda: [
+      "Workforce readiness briefing",
+      "Change-leadership discussion",
+      "People-system priorities"
+    ]
+  },
+  {
+    slug: "ai-executive-operating-agenda-for-2027",
+    title: "AI Executive Operating Agenda for 2027",
+    dateLabel: "Friday, January 8, 2027",
+    startAt: "2027-01-08T13:00:00-06:00",
+    durationMinutes: 90,
+    summary: "Align governance, budgets, ownership, use cases, risk, and summit priorities for the year.",
+    agenda: [
+      "2027 executive agenda briefing",
+      "Operating-priority exchange",
+      "Summit season planning signal"
+    ]
   }
 ];
 
