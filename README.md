@@ -3,6 +3,7 @@
 Static Cloudflare Pages site for Mojo AI Summits.
 
 - Production: https://mojoaisummits.com/
+- Canonical taxonomy: `taxonomy.md`
 - Company hub: https://mojoaisummits.com/admin/
 - Access console: https://mojoaisummits.com/access/
 - Fall 2026 virtual events: https://mojoaisummits.com/virtual/

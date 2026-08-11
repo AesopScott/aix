@@ -151,7 +151,18 @@ const allowedCompanySizes = new Set(["", "1-50", "51-200", "201-1000", "1001-500
 const allowedOrganizationTypes = new Set(["", "enterprise", "vendor-provider", "investor", "nonprofit", "government", "partner", "media", "other"]);
 const allowedEmailPermissions = new Set(["unknown", "opted-in", "transactional-only", "opted-out"]);
 const allowedActivityTypes = new Set(["note", "call", "email", "meeting", "sms", "follow-up", "qualification"]);
-const allowedTopicTracks = new Set(["ai-strategy", "ai-use-cases", "workflow-integration", "security-governance", "operating-model", "executive-readiness"]);
+const allowedTopicTracks = new Set([
+  "ai-strategy",
+  "executive-readiness",
+  "data-readiness",
+  "ai-use-cases",
+  "agents-automation",
+  "workflow-integration",
+  "vendor-strategy",
+  "security-governance",
+  "workforce-adoption",
+  "operating-model"
+]);
 const maxFieldLength = 2000;
 const guestInviteEmailCc = ["angel@mojoaisummits.com", "scott@mojoaisummits.com"];
 
