@@ -527,7 +527,8 @@
     .priority-select,
     .deliverable-select,
     .date-input,
-    .support-summary {
+    .support-summary,
+    .item-notes-textarea {
       width: 100%;
       min-height: 34px;
       border: 1px solid var(--line);
@@ -555,8 +556,23 @@
     .status-select:focus,
     .priority-select:focus,
     .date-input:focus,
+    .item-notes-textarea:focus,
     .support-picker[open] .support-summary {
       border-color: var(--teal);
+    }
+
+    .item-notes-field {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 5px;
+      margin-top: 2px;
+    }
+
+    .item-notes-textarea {
+      min-height: 72px;
+      resize: vertical;
+      line-height: 1.45;
+      font-weight: 700;
     }
 
     .owner-select.owner-scott {
@@ -1007,7 +1023,7 @@
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
 Date: 2026-08-11
-Version: 3.12
+Version: 3.13
 Category: event operations
 
 ## Purpose
@@ -1613,6 +1629,7 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.13 - Added manually editable autosaved notes to each setup item.
 - 3.12 - Changed support filtering to checkbox toggles for multi-person support assignments.
 - 3.11 - Added support-person filtering alongside owner filtering.
 - 3.10 - Added Delete as a confirmation-based status that removes setup items.
@@ -1702,14 +1719,15 @@ The following decisions should not be made by one owner alone:
     const sharedSyncIntervalMs = 5000;
     let lastSharedUpdatedAt = "";
     let sharedSyncTimer = null;
-    const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status"];
+    const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status", "notes"];
     const defaultFieldKeys = {
       owner: "defaultOwner",
       support: "defaultSupport",
       priority: "defaultPriority",
       deliverable: "defaultDeliverable",
       dueDate: "defaultDueDate",
-      status: "defaultStatus"
+      status: "defaultStatus",
+      notes: "defaultNotes"
     };
 
     const state = {
@@ -1825,12 +1843,14 @@ The following decisions should not be made by one owner alone:
           defaultDeliverable: "",
           defaultDueDate: "",
           defaultStatus: "Undefined",
+          defaultNotes: "",
           owner: parsed.owner || "Shared",
           support: "",
           priority: "",
           deliverable: "",
           dueDate: "",
           status: "Undefined",
+          notes: "",
           phase: current.title,
           subsection: currentSub.title
         });
@@ -1861,6 +1881,7 @@ The following decisions should not be made by one owner alone:
     let allItems = [...staticItems];
     let customItems = [];
     let deletedItemIds = new Set();
+    const noteSaveTimers = new Map();
     const itemById = new Map(allItems.map((item) => [item.id, item]));
 
     function storedCustomItem(item) {
@@ -1889,12 +1910,14 @@ The following decisions should not be made by one owner alone:
         defaultDeliverable: "",
         defaultDueDate: "",
         defaultStatus: "Undefined",
+        defaultNotes: "",
         owner: data.owner || "Shared",
         support: data.support || "",
         priority: data.priority || "",
         deliverable: data.deliverable || "",
         dueDate: data.dueDate || "",
         status: data.status || "Undefined",
+        notes: data.notes || "",
         phase: data.phase || customInboxPhase,
         subsection: data.subsection || customInboxSubsection,
         custom: true
@@ -2025,7 +2048,7 @@ The following decisions should not be made by one owner alone:
     }
 
     function itemSearchText(item) {
-      return `${item.text} ${item.owner} ${item.support} ${item.priority} ${item.deliverable} ${item.dueDate} ${item.status} ${item.phase} ${item.subsection}`.toLowerCase();
+      return `${item.text} ${item.owner} ${item.support} ${item.priority} ${item.deliverable} ${item.dueDate} ${item.status} ${item.notes} ${item.phase} ${item.subsection}`.toLowerCase();
     }
 
     function currentAssignment(item) {
@@ -2035,7 +2058,8 @@ The following decisions should not be made by one owner alone:
         priority: item.priority,
         deliverable: item.deliverable,
         dueDate: item.dueDate,
-        status: item.status
+        status: item.status,
+        notes: item.notes
       };
     }
 
@@ -2051,7 +2075,8 @@ The following decisions should not be made by one owner alone:
         priority: priorityOptions.includes(assignment.priority) ? assignment.priority : item.defaultPriority,
         deliverable: deliverableOptions.includes(assignment.deliverable) ? assignment.deliverable : item.defaultDeliverable,
         dueDate: /^\d{4}-\d{2}-\d{2}$/.test(assignment.dueDate || "") ? assignment.dueDate : item.defaultDueDate,
-        status: statusOptions.includes(assignment.status) ? assignment.status : item.defaultStatus
+        status: statusOptions.includes(assignment.status) ? assignment.status : item.defaultStatus,
+        notes: String(assignment.notes || item.defaultNotes || "").slice(0, 5000)
       };
     }
 
@@ -2080,6 +2105,7 @@ The following decisions should not be made by one owner alone:
       item.deliverable = normalized.deliverable;
       item.dueDate = normalized.dueDate;
       item.status = normalized.status;
+      item.notes = normalized.notes;
     }
 
     function localAssignments() {
@@ -2132,6 +2158,7 @@ The following decisions should not be made by one owner alone:
           item.deliverable = item.defaultDeliverable;
           item.dueDate = item.defaultDueDate;
           item.status = item.defaultStatus;
+          item.notes = item.defaultNotes;
         }
         cacheAssignment(item);
       });
@@ -2508,6 +2535,15 @@ The following decisions should not be made by one owner alone:
       `;
     }
 
+    function itemNotesField(item) {
+      return `
+        <label class="item-notes-field">
+          <span class="assignment-label">Notes</span>
+          <textarea class="item-notes-textarea" data-assignment="notes" data-item-id="${item.id}" maxlength="5000" rows="3" placeholder="Add notes for this setup item">${escapeHtml(item.notes)}</textarea>
+        </label>
+      `;
+    }
+
     function renderNotes(section) {
       if (section.title === "Owner Key") {
         return `
@@ -2566,6 +2602,7 @@ The following decisions should not be made by one owner alone:
                         <span class="item-text">${escapeHtml(item.text)}</span>
                         ${assignmentControls(item)}
                         ${statusSelect(item)}
+                        ${itemNotesField(item)}
                       </div>
                     `).join("")}
                   </div>
@@ -2646,6 +2683,21 @@ The following decisions should not be made by one owner alone:
         });
       });
 
+      document.querySelectorAll('textarea[data-assignment="notes"]').forEach((textarea) => {
+        textarea.addEventListener("input", () => {
+          const item = itemById.get(textarea.dataset.itemId);
+          if (!item) return;
+          item.notes = textarea.value.slice(0, 5000);
+          cacheAssignment(item);
+          updateAssignmentRow(item, { preserveFocus: true, skipFilters: true });
+          if (noteSaveTimers.has(item.id)) window.clearTimeout(noteSaveTimers.get(item.id));
+          noteSaveTimers.set(item.id, window.setTimeout(() => {
+            noteSaveTimers.delete(item.id);
+            saveSharedAssignment(item, ["notes"]);
+          }, 650));
+        });
+      });
+
       document.querySelectorAll("[data-support-picker]").forEach((picker) => {
         picker.addEventListener("toggle", () => {
           if (picker.open) closeSupportPickers(picker);
@@ -2653,7 +2705,7 @@ The following decisions should not be made by one owner alone:
       });
     }
 
-    function updateAssignmentRow(item) {
+    function updateAssignmentRow(item, options = {}) {
       const row = document.querySelector(`.item[data-item-id="${item.id}"]`);
       if (!row) return;
 
@@ -2696,9 +2748,16 @@ The following decisions should not be made by one owner alone:
         statusSelect.value = item.status;
       }
 
+      const notesTextarea = row.querySelector('textarea[data-assignment="notes"]');
+      if (notesTextarea && (!options.preserveFocus || document.activeElement !== notesTextarea)) {
+        notesTextarea.value = item.notes;
+      }
+
       renderSummary();
-      renderFilters();
-      applyFilters();
+      if (!options.skipFilters) {
+        renderFilters();
+        applyFilters();
+      }
     }
 
     function renderFilters() {
@@ -2876,7 +2935,7 @@ The following decisions should not be made by one owner alone:
     }
 
     function exportVisibleItemsToCsv() {
-      const csvColumns = ["Phase", "Subsection", "Item", "Owner", "Support", "Priority", "Deliverable", "Expected Delivery Date", "Status"];
+      const csvColumns = ["Phase", "Subsection", "Item", "Owner", "Support", "Priority", "Deliverable", "Expected Delivery Date", "Status", "Notes"];
       const rows = Array.from(document.querySelectorAll(".item"))
         .filter((row) => !row.classList.contains("hidden"))
         .map((row) => itemById.get(row.dataset.itemId))
@@ -2890,7 +2949,8 @@ The following decisions should not be made by one owner alone:
           item.priority,
           item.deliverable,
           item.dueDate,
-          item.status
+          item.status,
+          item.notes
         ].map(csvField).join(","));
 
       const csv = [csvColumns.map(csvField).join(","), ...rows].join("\r\n");
@@ -2925,6 +2985,7 @@ The following decisions should not be made by one owner alone:
         item.deliverable = item.defaultDeliverable;
         item.dueDate = item.defaultDueDate;
         item.status = item.defaultStatus;
+        item.notes = item.defaultNotes;
         localStorage.removeItem(assignmentStorageKey(item));
       });
       clearSharedAssignments();
