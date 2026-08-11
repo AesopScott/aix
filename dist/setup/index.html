@@ -1002,7 +1002,7 @@
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
 Date: 2026-08-11
-Version: 3.8
+Version: 3.9
 Category: event operations
 
 ## Purpose
@@ -1608,6 +1608,7 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.9 - Added Issue/problem as a setup item status.
 - 3.8 - Added status visibility checkboxes in addition to the status filter.
 - 3.7 - Added quick-add inbox support for setup tracker items that can be populated later.
 - 3.6 - Added Miller Freeman as an assignable owner and support option.
@@ -1683,7 +1684,7 @@ The following decisions should not be made by one owner alone:
       "Priority 8 - Day of"
     ];
     const deliverableOptions = ["Conversation", "Document", "Contract", "Website", "Event Tracker"];
-    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered"];
+    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem"];
     const assignmentStoragePrefix = "mojo-event-assignment:";
     const customItemsStorageKey = "mojo-event-custom-items";
     const customInboxPhase = "Setup Tracker Inbox";
