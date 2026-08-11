@@ -558,6 +558,23 @@
       background: rgba(10, 15, 30, 0.64);
     }
 
+    .contact-photo-upload {
+      display: grid;
+      grid-template-columns: minmax(12rem, 1fr) auto;
+      gap: 0.5rem;
+      align-items: end;
+    }
+
+    .contact-photo-upload input[type="file"] {
+      min-width: 0;
+    }
+
+    @media (max-width: 720px) {
+      .contact-photo-upload {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .crm-compact-stack {
       display: grid;
       gap: 0.4rem;
@@ -2370,6 +2387,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       `;
     }
 
+    let activityDraftCounter = 0;
+
+    function activityDraftEntry(row = {}, draftId = "primary") {
+      return `
+        <div class="activity-entry" data-activity-row="${escapeHtml(row.key)}" data-activity-draft-id="${escapeHtml(draftId)}">
+          <label>Type<select data-activity-field="type">${optionList(activityTypeOptions, "note")}</select></label>
+          <label>Owner<input data-activity-field="owner" value="${escapeHtml(row.relationshipOwner || "")}"></label>
+          <label class="span-full">Activity<textarea data-activity-field="text" placeholder="Dated activity entry"></textarea></label>
+          <label>Next Action<select data-activity-field="nextAction">${optionList(nextActionOptions, row.nextAction || "none")}</select></label>
+          <label>Due Date<input type="date" data-activity-field="dueDate" value="${escapeHtml(row.nextActionDueDate || "")}"></label>
+          <button class="compact secondary span-full" type="button" data-save-activity-key="${escapeHtml(row.key)}" data-activity-draft-id="${escapeHtml(draftId)}">Save Activity</button>
+          <span>${escapeHtml(row.crmUpdatedAt ? `Updated ${formatDate(row.crmUpdatedAt)}` : "")}</span>
+        </div>
+      `;
+    }
+
     function contactPhotoPreview(row = {}) {
       const photoUrl = String(row.photoUrl || "").trim();
       if (!photoUrl) return "";
@@ -2391,8 +2424,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <div class="crm-detail-grid">
               <label>First Name<input data-contact-field="firstName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.firstName || "")}"></label>
               <label>Last Name<input data-contact-field="lastName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastName || "")}"></label>
+              <label>Email<input type="email" data-contact-field="email" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.email || "")}"></label>
+              <label>Phone<input type="tel" data-contact-field="phone" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.phone || "")}"></label>
+              <label>Company<input data-contact-field="company" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.company || "")}"></label>
               <label>Job Title<input data-contact-field="title" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.title || "")}"></label>
-              <label>Photo URL<input data-contact-field="photoUrl" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.photoUrl || "")}" placeholder="https://..."></label>
+              <div class="contact-photo-upload span-full">
+                <label>Photo<input type="file" accept="image/*" data-contact-photo-key="${escapeHtml(row.key)}"></label>
+                <button class="compact secondary" type="button" data-upload-contact-photo-key="${escapeHtml(row.key)}">Upload Photo</button>
+              </div>
               <label>Function<select data-contact-field="executiveFunction" data-contact-key="${escapeHtml(row.key)}">${optionList(executiveFunctionOptions, row.executiveFunction || "")}</select></label>
               <label>Industry<input data-contact-field="industry" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.industry || "")}"></label>
               <label>Company Size<select data-contact-field="companySize" data-contact-key="${escapeHtml(row.key)}">${optionList(companySizeOptions, row.companySize || "")}</select></label>
@@ -2428,15 +2467,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <details>
             <summary>Activity</summary>
             ${renderActivityList(row)}
-            <div class="activity-entry" data-activity-row="${escapeHtml(row.key)}">
-              <label>Type<select data-activity-field="type">${optionList(activityTypeOptions, "note")}</select></label>
-              <label>Owner<input data-activity-field="owner" value="${escapeHtml(row.relationshipOwner || "")}"></label>
-              <label class="span-full">Activity<textarea data-activity-field="text" placeholder="Dated activity entry"></textarea></label>
-              <label>Next Action<select data-activity-field="nextAction">${optionList(nextActionOptions, row.nextAction || "none")}</select></label>
-              <label>Due Date<input type="date" data-activity-field="dueDate" value="${escapeHtml(row.nextActionDueDate || "")}"></label>
-              <button class="compact secondary span-full" type="button" data-add-activity-key="${escapeHtml(row.key)}">Add Activity</button>
-              <span>${escapeHtml(row.crmUpdatedAt ? `Updated ${formatDate(row.crmUpdatedAt)}` : "")}</span>
+            <div class="activity-drafts" data-activity-drafts="${escapeHtml(row.key)}">
+              ${activityDraftEntry(row)}
             </div>
+            <button class="compact secondary" type="button" data-add-activity-draft-key="${escapeHtml(row.key)}">Add Activity</button>
           </details>
         </div>
       `;
@@ -2789,10 +2823,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             body: JSON.stringify({
               action: "save-contact",
               key,
-              email: existing.email,
+              email: changes.email ?? existing.email ?? "",
               firstName: changes.firstName ?? existing.firstName ?? "",
               lastName: changes.lastName ?? existing.lastName ?? "",
+              company: changes.company ?? existing.company ?? "",
               title: changes.title ?? existing.title ?? "",
+              phone: changes.phone ?? existing.phone ?? "",
               photoUrl: changes.photoUrl ?? existing.photoUrl ?? "",
               bio: changes.bio ?? existing.bio ?? "",
               industry: changes.industry ?? existing.industry ?? "",
@@ -2843,6 +2879,39 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    async function uploadContactPhoto(key) {
+      const existing = state.rows.find((row) => row.key === key);
+      if (!existing) return;
+      const input = rowsElement.querySelector(`[data-contact-photo-key="${CSS.escape(key)}"]`);
+      const file = input?.files?.[0];
+      if (!file) {
+        setNotice("Choose a photo first.", "error");
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        setNotice("Upload an image file.", "error");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.set("action", "upload-contact-photo");
+      formData.set("key", key);
+      formData.set("email", existing.email || "");
+      formData.set("photo", file);
+
+      setNotice("Uploading contact photo...");
+      try {
+        state = await fetch(api, {
+          method: "POST",
+          body: formData
+        }).then(readJson);
+        setNotice("Contact photo uploaded.", "ok");
+        render();
+      } catch (error) {
+        showErrorNotice(error);
+      }
+    }
+
     function contactEditChanges(key) {
       const fields = [...rowsElement.querySelectorAll(`[data-contact-key="${CSS.escape(key)}"]`)];
       const changes = {};
@@ -2856,8 +2925,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return changes;
     }
 
-    function activityPayload(key) {
-      const row = rowsElement.querySelector(`[data-activity-row="${CSS.escape(key)}"]`);
+    function activityPayload(key, draftId = "primary") {
+      const row = rowsElement.querySelector(`[data-activity-row="${CSS.escape(key)}"][data-activity-draft-id="${CSS.escape(draftId)}"]`);
       if (!row) return null;
       const value = (field) => row.querySelector(`[data-activity-field="${field}"]`)?.value.trim() || "";
       const existing = state.rows.find((contact) => contact.key === key);
@@ -2873,8 +2942,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       };
     }
 
-    async function addContactActivity(key) {
-      const payload = activityPayload(key);
+    async function saveContactActivity(key, draftId = "primary") {
+      const payload = activityPayload(key, draftId);
       if (!payload) return;
       setNotice("Saving contact activity...");
       try {
@@ -2888,6 +2957,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       } catch (error) {
         showErrorNotice(error);
       }
+    }
+
+    function addActivityDraft(key) {
+      const existing = state.rows.find((row) => row.key === key);
+      const container = rowsElement.querySelector(`[data-activity-drafts="${CSS.escape(key)}"]`);
+      if (!existing || !container) return;
+      const draftId = `draft-${++activityDraftCounter}`;
+      container.insertAdjacentHTML("beforeend", activityDraftEntry(existing, draftId));
+      container.querySelector(`[data-activity-draft-id="${CSS.escape(draftId)}"] textarea`)?.focus();
     }
 
     function partnerEditChanges(key) {
@@ -3175,7 +3253,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const deleteContactKey = event.target.dataset.deleteContactKey;
       const deleteGuestRegistrantKey = event.target.dataset.deleteGuestRegistrantKey;
       const saveContactKey = event.target.dataset.saveContactKey;
-      const addActivityKey = event.target.dataset.addActivityKey;
+      const uploadContactPhotoKey = event.target.dataset.uploadContactPhotoKey;
+      const addActivityDraftKey = event.target.dataset.addActivityDraftKey;
+      const saveActivityKey = event.target.dataset.saveActivityKey;
       const addContactCompany = event.target.dataset.addContactCompany;
       const cancelContactCompany = event.target.dataset.cancelCompanyContact;
       const saveContactCompany = event.target.dataset.saveCompanyContact;
@@ -3206,8 +3286,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         await saveRegistrant(saveContactKey, contactEditChanges(saveContactKey));
         return;
       }
-      if (addActivityKey) {
-        await addContactActivity(addActivityKey);
+      if (uploadContactPhotoKey) {
+        await uploadContactPhoto(uploadContactPhotoKey);
+        return;
+      }
+      if (addActivityDraftKey) {
+        addActivityDraft(addActivityDraftKey);
+        return;
+      }
+      if (saveActivityKey) {
+        await saveContactActivity(saveActivityKey, event.target.dataset.activityDraftId || "primary");
         return;
       }
       if (profilePath) {
