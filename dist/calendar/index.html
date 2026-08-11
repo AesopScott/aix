@@ -146,11 +146,7 @@
     .nav-actions a[aria-current="page"] { color: var(--white); }
 
     .hero {
-      padding: clamp(42px, 6vw, 86px) 0 clamp(28px, 4vw, 46px);
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 28px;
-      align-items: end;
+      padding: clamp(42px, 6vw, 86px) 0 clamp(18px, 3vw, 30px);
     }
     .eyebrow {
       display: inline-flex;
@@ -179,13 +175,27 @@
       font-size: 17px;
       line-height: 1.62;
     }
-    .attendee-tabs {
+    .calendar-controls {
+      display: grid;
+      gap: 14px;
+      padding-bottom: clamp(28px, 4vw, 46px);
+    }
+    .filter-group {
       display: flex;
       flex-wrap: wrap;
-      justify-content: flex-end;
+      align-items: center;
       gap: 10px;
     }
-    .attendee-tabs a {
+    .filter-label {
+      min-width: 78px;
+      color: rgba(27, 35, 51, .72);
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    .filter-button {
       min-height: 42px;
       display: inline-flex;
       align-items: center;
@@ -201,12 +211,17 @@
       letter-spacing: .1em;
       text-transform: uppercase;
       white-space: nowrap;
+      cursor: pointer;
+      transition: background .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease);
     }
-    .attendee-tabs a.active,
-    .attendee-tabs a:hover {
+    .filter-button[aria-pressed="true"],
+    .filter-button:hover {
       border-color: var(--navy);
       color: var(--white);
       background: var(--navy);
+    }
+    .filter-button[aria-pressed="true"] {
+      box-shadow: 0 12px 24px rgba(10, 15, 30, .16);
     }
 
     .event-grid {
@@ -224,6 +239,28 @@
       display: grid;
       grid-template-rows: auto auto auto;
       border: 1px solid rgba(0, 230, 255, .16);
+    }
+    .event-card.is-hidden {
+      display: none;
+    }
+    .filter-status {
+      width: min(1296px, calc(100% - clamp(72px, 10vw, 176px)));
+      margin: -22px auto clamp(56px, 8vw, 112px);
+      padding: 28px;
+      border: 1px solid rgba(22, 102, 255, .2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .72);
+      color: rgba(27, 35, 51, .78);
+      font-size: 16px;
+      line-height: 1.55;
+    }
+    .filter-status[hidden] {
+      display: none;
+    }
+    .event-card.summit-card {
+      background: var(--slate);
+      border-color: rgba(22, 102, 255, .52);
+      box-shadow: 0 28px 56px rgba(22, 102, 255, .14), 0 22px 44px rgba(10, 15, 30, .18);
     }
     .event-art {
       position: relative;
@@ -272,6 +309,11 @@
     }
     .event-art.is-photo::after {
       display: none;
+    }
+    .summit-card .event-art.is-photo::before {
+      background:
+        linear-gradient(180deg, rgba(10, 15, 30, .02), rgba(22, 102, 255, .34)),
+        linear-gradient(90deg, rgba(10, 15, 30, .24), transparent 46%, rgba(22, 102, 255, .16));
     }
     .event-photo {
       position: absolute;
@@ -331,6 +373,10 @@
       background:
         linear-gradient(180deg, rgba(27, 35, 51, .98), rgba(10, 15, 30, .98));
     }
+    .summit-card .event-body {
+      background:
+        linear-gradient(180deg, rgba(22, 102, 255, .28), rgba(27, 35, 51, .98) 45%, rgba(27, 35, 51, .98));
+    }
     .format-pill {
       width: fit-content;
       min-width: 0;
@@ -347,6 +393,11 @@
       font-weight: 600;
       letter-spacing: .035em;
       text-transform: uppercase;
+    }
+    .summit-card .format-pill {
+      border-color: rgba(22, 102, 255, .72);
+      background: rgba(22, 102, 255, .18);
+      color: var(--white);
     }
     .event-card h2 {
       margin-top: 24px;
@@ -418,6 +469,14 @@
       border-top: 1px solid var(--line);
       padding: 16px 28px 20px;
       background: rgba(10, 15, 30, .98);
+    }
+    .summit-card .event-action {
+      border-top-color: rgba(22, 102, 255, .44);
+      background:
+        linear-gradient(180deg, rgba(22, 102, 255, .16), rgba(10, 15, 30, .98));
+    }
+    .summit-card .learn-more {
+      color: var(--white);
     }
     .learn-more {
       color: var(--white);
@@ -493,6 +552,13 @@
         display: flex;
         justify-content: flex-start;
       }
+      .filter-label {
+        width: 100%;
+      }
+      .filter-button {
+        flex: 1 1 auto;
+        padding: 0 14px;
+      }
       .event-card { border-radius: 8px; }
       .event-art { min-height: 205px; }
       .track-chip {
@@ -535,17 +601,30 @@
         <h1>Executive AI Calendar</h1>
         <p>Browse the current MOJO AI Summits schedule for invitation-only virtual rooms, city summits, and intelligence brief events.</p>
       </div>
-      <div class="attendee-tabs" aria-label="Calendar categories">
-        <a class="active" href="#all-events">All</a>
-        <a href="#virtual-events">Virtual</a>
-        <a href="#live-events">Live</a>
-        <a href="#brief-events">Briefs</a>
+    </section>
+
+    <section class="calendar-controls wrap" aria-label="Calendar filters">
+      <div class="filter-group" role="group" aria-label="Event format">
+        <span class="filter-label">Format</span>
+        <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="all" aria-pressed="true">All</button>
+        <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="virtual" aria-pressed="false">Virtual</button>
+        <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="in-person" aria-pressed="false">In-person</button>
+      </div>
+      <div class="filter-group" role="group" aria-label="Cohort">
+        <span class="filter-label">Cohort</span>
+        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all" aria-pressed="true">All</button>
+        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="technology-strategy" aria-pressed="false">Technology Strategy</button>
+        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="integration" aria-pressed="false">Integration</button>
+        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="operations-finance" aria-pressed="false">Operations and Finance</button>
+        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="security-risk" aria-pressed="false">Security and Risk</button>
+        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="business-enablement" aria-pressed="false">Business Enablement</button>
+        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all-cohorts" aria-pressed="false">All Cohorts</button>
       </div>
     </section>
 
     <section class="event-grid wrap" id="all-events" aria-label="All upcoming events">
 
-      <article class="event-card" id="virtual-events">
+      <article class="event-card" id="virtual-events" data-format="virtual" data-cohort="technology-strategy">
         <a class="event-art is-photo" href="/ai-executive-readiness-online/" aria-label="View details for AI Executive Readiness">
           <img class="event-photo" src="/assets/calendar/virtual/ai-executive-readiness.webp" alt="" decoding="async">
           <span class="track-chip">Technology Strategy</span>
@@ -567,7 +646,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="integration">
         <a class="event-art is-photo" href="/ai-data-readiness-and-knowledge-strategy-online/" aria-label="View details for AI Data Readiness and Knowledge Strategy">
           <img class="event-photo" src="/assets/calendar/virtual/ai-data-readiness-and-knowledge-strategy.webp" alt="" decoding="async">
           <span class="track-chip">Integration</span>
@@ -589,7 +668,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="operations-finance">
         <a class="event-art is-photo" href="/ai-use-cases-that-survive-finance-online/" aria-label="View details for AI Use Cases That Survive Finance">
           <img class="event-photo" src="/assets/calendar/virtual/ai-use-cases-that-survive-finance.webp" alt="" decoding="async">
           <span class="track-chip">Operations and Finance</span>
@@ -611,7 +690,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="integration">
         <a class="event-art is-photo" href="/ai-agents-automation-and-human-handoffs-online/" aria-label="View details for AI Agents, Automation, and Human Handoffs">
           <img class="event-photo" src="/assets/calendar/virtual/ai-agents-automation-and-human-handoffs.webp" alt="" decoding="async">
           <span class="track-chip">Integration</span>
@@ -633,7 +712,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="integration">
         <a class="event-art is-photo" href="/ai-integration-and-workflow-online/" aria-label="View details for AI Integration and Workflow">
           <img class="event-photo" src="/assets/calendar/virtual/ai-integration-and-workflow.webp" alt="" decoding="async">
           <span class="track-chip">Integration</span>
@@ -655,7 +734,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="technology-strategy">
         <a class="event-art is-photo" href="/ai-vendor-strategy-and-platform-decisions-online/" aria-label="View details for AI Vendor Strategy and Platform Decisions">
           <img class="event-photo" src="/assets/calendar/virtual/ai-vendor-strategy-and-platform-decisions.webp" alt="" decoding="async">
           <span class="track-chip">Technology Strategy</span>
@@ -677,7 +756,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="security-risk">
         <a class="event-art is-photo" href="/ai-security-governance-and-trust-online/" aria-label="View details for AI Security, Governance, and Trust">
           <img class="event-photo" src="/assets/calendar/virtual/ai-security-governance-and-trust.webp" alt="" decoding="async">
           <span class="track-chip">Security and Risk</span>
@@ -699,7 +778,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="business-enablement">
         <a class="event-art is-photo" href="/ai-workforce-talent-and-change-adoption-online/" aria-label="View details for AI Workforce, Talent, and Change Adoption">
           <img class="event-photo" src="/assets/calendar/virtual/ai-workforce-talent-and-change-adoption.webp" alt="" decoding="async">
           <span class="track-chip">Business Enablement</span>
@@ -721,7 +800,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="operations-finance">
         <a class="event-art is-photo" href="/ai-operating-model-for-2027-online/" aria-label="View details for AI Operating Model for 2027">
           <img class="event-photo" src="/assets/calendar/virtual/ai-operating-model-for-2027.webp" alt="" decoding="async">
           <span class="track-chip">Operations and Finance</span>
@@ -743,7 +822,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="operations-finance">
         <a class="event-art is-photo" href="/ai-budgeting-and-investment-priorities-online/" aria-label="View details for AI Budgeting and Investment Priorities">
           <img class="event-photo" src="/assets/calendar/virtual/ai-budgeting-and-investment-priorities.webp" alt="" decoding="async">
           <span class="track-chip">Operations and Finance</span>
@@ -765,7 +844,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="business-enablement">
         <a class="event-art is-photo" href="/ai-workforce-readiness-and-change-leadership-online/" aria-label="View details for AI Workforce Readiness and Change Leadership">
           <img class="event-photo" src="/assets/calendar/virtual/ai-workforce-readiness-and-change-leadership.webp" alt="" decoding="async">
           <span class="track-chip">Business Enablement</span>
@@ -787,7 +866,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card" data-format="virtual" data-cohort="technology-strategy">
         <a class="event-art is-photo" href="/ai-executive-operating-agenda-for-2027-online/" aria-label="View details for AI Executive Operating Agenda for 2027">
           <img class="event-photo" src="/assets/calendar/virtual/ai-executive-operating-agenda-for-2027.webp" alt="" decoding="async">
           <span class="track-chip">Technology Strategy</span>
@@ -809,7 +888,7 @@
 
 
 
-      <article class="event-card" id="live-events">
+      <article class="event-card summit-card" id="live-events" data-format="in-person" data-cohort="all-cohorts">
         <a class="event-art is-photo" href="/dallas/" aria-label="View details for Q1 Intelligence Brief Summit: Dallas">
           <img class="event-photo" src="/assets/calendar/summits/q1-intelligence-brief-summit-dallas.webp" alt="" decoding="async">
           <span class="track-chip">All Cohorts</span>
@@ -831,7 +910,7 @@
 
 
 
-      <article class="event-card" id="brief-events">
+      <article class="event-card summit-card" id="brief-events" data-format="in-person" data-cohort="all-cohorts">
         <a class="event-art is-photo" href="/briefs/" aria-label="View details for Q2 Intelligence Brief Summit">
           <img class="event-photo" src="/assets/calendar/summits/q2-intelligence-brief-summit-denver.webp" alt="" decoding="async">
           <span class="track-chip">All Cohorts</span>
@@ -853,7 +932,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card summit-card" data-format="in-person" data-cohort="all-cohorts">
         <a class="event-art is-photo" href="/briefs/" aria-label="View details for Q3 Intelligence Brief Summit">
           <img class="event-photo" src="/assets/calendar/summits/q3-intelligence-brief-summit-raleigh.webp" alt="" decoding="async">
           <span class="track-chip">All Cohorts</span>
@@ -875,7 +954,7 @@
 
 
 
-      <article class="event-card">
+      <article class="event-card summit-card" data-format="in-person" data-cohort="all-cohorts">
         <a class="event-art is-photo" href="/briefs/" aria-label="View details for Q4 Intelligence Brief Summit">
           <img class="event-photo" src="/assets/calendar/summits/q4-intelligence-brief-summit-chicago.webp" alt="" decoding="async">
           <span class="track-chip">All Cohorts</span>
@@ -895,6 +974,7 @@
         </div>
       </article>
     </section>
+    <p class="filter-status" id="filterStatus" hidden>No events match the selected filters.</p>
   </main>
 
   <footer>
@@ -903,6 +983,45 @@
       <a href="/virtual/">Virtual event series</a>
     </div>
   </footer>
+  <script>
+    const calendarFilters = {
+      format: "all",
+      cohort: "all"
+    };
+
+    const filterButtons = Array.from(document.querySelectorAll("[data-filter-kind]"));
+    const eventCards = Array.from(document.querySelectorAll(".event-card[data-format][data-cohort]"));
+    const filterStatus = document.getElementById("filterStatus");
+
+    function applyCalendarFilters() {
+      let visibleCount = 0;
+
+      eventCards.forEach((card) => {
+        const formatMatch = calendarFilters.format === "all" || card.dataset.format === calendarFilters.format;
+        const cohortMatch = calendarFilters.cohort === "all" || card.dataset.cohort === calendarFilters.cohort;
+        const isVisible = formatMatch && cohortMatch;
+
+        card.classList.toggle("is-hidden", !isVisible);
+        card.toggleAttribute("hidden", !isVisible);
+        if (isVisible) visibleCount += 1;
+      });
+
+      filterStatus.hidden = visibleCount !== 0;
+    }
+
+    filterButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const kind = button.dataset.filterKind;
+        calendarFilters[kind] = button.dataset.filterValue;
+
+        filterButtons
+          .filter((item) => item.dataset.filterKind === kind)
+          .forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+
+        applyCalendarFilters();
+      });
+    });
+  </script>
   <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
 </body>
 </html>
