@@ -117,8 +117,6 @@ const DEFAULT_UPCOMING_EVENTS = [
     format: "Virtual"
   },
   {
-    slug: "dallas-2027",
-  {
     slug: "ai-budgeting-and-investment-priorities",
     title: "AI Budgeting and Investment Priorities",
     date: "Friday, December 4, 2026",
