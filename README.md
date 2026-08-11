@@ -69,9 +69,9 @@ Protected internal routes:
 - `/setup/` and `/api/setup-state`
 - `/events/` and `/api/events`
 - `/storage/` and `/api/storage`
-- `/budget/` and `/api/budget`
+- `/api/budget`
 
-Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/partner-pricing/`, `/briefs/`, `/book/`, `/member-registration/`, `/member-profile/`, `/partner-registration/`, `/guest/`, `/api/scheduling/team`, `/api/scheduling/availability`, `/api/scheduling/book`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/member-profile`, `/api/partner-registration`, `/api/guest-registration`, and `/crm/api/public/...`.
+Public routes intentionally remain open, including `/`, `/dallas/`, `/virtual/`, `/membership/`, `/fellowships/`, `/partners/`, `/partner-pricing/`, `/briefs/`, `/book/`, `/budget/`, `/member-registration/`, `/member-profile/`, `/partner-registration/`, `/guest/`, `/api/scheduling/team`, `/api/scheduling/availability`, `/api/scheduling/book`, `/api/invite-request`, `/api/phone-verification`, `/api/member-registration`, `/api/member-profile`, `/api/partner-registration`, `/api/guest-registration`, and `/crm/api/public/...`. The Budget page shell stays public so users can reach the Mojo Auth login flow; budget data remains protected by `/api/budget`.
 
 Mojo Auth endpoints:
 

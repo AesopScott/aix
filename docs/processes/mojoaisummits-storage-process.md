@@ -60,7 +60,7 @@ Before using the storage portal in production, protect the Storage API through `
 
 - `/api/storage`
 
-The `/files/` page shell stays reachable so users can get to site sign-in and Storage instructions. Storage data and file operations remain protected by `/api/storage`. The repo-level access configuration also protects the other internal operating routes: `/admin/`, `/crm/`, `/setup/`, `/events/`, `/budget/`, `/mockups/`, and their internal APIs, including `/api/events`. Recommended account groups:
+The `/files/` page shell stays reachable so users can get to site sign-in and Storage instructions. Storage data and file operations remain protected by `/api/storage`. The `/budget/` page shell follows the same pattern so users can reach the Mojo Auth login flow, while budget data remains protected by `/api/budget`. The repo-level access configuration also protects the other internal operating routes: `/admin/`, `/crm/`, `/setup/`, `/events/`, `/mockups/`, and their internal APIs, including `/api/events`. Recommended account groups:
 
 - Founders: Scott, Robert, Jodi, Ron
 - Event Ops: Charlie, The Event Lounge

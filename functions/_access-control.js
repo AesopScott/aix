@@ -158,8 +158,8 @@ export const DEFAULT_ACCESS_RULES = [
     group: "Data",
     label: "Budget and P&L",
     summary: "Receipts, reimbursement state, and expense reporting.",
-    mode: "allowlist",
-    defaultGroupIds: ["admin"],
+    mode: "public",
+    defaultGroupIds: ["public"],
     matches: [{ exact: "/budget" }, { prefix: "/budget/" }],
     domains: ["mojoaisummits.com/budget", "mojoaisummits.com/budget/*"]
   },
