@@ -218,6 +218,8 @@ def make_contributor_portraits():
     for name, *_ in contributors:
         style = PORTRAIT_STYLES.get(name, PORTRAIT_STYLES["Name withheld"])
         path = portrait_asset_for(name)
+        if path.exists():
+            continue
         img = Image.new("RGBA", (W, H), (10, 15, 30, 255))
         draw = ImageDraw.Draw(img)
         accent = tuple(int(style["accent"].lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))

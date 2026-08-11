@@ -22,7 +22,7 @@ async function readState(env) {
   const stored = await env.MOJO_SUMMITS_SETUP_STATE.get(STATE_KEY, "json");
   return stored && typeof stored === "object"
     ? stored
-    : { assignments: {}, customItems: [], updatedAt: null };
+    : { assignments: {}, customItems: [], deletedItemIds: [], updatedAt: null };
 }
 
 function sanitizeAssignment(value) {
@@ -58,10 +58,16 @@ function sanitizeCustomItems(value) {
   return items;
 }
 
+function sanitizeDeletedItemIds(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((id) => String(id || "").trim()).filter(Boolean))];
+}
+
 async function writeState(env, state) {
   const next = {
     assignments: state.assignments || {},
     customItems: sanitizeCustomItems(state.customItems),
+    deletedItemIds: sanitizeDeletedItemIds(state.deletedItemIds),
     updatedAt: new Date().toISOString()
   };
   await env.MOJO_SUMMITS_SETUP_STATE.put(STATE_KEY, JSON.stringify(next));
@@ -73,6 +79,7 @@ export async function onRequestGet({ env }) {
   return json({
     assignments: state.assignments || {},
     customItems: sanitizeCustomItems(state.customItems),
+    deletedItemIds: sanitizeDeletedItemIds(state.deletedItemIds),
     updatedAt: state.updatedAt || null
   });
 }
@@ -80,6 +87,23 @@ export async function onRequestGet({ env }) {
 export async function onRequestPatch({ request, env }) {
   const payload = await request.json().catch(() => null);
   const id = typeof payload?.id === "string" ? payload.id : "";
+
+  if (payload?.action === "delete-item") {
+    if (!id) {
+      return json({ error: "Expected an item id." }, { status: 400 });
+    }
+
+    const state = await readState(env);
+    const deletedItemIds = sanitizeDeletedItemIds(state.deletedItemIds);
+    if (!deletedItemIds.includes(id)) deletedItemIds.push(id);
+    state.deletedItemIds = deletedItemIds;
+    state.customItems = sanitizeCustomItems(state.customItems).filter((item) => item.id !== id);
+    state.assignments = state.assignments || {};
+    delete state.assignments[id];
+
+    return json(await writeState(env, state));
+  }
+
   const assignment = sanitizeAssignment(payload?.assignment);
   const fields = Array.isArray(payload?.fields)
     ? payload.fields.filter((field) => assignmentFields.includes(field))
@@ -112,6 +136,7 @@ export async function onRequestPost({ request, env }) {
   const customItems = sanitizeCustomItems(state.customItems).filter((existing) => existing.id !== item.id);
   customItems.push(item);
   state.customItems = customItems;
+  state.deletedItemIds = sanitizeDeletedItemIds(state.deletedItemIds).filter((id) => id !== item.id);
   state.assignments = state.assignments || {};
   state.assignments[item.id] = sanitizeAssignment(item);
 
@@ -136,11 +161,16 @@ export async function onRequestPut({ request, env }) {
   const state = await readState(env);
   return json(await writeState(env, {
     assignments,
-    customItems: payload?.customItems === undefined ? state.customItems : payload.customItems
+    customItems: payload?.customItems === undefined ? state.customItems : payload.customItems,
+    deletedItemIds: payload?.deletedItemIds === undefined ? state.deletedItemIds : payload.deletedItemIds
   }));
 }
 
 export async function onRequestDelete({ env }) {
   const state = await readState(env);
-  return json(await writeState(env, { assignments: {}, customItems: state.customItems }));
+  return json(await writeState(env, {
+    assignments: {},
+    customItems: state.customItems,
+    deletedItemIds: state.deletedItemIds
+  }));
 }

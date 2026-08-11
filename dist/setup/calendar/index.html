@@ -432,7 +432,7 @@
       "Priority 7 - 1 day out", "Priority 8 - Day of"
     ];
     const deliverableOptions = ["Conversation", "Document", "Contract", "Website", "Event Tracker"];
-    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem"];
+    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem", "Delete"];
     const sharedStateEndpoint = "/api/setup-state";
     const sharedSyncIntervalMs = 5000;
 
@@ -756,6 +756,8 @@
         if (state.updatedAt === lastUpdatedAt) return;
         lastUpdatedAt = state.updatedAt || lastUpdatedAt;
         applyCustomItems(Array.isArray(state.customItems) ? state.customItems : []);
+        const deletedItemIds = new Set(Array.isArray(state.deletedItemIds) ? state.deletedItemIds : []);
+        allItems = allItems.filter((item) => !deletedItemIds.has(item.id));
         const assignments = state.assignments || {};
         allItems.forEach((item) => {
           if (assignments[item.id]) applyAssignment(item, assignments[item.id]);

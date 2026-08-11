@@ -961,6 +961,11 @@
         </div>
 
         <div class="control-group">
+          <div class="control-label">Support</div>
+          <div class="segmented" id="supportFilters"></div>
+        </div>
+
+        <div class="control-group">
           <label class="control-label" for="priorityFilter">Priority</label>
           <select class="filter-select" id="priorityFilter"></select>
         </div>
@@ -1002,7 +1007,7 @@
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
 Date: 2026-08-11
-Version: 3.9
+Version: 3.11
 Category: event operations
 
 ## Purpose
@@ -1608,6 +1613,8 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.11 - Added support-person filtering alongside owner filtering.
+- 3.10 - Added Delete as a confirmation-based status that removes setup items.
 - 3.9 - Added Issue/problem as a setup item status.
 - 3.8 - Added status visibility checkboxes in addition to the status filter.
 - 3.7 - Added quick-add inbox support for setup tracker items that can be populated later.
@@ -1684,9 +1691,10 @@ The following decisions should not be made by one owner alone:
       "Priority 8 - Day of"
     ];
     const deliverableOptions = ["Conversation", "Document", "Contract", "Website", "Event Tracker"];
-    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem"];
+    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem", "Delete"];
     const assignmentStoragePrefix = "mojo-event-assignment:";
     const customItemsStorageKey = "mojo-event-custom-items";
+    const deletedItemIdsStorageKey = "mojo-event-deleted-item-ids";
     const customInboxPhase = "Setup Tracker Inbox";
     const customInboxSubsection = "Quick Adds";
     const sharedStateEndpoint = "/api/setup-state";
@@ -1706,6 +1714,7 @@ The following decisions should not be made by one owner alone:
     const state = {
       phase: "All",
       owner: "All",
+      support: "All",
       priority: "All",
       dueDate: "",
       status: "All",
@@ -1850,6 +1859,7 @@ The following decisions should not be made by one owner alone:
     });
     let allItems = [...staticItems];
     let customItems = [];
+    let deletedItemIds = new Set();
     const itemById = new Map(allItems.map((item) => [item.id, item]));
 
     function storedCustomItem(item) {
@@ -1956,6 +1966,51 @@ The following decisions should not be made by one owner alone:
       } catch {
         localStorage.removeItem(customItemsStorageKey);
       }
+    }
+
+    function cacheDeletedItemIds() {
+      localStorage.setItem(deletedItemIdsStorageKey, JSON.stringify([...deletedItemIds]));
+    }
+
+    function loadCachedDeletedItemIds() {
+      const saved = localStorage.getItem(deletedItemIdsStorageKey);
+      if (!saved) return;
+      try {
+        const ids = JSON.parse(saved);
+        if (Array.isArray(ids)) applyDeletedItemIds(ids);
+      } catch {
+        localStorage.removeItem(deletedItemIdsStorageKey);
+      }
+    }
+
+    function removeItemFromCollections(item) {
+      itemById.delete(item.id);
+      allItems = allItems.filter((candidate) => candidate.id !== item.id);
+      customItems = customItems.filter((candidate) => candidate.id !== item.id);
+      checklistSections.forEach((section) => {
+        section.subsections.forEach((subsection) => {
+          subsection.items = subsection.items.filter((candidate) => candidate.id !== item.id);
+        });
+        section.subsections = section.subsections.filter((subsection) => subsection.items.length > 0);
+      });
+      for (let index = checklistSections.length - 1; index >= 0; index -= 1) {
+        const section = checklistSections[index];
+        if (!section.custom || section.subsections.length > 0) continue;
+        checklistSections.splice(index, 1);
+        const sectionIndex = sections.indexOf(section);
+        if (sectionIndex >= 0) sections.splice(sectionIndex, 1);
+      }
+      localStorage.removeItem(`${assignmentStoragePrefix}${item.id}`);
+      cacheCustomItems();
+    }
+
+    function applyDeletedItemIds(ids = []) {
+      deletedItemIds = new Set(ids.map((id) => String(id || "").trim()).filter(Boolean));
+      [...deletedItemIds].forEach((id) => {
+        const item = itemById.get(id);
+        if (item) removeItemFromCollections(item);
+      });
+      cacheDeletedItemIds();
     }
 
     function assignmentStorageKey(item) {
@@ -2121,7 +2176,8 @@ The following decisions should not be made by one owner alone:
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             assignments: assignmentSnapshot(),
-            customItems: customItems.map(storedCustomItem)
+            customItems: customItems.map(storedCustomItem),
+            deletedItemIds: [...deletedItemIds]
           })
         });
         if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
@@ -2152,6 +2208,24 @@ The following decisions should not be made by one owner alone:
       }
     }
 
+    async function saveSharedDeletedItem(item) {
+      try {
+        setSyncState("warn", "Deleting shared item...");
+        const response = await fetch(sharedStateEndpoint, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: item.id, action: "delete-item" })
+        });
+        if (!response.ok) throw new Error(`Shared item delete failed: ${response.status}`);
+        const state = await response.json();
+        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
+        setSyncState("ok", "Shared sync live. Item deleted.");
+      } catch (error) {
+        setSyncState("error", describeSharedError(error));
+        console.warn(error);
+      }
+    }
+
     async function clearSharedAssignments() {
       try {
         setSyncState("warn", "Resetting shared state...");
@@ -2171,16 +2245,19 @@ The following decisions should not be made by one owner alone:
         const state = await fetchSharedState();
         setSyncState("ok", "Shared sync live. Updates refresh every 5 seconds.");
         const sharedCustomItems = Array.isArray(state.customItems) ? state.customItems : [];
+        const sharedDeletedItemIds = Array.isArray(state.deletedItemIds) ? state.deletedItemIds : [];
         const assignments = state.assignments || {};
         const hasSharedAssignments = Object.keys(assignments).length > 0;
         const hasSharedCustomItems = sharedCustomItems.length > 0;
         const cachedCustomItems = customItems.map(storedCustomItem);
+        const cachedDeletedItemIds = [...deletedItemIds];
 
         if (state.updatedAt && state.updatedAt === lastSharedUpdatedAt) return;
 
         if (hasSharedCustomItems || state.updatedAt) {
           applyCustomItems(sharedCustomItems);
         }
+        applyDeletedItemIds(sharedDeletedItemIds);
 
         if (hasSharedAssignments) {
           const savedLocalAssignments = localAssignments();
@@ -2204,8 +2281,9 @@ The following decisions should not be made by one owner alone:
           return;
         }
 
-        if (migrateLocalIfEmpty && (Object.keys(localAssignments()).length > 0 || cachedCustomItems.length > 0)) {
+        if (migrateLocalIfEmpty && (Object.keys(localAssignments()).length > 0 || cachedCustomItems.length > 0 || cachedDeletedItemIds.length > 0)) {
           if (cachedCustomItems.length > 0 && !hasSharedCustomItems) applyCustomItems(cachedCustomItems);
+          if (cachedDeletedItemIds.length > 0 && sharedDeletedItemIds.length === 0) applyDeletedItemIds(cachedDeletedItemIds);
           await saveAllSharedAssignments();
           return;
         }
@@ -2236,11 +2314,32 @@ The following decisions should not be made by one owner alone:
       applyFilters();
     }
 
+    function deleteSetupItem(item) {
+      const confirmed = window.confirm(`Delete this setup item?\n\n${item.text}`);
+      if (!confirmed) {
+        updateAssignmentRow(item);
+        return;
+      }
+
+      deletedItemIds.add(item.id);
+      removeItemFromCollections(item);
+      cacheDeletedItemIds();
+      refreshView();
+      saveSharedDeletedItem(item);
+    }
+
     loadCachedCustomItems();
+    loadCachedDeletedItemIds();
     loadCachedAssignments();
 
     function countByOwner(owner) {
       return allItems.filter((item) => ownerNames(item.owner).includes(owner)).length;
+    }
+
+    function countBySupport(owner) {
+      if (owner === "All") return allItems.length;
+      if (owner === "No support") return allItems.filter((item) => ownerNames(item.support).length === 0).length;
+      return allItems.filter((item) => ownerNames(item.support).includes(owner)).length;
     }
 
     function countByPhase(phase) {
@@ -2469,6 +2568,10 @@ The following decisions should not be made by one owner alone:
         select.addEventListener("change", () => {
           const item = itemById.get(select.dataset.itemId);
           if (!item) return;
+          if (select.value === "Delete") {
+            deleteSetupItem(item);
+            return;
+          }
           item.status = select.value;
           saveAssignment(item, ["status"]);
           updateAssignmentRow(item);
@@ -2576,6 +2679,7 @@ The following decisions should not be made by one owner alone:
 
     function renderFilters() {
       const phaseOptions = ["All", ...checklistSections.map((section) => section.title)];
+      const supportFilterOptions = ["All", "No support", ...supportOwners];
       const priorityFilterOptions = ["All", "No priority", ...priorityOptions];
       const statusFilterOptions = ["All", ...statusOptions];
 
@@ -2588,6 +2692,12 @@ The following decisions should not be made by one owner alone:
       document.getElementById("ownerFilters").innerHTML = ownerFilterOptions.map((owner) => `
         <button class="filter-btn ${owner === state.owner ? "active" : ""}" data-filter-type="owner" data-value="${owner}" type="button">
           <span>${owner}</span><span class="filter-count">${owner === "All" ? allItems.length : countByOwner(owner)}</span>
+        </button>
+      `).join("");
+
+      document.getElementById("supportFilters").innerHTML = supportFilterOptions.map((owner) => `
+        <button class="filter-btn ${owner === state.support ? "active" : ""}" data-filter-type="support" data-value="${escapeHtml(owner)}" type="button">
+          <span>${escapeHtml(owner)}</span><span class="filter-count">${countBySupport(owner)}</span>
         </button>
       `).join("");
 
@@ -2631,15 +2741,18 @@ The following decisions should not be made by one owner alone:
 
       document.querySelectorAll(".item").forEach((item) => {
         const itemOwners = ownerNames(item.dataset.owner);
+        const itemSupportOwners = ownerNames(item.dataset.support);
         const phaseOk = state.phase === "All" || item.dataset.phase === state.phase;
         const ownerOk = state.owner === "All" || itemOwners.includes(state.owner);
+        const supportOk = state.support === "All" ||
+          (state.support === "No support" ? itemSupportOwners.length === 0 : itemSupportOwners.includes(state.support));
         const priorityOk = state.priority === "All" ||
           (state.priority === "No priority" ? !item.dataset.priority : item.dataset.priority === state.priority);
         const dateOk = !state.dueDate || item.dataset.dueDate === state.dueDate;
         const statusVisible = state.visibleStatuses[item.dataset.status] !== false;
         const statusOk = statusVisible && (state.status === "All" || item.dataset.status === state.status);
         const searchOk = !query || item.dataset.search.includes(query);
-        const visible = phaseOk && ownerOk && priorityOk && dateOk && statusOk && searchOk;
+        const visible = phaseOk && ownerOk && supportOk && priorityOk && dateOk && statusOk && searchOk;
         item.classList.toggle("hidden", !visible);
         if (visible) visibleCount += 1;
       });
