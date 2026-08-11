@@ -61,6 +61,7 @@ const REGISTRATION_DEBUG_PREFIX = "crm:registration-debug:";
 const PHONE_VERIFICATION_DEBUG_PREFIX = "crm:phone-verification-debug:";
 const R2_REGISTRATION_PREFIX = "crm/registrations";
 const OVERFLOW_REGISTRATION_PREFIX = "crm-overflow/registrations";
+const CONTACT_PHOTO_PREFIX = "crm/contact-photos";
 const DEFAULT_UPCOMING_EVENTS = [
   {
     slug: "ai-executive-readiness",
@@ -189,6 +190,26 @@ function cleanString(value, max = maxFieldLength) {
   return typeof value === "string"
     ? value.trim().slice(0, max)
     : "";
+}
+
+function safeFileSegment(value, fallback = "file") {
+  const clean = String(value || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter(Boolean)
+    .join("-")
+    .replace(/[^a-zA-Z0-9._ -]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 90);
+  return clean || fallback;
+}
+
+function safeObjectKey(value) {
+  const key = String(value || "").trim().replace(/^\/+/, "");
+  if (!key || key.includes("..") || key.includes("\\") || key.length > 1024) return "";
+  return key;
 }
 
 function cleanType(value) {
@@ -366,6 +387,7 @@ function normalizeContactRecord(key, record = {}) {
     company: cleanString(record.company),
     title: cleanString(record.title),
     photoUrl: cleanString(record.photoUrl || record.photoURL || record.photo, 500),
+    photoKey: safeObjectKey(record.photoKey),
     bio: cleanString(record.bio || record.biography, 4000),
     executiveFunction: cleanAllowed(record.executiveFunction, allowedExecutiveFunctions, ""),
     industry: cleanString(record.industry),
@@ -653,6 +675,7 @@ function mergeContactRows(storedRows, derivedRows) {
       company: cleanString(row.company) || cleanString(previous.company),
       title: cleanString(row.title) || cleanString(previous.title),
       photoUrl: cleanString(row.photoUrl) || cleanString(previous.photoUrl),
+      photoKey: safeObjectKey(row.photoKey) || safeObjectKey(previous.photoKey),
       bio: cleanString(row.bio) || cleanString(previous.bio),
       executiveFunction: cleanString(row.executiveFunction) || cleanString(previous.executiveFunction),
       industry: cleanString(row.industry) || cleanString(previous.industry),
@@ -1475,16 +1498,19 @@ async function deleteGuestRegistrant(env, payload = {}, actor = "") {
 
 async function updateContact(env, payload = {}, actor = "") {
   const requestedKey = cleanString(payload.key);
-  const email = cleanString(
-    payload.email ||
-      (requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
-        ? requestedKey.replace(registrantTypes.contacts.crmPrefix, "")
-        : requestedKey)
+  const currentEmail = cleanString(
+    requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
+      ? requestedKey.replace(registrantTypes.contacts.crmPrefix, "")
+      : requestedKey
   ).toLowerCase();
+  const email = cleanString(payload.email || currentEmail).toLowerCase();
   if (!email || !email.includes("@")) throw new Error("Contact email is required before updating a contact.");
 
+  const currentKey = `${registrantTypes.contacts.crmPrefix}${currentEmail || email}`;
   const key = `${registrantTypes.contacts.crmPrefix}${email}`;
-  const existing = await readRawRecord(env, key);
+  const existing = await readRawRecord(env, currentKey);
+  const targetExisting = key === currentKey ? existing : await readRawRecord(env, key);
+  if (key !== currentKey && targetExisting) throw new Error("A contact with that email address already exists.");
   const now = new Date().toISOString();
   const firstName = cleanString(payload.firstName ?? existing?.firstName, 120);
   const lastName = cleanString(payload.lastName ?? existing?.lastName, 120);
@@ -1500,9 +1526,13 @@ async function updateContact(env, payload = {}, actor = "") {
     name,
     firstName,
     lastName,
+    company: cleanString(payload.company ?? existing?.company, 240),
+    title: cleanString(payload.title ?? existing?.title, 180),
+    phone: cleanString(payload.phone ?? existing?.phone, 80),
     source: cleanString(existing?.source) || "crm-contact-overlay",
     createdAt: cleanString(existing?.createdAt) || now,
     photoUrl: cleanString(payload.photoUrl ?? payload.photoURL ?? payload.photo ?? existing?.photoUrl, 500),
+    photoKey: safeObjectKey(payload.photoKey ?? existing?.photoKey),
     bio: cleanString(payload.bio ?? payload.biography ?? existing?.bio, 4000),
     executiveFunction: cleanAllowed(payload.executiveFunction ?? existing?.executiveFunction, allowedExecutiveFunctions, ""),
     industry: cleanString(payload.industry ?? existing?.industry),
@@ -1521,10 +1551,108 @@ async function updateContact(env, payload = {}, actor = "") {
     emailPermission,
     emailOptOut: payload.emailOptOut === true || emailPermission === "opted-out",
     topicInterests,
+    events: Array.isArray(existing?.events)
+      ? existing.events.map((event) => ({ ...event, email }))
+      : existing?.events,
     crmNotes: cleanString(payload.crmNotes),
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
   }));
+  if (currentKey !== key && currentEmail) await env.MOJO_SUMMITS_SETUP_STATE.delete(currentKey);
+}
+
+async function serveContactPhoto(request, env) {
+  if (!env.MOJO_SUMMITS_STORAGE?.get) {
+    return json({ error: "CRM photo storage is not configured." }, { status: 500 });
+  }
+  const url = new URL(request.url);
+  const key = safeObjectKey(url.searchParams.get("photo"));
+  if (!key || !key.startsWith(`${CONTACT_PHOTO_PREFIX}/`)) {
+    return json({ error: "Contact photo was not found." }, { status: 404 });
+  }
+  const object = await env.MOJO_SUMMITS_STORAGE.get(key);
+  if (!object) return json({ error: "Contact photo was not found." }, { status: 404 });
+  return new Response(object.body, {
+    headers: {
+      "cache-control": "private, max-age=300",
+      "content-type": object.httpMetadata?.contentType || "application/octet-stream"
+    }
+  });
+}
+
+async function uploadContactPhoto(request, env, form, actor = "") {
+  if (!env.MOJO_SUMMITS_STORAGE?.put) {
+    return json({ error: "CRM photo storage is not configured." }, { status: 500 });
+  }
+
+  const requestedKey = cleanString(form.get("key"));
+  const email = cleanString(
+    form.get("email") ||
+      (requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
+        ? requestedKey.replace(registrantTypes.contacts.crmPrefix, "")
+        : requestedKey)
+  ).toLowerCase();
+  if (!email || !email.includes("@")) return json({ error: "Contact email is required before uploading a photo." }, { status: 400 });
+
+  const file = form.get("photo") || form.get("file");
+  if (!file || typeof file.name !== "string" || typeof file.stream !== "function") {
+    return json({ error: "Choose a photo to upload." }, { status: 400 });
+  }
+  if (!String(file.type || "").toLowerCase().startsWith("image/")) {
+    return json({ error: "Upload an image file." }, { status: 400 });
+  }
+  if (Number(file.size || 0) > 6 * 1024 * 1024) {
+    return json({ error: "Contact photos must be 6 MB or smaller." }, { status: 400 });
+  }
+
+  const now = new Date().toISOString();
+  const stamp = now.replace(/[:.]/g, "-");
+  const id = crypto.randomUUID().slice(0, 8);
+  const emailSegment = safeFileSegment(email.replace("@", "-at-"), "contact");
+  const originalName = safeFileSegment(file.name, "photo");
+  const photoKey = `${CONTACT_PHOTO_PREFIX}/${emailSegment}/${stamp}-${id}-${originalName}`;
+  const photoUrl = `/api/crm?photo=${encodeURIComponent(photoKey)}`;
+
+  await env.MOJO_SUMMITS_STORAGE.put(photoKey, file.stream(), {
+    httpMetadata: {
+      contentType: file.type || "application/octet-stream"
+    },
+    customMetadata: {
+      contactEmail: email,
+      originalName: file.name,
+      uploadedBy: actor || "crm",
+      uploadedAt: now
+    }
+  });
+
+  const key = `${registrantTypes.contacts.crmPrefix}${email}`;
+  const existing = await readRawRecord(env, key);
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+    ...(existing || {}),
+    id: email,
+    email,
+    name: cleanString(existing?.name) || email,
+    source: cleanString(existing?.source) || "crm-contact-overlay",
+    createdAt: cleanString(existing?.createdAt) || now,
+    photoUrl,
+    photoKey,
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor || "crm"
+  }));
+
+  const rows = await contacts(env);
+  return json({
+    ok: true,
+    type: "contacts",
+    label: registrantTypes.contacts.label,
+    summary: summarizeContacts(rows),
+    rows,
+    photoUrl,
+    photoKey,
+    partnerInviteCodes: await partnerInviteCodes(env),
+    registrationInviteCodes: await registrationInviteCodes(env),
+    upcomingEvents: await upcomingEvents(env)
+  }, { status: 201 });
 }
 
 async function addContactActivity(env, payload = {}, actor = "") {
@@ -1887,6 +2015,8 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   const url = new URL(request.url);
+  if (url.searchParams.has("photo")) return serveContactPhoto(request, env);
+
   if (url.searchParams.get("debug") === "registration") {
     return json(await registrationDiagnostics(env));
   }
@@ -2146,6 +2276,20 @@ export async function onRequestPost({ request, env, data }) {
     return json({ error: "CRM storage is not configured." }, { status: 500 });
   }
 
+  const contentType = request.headers.get("content-type") || "";
+  if (contentType.includes("multipart/form-data")) {
+    const form = await request.formData().catch(() => null);
+    if (!form) return json({ error: "Expected form data." }, { status: 400 });
+    if (form.get("action") === "upload-contact-photo") {
+      try {
+        return uploadContactPhoto(request, env, form, access.email);
+      } catch (error) {
+        return json({ error: error.message || "Contact photo could not be uploaded." }, { status: 500 });
+      }
+    }
+    return json({ error: "Unsupported CRM upload action." }, { status: 400 });
+  }
+
   const payload = await request.json().catch(() => null);
   if (payload?.action === "generate-member-password") {
     try {
@@ -2327,7 +2471,8 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
-      return json({ error: error.message || "Contact could not be updated." }, { status: 500 });
+      const status = /required|already exists|valid email/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Contact could not be updated." }, { status });
     }
   }
 
