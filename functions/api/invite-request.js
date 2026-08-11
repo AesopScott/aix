@@ -52,6 +52,7 @@ function cleanPayload(payload) {
     phone: cleanString(payload?.phone),
     company: cleanString(payload?.company),
     title: cleanString(payload?.title),
+    linkedinProfileUrl: cleanString(payload?.linkedinProfileUrl),
     track: cleanString(payload?.track),
     stage: cleanString(payload?.stage),
     goal: cleanString(payload?.goal),
@@ -86,6 +87,9 @@ function validateRequest(request) {
   if (request.type === "partner-subscription" && !request.phone) {
     return "Phone is required.";
   }
+  if (request.type === "executive" && !request.linkedinProfileUrl) {
+    return "LinkedIn profile URL is required.";
+  }
   return "";
 }
 
@@ -118,6 +122,7 @@ function requestEmailText(record) {
     record.phone ? `Phone: ${record.phone}` : "",
     `Title: ${record.title || ""}`,
     `Company: ${record.company || ""}`,
+    record.linkedinProfileUrl ? `LinkedIn profile URL: ${record.linkedinProfileUrl}` : "",
     record.sessionTitle ? `Conversation title: ${record.sessionTitle}` : "",
     record.track ? `Track: ${record.track}` : "",
     record.format ? `Role: ${record.format}` : "",
@@ -138,6 +143,7 @@ function requestEmailHtml(record) {
     ["Phone", record.phone],
     ["Title", record.title],
     ["Company", record.company],
+    ["LinkedIn profile URL", record.linkedinProfileUrl],
     ["Conversation title", record.sessionTitle],
     ["Track", record.track],
     ["Role", record.format],
