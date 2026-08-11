@@ -19,6 +19,7 @@ PDF_PATH = PDF_DIR / PDF_NAME
 OUT_PDF_PATH = OUT_DIR / PDF_NAME
 SPONSOR_ASSET_DIR = DIST / "assets" / "sponsors"
 PORTRAIT_ASSET_DIR = DIST / "assets" / "brief-portraits"
+PORTRAIT_CACHE_VERSION = "20260811-real-portraits"
 
 NAVY = "#0A0F1E"
 NAVY_2 = "#10192C"
@@ -613,7 +614,7 @@ def write_html():
     def quote_card(name, quote):
         speaker = speaker_from_cite(name)
         alt = "Confidential executive portrait-style image" if speaker == "Name withheld" else f"Portrait-style image representing {speaker}"
-        image_src = asset_path(portrait_asset_for(name)) + "?v=20260811"
+        image_src = asset_path(portrait_asset_for(name)) + f"?v={PORTRAIT_CACHE_VERSION}"
         return f"""<blockquote class="quote-card"><div class="quote-copy"><cite>{h(name)}</cite><p>&quot;{h(quote)}&quot;</p></div><div class="quote-portrait-frame"><img src="{h(image_src)}" alt="{h(alt)}" loading="lazy"></div></blockquote>"""
 
     contributor_rows = "\n".join(
