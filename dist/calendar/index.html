@@ -259,6 +259,31 @@
       border: 1px solid rgba(0, 230, 255, .36);
       box-shadow: 0 0 38px rgba(0, 230, 255, .18);
     }
+    .event-art.is-photo {
+      background: var(--navy);
+    }
+    .event-art.is-photo::before {
+      background:
+        linear-gradient(180deg, rgba(10, 15, 30, .08), rgba(10, 15, 30, .42)),
+        linear-gradient(90deg, rgba(10, 15, 30, .38), transparent 42%, rgba(10, 15, 30, .12));
+      opacity: 1;
+      z-index: 1;
+    }
+    .event-art.is-photo::after {
+      display: none;
+    }
+    .event-photo {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
+      filter: saturate(.96) contrast(1.03);
+      transform: scale(1.002);
+    }
     .image-slot {
       position: absolute;
       inset: 0;
@@ -272,39 +297,30 @@
       text-transform: uppercase;
       z-index: 1;
     }
-    .brand-chip {
-      position: absolute;
-      left: 0;
-      top: 16px;
-      z-index: 2;
-      width: 58px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--white);
-      font-size: 20px;
-      font-weight: 900;
-      letter-spacing: -.08em;
-    }
     .track-chip {
       position: absolute;
-      top: 24px;
-      left: 58px;
+      top: 16px;
+      left: 16px;
       z-index: 2;
-      min-width: 132px;
-      max-width: min(260px, calc(100% - 84px));
-      min-height: 32px;
+      max-width: calc(100% - 32px);
+      min-height: 34px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       border-radius: 999px;
-      background: rgba(214, 214, 214, .86);
+      border: 1px solid rgba(0, 230, 255, .42);
+      background: rgba(10, 15, 30, .86);
       color: var(--white);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, .28);
       font-family: "Space Grotesk", sans-serif;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 800;
-      letter-spacing: .07em;
+      letter-spacing: .06em;
+      line-height: 1.15;
+      padding: 0 16px;
+      text-align: center;
       text-transform: uppercase;
+      white-space: normal;
     }
     .event-body {
       padding: 22px 28px 28px;
@@ -446,13 +462,11 @@
       .event-card { border-radius: 8px; }
       .event-art { min-height: 205px; }
       .track-chip {
-        left: 58px;
-        min-width: 132px;
-        max-width: calc(100% - 84px);
+        left: 16px;
+        max-width: calc(100% - 32px);
         padding: 0 14px;
         font-size: 10px;
       }
-      .brand-chip { width: 58px; font-size: 22px; }
       .event-action { grid-template-columns: 1fr; }
       .partner-slot { width: 100%; }
       .partner-slot.empty { display: none; }
@@ -498,10 +512,9 @@
     <section class="event-grid wrap" id="all-events" aria-label="All upcoming events">
 
       <article class="event-card" id="virtual-events">
-        <a class="event-art" href="/ai-executive-readiness-online/" aria-label="View details for AI Executive Readiness">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-executive-readiness-online/" aria-label="View details for AI Executive Readiness">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-executive-readiness.webp" alt="" decoding="async">
           <span class="track-chip">Technology Strategy</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -520,10 +533,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-data-readiness-and-knowledge-strategy-online/" aria-label="View details for AI Data Readiness and Knowledge Strategy">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-data-readiness-and-knowledge-strategy-online/" aria-label="View details for AI Data Readiness and Knowledge Strategy">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-data-readiness-and-knowledge-strategy.webp" alt="" decoding="async">
           <span class="track-chip">Integration</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -542,10 +554,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-use-cases-that-survive-finance-online/" aria-label="View details for AI Use Cases That Survive Finance">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-use-cases-that-survive-finance-online/" aria-label="View details for AI Use Cases That Survive Finance">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-use-cases-that-survive-finance.webp" alt="" decoding="async">
           <span class="track-chip">Operations and Finance</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -564,10 +575,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-agents-automation-and-human-handoffs-online/" aria-label="View details for AI Agents, Automation, and Human Handoffs">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-agents-automation-and-human-handoffs-online/" aria-label="View details for AI Agents, Automation, and Human Handoffs">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-agents-automation-and-human-handoffs.webp" alt="" decoding="async">
           <span class="track-chip">Integration</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -586,10 +596,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-integration-and-workflow-online/" aria-label="View details for AI Integration and Workflow">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-integration-and-workflow-online/" aria-label="View details for AI Integration and Workflow">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-integration-and-workflow.webp" alt="" decoding="async">
           <span class="track-chip">Integration</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -608,10 +617,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-vendor-strategy-and-platform-decisions-online/" aria-label="View details for AI Vendor Strategy and Platform Decisions">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-vendor-strategy-and-platform-decisions-online/" aria-label="View details for AI Vendor Strategy and Platform Decisions">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-vendor-strategy-and-platform-decisions.webp" alt="" decoding="async">
           <span class="track-chip">Technology Strategy</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -630,10 +638,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-security-governance-and-trust-online/" aria-label="View details for AI Security, Governance, and Trust">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-security-governance-and-trust-online/" aria-label="View details for AI Security, Governance, and Trust">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-security-governance-and-trust.webp" alt="" decoding="async">
           <span class="track-chip">Security and Risk</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -652,10 +659,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-workforce-talent-and-change-adoption-online/" aria-label="View details for AI Workforce, Talent, and Change Adoption">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-workforce-talent-and-change-adoption-online/" aria-label="View details for AI Workforce, Talent, and Change Adoption">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-workforce-talent-and-change-adoption.webp" alt="" decoding="async">
           <span class="track-chip">Business Enablement</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -674,10 +680,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-operating-model-for-2027-online/" aria-label="View details for AI Operating Model for 2027">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-operating-model-for-2027-online/" aria-label="View details for AI Operating Model for 2027">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-operating-model-for-2027.webp" alt="" decoding="async">
           <span class="track-chip">Operations and Finance</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -696,10 +701,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-budgeting-and-investment-priorities-online/" aria-label="View details for AI Budgeting and Investment Priorities">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-budgeting-and-investment-priorities-online/" aria-label="View details for AI Budgeting and Investment Priorities">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-budgeting-and-investment-priorities.webp" alt="" decoding="async">
           <span class="track-chip">Operations and Finance</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -718,10 +722,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-workforce-readiness-and-change-leadership-online/" aria-label="View details for AI Workforce Readiness and Change Leadership">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-workforce-readiness-and-change-leadership-online/" aria-label="View details for AI Workforce Readiness and Change Leadership">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-workforce-readiness-and-change-leadership.webp" alt="" decoding="async">
           <span class="track-chip">Business Enablement</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -740,10 +743,9 @@
 
 
       <article class="event-card">
-        <a class="event-art" href="/ai-executive-operating-agenda-for-2027-online/" aria-label="View details for AI Executive Operating Agenda for 2027">
-          <span class="brand-chip">mojo</span>
+        <a class="event-art is-photo" href="/ai-executive-operating-agenda-for-2027-online/" aria-label="View details for AI Executive Operating Agenda for 2027">
+          <img class="event-photo" src="/assets/calendar/virtual/ai-executive-operating-agenda-for-2027.webp" alt="" decoding="async">
           <span class="track-chip">Technology Strategy</span>
-          <span class="image-slot">Image placeholder</span>
         </a>
         <div class="event-body">
           <span class="format-pill">Executive Research Council</span>
@@ -763,7 +765,6 @@
 
       <article class="event-card" id="live-events">
         <a class="event-art" href="/dallas/" aria-label="View details for Q1 Intelligence Brief Summit: Dallas">
-          <span class="brand-chip">mojo</span>
           <span class="track-chip">All Cohorts</span>
           <span class="image-slot">Image placeholder</span>
         </a>
@@ -786,7 +787,6 @@
 
       <article class="event-card" id="brief-events">
         <a class="event-art" href="/briefs/" aria-label="View details for Q2 Intelligence Brief Summit">
-          <span class="brand-chip">mojo</span>
           <span class="track-chip">All Cohorts</span>
           <span class="image-slot">Image placeholder</span>
         </a>
@@ -809,7 +809,6 @@
 
       <article class="event-card">
         <a class="event-art" href="/briefs/" aria-label="View details for Q3 Intelligence Brief Summit">
-          <span class="brand-chip">mojo</span>
           <span class="track-chip">All Cohorts</span>
           <span class="image-slot">Image placeholder</span>
         </a>
@@ -832,7 +831,6 @@
 
       <article class="event-card">
         <a class="event-art" href="/briefs/" aria-label="View details for Q4 Intelligence Brief Summit">
-          <span class="brand-chip">mojo</span>
           <span class="track-chip">All Cohorts</span>
           <span class="image-slot">Image placeholder</span>
         </a>
