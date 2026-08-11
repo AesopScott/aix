@@ -1,11 +1,133 @@
 /*
-  Intentionally non-invasive.
+  Shared brand lockup normalization.
 
-  This file remains linked from static pages for compatibility with the
-  prior brand-check pass, but it must not override page-level typography,
-  hero titles, nav styles, colors, layout, or responsive behavior.
-
-  The site pages should keep their authored art direction. Brand guidance
-  should be applied directly in page designs and assets, not through a
-  global CSS override.
+  Keep page art direction local, but standardize the MOJO AI Summits header
+  lockup to the partners page proportions across the static site.
 */
+
+.brand-lockup,
+.mojo-home-brand,
+.mojo-global-home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-lockup > img,
+.brand-lockup .brand-mark,
+.brand-lockup img.brand-mark,
+.mojo-home-brand-mark,
+.mojo-global-home-link .mojo-home-brand-mark {
+  width: auto !important;
+  height: 39px !important;
+  display: block;
+  filter: drop-shadow(0 0 18px rgba(0, 230, 255, .18));
+}
+
+.brand-lockup:hover > img,
+.brand-lockup:hover .brand-mark,
+.brand-lockup:hover img.brand-mark,
+.mojo-home-brand:hover .mojo-home-brand-mark,
+.mojo-global-home-link:hover .mojo-home-brand-mark {
+  transform: none !important;
+}
+
+.brand-divider,
+.brand-lockup .brand-divider,
+.mojo-home-brand-divider,
+.mojo-home-brand .mojo-home-brand-divider,
+.mojo-global-home-link .mojo-home-brand-divider {
+  width: 1px;
+  height: 35px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 230, 255, .9), transparent);
+  box-shadow: 0 0 14px rgba(0, 230, 255, .24);
+}
+
+.brand-name,
+.brand-lockup .brand-name,
+.mojo-home-brand-name,
+.mojo-home-brand .mojo-home-brand-name,
+.mojo-global-home-link .mojo-home-brand-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.brand-primary,
+.brand-name .brand-primary,
+.mojo-home-brand-primary,
+.mojo-home-brand-name .mojo-home-brand-primary,
+.mojo-global-home-link .mojo-home-brand-primary {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: .08em !important;
+  white-space: nowrap;
+  background: linear-gradient(90deg, #1175d8 0%, #00e6ff 82%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 18px rgba(0, 230, 255, .16);
+}
+
+.brand-secondary,
+.brand-name .brand-secondary,
+.mojo-home-brand-secondary,
+.mojo-home-brand-name .mojo-home-brand-secondary,
+.mojo-global-home-link .mojo-home-brand-secondary {
+  color: rgba(222, 235, 255, .82);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .38em !important;
+  padding-left: .38em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .brand-lockup,
+  .mojo-home-brand,
+  .mojo-global-home-link {
+    gap: 8px;
+  }
+
+  .brand-lockup > img,
+  .brand-lockup .brand-mark,
+  .brand-lockup img.brand-mark,
+  .mojo-home-brand-mark,
+  .mojo-global-home-link .mojo-home-brand-mark {
+    height: 34px !important;
+  }
+
+  .brand-divider,
+  .brand-lockup .brand-divider,
+  .mojo-home-brand-divider,
+  .mojo-home-brand .mojo-home-brand-divider,
+  .mojo-global-home-link .mojo-home-brand-divider {
+    height: 30px;
+  }
+
+  .brand-primary,
+  .brand-name .brand-primary,
+  .mojo-home-brand-primary,
+  .mojo-home-brand-name .mojo-home-brand-primary,
+  .mojo-global-home-link .mojo-home-brand-primary {
+    font-size: 20px;
+    letter-spacing: .03em !important;
+  }
+
+  .brand-secondary,
+  .brand-name .brand-secondary,
+  .mojo-home-brand-secondary,
+  .mojo-home-brand-name .mojo-home-brand-secondary,
+  .mojo-global-home-link .mojo-home-brand-secondary {
+    font-size: 9.5px;
+    letter-spacing: .32em !important;
+    padding-left: .32em;
+  }
+}
