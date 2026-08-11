@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Upcoming Events | MOJO AI Summits</title>
+  <title>Executive AI Calendar | MOJO AI Summits</title>
   <meta name="description" content="Upcoming MOJO AI Summits virtual and live events for executive AI leaders.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://mojoaisummits.com/calendar/">
-  <meta property="og:title" content="Upcoming Events | MOJO AI Summits">
+  <meta property="og:title" content="Executive AI Calendar | MOJO AI Summits">
   <meta property="og:description" content="Browse the MOJO AI Summits calendar for upcoming executive AI leadership sessions.">
   <meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
   <meta property="og:image:secure_url" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="MOJO AI Summits upcoming events">
+  <meta property="og:image:alt" content="MOJO AI Summits Executive AI Calendar">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Upcoming Events | MOJO AI Summits">
+  <meta name="twitter:title" content="Executive AI Calendar | MOJO AI Summits">
   <meta name="twitter:description" content="Browse the MOJO AI Summits calendar for upcoming executive AI leadership sessions.">
   <meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
   <link rel="icon" type="image/png" href="/assets/logo-badge.png">
@@ -31,13 +31,13 @@
       --blue: #1666FF;
       --cyan: #00E6FF;
       --white: #FFFFFF;
-      --page: #e7e7e7;
+      --page: #FFFFFF;
       --card: #ffffff;
-      --ink: #10131a;
-      --muted: #7d828a;
-      --line: #e1e2e5;
-      --soft: #f4f5f7;
-      --shadow: 0 22px 44px rgba(10, 15, 30, .12);
+      --ink: #0A0F1E;
+      --muted: rgba(27, 35, 51, .66);
+      --line: rgba(27, 35, 51, .14);
+      --soft: rgba(27, 35, 51, .04);
+      --shadow: 0 22px 44px rgba(10, 15, 30, .14);
       --ease: cubic-bezier(.22, 1, .36, 1);
     }
 
@@ -46,7 +46,8 @@
     body {
       margin: 0;
       color: var(--ink);
-      background: var(--page);
+      background:
+        linear-gradient(180deg, var(--white) 0%, rgba(27, 35, 51, .07) 100%);
       font-family: Inter, sans-serif;
       letter-spacing: 0;
       -webkit-font-smoothing: antialiased;
@@ -55,7 +56,7 @@
     p, h1, h2, h3 { margin: 0; }
 
     .wrap {
-      width: min(1728px, calc(100% - 64px));
+      width: min(1296px, calc(100% - clamp(72px, 10vw, 176px)));
       margin: 0 auto;
     }
 
@@ -155,7 +156,7 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      color: #59606b;
+      color: var(--blue);
       font-family: "Space Grotesk", sans-serif;
       font-size: 11px;
       font-weight: 800;
@@ -174,7 +175,7 @@
     .hero p {
       max-width: 650px;
       margin-top: 18px;
-      color: #646a73;
+      color: rgba(27, 35, 51, .76);
       font-size: 17px;
       line-height: 1.62;
     }
@@ -189,11 +190,11 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid #b7bbc2;
+      border: 1px solid rgba(27, 35, 51, .26);
       border-radius: 999px;
       padding: 0 20px;
-      color: #4f5662;
-      background: rgba(255, 255, 255, .46);
+      color: var(--slate);
+      background: rgba(255, 255, 255, .78);
       font-family: "Space Grotesk", sans-serif;
       font-size: 12px;
       font-weight: 700;
@@ -211,7 +212,7 @@
     .event-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 36px;
+      gap: 28px;
       padding-bottom: clamp(56px, 8vw, 112px);
     }
     .event-card {
@@ -221,15 +222,21 @@
       background: var(--card);
       box-shadow: var(--shadow);
       display: grid;
-      grid-template-rows: auto minmax(336px, 1fr) auto;
+      grid-template-rows: auto auto auto;
     }
     .event-art {
       position: relative;
-      min-height: 265px;
+      display: block;
+      min-height: 200px;
       overflow: hidden;
+      color: inherit;
       background:
         linear-gradient(145deg, rgba(10, 15, 30, .96), rgba(27, 35, 51, .92)),
         radial-gradient(circle at 76% 18%, rgba(0, 230, 255, .26), transparent 34%);
+    }
+    .event-art:focus-visible {
+      outline: 3px solid var(--cyan);
+      outline-offset: -3px;
     }
     .event-art::before {
       content: "";
@@ -270,22 +277,23 @@
       left: 0;
       top: 16px;
       z-index: 2;
-      width: 72px;
+      width: 58px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       color: var(--white);
-      font-size: 25px;
+      font-size: 20px;
       font-weight: 900;
       letter-spacing: -.08em;
     }
     .track-chip {
       position: absolute;
-      top: 31px;
-      left: 72px;
+      top: 24px;
+      left: 58px;
       z-index: 2;
-      min-width: 156px;
-      min-height: 36px;
+      min-width: 132px;
+      max-width: min(260px, calc(100% - 84px));
+      min-height: 32px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -293,83 +301,83 @@
       background: rgba(214, 214, 214, .86);
       color: var(--white);
       font-family: "Space Grotesk", sans-serif;
-      font-size: 17px;
+      font-size: 11px;
       font-weight: 800;
       letter-spacing: .07em;
       text-transform: uppercase;
     }
     .event-body {
-      padding: 28px 36px 34px;
+      padding: 22px 28px 28px;
       display: flex;
       flex-direction: column;
       min-width: 0;
     }
     .format-pill {
       width: fit-content;
-      min-width: 130px;
-      min-height: 38px;
+      min-width: 0;
+      min-height: 34px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       border: 1px solid #74777c;
       border-radius: 999px;
-      padding: 0 22px;
+      padding: 0 18px;
       color: #5e636b;
       font-family: "Space Grotesk", sans-serif;
-      font-size: 18px;
+      font-size: 11px;
       font-weight: 600;
-      letter-spacing: .04em;
+      letter-spacing: .035em;
       text-transform: uppercase;
     }
     .event-card h2 {
-      margin-top: 31px;
+      margin-top: 24px;
       color: #070a10;
-      font-size: clamp(26px, 1.85vw, 32px);
+      font-size: clamp(20px, 1.4vw, 25px);
       font-weight: 900;
       line-height: 1.24;
       text-transform: uppercase;
       overflow-wrap: anywhere;
     }
     .event-meta {
-      margin-top: 32px;
+      margin-top: 25px;
       display: grid;
       gap: 13px;
       color: var(--muted);
-      font-size: 24px;
+      font-size: 18px;
       line-height: 1.22;
     }
     .event-meta span {
       display: grid;
-      grid-template-columns: 22px minmax(0, 1fr);
-      gap: 12px;
+      grid-template-columns: 18px minmax(0, 1fr);
+      gap: 10px;
       align-items: start;
     }
     .event-meta svg {
-      width: 22px;
-      height: 22px;
+      width: 18px;
+      height: 18px;
       margin-top: 2px;
       stroke: currentColor;
       stroke-width: 1.7;
       fill: none;
     }
     .event-action {
-      min-height: 98px;
+      min-height: 74px;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 18px;
       align-items: center;
       border-top: 1px solid var(--line);
-      padding: 20px 36px 28px;
+      padding: 16px 28px 20px;
     }
     .learn-more {
       color: #070a10;
-      font-size: 23px;
+      font-size: 19px;
       font-weight: 900;
       line-height: 1.1;
     }
     .partner-slot {
-      min-width: 150px;
-      min-height: 58px;
+      min-width: 126px;
+      min-height: 46px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -377,7 +385,7 @@
       background: var(--soft);
       color: #8b9099;
       font-family: "Space Grotesk", sans-serif;
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 700;
       letter-spacing: .12em;
       text-transform: uppercase;
@@ -387,9 +395,9 @@
     }
 
     footer {
-      border-top: 1px solid #d4d6da;
+      border-top: 1px solid var(--line);
       padding: 28px 0 36px;
-      color: #717782;
+      color: var(--muted);
       font-size: 13px;
     }
     footer .wrap {
@@ -406,7 +414,7 @@
 
     @media (max-width: 1280px) {
       .event-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .event-card { grid-template-rows: auto minmax(300px, 1fr) auto; }
+      .event-card { grid-template-rows: auto auto auto; }
     }
     @media (max-width: 860px) {
       .wrap {
@@ -437,7 +445,13 @@
       }
       .event-card { border-radius: 8px; }
       .event-art { min-height: 205px; }
-      .track-chip { left: 58px; min-width: 138px; font-size: 14px; }
+      .track-chip {
+        left: 58px;
+        min-width: 132px;
+        max-width: calc(100% - 84px);
+        padding: 0 14px;
+        font-size: 10px;
+      }
       .brand-chip { width: 58px; font-size: 22px; }
       .event-action { grid-template-columns: 1fr; }
       .partner-slot { width: 100%; }
@@ -470,7 +484,7 @@
     <section class="hero wrap">
       <div>
         <span class="eyebrow">Upcoming events</span>
-        <h1>Executive AI calendar</h1>
+        <h1>Executive AI Calendar</h1>
         <p>Browse the current MOJO AI Summits schedule for invitation-only virtual rooms, city summits, and intelligence brief events.</p>
       </div>
       <div class="attendee-tabs" aria-label="Calendar categories">
@@ -484,13 +498,13 @@
     <section class="event-grid wrap" id="all-events" aria-label="All upcoming events">
 
       <article class="event-card" id="virtual-events">
-        <div class="event-art">
+        <a class="event-art" href="/ai-executive-readiness-online/" aria-label="View details for AI Executive Readiness">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Technology Strategy</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Executive Readiness</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>4 September 2026</span>
@@ -506,13 +520,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-data-readiness-and-knowledge-strategy-online/" aria-label="View details for AI Data Readiness and Knowledge Strategy">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Integration</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Data Readiness and Knowledge Strategy</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>18 September 2026</span>
@@ -528,13 +542,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-use-cases-that-survive-finance-online/" aria-label="View details for AI Use Cases That Survive Finance">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Operations and Finance</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Use Cases That Survive Finance</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>25 September 2026</span>
@@ -550,13 +564,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-agents-automation-and-human-handoffs-online/" aria-label="View details for AI Agents, Automation, and Human Handoffs">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Integration</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Agents, Automation, and Human Handoffs</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>9 October 2026</span>
@@ -572,13 +586,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-integration-and-workflow-online/" aria-label="View details for AI Integration and Workflow">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Integration</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Integration and Workflow</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>16 October 2026</span>
@@ -594,13 +608,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-vendor-strategy-and-platform-decisions-online/" aria-label="View details for AI Vendor Strategy and Platform Decisions">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Technology Strategy</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Vendor Strategy and Platform Decisions</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>30 October 2026</span>
@@ -616,13 +630,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-security-governance-and-trust-online/" aria-label="View details for AI Security, Governance, and Trust">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Security and Risk</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Security, Governance, and Trust</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>6 November 2026</span>
@@ -638,13 +652,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-workforce-talent-and-change-adoption-online/" aria-label="View details for AI Workforce, Talent, and Change Adoption">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Business Enablement</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Workforce, Talent, and Change Adoption</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>20 November 2026</span>
@@ -660,13 +674,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-operating-model-for-2027-online/" aria-label="View details for AI Operating Model for 2027">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Operations and Finance</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Operating Model for 2027</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>27 November 2026</span>
@@ -682,13 +696,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-budgeting-and-investment-priorities-online/" aria-label="View details for AI Budgeting and Investment Priorities">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Operations and Finance</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Budgeting and Investment Priorities</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>4 December 2026</span>
@@ -704,13 +718,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-workforce-readiness-and-change-leadership-online/" aria-label="View details for AI Workforce Readiness and Change Leadership">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Business Enablement</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Workforce Readiness and Change Leadership</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>18 December 2026</span>
@@ -726,13 +740,13 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/ai-executive-operating-agenda-for-2027-online/" aria-label="View details for AI Executive Operating Agenda for 2027">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">Technology Strategy</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
-          <span class="format-pill">Roundtable</span>
+          <span class="format-pill">Executive Research Council</span>
           <h2>AI Executive Operating Agenda for 2027</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>8 January 2027</span>
@@ -748,11 +762,11 @@
 
 
       <article class="event-card" id="live-events">
-        <div class="event-art">
+        <a class="event-art" href="/dallas/" aria-label="View details for Q1 Intelligence Brief Summit: Dallas">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">All Cohorts</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
           <span class="format-pill">Live</span>
           <h2>Q1 Intelligence Brief Summit: Dallas</h2>
@@ -771,11 +785,11 @@
 
 
       <article class="event-card" id="brief-events">
-        <div class="event-art">
+        <a class="event-art" href="/briefs/" aria-label="View details for Q2 Intelligence Brief Summit">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">All Cohorts</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
           <span class="format-pill">Live</span>
           <h2>Q2 Intelligence Brief Summit</h2>
@@ -794,11 +808,11 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/briefs/" aria-label="View details for Q3 Intelligence Brief Summit">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">All Cohorts</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
           <span class="format-pill">Live</span>
           <h2>Q3 Intelligence Brief Summit</h2>
@@ -817,11 +831,11 @@
 
 
       <article class="event-card">
-        <div class="event-art">
+        <a class="event-art" href="/briefs/" aria-label="View details for Q4 Intelligence Brief Summit">
           <span class="brand-chip">mojo</span>
-          <span class="track-chip">Business</span>
+          <span class="track-chip">All Cohorts</span>
           <span class="image-slot">Image placeholder</span>
-        </div>
+        </a>
         <div class="event-body">
           <span class="format-pill">Live</span>
           <h2>Q4 Intelligence Brief Summit</h2>
