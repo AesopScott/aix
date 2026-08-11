@@ -24,10 +24,30 @@ const DEFAULT_PHOTOS = {
   charlie: "/assets/images/charlie.png",
   gina: "/assets/images/gina.png",
   jodi: "/assets/images/jodi.png",
+  miller: "",
   robert: "/assets/images/robert.png",
   ron: "/assets/images/ron.png",
   scott: "/assets/images/scott-pro3-6.png"
 };
+const DEFAULT_EMPLOYEES = [
+  {
+    slug: "miller",
+    email: "miller@mojoaisummits.com",
+    name: "Miller",
+    title: "Strategic Partner",
+    bio: "Miller supports Mojo AI Summits partner relationships, sponsorship opportunities, and executive event growth.",
+    timezone: "America/Chicago",
+    meetingTypes: [
+      {
+        id: "intro",
+        label: "Intro call",
+        durationMinutes: 30,
+        description: "Inviting distinguished guests to experience Mojo AI Summit's Executive Intelligence Network",
+        location: "Zoom"
+      }
+    ]
+  }
+];
 const WINDOWS_TIMEZONE_MAP = {
   "Dateline Standard Time": "Etc/GMT+12",
   "UTC-11": "Etc/GMT+11",
@@ -458,6 +478,11 @@ export function sanitizeEmployee(input = {}) {
   };
 }
 
+function defaultEmployee(slug) {
+  const template = DEFAULT_EMPLOYEES.find((employee) => employee.slug === cleanSlug(slug));
+  return template ? sanitizeEmployee(template) : null;
+}
+
 export async function listEmployees(env, { includeInactive = false } = {}) {
   const ids = await getStoredJson(env, TEAM_INDEX_KEY);
   const employees = await Promise.all(
@@ -465,7 +490,16 @@ export async function listEmployees(env, { includeInactive = false } = {}) {
       getStoredJson(env, `${EMPLOYEE_PREFIX}${slug}`)
     )
   );
-  return employees
+  const bySlug = new Map(
+    DEFAULT_EMPLOYEES
+      .map((employee) => defaultEmployee(employee.slug))
+      .filter(Boolean)
+      .map((employee) => [employee.slug, employee])
+  );
+  employees.filter(Boolean).forEach((employee) => {
+    bySlug.set(employee.slug, employee);
+  });
+  return [...bySlug.values()]
     .filter((employee) => employee && (includeInactive || employee.active !== false))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -473,7 +507,7 @@ export async function listEmployees(env, { includeInactive = false } = {}) {
 export async function getEmployee(env, slug) {
   const clean = cleanSlug(slug);
   if (!clean) return null;
-  return getStoredJson(env, `${EMPLOYEE_PREFIX}${clean}`);
+  return (await getStoredJson(env, `${EMPLOYEE_PREFIX}${clean}`)) || defaultEmployee(clean);
 }
 
 async function connectionIds(env, employeeSlug) {
