@@ -34,6 +34,9 @@ All sessions run from 1:00 PM to 2:30 PM Central.
 7. AI Security, Governance, and Trust
 8. AI Workforce, Talent, and Change Adoption
 9. AI Operating Model for 2027
+10. AI Budgeting and Investment Priorities
+11. AI Workforce Readiness and Change Leadership
+12. AI Executive Operating Agenda for 2027
 
 ## Repeatable Scaffold
 

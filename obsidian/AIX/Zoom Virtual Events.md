@@ -7,9 +7,13 @@ MOJO AI Summits now has a Cloudflare-native scaffold for twelve 2026-2027 Zoom-b
 ## Event Share Routes
 
 - `/virtual/ai-executive-readiness.php`
+- `/virtual/ai-data-readiness-and-knowledge-strategy.php`
 - `/virtual/ai-use-cases-that-survive-finance.php`
+- `/virtual/ai-agents-automation-and-human-handoffs.php`
 - `/virtual/ai-integration-and-workflow.php`
+- `/virtual/ai-vendor-strategy-and-platform-decisions.php`
 - `/virtual/ai-security-governance-and-trust.php`
+- `/virtual/ai-workforce-talent-and-change-adoption.php`
 - `/virtual/ai-operating-model-for-2027.php`
 - `/virtual/ai-budgeting-and-investment-priorities.php`
 - `/virtual/ai-workforce-readiness-and-change-leadership.php`
