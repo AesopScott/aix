@@ -194,6 +194,14 @@
       display: inline-block;
     }
 
+    .legend-dot.complete {
+      background: var(--complete-green);
+    }
+
+    .legend-dot.overdue {
+      background: var(--overdue-red);
+    }
+
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -381,7 +389,7 @@
 
     <div class="controls">
       <div class="control-field">
-        <label class="control-label" for="ownerSelect">Show items for</label>
+        <label class="control-label" for="ownerSelect">Owner</label>
         <select class="owner-select" id="ownerSelect"></select>
       </div>
 
@@ -623,16 +631,19 @@
 
     function renderLegend() {
       const owners = view.owner === "All" ? editableOwners : [view.owner];
-      document.getElementById("legend").innerHTML = owners.map((owner) => `
+      const statusLegend = `
+        <span class="legend-item"><span class="legend-dot complete"></span>Complete</span>
+        <span class="legend-item"><span class="legend-dot overdue"></span>Overdue</span>
+      `;
+      const ownerLegend = owners.map((owner) => `
         <span class="legend-item"><span class="legend-dot ${ownerClass(owner)}"></span>${escapeHtml(owner)}</span>
       `).join("");
+      document.getElementById("legend").innerHTML = statusLegend + ownerLegend;
     }
 
     function itemsForOwner() {
       if (view.owner === "All") return allItems;
-      return allItems.filter((item) =>
-        ownerNames(item.owner).includes(view.owner) || ownerNames(item.support).includes(view.owner)
-      );
+      return allItems.filter((item) => ownerNames(item.owner).includes(view.owner));
     }
 
     function itemsByDate() {
@@ -652,8 +663,7 @@
     }
 
     function chipHtml(item) {
-      const isOwner = view.owner !== "All" && ownerNames(item.owner).includes(view.owner);
-      const badgeOwner = view.owner === "All" ? item.owner : (isOwner ? item.owner : `Support: ${item.owner}`);
+      const badgeOwner = item.owner;
       const stateClass = calendarStateClass(item);
       return `
         <span class="day-chip ${ownerClass(item.owner)} ${stateClass}" title="${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">

@@ -286,12 +286,12 @@
 
     .date-filter-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 6px;
     }
 
-    .date-clear-btn {
-      width: 38px;
+    .date-clear-btn,
+    .date-missing-btn {
       min-height: 38px;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -301,8 +301,24 @@
       font-weight: 900;
     }
 
-    .date-clear-btn:hover {
+    .date-clear-btn {
+      width: 38px;
+    }
+
+    .date-missing-btn {
+      padding: 0 10px;
+      white-space: nowrap;
+    }
+
+    .date-clear-btn:hover,
+    .date-missing-btn:hover,
+    .date-missing-btn.active {
       border-color: var(--cyan);
+    }
+
+    .date-missing-btn.active {
+      background: var(--electric-blue);
+      color: var(--white);
     }
 
     .segmented {
@@ -990,6 +1006,7 @@
           <label class="control-label" for="dateFilter">Expected Delivery Date</label>
           <div class="date-filter-row">
             <input class="filter-date" id="dateFilter" type="date">
+            <button class="date-missing-btn" id="missingDateFilter" type="button">No due date</button>
             <button class="date-clear-btn" id="clearDateFilter" type="button" aria-label="Clear date filter">×</button>
           </div>
         </div>
@@ -1023,7 +1040,7 @@
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
 Date: 2026-08-11
-Version: 3.14
+Version: 3.15
 Category: event operations
 
 ## Purpose
@@ -1629,6 +1646,7 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.15 - Added a no-due-date filter for setup items missing delivery dates.
 - 3.14 - Simplified priority options to Immediate, High, Medium, and Low.
 - 3.13 - Added manually editable autosaved notes to each setup item.
 - 3.12 - Changed support filtering to checkbox toggles for multi-person support assignments.
@@ -1709,6 +1727,7 @@ The following decisions should not be made by one owner alone:
     const customInboxSubsection = "Quick Adds";
     const sharedStateEndpoint = "/api/setup-state";
     const sharedSyncIntervalMs = 5000;
+    const noDueDateFilterValue = "__NO_DUE_DATE__";
     let lastSharedUpdatedAt = "";
     let sharedSyncTimer = null;
     const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status", "notes"];
@@ -2793,7 +2812,8 @@ The following decisions should not be made by one owner alone:
         </label>
       `).join("");
 
-      document.getElementById("dateFilter").value = state.dueDate;
+      document.getElementById("dateFilter").value = state.dueDate === noDueDateFilterValue ? "" : state.dueDate;
+      document.getElementById("missingDateFilter").classList.toggle("active", state.dueDate === noDueDateFilterValue);
 
       document.querySelectorAll(".filter-btn").forEach((button) => {
         button.addEventListener("click", () => {
@@ -2845,7 +2865,8 @@ The following decisions should not be made by one owner alone:
         );
         const priorityOk = state.priority === "All" ||
           (state.priority === "No priority" ? !item.dataset.priority : item.dataset.priority === state.priority);
-        const dateOk = !state.dueDate || item.dataset.dueDate === state.dueDate;
+        const dateOk = !state.dueDate ||
+          (state.dueDate === noDueDateFilterValue ? !item.dataset.dueDate : item.dataset.dueDate === state.dueDate);
         const statusVisible = state.visibleStatuses[item.dataset.status] !== false;
         const statusOk = statusVisible && (state.status === "All" || item.dataset.status === state.status);
         const searchOk = !query || item.dataset.search.includes(query);
@@ -2895,12 +2916,21 @@ The following decisions should not be made by one owner alone:
 
     document.getElementById("dateFilter").addEventListener("change", (event) => {
       state.dueDate = event.target.value;
+      document.getElementById("missingDateFilter").classList.remove("active");
+      renderFilters();
+      applyFilters();
+    });
+
+    document.getElementById("missingDateFilter").addEventListener("click", () => {
+      state.dueDate = state.dueDate === noDueDateFilterValue ? "" : noDueDateFilterValue;
+      renderFilters();
       applyFilters();
     });
 
     document.getElementById("clearDateFilter").addEventListener("click", () => {
       state.dueDate = "";
       document.getElementById("dateFilter").value = "";
+      document.getElementById("missingDateFilter").classList.remove("active");
       applyFilters();
     });
 
