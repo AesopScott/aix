@@ -259,6 +259,16 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/virtual", "mojoaisummits.com/virtual/*"]
   },
   {
+    id: "calendar",
+    kind: "page",
+    group: "Public",
+    label: "Calendar",
+    summary: "Public attendee calendar listing upcoming Mojo AI Summits events.",
+    mode: "public",
+    matches: [{ exact: "/calendar" }, { prefix: "/calendar/" }],
+    domains: ["mojoaisummits.com/calendar", "mojoaisummits.com/calendar/*"]
+  },
+  {
     id: "membership",
     kind: "page",
     group: "Public",
