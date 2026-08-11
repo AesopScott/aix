@@ -7,9 +7,13 @@ MOJO AI Summits is scaffolding twelve 2026-2027 virtual AI events as a lead-in t
 ## Dates
 
 - Friday, September 4, 2026
+- Friday, September 18, 2026
 - Friday, September 25, 2026
+- Friday, October 9, 2026
 - Friday, October 16, 2026
+- Friday, October 30, 2026
 - Friday, November 6, 2026
+- Friday, November 20, 2026
 - Friday, November 27, 2026
 - Friday, December 4, 2026
 - Friday, December 18, 2026
@@ -20,13 +24,34 @@ All sessions run from 1:00 PM to 2:30 PM Central.
 ## Working Arc
 
 1. AI Executive Readiness
-2. AI Use Cases That Survive Finance
-3. AI Integration and Workflow
-4. AI Security, Governance, and Trust
-5. AI Operating Model for 2027
-6. AI Budgeting and Investment Priorities
-7. AI Workforce Readiness and Change Leadership
-8. AI Executive Operating Agenda for 2027
+2. AI Data Readiness and Knowledge Strategy
+3. AI Use Cases That Survive Finance
+4. AI Agents, Automation, and Human Handoffs
+5. AI Integration and Workflow
+6. AI Vendor Strategy and Platform Decisions
+7. AI Security, Governance, and Trust
+8. AI Workforce, Talent, and Change Adoption
+9. AI Operating Model for 2027
+10. AI Budgeting and Investment Priorities
+11. AI Workforce Readiness and Change Leadership
+12. AI Executive Operating Agenda for 2027
+
+## Draft Cohort Mapping
+
+- AI Executive Readiness: Technology Strategy
+- AI Data Readiness and Knowledge Strategy: Integration
+- AI Use Cases That Survive Finance: Operations and Finance
+- AI Agents, Automation, and Human Handoffs: Integration
+- AI Integration and Workflow: Integration
+- AI Vendor Strategy and Platform Decisions: Technology Strategy
+- AI Security, Governance, and Trust: Security and Risk
+- AI Workforce, Talent, and Change Adoption: Business Enablement
+- AI Operating Model for 2027: Operations and Finance
+- AI Budgeting and Investment Priorities: Operations and Finance
+- AI Workforce Readiness and Change Leadership: Business Enablement
+- AI Executive Operating Agenda for 2027: Technology Strategy
+
+These mappings are a first-pass classification against the six home-page cohorts: Business Enablement, Innovation, Integration, Security and Risk, Operations and Finance, and Technology Strategy. Scott should review and adjust before the mapping becomes canonical.
 
 ## Implementation Notes
 
