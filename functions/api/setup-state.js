@@ -5,7 +5,7 @@ const jsonHeaders = {
   "cache-control": "no-store"
 };
 
-const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status"];
+const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status", "notes"];
 const customItemFields = ["id", "text", "phase", "subsection"];
 
 function json(data, init = {}) {
