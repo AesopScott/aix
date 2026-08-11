@@ -188,7 +188,7 @@
     }
     .filter-label {
       min-width: 78px;
-      color: rgba(27, 35, 51, .72);
+      color: var(--slate);
       font-family: "Space Grotesk", sans-serif;
       font-size: 11px;
       font-weight: 800;
@@ -200,11 +200,12 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid rgba(27, 35, 51, .26);
+      border: 1px solid rgba(0, 230, 255, .28);
       border-radius: 999px;
       padding: 0 20px;
-      color: var(--slate);
-      background: rgba(255, 255, 255, .78);
+      color: var(--white);
+      background: var(--slate);
+      box-shadow: 0 10px 22px rgba(10, 15, 30, .12);
       font-family: "Space Grotesk", sans-serif;
       font-size: 12px;
       font-weight: 700;
@@ -216,12 +217,16 @@
     }
     .filter-button[aria-pressed="true"],
     .filter-button:hover {
-      border-color: var(--navy);
+      border-color: rgba(0, 230, 255, .72);
       color: var(--white);
-      background: var(--navy);
+      background: var(--blue);
     }
     .filter-button[aria-pressed="true"] {
-      box-shadow: 0 12px 24px rgba(10, 15, 30, .16);
+      box-shadow: 0 14px 28px rgba(22, 102, 255, .24);
+    }
+    .filter-button:focus-visible {
+      outline: 3px solid rgba(0, 230, 255, .72);
+      outline-offset: 3px;
     }
 
     .event-grid {
