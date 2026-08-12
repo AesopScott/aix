@@ -166,6 +166,7 @@ const allowedTopicTracks = new Set([
 ]);
 const maxFieldLength = 2000;
 const guestInviteEmailCc = ["angel@mojoaisummits.com", "scott@mojoaisummits.com"];
+const EMAIL_LOG_PREFIX = "crm:email-log:";
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -300,6 +301,34 @@ function cleanGuestRegistrationType(value) {
   }[cleanString(value, 80).toLowerCase()] || "guest";
 }
 
+function cleanEventShowId(value, fallback = "both") {
+  const normalized = cleanString(value, 80).toLowerCase();
+  if (["morning", "am", "10", "10am", "10:00"].includes(normalized)) return "morning";
+  if (["afternoon", "pm", "1", "1pm", "13:00", "1:00"].includes(normalized)) return "afternoon";
+  if (["both", "all", "both-shows"].includes(normalized)) return "both";
+  return fallback;
+}
+
+function eventShowLabel(showId) {
+  return {
+    morning: "Morning show",
+    afternoon: "Afternoon show",
+    both: "Both shows"
+  }[cleanEventShowId(showId)] || "Both shows";
+}
+
+function eventShowTime(showId) {
+  return {
+    morning: "10:00 am - 11:30 am CT",
+    afternoon: "1:00 pm - 2:30 pm CT",
+    both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
+  }[cleanEventShowId(showId)] || "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT";
+}
+
+function eventShowKey(record = {}) {
+  return cleanEventShowId(record.eventShowId || record.showId || record.eventShow || record.show, "");
+}
+
 function randomInviteCode() {
   return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
 }
@@ -329,6 +358,10 @@ function normalizeRecord(key, record) {
     eventSlug: cleanString(record?.eventSlug),
     eventName: cleanString(record?.eventName),
     eventDate: cleanString(record?.eventDate),
+    eventTime: cleanString(record?.eventTime),
+    eventShowId: cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, ""),
+    eventShowLabel: cleanString(record?.eventShowLabel) || (record?.eventShowId ? eventShowLabel(record.eventShowId) : ""),
+    eventShowTime: cleanString(record?.eventShowTime) || cleanString(record?.eventTime),
     intendedGuestName: invitePersonName(record),
     intendedGuestEmail: invitePersonEmail(record),
     invitedEmail: invitePersonEmail(record),
@@ -376,6 +409,8 @@ function normalizeContactRecord(key, record = {}) {
   const contactStatus = contactStatusFromRegistration(latestEvent.registrationType || record.registrationType || record.source);
   const fullName = cleanString(record.name) || email;
   const fallbackName = splitName(fullName);
+  const publicationUseName = record.publicationUseName === true || sortedEvents.some((event) => event?.publicationUseName === true);
+  const publicationUseCompany = record.publicationUseCompany === true || sortedEvents.some((event) => event?.publicationUseCompany === true);
   return {
     key,
     id: email,
@@ -417,7 +452,11 @@ function normalizeContactRecord(key, record = {}) {
     crmUpdatedAt: cleanString(record.crmUpdatedAt),
     crmUpdatedBy: cleanString(record.crmUpdatedBy),
     contactStatus,
-    publicationCount: Number.isFinite(Number(record.publicationCount)) ? Number(record.publicationCount) : 0,
+    publicationUseName,
+    publicationUseCompany,
+    publicationCount: Number.isFinite(Number(record.publicationCount))
+      ? Number(record.publicationCount)
+      : [publicationUseName, publicationUseCompany].filter(Boolean).length,
     companyKey: cleanString(record.companyKey),
     companySlug: cleanString(record.companySlug),
     profileKey: cleanString(record.profileKey),
@@ -432,6 +471,10 @@ function normalizeContactRecord(key, record = {}) {
       eventSlug: cleanString(event?.eventSlug),
       eventName: cleanString(event?.eventName),
       eventDate: cleanString(event?.eventDate),
+      eventTime: cleanString(event?.eventTime),
+      eventShowId: cleanEventShowId(event?.eventShowId || event?.showId || event?.eventShow, ""),
+      eventShowLabel: cleanString(event?.eventShowLabel) || (event?.eventShowId ? eventShowLabel(event.eventShowId) : ""),
+      eventShowTime: cleanString(event?.eventShowTime) || cleanString(event?.eventTime),
       intendedGuestName: cleanString(event?.intendedGuestName || event?.invitedName || event?.guestName),
       invitedName: cleanString(event?.invitedName || event?.intendedGuestName || event?.guestName),
       guestRegistrationType: cleanGuestRegistrationType(event?.guestRegistrationType || event?.registrationRole),
@@ -443,6 +486,8 @@ function normalizeContactRecord(key, record = {}) {
       strategicRole: cleanAllowed(event?.strategicRole || event?.role || event?.registrationRole, allowedStrategicRoles, "attendee"),
       registrationStatus: cleanAllowed(event?.registrationStatus || event?.status || event?.crmStatus, allowedRegistrationStatuses, "confirmed"),
       status: cleanAllowed(event?.status || event?.registrationStatus || event?.crmStatus, allowedRegistrationStatuses, "confirmed"),
+      publicationUseName: event?.publicationUseName === true,
+      publicationUseCompany: event?.publicationUseCompany === true,
       attended: event?.attended === true,
       attendanceStatus: cleanString(event?.attendanceStatus) || "not_recorded",
       registeredAt: cleanString(event?.registeredAt)
@@ -606,6 +651,7 @@ function contactFromRegistrant(row = {}, type = "") {
   }
 
   const eventId = cleanString(row.eventId || row.eventSlug || row.eventName || row.inviteCode || row.id);
+  const rowShowId = cleanEventShowId(row.eventShowId || row.showId || row.eventShow, "");
   return normalizeContactRecord(`crm:contact:${email}`, {
     id: email,
     email,
@@ -617,6 +663,8 @@ function contactFromRegistrant(row = {}, type = "") {
     source: cleanString(row.source || `${type}-registration`),
     registrationId: cleanString(row.id),
     registrationType: cleanString(type),
+    publicationUseName: row.publicationUseName === true,
+    publicationUseCompany: row.publicationUseCompany === true,
     createdAt: cleanString(row.createdAt),
     updatedAt: cleanString(row.createdAt),
     events: [{
@@ -625,12 +673,18 @@ function contactFromRegistrant(row = {}, type = "") {
       eventSlug: cleanString(row.eventSlug),
       eventName: cleanString(row.eventName) || eventId || "Registration",
       eventDate: cleanString(row.eventDate),
+      eventTime: cleanString(row.eventTime),
+      eventShowId: rowShowId,
+      eventShowLabel: cleanString(row.eventShowLabel) || (rowShowId ? eventShowLabel(rowShowId) : ""),
+      eventShowTime: cleanString(row.eventShowTime) || cleanString(row.eventTime),
       inviteCode: cleanString(row.inviteCode),
       registrationId: cleanString(row.id),
       registrationType: cleanString(type),
       guestRegistrationType: cleanGuestRegistrationType(row.guestRegistrationType || row.registrationRole),
       registrationRole: cleanGuestRegistrationType(row.registrationRole || row.guestRegistrationType),
       role: roleLabelForRow(row, type),
+      publicationUseName: row.publicationUseName === true,
+      publicationUseCompany: row.publicationUseCompany === true,
       registeredAt: cleanString(row.createdAt),
       attended: false,
       attendanceStatus: "not_recorded"
@@ -697,6 +751,9 @@ function mergeContactRows(storedRows, derivedRows) {
       topicInterests: Array.isArray(row.topicInterests) && row.topicInterests.length ? row.topicInterests : previous.topicInterests,
       activity: Array.isArray(row.activity) && row.activity.length ? row.activity : previous.activity,
       crmNotes: cleanString(row.crmNotes) || cleanString(previous.crmNotes),
+      publicationUseName: row.publicationUseName === true || previous.publicationUseName === true,
+      publicationUseCompany: row.publicationUseCompany === true || previous.publicationUseCompany === true,
+      publicationCount: Math.max(Number(row.publicationCount || 0), Number(previous.publicationCount || 0)),
       events: [...eventMap.values()]
     }));
   }
@@ -741,6 +798,26 @@ function normalizeDebugEntry(key, record = {}) {
   };
 }
 
+function normalizeEmailLogEntry(key, record = {}) {
+  return {
+    key,
+    id: cleanString(record.id || key.replace(EMAIL_LOG_PREFIX, "")),
+    createdAt: cleanString(record.createdAt),
+    type: cleanString(record.type),
+    status: cleanString(record.status),
+    to: cleanString(record.to).toLowerCase(),
+    cc: cleanEmailList(record.cc || []),
+    subject: cleanString(record.subject, 300),
+    inviteKey: cleanString(record.inviteKey),
+    inviteCode: cleanCode(record.inviteCode),
+    eventSlug: cleanString(record.eventSlug),
+    eventName: cleanString(record.eventName),
+    actor: cleanString(record.actor),
+    messageId: cleanString(record.messageId),
+    error: cleanString(record.error)
+  };
+}
+
 async function readRawRecord(env, key) {
   return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
 }
@@ -756,7 +833,8 @@ async function registrationDiagnostics(env) {
     member: 0,
     partner: 0,
     missingContacts: 0,
-    debugAttempts: 0
+    debugAttempts: 0,
+    emailAttempts: 0
   };
 
   for (const type of ["guest", "member", "partner"]) {
@@ -806,13 +884,25 @@ async function registrationDiagnostics(env) {
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   counts.debugAttempts = debugAttempts.length;
 
+  const emailKeys = await listKeys(env, EMAIL_LOG_PREFIX);
+  const emailAttempts = (await Promise.all(
+    emailKeys.map(async (key) => {
+      const record = await readRawRecord(env, key);
+      return record ? normalizeEmailLogEntry(key, record) : null;
+    })
+  ))
+    .filter(Boolean)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  counts.emailAttempts = emailAttempts.length;
+
   return {
     ok: true,
     generatedAt,
     counts,
     latestRegistrations: registrationRows.slice(0, 40),
     missingContacts: missingContacts.slice(0, 40),
-    debugAttempts: debugAttempts.slice(0, 40)
+    debugAttempts: debugAttempts.slice(0, 40),
+    emailAttempts: emailAttempts.slice(0, 40)
   };
 }
 
@@ -874,6 +964,10 @@ function normalizeInviteCode(key, record) {
     eventSlug: cleanString(record?.eventSlug),
     eventName: cleanString(record?.eventName),
     eventDate: cleanString(record?.eventDate),
+    eventTime: cleanString(record?.eventTime),
+    eventShowId: cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, ""),
+    eventShowLabel: cleanString(record?.eventShowLabel) || (record?.eventShowId ? eventShowLabel(record.eventShowId) : ""),
+    eventShowTime: cleanString(record?.eventShowTime) || cleanString(record?.eventTime),
     intendedGuestName: invitePersonName(record),
     intendedGuestEmail: invitePersonEmail(record),
     invitedEmail: invitePersonEmail(record),
@@ -909,7 +1003,9 @@ async function enrichInviteUsage(env, invites, types = ["member", "guest", "part
       usedByName: cleanString(invite.usedByName || row?.name),
       usedByEmail: cleanString(invite.usedByEmail || row?.email || invite.usedBy).toLowerCase(),
       usedFor: cleanString(row?.eventName || invite.usedFor || invite.eventName),
-      usedForDate: cleanString(row?.eventDate || invite.usedForDate || invite.eventDate)
+      usedForDate: cleanString(row?.eventDate || invite.usedForDate || invite.eventDate),
+      usedForShow: cleanString(row?.eventShowLabel || invite.usedForShow || invite.eventShowLabel),
+      usedForTime: cleanString(row?.eventShowTime || row?.eventTime || invite.usedForTime || invite.eventShowTime || invite.eventTime)
     };
   });
 }
@@ -1006,6 +1102,8 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
 
   const eventSlug = cleanString(payload.eventSlug, 200);
   const eventName = cleanString(payload.eventName, 240);
+  const eventShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
+  const eventTime = eventShowTime(eventShowId);
   const rawGuestName = cleanString(
     payload.intendedGuestName || payload.invitedName || payload.guestName || payload.name,
     240
@@ -1028,10 +1126,14 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     type,
     code,
     status: "active",
-    eventId: cleanString(payload.eventId || eventSlug || eventName, 200),
+    eventId: cleanString(payload.eventId || `${eventSlug || eventName}:${eventShowId}`, 200),
     eventSlug,
     eventName,
     eventDate: cleanString(payload.eventDate, 120),
+    eventTime,
+    eventShowId,
+    eventShowLabel: eventShowLabel(eventShowId),
+    eventShowTime: eventTime,
     intendedGuestName,
     intendedGuestEmail,
     invitedEmail: intendedGuestEmail,
@@ -1199,6 +1301,15 @@ async function sendResendEmail(env, { to, subject, html, text, replyTo, cc = [] 
 
   const from = cleanString(env.MOJO_RESEND_FROM, 200) || "Angel Mosley <angel@mojoaisummits.com>";
   const ccList = cleanEmailList(cc, [to]);
+  const payload = {
+    from,
+    to: [to],
+    subject,
+    html,
+    text,
+    ...(ccList.length ? { cc: ccList } : {}),
+    ...(replyTo ? { reply_to: replyTo } : {})
+  };
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -1206,15 +1317,7 @@ async function sendResendEmail(env, { to, subject, html, text, replyTo, cc = [] 
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json"
     },
-    body: JSON.stringify({
-      from,
-      to: [to],
-      subject,
-      html,
-      text,
-      ...(ccList.length ? { cc: ccList } : {}),
-      ...(replyTo ? { reply_to: replyTo } : {})
-    })
+    body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
@@ -1222,7 +1325,12 @@ async function sendResendEmail(env, { to, subject, html, text, replyTo, cc = [] 
     throw new Error(payload?.message || "Resend could not send the reminder email.");
   }
 
-  return response.json().catch(() => ({}));
+  return {
+    ...(await response.json().catch(() => ({}))),
+    cc: ccList,
+    to,
+    subject
+  };
 }
 
 function inviteInvitationText({ firstName, eventName, eventDate, registrationUrl }) {
@@ -1279,7 +1387,7 @@ async function sendInviteInvitationEmail(env, invite, origin = "") {
   const registrationUrl = inviteRegistrationUrl(origin, invite);
 
   const context = { firstName, eventName, eventDate, registrationUrl };
-  await sendResendEmail(env, {
+  const result = await sendResendEmail(env, {
     to: toEmail,
     subject: `You’re Invited: ${eventName}`,
     html: inviteInvitationHtml(context),
@@ -1288,7 +1396,7 @@ async function sendInviteInvitationEmail(env, invite, origin = "") {
     cc: guestInviteEmailCc
   });
 
-  return { sentTo: toEmail };
+  return { sentTo: toEmail, cc: result.cc || [], messageId: cleanString(result.id || result.messageId, 200) };
 }
 
 async function sendInviteReminderEmail(env, payload = {}, origin = "") {
@@ -1302,7 +1410,7 @@ async function sendInviteReminderEmail(env, payload = {}, origin = "") {
   const registrationUrl = inviteRegistrationUrl(cleanString(payload.origin, 200) || origin, invite);
 
   const context = { firstName, eventName, eventDate, registrationUrl };
-  await sendResendEmail(env, {
+  const result = await sendResendEmail(env, {
     to: toEmail,
     subject: `Reminder: complete your registration for ${eventName}`,
     html: inviteReminderHtml(context),
@@ -1311,7 +1419,30 @@ async function sendInviteReminderEmail(env, payload = {}, origin = "") {
     cc: guestInviteEmailCc
   });
 
-  return { sentTo: toEmail };
+  return { sentTo: toEmail, cc: result.cc || [], messageId: cleanString(result.id || result.messageId, 200) };
+}
+
+async function logGuestRegistrationEmail(env, entry = {}) {
+  if (!env.MOJO_SUMMITS_SETUP_STATE?.put) return;
+  const now = new Date().toISOString();
+  const id = `${now}:${crypto.randomUUID()}`;
+  await env.MOJO_SUMMITS_SETUP_STATE.put(`${EMAIL_LOG_PREFIX}${id}`, JSON.stringify({
+    id,
+    createdAt: now,
+    type: cleanString(entry.type, 80) || "guest-registration",
+    status: cleanString(entry.status, 80) || "attempted",
+    to: cleanString(entry.to, 240).toLowerCase(),
+    cc: cleanEmailList(entry.cc || []),
+    subject: cleanString(entry.subject, 300),
+    contactKey: cleanString(entry.contactKey, 300),
+    inviteKey: cleanString(entry.inviteKey, 300),
+    inviteCode: cleanCode(entry.inviteCode),
+    eventSlug: cleanString(entry.eventSlug, 200),
+    eventName: cleanString(entry.eventName, 240),
+    actor: cleanString(entry.actor, 240),
+    messageId: cleanString(entry.messageId, 240),
+    error: cleanString(entry.error, 500)
+  }));
 }
 
 async function removeEmailFromCompanyContacts(env, email, actor = "") {
@@ -1386,6 +1517,10 @@ function registrationEventTarget(row = {}) {
     eventSlug: cleanString(row.eventSlug),
     eventName: cleanString(row.eventName),
     eventDate: cleanString(row.eventDate),
+    eventTime: cleanString(row.eventTime),
+    eventShowId: cleanEventShowId(row.eventShowId || row.showId || row.eventShow, ""),
+    eventShowLabel: cleanString(row.eventShowLabel),
+    eventShowTime: cleanString(row.eventShowTime),
     inviteCode: cleanString(row.inviteCode),
     registrationId: cleanString(row.id),
     registeredAt: cleanString(row.createdAt)
@@ -1780,22 +1915,25 @@ function contactEventIdentity(event = {}) {
 }
 
 function contactEventMatches(event = {}, target = {}) {
+  const leftShow = eventShowKey(event);
+  const rightShow = eventShowKey(target);
+  const showCompatible = !leftShow || !rightShow || leftShow === rightShow;
   const directFields = ["registrationId", "eventId", "eventSlug", "inviteCode", "registeredAt", "id"];
   for (const field of directFields) {
     const left = cleanString(event[field]).toLowerCase();
     const right = cleanString(target[field]).toLowerCase();
-    if (left && right && left === right) return true;
+    if (left && right && left === right && showCompatible) return true;
   }
 
   const leftIdentity = contactEventIdentity(event);
   const rightIdentity = contactEventIdentity(target);
-  if (leftIdentity && rightIdentity && leftIdentity === rightIdentity) return true;
+  if (leftIdentity && rightIdentity && leftIdentity === rightIdentity && showCompatible) return true;
 
   const leftName = cleanString(event.eventName).toLowerCase();
   const rightName = cleanString(target.eventName).toLowerCase();
   const leftDate = cleanString(event.eventDate).toLowerCase();
   const rightDate = cleanString(target.eventDate).toLowerCase();
-  return Boolean(leftName && rightName && leftName === rightName && (!rightDate || leftDate === rightDate));
+  return Boolean(showCompatible && leftName && rightName && leftName === rightName && (!rightDate || leftDate === rightDate));
 }
 
 async function syncRegistrationAttendance(env, email, targetEvent, attended, actor = "", now = "") {
@@ -1842,6 +1980,10 @@ async function updateContactEventAttendance(env, payload = {}, actor = "") {
     eventSlug: cleanString(payload.eventSlug),
     eventName: cleanString(payload.eventName),
     eventDate: cleanString(payload.eventDate),
+    eventTime: cleanString(payload.eventTime),
+    eventShowId: cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, ""),
+    eventShowLabel: cleanString(payload.eventShowLabel),
+    eventShowTime: cleanString(payload.eventShowTime),
     inviteCode: cleanString(payload.inviteCode),
     registrationId: cleanString(payload.registrationId),
     registeredAt: cleanString(payload.registeredAt)
@@ -2354,15 +2496,63 @@ export async function onRequestPost({ request, env, data }) {
       }
       const invite = await createRegistrationInviteCode(env, payload, access.email);
       let emailSent = null;
+      let emailCc = [];
+      let emailMessageId = "";
       if (sendEmail) {
         const origin = new URL(request.url).origin;
-        const result = await sendInviteInvitationEmail(env, invite, origin);
-        emailSent = result.sentTo;
+        await logGuestRegistrationEmail(env, {
+          type: "guest-registration-invitation",
+          status: "attempted",
+          to: invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail,
+          cc: guestInviteEmailCc,
+          subject: `You’re Invited: ${invite.eventName || "Mojo AI Summits"}`,
+          inviteKey: invite.key,
+          inviteCode: invite.code,
+          eventSlug: invite.eventSlug,
+          eventName: invite.eventName,
+          actor: access.email
+        });
+        try {
+          const result = await sendInviteInvitationEmail(env, invite, origin);
+          emailSent = result.sentTo;
+          emailCc = result.cc || [];
+          emailMessageId = result.messageId || "";
+          await logGuestRegistrationEmail(env, {
+            type: "guest-registration-invitation",
+            status: "sent",
+            to: emailSent,
+            cc: emailCc,
+            subject: `You’re Invited: ${invite.eventName || "Mojo AI Summits"}`,
+            inviteKey: invite.key,
+            inviteCode: invite.code,
+            eventSlug: invite.eventSlug,
+            eventName: invite.eventName,
+            actor: access.email,
+            messageId: emailMessageId
+          });
+        } catch (error) {
+          await logGuestRegistrationEmail(env, {
+            type: "guest-registration-invitation",
+            status: "failed",
+            to: invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail,
+            cc: guestInviteEmailCc,
+            subject: `You’re Invited: ${invite.eventName || "Mojo AI Summits"}`,
+            inviteKey: invite.key,
+            inviteCode: invite.code,
+            eventSlug: invite.eventSlug,
+            eventName: invite.eventName,
+            actor: access.email,
+            error: error.message || "Guest invitation email failed."
+          });
+          throw error;
+        }
       }
       return json({
         ok: true,
         invite,
         emailSent,
+        emailCc,
+        emailMessageId,
         registrationInviteCodes: [invite]
       }, { status: 201 });
     } catch (error) {
@@ -2387,7 +2577,51 @@ export async function onRequestPost({ request, env, data }) {
   if (payload?.action === "send-invite-reminder") {
     try {
       const origin = new URL(request.url).origin;
-      const result = await sendInviteReminderEmail(env, payload, origin);
+      const invite = await findInviteCodeRecord(env, payload);
+      await logGuestRegistrationEmail(env, {
+        type: "guest-registration-reminder",
+        status: "attempted",
+        to: invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail,
+        cc: guestInviteEmailCc,
+        subject: `Reminder: complete your registration for ${invite.eventName || "Mojo AI Summits"}`,
+        inviteKey: invite.key,
+        inviteCode: invite.code,
+        eventSlug: invite.eventSlug,
+        eventName: invite.eventName,
+        actor: access.email
+      });
+      let result;
+      try {
+        result = await sendInviteReminderEmail(env, { ...payload, key: invite.key }, origin);
+        await logGuestRegistrationEmail(env, {
+          type: "guest-registration-reminder",
+          status: "sent",
+          to: result.sentTo,
+          cc: result.cc || [],
+          subject: `Reminder: complete your registration for ${invite.eventName || "Mojo AI Summits"}`,
+          inviteKey: invite.key,
+          inviteCode: invite.code,
+          eventSlug: invite.eventSlug,
+          eventName: invite.eventName,
+          actor: access.email,
+          messageId: result.messageId
+        });
+      } catch (error) {
+        await logGuestRegistrationEmail(env, {
+          type: "guest-registration-reminder",
+          status: "failed",
+          to: invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail,
+          cc: guestInviteEmailCc,
+          subject: `Reminder: complete your registration for ${invite.eventName || "Mojo AI Summits"}`,
+          inviteKey: invite.key,
+          inviteCode: invite.code,
+          eventSlug: invite.eventSlug,
+          eventName: invite.eventName,
+          actor: access.email,
+          error: error.message || "Reminder email failed."
+        });
+        throw error;
+      }
       return json({ ok: true, ...result });
     } catch (error) {
       return json({ error: error.message || "Reminder email could not be sent." }, { status: 502 });

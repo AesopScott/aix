@@ -1243,6 +1243,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           </select>
         </label>
         <label>
+          Show time
+          <select id="registrationInviteShow" name="eventShowId">
+            <option value="both">Both shows</option>
+            <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
+            <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
+          </select>
+        </label>
+        <label>
           Guest or user name
           <input id="registrationInviteName" name="intendedGuestName" placeholder="Optional invitee name" autocomplete="name">
         </label>
@@ -1399,6 +1407,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const partnerPageSummary = document.querySelector("#partnerPageSummary");
     const registrationInviteForm = document.querySelector("#registrationInviteForm");
     const registrationInviteEvent = document.querySelector("#registrationInviteEvent");
+    const registrationInviteShow = document.querySelector("#registrationInviteShow");
     const registrationInviteType = document.querySelector("#registrationInviteType");
     const registrationInviteSubmit = document.querySelector("#registrationInviteSubmit");
     const registrationInviteSendEmail = document.querySelector("#registrationInviteSendEmail");
@@ -1448,6 +1457,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       { slug: "ai-security-governance-and-trust", title: "AI Security, Governance, and Trust", date: "Friday, November 6, 2026", format: "Virtual" },
       { slug: "ai-workforce-talent-and-change-adoption", title: "AI Workforce, Talent, and Change Adoption", date: "Friday, November 20, 2026", format: "Virtual" },
       { slug: "ai-operating-model-for-2027", title: "AI Operating Model for 2027", date: "Friday, November 27, 2026", format: "Virtual" },
+      { slug: "ai-budgeting-and-investment-priorities", title: "AI Budgeting and Investment Priorities", date: "Friday, December 4, 2026", format: "Virtual" },
+      { slug: "ai-workforce-readiness-and-change-leadership", title: "AI Workforce Readiness and Change Leadership", date: "Friday, December 18, 2026", format: "Virtual" },
+      { slug: "ai-executive-operating-agenda-for-2027", title: "AI Executive Operating Agenda for 2027", date: "Friday, January 8, 2027", format: "Virtual" },
       { slug: "dallas-2027", title: "Dallas 2027 Summit", date: "January 2027", format: "In person" }
     ];
     const lifecycleStageOptions = [
@@ -1617,7 +1629,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <strong>${escapeHtml(role)} invite link generated.</strong>
           <p>${copied ? "The link was copied to your clipboard." : "Copy the link below, or open the Guest Invites page to review it."}</p>
           <p><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a></p>
-          <p>${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Invited guest")} | ${escapeHtml(role)} | ${escapeHtml(invite.eventName || "Event invite")}</p>
+          <p>${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Invited guest")} | ${escapeHtml(role)} | ${escapeHtml(eventDisplayLabel(invite))}</p>
         </div>
         <div class="invite-result-actions">
           <button class="compact" type="button" data-copy-created-registration-invite="${escapeHtml(url)}">Copy Link</button>
@@ -1678,6 +1690,44 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return "Guest";
     }
 
+    function eventShowId(value, fallback = "both") {
+      const show = String(value || "").toLowerCase();
+      if (["morning", "am", "10", "10am", "10:00"].includes(show)) return "morning";
+      if (["afternoon", "pm", "1", "1pm", "13:00", "1:00"].includes(show)) return "afternoon";
+      if (["both", "all", "both-shows"].includes(show)) return "both";
+      return fallback;
+    }
+
+    function eventShowLabel(value) {
+      return {
+        morning: "Morning show",
+        afternoon: "Afternoon show",
+        both: "Both shows"
+      }[eventShowId(value)] || "Both shows";
+    }
+
+    function eventShowTime(value) {
+      return {
+        morning: "10:00 am - 11:30 am CT",
+        afternoon: "1:00 pm - 2:30 pm CT",
+        both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
+      }[eventShowId(value)] || "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT";
+    }
+
+    function eventShowText(record = {}) {
+      const raw = record.eventShowId || record.showId || record.eventShow;
+      const show = eventShowId(raw, "");
+      const label = record.eventShowLabel || (show ? eventShowLabel(show) : "");
+      const time = record.eventShowTime || record.eventTime || (show ? eventShowTime(show) : "");
+      return [label, time].filter(Boolean).join(" | ");
+    }
+
+    function eventDisplayLabel(event = {}) {
+      const label = event.eventName || event.inviteCode || event.eventSlug || event.eventId || "Registration";
+      const show = eventShowText(event);
+      return show ? `${label} | ${show}` : label;
+    }
+
     function contactStatusLabel(row) {
       const status = String(row.contactStatus || row.registrationType || row.source || "guest").toLowerCase();
       if (status.includes("partner member")) return "Partner Member";
@@ -1727,8 +1777,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function eventAttendanceKey(event = {}) {
+      const show = eventShowId(event.eventShowId || event.showId || event.eventShow, "");
+      const fallbackEvent = event.eventSlug || event.eventName || event.eventId || "";
       return event.registrationId ||
         event.eventId ||
+        (fallbackEvent && show ? `${fallbackEvent}:${show}` : "") ||
         event.eventSlug ||
         event.eventName ||
         event.inviteCode ||
@@ -1738,7 +1791,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function eventFilterKey(event = {}) {
-      return filterKey(event.eventSlug || event.eventId || event.eventName || event.inviteCode || eventAttendanceKey(event));
+      return filterKey(eventAttendanceKey(event));
     }
 
     function rowEvents(row = {}) {
@@ -1748,6 +1801,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventSlug: row.eventSlug,
         eventName: row.eventName,
         eventDate: row.eventDate,
+        eventTime: row.eventTime,
+        eventShowId: row.eventShowId,
+        eventShowLabel: row.eventShowLabel,
+        eventShowTime: row.eventShowTime,
         inviteCode: row.inviteCode,
         registrationId: row.id,
         registeredAt: row.createdAt,
@@ -1806,12 +1863,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (!events.length) return '<span class="pill warn">No event</span>';
         return `<div class="event-attendance-list">${events.map((event) => {
           const label = event.eventName || event.inviteCode || "Registration";
+          const show = eventShowText(event);
           const eventKey = eventAttendanceKey(event);
           return `
             <div class="event-attendance-item">
               <div>
                 <span class="event-attendance-name">${escapeHtml(label)}</span>
                 ${event.eventDate ? `<span class="event-attendance-date">${escapeHtml(event.eventDate)}</span>` : ""}
+                ${show ? `<span class="event-attendance-date">${escapeHtml(show)}</span>` : ""}
                 <span class="event-attendance-date">${escapeHtml(labelForOption([["invited", "Invited"], ["opened", "Invitation Opened"], ["started", "Registration Started"], ["confirmed", "Confirmed"], ["declined", "Declined"], ["canceled", "Canceled"], ["waitlisted", "Waitlisted"]], event.registrationStatus || event.status || "confirmed"))}</span>
               </div>
               <label class="attendance-toggle">
@@ -1824,6 +1883,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                   data-attendance-event-slug="${escapeHtml(event.eventSlug || "")}"
                   data-attendance-event-name="${escapeHtml(event.eventName || "")}"
                   data-attendance-event-date="${escapeHtml(event.eventDate || "")}"
+                  data-attendance-event-time="${escapeHtml(event.eventTime || "")}"
+                  data-attendance-event-show-id="${escapeHtml(event.eventShowId || "")}"
+                  data-attendance-event-show-label="${escapeHtml(event.eventShowLabel || "")}"
+                  data-attendance-event-show-time="${escapeHtml(event.eventShowTime || "")}"
                   data-attendance-invite-code="${escapeHtml(event.inviteCode || "")}"
                   data-attendance-registration-id="${escapeHtml(event.registrationId || "")}"
                   data-attendance-registered-at="${escapeHtml(event.registeredAt || "")}"
@@ -1836,7 +1899,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }).join("")}</div>`;
       }
       if (row.manualPartner) return '<span class="pill">Manual outreach</span>';
-      return `<span>${escapeHtml(row.eventName || row.inviteCode || "")}</span>${row.eventDate ? `<br><span>${escapeHtml(row.eventDate)}</span>` : ""}`;
+      const show = eventShowText(row);
+      return `<span>${escapeHtml(row.eventName || row.inviteCode || "")}</span>${row.eventDate ? `<br><span>${escapeHtml(row.eventDate)}</span>` : ""}${show ? `<br><span>${escapeHtml(show)}</span>` : ""}`;
     }
 
     function roleBadges(row) {
@@ -1860,7 +1924,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function publicationBadges(row) {
       if (state.type === "contacts") {
         const count = Number(row.publicationCount || 0);
-        return `<span class="pill">${count} publication${count === 1 ? "" : "s"}</span>`;
+        const approvals = [];
+        if (row.publicationUseName) approvals.push("Name");
+        if (row.publicationUseCompany) approvals.push("Company");
+        if (!approvals.length) return '<span class="pill warn">No publication opt-in</span>';
+        return [
+          `<span class="pill">${count} publication${count === 1 ? "" : "s"}</span>`,
+          ...approvals.map((approval) => `<span class="pill">${escapeHtml(approval)} OK</span>`)
+        ].join("");
       }
       const approvals = [];
       if (row.publicationUseName) approvals.push("Name");
@@ -1993,7 +2064,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function inviteUsedForText(invite) {
       const event = invite.usedFor || invite.eventName || "No event assigned";
       const date = invite.usedForDate || invite.eventDate || "";
-      return date ? `${event} | ${date}` : event;
+      const show = invite.usedForShow || invite.eventShowLabel || "";
+      const time = invite.usedForTime || invite.eventShowTime || invite.eventTime || "";
+      return [event, date, show, time].filter(Boolean).join(" | ");
     }
 
     function eventOptionMarkup() {
@@ -2037,7 +2110,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
         for (const event of rowEvents(row)) {
           const key = eventFilterKey(event);
-          const label = event.eventName || event.inviteCode || event.eventSlug || event.eventId || "Registration";
+          const label = eventDisplayLabel(event);
           if (key && label) events.set(key, label);
         }
       }
@@ -2088,6 +2161,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         role,
         invite.eventName,
         invite.eventDate,
+        invite.eventTime,
+        invite.eventShowId,
+        invite.eventShowLabel,
+        invite.eventShowTime,
         invite.eventSlug,
         invite.intendedGuestName,
         invite.invitedName,
@@ -2099,6 +2176,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         invite.usedByEmail,
         invite.usedBy,
         invite.usedFor,
+        invite.usedForShow,
+        invite.usedForTime,
         invite.usedForDate,
         inviteStatusText(invite),
         invite.createdAt,
@@ -2243,7 +2322,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             </div>
             <div>
               <strong>${escapeHtml(invite.eventName || "Event registration invite")}</strong>
-              <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(inviteStatusText(invite))}</p>
+              <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(eventShowText(invite) || "Show time not assigned")} | ${escapeHtml(inviteStatusText(invite))}</p>
               <p>Invited: ${escapeHtml(invitedName)}${invitedEmail ? ` | ${escapeHtml(invitedEmail)}` : ""}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
@@ -2721,6 +2800,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const counts = registrationDebug.counts || {};
       const missing = registrationDebug.missingContacts || [];
       const attempts = registrationDebug.debugAttempts || [];
+      const emailAttempts = registrationDebug.emailAttempts || [];
       const latest = registrationDebug.latestRegistrations || [];
       registrationDebugContent.innerHTML = `
         <div class="debug-summary">
@@ -2730,6 +2810,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <div class="debug-card"><span>Partner rows</span><strong>${counts.partner || 0}</strong></div>
           <div class="debug-card"><span>Missing contacts</span><strong>${counts.missingContacts || 0}</strong></div>
           <div class="debug-card"><span>Audit attempts</span><strong>${counts.debugAttempts || 0}</strong></div>
+          <div class="debug-card"><span>Email attempts</span><strong>${counts.emailAttempts || 0}</strong></div>
         </div>
         <div>
           <h3>Missing Contact Links</h3>
@@ -2741,6 +2822,20 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 <p>Expected contact key: ${escapeHtml(row.contactKey || "")}</p>
               </div>
             `).join("") : '<p>No stored registrations are missing contact records.</p>'}
+          </div>
+        </div>
+        <div>
+          <h3>Recent Guest Registration Email</h3>
+          <div class="debug-list">
+            ${emailAttempts.length ? emailAttempts.slice(0, 12).map((row) => `
+              <div class="debug-row${debugStatusClass(row)}">
+                <strong>${escapeHtml(formatDate(row.createdAt))} | ${escapeHtml(row.status || "unknown")} | ${escapeHtml(row.type || "")}</strong>
+                <p>To: ${escapeHtml(row.to || "")}${Array.isArray(row.cc) && row.cc.length ? ` | CC: ${escapeHtml(row.cc.join(", "))}` : ""}</p>
+                <p>${escapeHtml(row.eventName || "")}${row.inviteCode ? ` | Invite ${escapeHtml(row.inviteCode)}` : ""}</p>
+                ${row.subject || row.actor || row.messageId ? `<p>${escapeHtml([row.subject ? `Subject ${row.subject}` : "", row.actor ? `Actor ${row.actor}` : "", row.messageId ? `Message ${row.messageId}` : ""].filter(Boolean).join(" | "))}</p>` : ""}
+                ${row.error ? `<p>Error: ${escapeHtml(row.error)}</p>` : ""}
+              </div>
+            `).join("") : '<p>No guest registration email attempts have been stored yet. New sends and reminders will appear here after this deploy.</p>'}
           </div>
         </div>
         <div>
@@ -3055,6 +3150,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             eventSlug: input.dataset.attendanceEventSlug || "",
             eventName: input.dataset.attendanceEventName || "",
             eventDate: input.dataset.attendanceEventDate || "",
+            eventTime: input.dataset.attendanceEventTime || "",
+            eventShowId: input.dataset.attendanceEventShowId || "",
+            eventShowLabel: input.dataset.attendanceEventShowLabel || "",
+            eventShowTime: input.dataset.attendanceEventShowTime || "",
             inviteCode: input.dataset.attendanceInviteCode || "",
             registrationId: input.dataset.attendanceRegistrationId || "",
             registeredAt: input.dataset.attendanceRegisteredAt || ""
@@ -3107,7 +3206,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             origin: window.location.origin
           })
         }).then(readJson);
-        setNotice(`Reminder email sent to ${data.sentTo || "the invited guest"}.`, "ok");
+        const ccText = Array.isArray(data.cc) && data.cc.length ? ` CC: ${data.cc.join(", ")}.` : "";
+        setNotice(`Reminder email sent to ${data.sentTo || "the invited guest"}.${ccText}`, "ok");
       } catch (error) {
         showErrorNotice(error);
       }
@@ -3523,6 +3623,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function buildRegistrationInvitePayload(sendEmail) {
       const formData = new FormData(registrationInviteForm);
       const selected = registrationInviteEvent.selectedOptions[0];
+      const showId = eventShowId(formData.get("eventShowId") || registrationInviteShow?.value || "both");
       return {
         action: "create-registration-invite",
         type: "guest",
@@ -3532,6 +3633,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         intendedGuestEmail: formData.get("intendedGuestEmail") || "",
         eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
         eventDate: selected?.dataset.eventDate || "",
+        eventShowId: showId,
+        eventShowLabel: eventShowLabel(showId),
+        eventShowTime: eventShowTime(showId),
+        eventTime: eventShowTime(showId),
         sendEmail: Boolean(sendEmail)
       };
     }
@@ -3566,8 +3671,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const copied = await copyText(url);
         showRegistrationInviteResult(data.invite || {}, url, copied);
         const role = guestRegistrationTypeLabel(data.invite?.guestRegistrationType || data.invite?.registrationRole || payload.guestRegistrationType);
+        const ccText = Array.isArray(data.emailCc) && data.emailCc.length ? ` CC: ${data.emailCc.join(", ")}.` : "";
         setNotice(data.emailSent
-          ? `${role} invite link generated and emailed to ${data.emailSent}.`
+          ? `${role} invite link generated and emailed to ${data.emailSent}.${ccText}`
           : `${role} invite link generated successfully.`, "ok");
       } catch (error) {
         showRegistrationInviteError(error.message || "Registration invite link could not be generated.");
