@@ -34,7 +34,7 @@ const DEFAULT_EMPLOYEES = [
     slug: "miller",
     email: "miller@mojoaisummits.com",
     name: "Miller",
-    title: "Strategic Partner",
+    title: "Director of Partnerships",
     bio: "Miller supports Mojo AI Summits partner relationships, sponsorship opportunities, and executive event growth.",
     timezone: "America/Chicago",
     meetingTypes: [
