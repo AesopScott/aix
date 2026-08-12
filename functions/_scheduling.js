@@ -483,6 +483,15 @@ function defaultEmployee(slug) {
   return template ? sanitizeEmployee(template) : null;
 }
 
+function mergeDefaultEmployee(employee) {
+  const fallback = defaultEmployee(employee?.slug);
+  if (!fallback) return employee;
+  return {
+    ...employee,
+    title: fallback.title || employee.title
+  };
+}
+
 export async function listEmployees(env, { includeInactive = false } = {}) {
   const ids = await getStoredJson(env, TEAM_INDEX_KEY);
   const employees = await Promise.all(
@@ -497,7 +506,7 @@ export async function listEmployees(env, { includeInactive = false } = {}) {
       .map((employee) => [employee.slug, employee])
   );
   employees.filter(Boolean).forEach((employee) => {
-    bySlug.set(employee.slug, employee);
+    bySlug.set(employee.slug, mergeDefaultEmployee(employee));
   });
   return [...bySlug.values()]
     .filter((employee) => employee && (includeInactive || employee.active !== false))
@@ -507,7 +516,8 @@ export async function listEmployees(env, { includeInactive = false } = {}) {
 export async function getEmployee(env, slug) {
   const clean = cleanSlug(slug);
   if (!clean) return null;
-  return (await getStoredJson(env, `${EMPLOYEE_PREFIX}${clean}`)) || defaultEmployee(clean);
+  const stored = await getStoredJson(env, `${EMPLOYEE_PREFIX}${clean}`);
+  return stored ? mergeDefaultEmployee(stored) : defaultEmployee(clean);
 }
 
 async function connectionIds(env, employeeSlug) {
