@@ -5,7 +5,8 @@ const jsonHeaders = {
   "cache-control": "no-store"
 };
 
-const allowedTypes = new Set(["executive", "conversation", "partner", "partner-subscription", "dallas-invite"]);
+const allowedTypes = new Set(["executive", "conversation", "partner", "partner-subscription", "dallas-invite", "featured-guest-slot"]);
+const allowedFeaturedSlotTypes = new Set(["featured-guest", "featured-partner", "featured-author"]);
 const maxFieldLength = 2000;
 const notificationRecipients = [
   "angel@mojoaisummits.com",
@@ -63,6 +64,12 @@ function cleanPayload(payload) {
     teamSize: cleanString(payload?.teamSize),
     notes: cleanString(payload?.notes),
     sourcePage: cleanString(payload?.sourcePage),
+    eventSlug: cleanString(payload?.eventSlug),
+    eventTitle: cleanString(payload?.eventTitle),
+    eventDate: cleanString(payload?.eventDate),
+    slotType: cleanString(payload?.slotType),
+    slotLabel: cleanString(payload?.slotLabel),
+    slotCode: cleanString(payload?.slotCode),
     learningProgramMember: cleanBoolean(payload?.learningProgramMember),
     addons: cleanArray(payload?.addons)
   };
@@ -90,6 +97,15 @@ function validateRequest(request) {
   if (request.type === "executive" && !request.linkedinProfileUrl) {
     return "LinkedIn profile URL is required.";
   }
+  if (request.type === "featured-guest-slot") {
+    if (!request.linkedinProfileUrl) return "LinkedIn profile URL is required.";
+    if (!request.eventTitle || !request.slotLabel || !request.slotType) {
+      return "Event and featured slot details are required.";
+    }
+    if (!allowedFeaturedSlotTypes.has(request.slotType)) {
+      return "Choose a valid featured guest slot.";
+    }
+  }
   return "";
 }
 
@@ -103,7 +119,22 @@ function escapeHtml(value = "") {
   })[character]);
 }
 
-function requestLabel(type = "") {
+function featuredSlotRequestLabel(record = {}) {
+  return {
+    "featured-partner": "Featured partner slot request",
+    "featured-author": "Featured author slot request",
+    "featured-guest": "Featured guest slot request"
+  }[record.slotType] || "Featured guest slot request";
+}
+
+function featuredSlotSummary(record = {}) {
+  const label = record.slotLabel || featuredSlotRequestLabel(record).replace(" request", "");
+  return [label, record.slotCode].filter(Boolean).join(" ");
+}
+
+function requestLabel(value = "") {
+  const type = typeof value === "string" ? value : value?.type;
+  if (type === "featured-guest-slot") return featuredSlotRequestLabel(value);
   return {
     "dallas-invite": "Dallas invite request",
     executive: "Executive invite request",
@@ -115,13 +146,17 @@ function requestLabel(type = "") {
 
 function requestEmailText(record) {
   return [
-    `${requestLabel(record.type)} received from mojoaisummits.com.`,
+    `${requestLabel(record)} received from mojoaisummits.com.`,
     "",
     `Name: ${record.name || ""}`,
     `Email: ${record.email || ""}`,
     record.phone ? `Phone: ${record.phone}` : "",
     `Title: ${record.title || ""}`,
     `Company: ${record.company || ""}`,
+    record.type === "featured-guest-slot" ? `Featured slot: ${featuredSlotSummary(record)}` : "",
+    record.eventTitle ? `Event: ${record.eventTitle}` : "",
+    record.eventDate ? `Event date: ${record.eventDate}` : "",
+    record.slotType ? `Slot type: ${record.slotType}` : "",
     record.linkedinProfileUrl ? `LinkedIn profile URL: ${record.linkedinProfileUrl}` : "",
     record.sessionTitle ? `Conversation title: ${record.sessionTitle}` : "",
     record.track ? `Track: ${record.track}` : "",
@@ -143,6 +178,10 @@ function requestEmailHtml(record) {
     ["Phone", record.phone],
     ["Title", record.title],
     ["Company", record.company],
+    ["Featured slot", record.type === "featured-guest-slot" ? featuredSlotSummary(record) : ""],
+    ["Event", record.eventTitle],
+    ["Event date", record.eventDate],
+    ["Slot type", record.slotType],
     ["LinkedIn profile URL", record.linkedinProfileUrl],
     ["Conversation title", record.sessionTitle],
     ["Track", record.track],
@@ -157,7 +196,7 @@ function requestEmailHtml(record) {
 
   return `
     <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.5">
-      <h1 style="font-size:22px;margin:0 0 14px">${escapeHtml(requestLabel(record.type))}</h1>
+      <h1 style="font-size:22px;margin:0 0 14px">${escapeHtml(requestLabel(record))}</h1>
       <p style="margin:0 0 18px">A new request was submitted from mojoaisummits.com.</p>
       <table style="border-collapse:collapse;width:100%;max-width:640px">
         ${rows.map(([label, value]) => `
@@ -172,7 +211,7 @@ function requestEmailHtml(record) {
 }
 
 async function sendInviteNotification(env, record) {
-  const shouldNotify = ["dallas-invite", "executive", "conversation", "partner-subscription"].includes(record.type);
+  const shouldNotify = ["dallas-invite", "executive", "conversation", "partner-subscription", "featured-guest-slot"].includes(record.type);
   if (!shouldNotify) return null;
 
   try {
@@ -189,7 +228,7 @@ async function sendInviteNotification(env, record) {
       },
       body: JSON.stringify({
         message: {
-          subject: `${requestLabel(record.type)}: ${record.name} at ${record.company}`,
+          subject: `${requestLabel(record)}: ${record.name} at ${record.company}`,
           body: {
             contentType: "HTML",
             content: requestEmailHtml(record)
@@ -352,7 +391,7 @@ export async function onRequestPost({ request, env }) {
     : null;
   const notification = await sendInviteNotification(env, record);
 
-  if (["dallas-invite", "executive", "conversation", "partner-subscription"].includes(record.type) && !notification?.ok) {
+  if (["dallas-invite", "executive", "conversation", "partner-subscription", "featured-guest-slot"].includes(record.type) && !notification?.ok) {
     return json({
       error: "Invite request was saved, but the notification email could not be sent.",
       notification
