@@ -260,7 +260,12 @@
       line-height: 1.25;
       color: var(--navy);
       text-decoration: none;
-      cursor: default;
+      cursor: pointer;
+    }
+
+    .day-chip:hover {
+      outline: 2px solid var(--white);
+      outline-offset: 1px;
     }
 
     .day-chip .chip-status {
@@ -389,7 +394,7 @@
 
     <div class="controls">
       <div class="control-field">
-        <label class="control-label" for="ownerSelect">Owner</label>
+        <label class="control-label" for="ownerSelect">Owner or Support</label>
         <select class="owner-select" id="ownerSelect"></select>
       </div>
 
@@ -643,7 +648,9 @@
 
     function itemsForOwner() {
       if (view.owner === "All") return allItems;
-      return allItems.filter((item) => ownerNames(item.owner).includes(view.owner));
+      return allItems.filter((item) =>
+        ownerNames(item.owner).includes(view.owner) || ownerNames(item.support).includes(view.owner)
+      );
     }
 
     function itemsByDate() {
@@ -662,14 +669,21 @@
       return "";
     }
 
+    function setupItemUrl(item) {
+      return `/setup/#${encodeURIComponent(item.id)}`;
+    }
+
     function chipHtml(item) {
-      const badgeOwner = item.owner;
+      const isSupportMatch = view.owner !== "All" &&
+        !ownerNames(item.owner).includes(view.owner) &&
+        ownerNames(item.support).includes(view.owner);
+      const badgeOwner = isSupportMatch ? `Support: ${view.owner}` : item.owner;
       const stateClass = calendarStateClass(item);
       return `
-        <span class="day-chip ${ownerClass(item.owner)} ${stateClass}" title="${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">
+        <a class="day-chip ${ownerClass(item.owner)} ${stateClass}" href="${setupItemUrl(item)}" title="${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">
           ${escapeHtml(item.text.length > 60 ? `${item.text.slice(0, 57)}...` : item.text)}
           <span class="chip-status">${escapeHtml(badgeOwner)} • ${escapeHtml(item.status)}</span>
-        </span>
+        </a>
       `;
     }
 

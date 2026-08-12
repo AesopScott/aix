@@ -501,6 +501,12 @@
       display: none;
     }
 
+    .item.deep-linked {
+      outline: 2px solid var(--cyan);
+      outline-offset: -2px;
+      background: rgba(0, 230, 255, 0.08);
+    }
+
     .item-text {
       grid-column: 1;
       grid-row: 1;
@@ -1040,7 +1046,7 @@
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
 Date: 2026-08-11
-Version: 3.15
+Version: 3.16
 Category: event operations
 
 ## Purpose
@@ -1646,6 +1652,7 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.16 - Linked calendar items back to their matching master checklist rows.
 - 3.15 - Added a no-due-date filter for setup items missing delivery dates.
 - 3.14 - Simplified priority options to Immediate, High, Medium, and Low.
 - 3.13 - Added manually editable autosaved notes to each setup item.
@@ -1893,6 +1900,8 @@ The following decisions should not be made by one owner alone:
     let customItems = [];
     let deletedItemIds = new Set();
     const noteSaveTimers = new Map();
+    let activeLinkedItemId = "";
+    let lastScrolledLinkedItemId = "";
     const itemById = new Map(allItems.map((item) => [item.id, item]));
 
     function storedCustomItem(item) {
@@ -2351,6 +2360,61 @@ The following decisions should not be made by one owner alone:
       renderFilters();
       renderSummary();
       applyFilters();
+      highlightLinkedSetupItem({ scroll: false });
+    }
+
+    function linkedItemIdFromHash() {
+      const raw = window.location.hash.replace(/^#/, "");
+      if (!raw) return "";
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
+    }
+
+    function rowForItemId(id) {
+      return Array.from(document.querySelectorAll(".item")).find((row) => row.dataset.itemId === id) || null;
+    }
+
+    function resetFiltersForLinkedItem() {
+      state.phase = "All";
+      state.owner = "All";
+      state.priority = "All";
+      state.dueDate = "";
+      state.status = "All";
+      state.query = "";
+      state.visibleSupportOwners = { "All support": true };
+      state.visibleStatuses = Object.fromEntries(statusOptions.map((status) => [status, true]));
+      const search = document.getElementById("search");
+      if (search) search.value = "";
+    }
+
+    function highlightLinkedSetupItem({ scroll = false } = {}) {
+      document.querySelectorAll(".item.deep-linked").forEach((row) => row.classList.remove("deep-linked"));
+      const id = activeLinkedItemId || linkedItemIdFromHash();
+      if (!id) return;
+      const row = rowForItemId(id);
+      if (!row) return;
+      row.classList.remove("hidden");
+      const section = row.closest(".checklist-section");
+      if (section) section.style.display = "";
+      row.classList.add("deep-linked");
+      if (scroll && lastScrolledLinkedItemId !== id) {
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+        lastScrolledLinkedItemId = id;
+      }
+    }
+
+    function openLinkedSetupItem({ scroll = true } = {}) {
+      const id = linkedItemIdFromHash();
+      activeLinkedItemId = id;
+      if (!id) return;
+      if (!itemById.has(id)) return;
+      resetFiltersForLinkedItem();
+      renderFilters();
+      applyFilters();
+      highlightLinkedSetupItem({ scroll });
     }
 
     function deleteSetupItem(item) {
@@ -3014,8 +3078,14 @@ The following decisions should not be made by one owner alone:
       refreshView();
     });
 
+    window.addEventListener("hashchange", () => openLinkedSetupItem({ scroll: true }));
+
     refreshView();
-    loadSharedAssignments({ render: true, migrateLocalIfEmpty: true }).then(startSharedSync);
+    openLinkedSetupItem({ scroll: true });
+    loadSharedAssignments({ render: true, migrateLocalIfEmpty: true }).then(() => {
+      startSharedSync();
+      highlightLinkedSetupItem({ scroll: false });
+    });
   </script>
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
 </body>
