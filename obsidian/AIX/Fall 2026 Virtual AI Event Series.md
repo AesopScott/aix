@@ -41,7 +41,7 @@ Each virtual event now has two show windows: 10:00 AM to 11:30 AM Central and 1:
 - AI Executive Readiness: Technology Strategy
 - AI Data Readiness and Knowledge Strategy: Integration
 - AI Use Cases That Survive Finance: Operations and Finance
-- AI Agents, Automation, and Human Handoffs: Integration
+- AI Agents, Automation, and Human Handoffs: Innovation
 - AI Integration and Workflow: Integration
 - AI Vendor Strategy and Platform Decisions: Technology Strategy
 - AI Security, Governance, and Trust: Security and Risk
