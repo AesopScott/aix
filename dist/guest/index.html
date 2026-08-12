@@ -472,6 +472,14 @@
               <label for="email">Company email</label>
               <input type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
             </div>
+            <div class="field full">
+              <label for="eventShowId">Show time</label>
+              <select id="eventShowId" name="eventShowId" required>
+                <option value="both">Both shows</option>
+                <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
+                <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
+              </select>
+            </div>
             <p class="email-privacy-note">We do not share email addresses with sponsors or any other organizations. Personal email address domains may not be used, such as Gmail.</p>
             <div class="field full">
               <label for="phone">Mobile phone</label>
@@ -511,6 +519,7 @@
   const inviteBadge = document.getElementById('inviteBadge');
   const fullNameInput = document.getElementById('fullName');
   const emailInput = document.getElementById('email');
+  const eventShowSelect = document.getElementById('eventShowId');
   const phoneInput = document.getElementById('phone');
   const sendCodeButton = document.getElementById('sendCodeButton');
   const verifyCodeRow = document.getElementById('verifyCodeRow');
@@ -521,6 +530,7 @@
   const form = document.getElementById('guestRegistrationForm');
   const success = document.getElementById('registrationSuccess');
   const verificationStatus = document.getElementById('phoneVerificationStatus');
+  let currentInviteRole = 'guest';
 
   function getInviteCode(){
     const params = new URLSearchParams(window.location.search);
@@ -546,6 +556,28 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim().toLowerCase());
   }
 
+  function normalizeEventShow(value, fallback = ''){
+    const show = String(value || '').trim().toLowerCase();
+    if (['morning', 'am', '10', '10am', '10:00'].includes(show)) return 'morning';
+    if (['afternoon', 'pm', '1', '1pm', '13:00', '1:00'].includes(show)) return 'afternoon';
+    if (['both', 'all', 'both-shows'].includes(show)) return 'both';
+    return fallback;
+  }
+
+  function configureShowOptions(invite = {}){
+    currentInviteRole = String(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || 'guest').toLowerCase();
+    const featured = currentInviteRole === 'featured-guest' || currentInviteRole === 'featured-partner';
+    const assignedShow = normalizeEventShow(invite.eventShowId || invite.showId || invite.eventShow, '');
+    eventShowSelect.innerHTML = [
+      featured ? '<option value="">Select a show time</option>' : '<option value="both">Both shows</option>',
+      '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
+      '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
+    ].join('');
+    eventShowSelect.value = assignedShow === 'morning' || assignedShow === 'afternoon'
+      ? assignedShow
+      : featured ? '' : 'both';
+  }
+
   function normalizePhone(phone){
     const normalized = String(phone || '').replace(/[^\d+]/g, '');
     const digits = normalized.replace(/\D/g, '');
@@ -564,6 +596,7 @@
 
   function applyInviteDetails(data = {}){
     const invite = data.invite || {};
+    configureShowOptions(invite);
     const invitedName = invite.intendedGuestName || invite.invitedName || invite.guestName || '';
     const invitedEmail = invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || '';
     if (isValidEmail(invitedEmail) && !emailInput.value.trim()) emailInput.value = invitedEmail;
@@ -575,6 +608,7 @@
   }
 
   const incomingInviteCode = getInviteCode();
+  configureShowOptions();
   if (incomingInviteCode) {
     inviteInput.value = incomingInviteCode;
     inviteBadge.textContent = `Invite ${incomingInviteCode}`;
@@ -696,6 +730,18 @@
       phoneInput.focus();
       return;
     }
+    const selectedShow = normalizeEventShow(payload.eventShowId, '');
+    if ((currentInviteRole === 'featured-guest' || currentInviteRole === 'featured-partner') && !['morning', 'afternoon'].includes(selectedShow)) {
+      setMessage(formError, 'Choose either the morning show or afternoon show.', 'error');
+      eventShowSelect.focus();
+      return;
+    }
+    if (!['morning', 'afternoon', 'both'].includes(selectedShow)) {
+      setMessage(formError, 'Choose a valid show time.', 'error');
+      eventShowSelect.focus();
+      return;
+    }
+    payload.eventShowId = selectedShow;
     if (payload.phoneVerificationStatus === 'unverified' || payload.phoneVerificationStatus === 'code_sent' || payload.phoneVerificationStatus === 'pending_sms_setup') {
       setMessage(formError, 'Verify the phone number first so the registration has a phone confirmation status.', 'error');
       phoneInput.focus();

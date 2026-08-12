@@ -19,7 +19,7 @@ MOJO AI Summits is scaffolding twelve 2026-2027 virtual AI events as a lead-in t
 - Friday, December 18, 2026
 - Friday, January 8, 2027
 
-Each virtual event now has two show windows: 10:00 AM to 11:30 AM Central and 1:00 PM to 2:30 PM Central. Standard guest invites can cover both shows; featured guests, presenters, and roundtable leaders should be assigned to the appropriate show in the CRM invite workflow.
+Each virtual event now has two show windows: 10:00 AM to 11:30 AM Central and 1:00 PM to 2:30 PM Central. Regular guest registrations may choose the morning show, afternoon show, or both. Featured guest and featured partner registrations must choose one show only.
 
 ## Working Arc
 
