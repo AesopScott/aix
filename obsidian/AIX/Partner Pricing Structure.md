@@ -1,7 +1,7 @@
 # Partner Pricing Structure
 
 Created: 2026-08-01
-Updated: 2026-08-01
+Updated: 2026-08-12
 
 ## Summary
 
@@ -11,16 +11,15 @@ Created the static HTML partner-facing page at `/partner-pricing/` from the same
 
 The pricing model is now per Executive slot and stackable by tier. One subscription buys one Executive slot, which can be assigned to one approved director-level-or-above Executive attendee at a time according to substitution rules.
 
-- Tier 1 Partner: approved partner organization status.
-- Tier 2 Intelligence Partner: $500 per quarter per Executive slot for unlimited Mojo virtual event attendance.
-- Tier 3 Summit Partner: $2,500 total per quarter per Executive slot for virtual event access plus summit attendance; requires Tier 2.
-- Tier 4 Strategic Partner: $10,000 total per quarter per Executive slot, under an annual subscription, for unlimited eligible Mojo events above and beyond Tier 2 and Tier 3 event categories; requires Tier 2 and Tier 3.
+- Tier 1 Research Partner: $1,000 per quarter per Executive slot for unlimited Mojo virtual event attendance.
+- Tier 2 Summit Partner: $5,000 total per quarter per Executive slot for virtual event access plus summit attendance; requires Tier 1.
+- Tier 3 Strategic Partner: $10,000 total per quarter per Executive slot, under an annual subscription, for unlimited eligible Mojo events above and beyond Tier 1 and Tier 2 event categories; requires Tier 1 and Tier 2.
 
 ## Annualized Per-Slot Pricing
 
-- Tier 2 only: $2,000/year.
-- Tier 2 + Tier 3: $10,000/year.
-- Tier 2 + Tier 3 + Tier 4: $40,000/year.
+- Tier 1: $4,000/year.
+- Tier 2: $20,000/year.
+- Tier 3: $40,000/year.
 
 ## Key Rule
 

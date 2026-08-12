@@ -7,10 +7,9 @@ Working draft: August 1, 2026
 This document outlines the Mojo AI Summits partner subscription structure using the tiers shown on the Mojo AI Summits `/partners/` page:
 
 - Partner Candidate: entry stage
-- Partner: Tier 1
-- Intelligence Partner: Tier 2
-- Summit Partner: Tier 3
-- Strategic Partner: Tier 4
+- Research Partner: Tier 1
+- Summit Partner: Tier 2
+- Strategic Partner: Tier 3
 
 The pricing model is a stackable subscription per Executive slot. Each subscription buys one Executive slot, not unlimited seats. A slot may be assigned to one approved Executive attendee at a time according to the substitution rules in your agreement. Each approved Executive attendee must be director level or above, and higher tiers require the lower event-access tiers first.
 
@@ -20,11 +19,12 @@ Mojo AI Summits does not sell booths, badge scans, or generic logo packages.
 
 Your organization subscribes Executive slots into a curated executive intelligence network with access to approved Mojo virtual events, summits, and specialty events according to each subscription tier.
 
-The partnership model is built around five principles:
+The partnership model is built around six principles:
 
 - You are buying trusted proximity, not lead capture. Mojo creates access to serious executive rooms where trust, relevance, and repeated participation matter more than badge scans.
 - You are expected to contribute executive insight, not perform vendor theater. Your role is to improve the quality of the conversation instead of turning the room into a sales presentation.
 - You receive relationship intelligence, not raw attendee lists. Mojo focuses on context, shared participation history, appropriate follow-up paths, and consent-aware relationship development.
+- You receive a partner profile, not scattered activity. Your profile gives your team one private record of partner engagements, partner publications, and executives engaged through partner-sponsored events.
 - You are entering an annual partnership, not making a one-off event spend. The value compounds across virtual events, summits, specialty events, and ongoing executive intelligence.
 - You participate through curated access, not open sponsorship inventory. Mojo protects the executive room by matching partner participation to credibility, topic fit, and contribution value.
 
@@ -38,9 +38,9 @@ Partner Candidate means your organization is not yet an approved Partner. Candid
 
 | Candidate Access Level | Candidate Price | Billing Basis | Access |
 | --- | ---: | --- | --- |
-| Tier 2<br>(Intelligence Partner) | $650 per quarter | Per quarter | Unlimited Mojo virtual event attendance |
-| Tier 2 and Tier 3<br>(Summit Partner) | $3,250 per quarter | Per quarter | Unlimited Mojo virtual event attendance plus summit attendance |
-| Tier 2, Tier 3, and Tier 4<br>(Strategic Partner) | $13,000 per quarter | Per quarter, annual subscription | Unlimited virtual event attendance, summit attendance, and eligible Mojo events above and beyond Tier 2 and Tier 3 |
+| Tier 1<br>(Research Partner) | $1,300 per quarter | Per quarter | Unlimited Mojo virtual event attendance |
+| Tier 2<br>(Summit Partner) | $6,500 per quarter | Per quarter | Unlimited Mojo virtual event attendance plus summit attendance |
+| Tier 3<br>(Strategic Partner) | $13,000 per quarter | Per quarter, annual subscription | Unlimited virtual event attendance, summit attendance, and eligible Mojo events above and beyond Tier 1 and Tier 2 |
 
 Candidate pricing is applied to each subscribed Executive slot while your organization remains in Candidate status. Partner discounts do not apply during the Candidate period.
 
@@ -54,9 +54,9 @@ The program is designed to let your team experience the quality of the room, the
 
 | Access Level | Have a Taste First-Quarter Price | Applies To | Access |
 | --- | ---: | --- | --- |
-| Tier 2<br>(Intelligence Partner) | $500 | First Candidate quarter only | One Executive slot with Tier 2 access for one quarter |
-| Tier 2 and Tier 3<br>(Summit Partner) | $2,500 | First Candidate quarter only | One Executive slot with Tier 2 and Tier 3 access for one quarter |
-| Tier 2, Tier 3, and Tier 4<br>(Strategic Partner) | $10,000 | First Candidate quarter only | One Executive slot with Tier 2, Tier 3, and Tier 4 access for one quarter |
+| Tier 1<br>(Research Partner) | $1,000 | First Candidate quarter only | One Executive slot with Tier 1 access for one quarter |
+| Tier 2<br>(Summit Partner) | $5,000 | First Candidate quarter only | One Executive slot with Tier 2 access for one quarter |
+| Tier 3<br>(Strategic Partner) | $10,000 | First Candidate quarter only | One Executive slot with Tier 3 access for one quarter |
 
 Have a Taste does not create Partner approval or permanent Partner pricing by itself. After the first quarter, continued participation moves to Candidate pricing unless your organization is approved as a Partner.
 
@@ -68,10 +68,9 @@ Each Executive slot must be subscribed individually. One subscribed Executive sl
 
 | Partner Page Tier | Subscription Function | Price Per Executive Slot | Billing Basis | Access |
 | --- | --- | ---: | --- | --- |
-| Tier 1<br>(Partner) | Approved partner status | Included in partner approval | N/A | Establishes partner eligibility and profile |
-| Tier 2<br>(Intelligence Partner) | Virtual event subscription | $500 | Per quarter | Unlimited Mojo virtual event attendance |
-| Tier 2 and Tier 3<br>(Summit Partner) | Summit attendance subscription | $2,500 total | Per quarter | Unlimited Mojo virtual event attendance plus Mojo summit attendance |
-| Tier 2, Tier 3, and Tier 4<br>(Strategic Partner) | Full Mojo event subscription | $10,000 total | Per quarter, annual subscription | Unlimited virtual event attendance, summit attendance, and eligible Mojo events above and beyond Tier 2 and Tier 3 |
+| Tier 1<br>(Research Partner) | Virtual event subscription | $1,000 | Per quarter | Unlimited Mojo virtual event attendance |
+| Tier 2<br>(Summit Partner) | Summit attendance subscription | $5,000 total | Per quarter | Unlimited Mojo virtual event attendance plus Mojo summit attendance |
+| Tier 3<br>(Strategic Partner) | Full Mojo event subscription | $10,000 total | Per quarter, annual subscription | Unlimited virtual event attendance, summit attendance, and eligible Mojo events above and beyond Tier 1 and Tier 2 |
 
 ## Payment Terms
 
@@ -113,18 +112,18 @@ Annual payment discount:
 
 These examples include the slot-count discount: first Executive slot at standard price, second Executive slot at 15% off, and third Executive slot and beyond at 30% off. Member-status discounts are not included in this table and are applied separately when eligible.
 
-| Executive Slots | Tier 2 Only Annualized | Tier 2 + Tier 3 Annualized | Tier 2 + Tier 3 + Tier 4 Annualized |
+| Executive Slots | Tier 1 Annualized | Tier 2 Annualized | Tier 3 Annualized |
 | ---: | ---: | ---: | ---: |
-| 1 | $2,000 | $10,000 | $40,000 |
-| 2 | $3,700 | $18,500 | $74,000 |
-| 3 | $5,100 | $25,500 | $102,000 |
+| 1 | $4,000 | $20,000 | $40,000 |
+| 2 | $7,400 | $37,000 | $74,000 |
+| 3 | $10,200 | $51,000 | $102,000 |
 
 ## Member Status Discount Examples
 
 | Scenario | Standard Annual Cost | Member Discount | Discounted Annual Cost |
 | --- | ---: | ---: | ---: |
-| One Tier 3 member using a Tier 2 + Tier 3 Executive slot | $10,000 | 10% | $9,000 |
-| One Tier 4 member using a Tier 2 + Tier 3 + Tier 4 Executive slot | $40,000 | 20% | $32,000 |
+| One Tier 3 member using a Tier 2 Summit Partner Executive slot | $20,000 | 10% | $18,000 |
+| One Tier 4 member using a Tier 3 Strategic Partner Executive slot | $40,000 | 20% | $32,000 |
 
 ## SMB Program
 
@@ -134,35 +133,17 @@ Qualified SMB vendors pay 50% of the applicable Partner subscription price for e
 
 | Access Level | Standard Quarterly Cost | SMB Quarterly Cost | What It Covers |
 | --- | ---: | ---: | --- |
-| Tier 2 only | $500 | $250 | Unlimited virtual event attendance |
-| Tier 2 + Tier 3 | $2,500 | $1,250 | Unlimited virtual event attendance plus summit attendance |
-| Tier 2 + Tier 3 + Tier 4 | $10,000 | $5,000 | Unlimited virtual event attendance, summit attendance, and eligible Mojo events beyond Tier 2 and Tier 3 |
+| Tier 1 | $1,000 | $500 | Unlimited virtual event attendance |
+| Tier 2 | $5,000 | $2,500 | Unlimited virtual event attendance plus summit attendance |
+| Tier 3 | $10,000 | $5,000 | Unlimited virtual event attendance, summit attendance, and eligible Mojo events beyond Tier 1 and Tier 2 |
 
 If your organization is both a Partner Candidate and an SMB-qualified vendor, your agreement will specify whether Candidate pricing or SMB program pricing applies during the qualification period.
 
-## Tier 1: Partner
-
-### Function
-
-Partner is your approved organization status. It establishes that your company is qualified for the Mojo AI Summits partner network.
-
-### Includes
-
-- Formal Partner designation
-- Partner profile setup
-- Partner company relationship record
-- Approved partner contacts attached to the company record
-- Eligibility to subscribe Executive slots into Tier 2, Tier 3, and Tier 4
-
-### Details
-
-Tier 1 does not by itself create unlimited event attendance. Executive event access is priced per Executive slot through Tier 2, Tier 3, and Tier 4.
-
-## Tier 2: Intelligence Partner
+## Tier 1: Research Partner
 
 ### Price
 
-$500 per quarter per Executive slot.
+$1,000 per quarter per Executive slot.
 
 ### Access
 
@@ -174,21 +155,21 @@ Unlimited Mojo virtual event attendance for the Executive attendee using your su
 - Participation in approved online executive sessions
 - Access to recurring Mojo virtual programming
 - Mojo relationship tracking for participation through the Executive slot
-- Eligibility to purchase Tier 3 Summit Partner access
+- Eligibility to purchase Tier 2 Summit Partner access
 
 ### Details
 
-Tier 2 is the required virtual tier. Your Executive slot cannot purchase Tier 3 without an active Tier 2 subscription.
+Tier 1 is the virtual event partner tier. Your Executive slot cannot purchase Tier 2 without an active Tier 1 subscription.
 
-## Tier 3: Summit Partner
+## Tier 2: Summit Partner
 
 ### Price
 
-$2,500 total per quarter per Executive slot.
+$5,000 total per quarter per Executive slot.
 
 ### Requirement
 
-Tier 3 requires an active Tier 2 subscription for the same Executive slot.
+Tier 2 requires an active Tier 1 subscription for the same Executive slot.
 
 ### Access
 
@@ -199,13 +180,13 @@ Mojo summit attendance for the Executive attendee using your subscribed slot dur
 - Summit attendance access for one approved Executive attendee using the subscribed slot
 - Participation in approved summit programming
 - Mojo relationship tracking for summit participation
-- Eligibility to purchase Tier 4 Strategic Partner access
+- Eligibility to purchase Tier 3 Strategic Partner access
 
 ### Details
 
-Tier 3 is additive and is shown as a total stacked price. Your Executive slot subscription includes Tier 2 virtual access plus summit attendance for a combined $2,500 per quarter.
+Tier 2 is additive and is shown as a total stacked price. Your Executive slot subscription includes Tier 1 virtual access plus summit attendance for a combined $5,000 per quarter.
 
-## Tier 4: Strategic Partner
+## Tier 3: Strategic Partner
 
 ### Price
 
@@ -213,11 +194,11 @@ $10,000 total per quarter per Executive slot, with an annual subscription commit
 
 ### Requirement
 
-Tier 4 requires active Tier 2 and Tier 3 subscriptions for the same Executive slot.
+Tier 3 requires active Tier 1 and Tier 2 subscriptions for the same Executive slot.
 
 ### Access
 
-Unlimited eligible Mojo event attendance above and beyond Tier 2 virtual events and Tier 3 summit events.
+Unlimited eligible Mojo event attendance above and beyond Tier 1 virtual events and Tier 2 summit events.
 
 ### Includes
 
@@ -228,33 +209,33 @@ Unlimited eligible Mojo event attendance above and beyond Tier 2 virtual events 
 
 ### Details
 
-Tier 4 is the broadest Executive slot subscription and is shown as a total stacked price. It gives your already-subscribed virtual and summit slot the widest eligible Mojo event access through an annual subscription priced quarterly.
+Tier 3 is the broadest Executive slot subscription and is shown as a total stacked price. It gives your already-subscribed virtual and summit slot the widest eligible Mojo event access through an annual subscription priced quarterly.
 
 ## Per-Executive Slot Subscription Examples
 
 ### Example 1: Virtual-Only Executive
 
-You subscribe one Executive slot to Tier 2.
+You subscribe one Executive slot to Tier 1.
 
-- Quarterly cost: $500
-- Annualized cost: $2,000
+- Quarterly cost: $1,000
+- Annualized cost: $4,000
 - Access: unlimited Mojo virtual events
 
 ### Example 2: Virtual + Summit Executive
 
-You subscribe one Executive slot to Tier 2 and Tier 3.
+You subscribe one Executive slot to Tier 2.
 
-- Quarterly cost: $2,500
-- Annualized cost: $10,000
+- Quarterly cost: $5,000
+- Annualized cost: $20,000
 - Access: unlimited Mojo virtual events plus summit attendance
 
 ### Example 3: Full Mojo Event Executive
 
-You subscribe one Executive slot to Tier 2, Tier 3, and Tier 4.
+You subscribe one Executive slot to Tier 3.
 
 - Quarterly cost: $10,000
 - Annualized cost: $40,000
-- Access: unlimited Mojo virtual events, summit attendance, and eligible Mojo events above and beyond Tier 2 and Tier 3
+- Access: unlimited Mojo virtual events, summit attendance, and eligible Mojo events above and beyond Tier 1 and Tier 2
 
 ## Agreement Details
 
@@ -273,8 +254,8 @@ Your partner agreement will specify:
 - Slot-count discount for each eligible Executive slot
 - Member-status discount for each eligible Executive slot
 - Start date and renewal date
-- Quarterly billing terms for Tier 2 and Tier 3
-- Quarterly billing terms for Tier 4 under the annual subscription
+- Quarterly billing terms for Tier 1 and Tier 2
+- Quarterly billing terms for Tier 3 under the annual subscription
 - Annual contract term with quarterly payment schedule, when selected
 - Annual payment discount, when selected
 - Event categories included and excluded
@@ -284,4 +265,4 @@ Your partner agreement will specify:
 
 ## Summary
 
-> Mojo AI Summits uses a per-Executive slot subscription model. Each subscription buys one Executive slot, which may be assigned to one approved director-level-or-above Executive attendee at a time according to the agreement. Tier 2 is $500 per quarter for unlimited virtual event attendance. Tier 3 is $2,500 per quarter for virtual event access plus summit attendance. Tier 4 is $10,000 per quarter under an annual subscription for virtual events, summit attendance, and eligible Mojo events above and beyond Tier 2 and Tier 3. Partner Candidate means your organization is not yet an approved Partner, so Partner discounts do not apply until approval. Brand-new Partner Candidates may qualify for Have a Taste, a first-quarter introduction using standard Partner subscription pricing. If your organization does not become an approved Partner before the next quarter, pricing moves to the regular Candidate pricing structure. Tiers must be purchased in order, and additional Executive slots receive attendance-fee discounts.
+> Mojo AI Summits uses a per-Executive slot subscription model. Each subscription buys one Executive slot, which may be assigned to one approved director-level-or-above Executive attendee at a time according to the agreement. Tier 1 Research Partner access is $1,000 per quarter for unlimited virtual event attendance. Tier 2 Summit Partner access is $5,000 per quarter for virtual event access plus summit attendance. Tier 3 Strategic Partner access is $10,000 per quarter under an annual subscription for virtual events, summit attendance, and eligible Mojo events above and beyond Tier 1 and Tier 2. Partner Candidate means your organization is not yet an approved Partner, so Partner discounts do not apply until approval. Brand-new Partner Candidates may qualify for Have a Taste, a first-quarter introduction using standard Partner subscription pricing. If your organization does not become an approved Partner before the next quarter, pricing moves to the regular Candidate pricing structure. Tiers must be purchased in order, and additional Executive slots receive attendance-fee discounts.

@@ -1256,6 +1256,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Guest or user email
           <input id="registrationInviteEmail" name="intendedGuestEmail" type="email" placeholder="Optional invitee email" autocomplete="email">
         </label>
+        <label>
+          Invited by
+          <input id="registrationInviteInvitedBy" name="invitedBy" placeholder="Team member or referral source" autocomplete="name">
+        </label>
         <div class="invite-grid-actions">
           <button type="submit" id="registrationInviteSubmit">Generate Link</button>
           <button type="button" id="registrationInviteSendEmail" class="secondary">Send Email</button>
@@ -1293,12 +1297,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <input id="partnerInviteEmail" name="partnerContactEmail" type="email" placeholder="partner@company.com">
         </label>
         <label>
+          Invited by
+          <input id="partnerInviteInvitedBy" name="invitedBy" placeholder="Team member or referral source" autocomplete="name">
+        </label>
+        <label>
           Tier
           <select id="partnerInviteTier" name="partnerTier">
             <option value="">Not assigned</option>
             <option value="Partner Candidate">Partner Candidate</option>
-            <option value="Partner">Partner</option>
-            <option value="Intelligence Partner">Intelligence Partner</option>
+            <option value="Research Partner">Research Partner</option>
             <option value="Summit Partner">Summit Partner</option>
             <option value="Strategic Partner">Strategic Partner</option>
           </select>
@@ -1335,8 +1342,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Tier
           <select id="manualPartnerTier" name="partnerTier">
             <option value="Partner Candidate">Partner Candidate</option>
-            <option value="Partner">Partner</option>
-            <option value="Intelligence Partner">Intelligence Partner</option>
+            <option value="Research Partner">Research Partner</option>
             <option value="Summit Partner">Summit Partner</option>
             <option value="Strategic Partner">Strategic Partner</option>
           </select>
@@ -1971,9 +1977,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return `<span class="pill">${Number(row.attendedCount || 0)} attended</span>`;
     }
 
+    function normalizePartnerTier(value = "") {
+      const legacy = {
+        "Council Partner": "Research Partner",
+        "Partner": "Research Partner",
+        "Intelligence Partner": "Research Partner",
+        "Founding Partner": "Strategic Partner"
+      };
+      return legacy[value] || value;
+    }
+
     function partnerTierOptions(current = "") {
-      const selected = current || "Partner Candidate";
-      return ["Partner Candidate", "Partner", "Intelligence Partner", "Summit Partner", "Strategic Partner"]
+      const selected = normalizePartnerTier(current) || "Partner Candidate";
+      return ["Partner Candidate", "Research Partner", "Summit Partner", "Strategic Partner"]
         .map((tier) => `<option value="${escapeHtml(tier)}" ${selected === tier ? "selected" : ""}>${escapeHtml(tier)}</option>`)
         .join("");
     }
@@ -2180,6 +2196,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         invite.intendedGuestEmail,
         invite.invitedEmail,
         invite.guestEmail,
+        invite.invitedBy,
+        invite.inviter,
+        invite.invitedByName,
+        invite.createdBy,
         invite.usedByName,
         invite.usedByEmail,
         invite.usedBy,
@@ -2269,6 +2289,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const url = partnerRegistrationUrl(invite);
         const qrUrl = qrCodeUrl(url);
         const role = guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.registrationRole || "partner");
+        const invitedBy = invite.invitedBy || invite.inviter || invite.invitedByName || invite.createdBy || "Not recorded";
         return `
           <div class="invite-row">
             <div class="invite-qr">
@@ -2278,6 +2299,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <div>
               <strong>${escapeHtml(invite.eventName || "Partner event invite")}</strong>
               <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(inviteStatusText(invite))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}</p>
+              <p>Invited by: ${escapeHtml(invitedBy)}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
               <p>${escapeHtml(url)}</p>
@@ -2323,6 +2345,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const role = guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type);
         const invitedName = invite.intendedGuestName || invite.invitedName || invite.guestName || "Name not recorded";
         const invitedEmail = invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || "";
+        const invitedBy = invite.invitedBy || invite.inviter || invite.invitedByName || invite.createdBy || "Not recorded";
         return `
           <div class="invite-row">
             <div class="invite-qr">
@@ -2333,6 +2356,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <strong>${escapeHtml(invite.eventName || "Event registration invite")}</strong>
               <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(eventShowText(invite) || "Show time not assigned")} | ${escapeHtml(inviteStatusText(invite))}</p>
               <p>Invited: ${escapeHtml(invitedName)}${invitedEmail ? ` | ${escapeHtml(invitedEmail)}` : ""}</p>
+              <p>Invited by: ${escapeHtml(invitedBy)}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
               <p>${escapeHtml(url)}</p>
@@ -2397,6 +2421,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.state,
           row.timeZone,
           row.invitationSource,
+          row.invitedBy,
           row.partnerProductTypes,
           row.partnerClientMessaging,
           row.relationshipOwner,
@@ -2465,6 +2490,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function followUpSummary(row = {}) {
       const owner = row.relationshipOwner || "No owner";
+      const invitedBy = row.invitedBy || "Inviter not recorded";
       const action = labelForOption(nextActionOptions, row.nextAction || "none");
       const due = row.nextActionDueDate ? `Due ${row.nextActionDueDate}` : "No due date";
       const activityCount = (row.activity || []).length;
@@ -2472,6 +2498,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <div class="crm-compact-stack">
           <div class="crm-compact-pills">
             <span class="pill ${row.relationshipOwner ? "" : "warn"}">${escapeHtml(owner)}</span>
+            <span class="pill ${row.invitedBy ? "" : "warn"}">Invited by: ${escapeHtml(invitedBy)}</span>
             <span class="pill">${escapeHtml(action)}</span>
           </div>
           <div class="crm-compact-meta">${escapeHtml(due)} | ${activityCount} activit${activityCount === 1 ? "y" : "ies"}</div>
@@ -2548,6 +2575,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <summary>Edit follow-up</summary>
             <div class="crm-detail-grid">
               <label>Invitation Source<input data-contact-field="invitationSource" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.invitationSource || "")}"></label>
+              <label>Invited By<input data-contact-field="invitedBy" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.invitedBy || "")}"></label>
               <label>Relationship Owner<input data-contact-field="relationshipOwner" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.relationshipOwner || "")}"></label>
               <label>Last Contact<input type="date" data-contact-field="lastContactDate" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastContactDate || "")}"></label>
               <label>Next Action<select data-contact-field="nextAction" data-contact-key="${escapeHtml(row.key)}">${optionList(nextActionOptions, row.nextAction || "none")}</select></label>
@@ -2757,7 +2785,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <td>
             <strong>${escapeHtml(row.name)}</strong><br>
             <span>${escapeHtml(row.title || "")}</span>
-            ${row.partnerTier ? `<br><span>${escapeHtml(row.partnerTier)}</span>` : ""}
+            ${row.partnerTier ? `<br><span>${escapeHtml(normalizePartnerTier(row.partnerTier))}</span>` : ""}
           </td>
           <td>
             <strong>${escapeHtml(row.company || "")}</strong>
@@ -2951,6 +2979,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               state: changes.state ?? existing.state ?? "",
               timeZone: changes.timeZone ?? existing.timeZone ?? "",
               invitationSource: changes.invitationSource ?? existing.invitationSource ?? "",
+              invitedBy: changes.invitedBy ?? existing.invitedBy ?? "",
               relationshipOwner: changes.relationshipOwner ?? existing.relationshipOwner ?? "",
               lifecycleStage: changes.lifecycleStage ?? existing.lifecycleStage ?? "prospect",
               lastContactDate: changes.lastContactDate ?? existing.lastContactDate ?? "",
@@ -3648,6 +3677,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventSlug: formData.get("eventSlug") || "",
         intendedGuestName: formData.get("intendedGuestName") || "",
         intendedGuestEmail: formData.get("intendedGuestEmail") || "",
+        invitedBy: formData.get("invitedBy") || "",
         eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
         eventDate: selected?.dataset.eventDate || "",
         eventShowId: showId,
