@@ -14,13 +14,14 @@ const registrationSources = [
 ];
 const tierLabels = new Set([
   "Partner Candidate",
-  "Partner",
-  "Intelligence Partner",
+  "Research Partner",
   "Summit Partner",
   "Strategic Partner"
 ]);
 const legacyTierLabels = new Map([
-  ["Council Partner", "Partner"],
+  ["Council Partner", "Research Partner"],
+  ["Partner", "Research Partner"],
+  ["Intelligence Partner", "Research Partner"],
   ["Founding Partner", "Strategic Partner"]
 ]);
 
@@ -378,18 +379,17 @@ function attendeesForEvent(event, registrations) {
     .map((row) => ({
       id: row.email || row.id,
       name: row.name,
-      email: row.email,
       company: row.company,
       title: row.title,
       type: row.typeLabel
     }))
     .filter((row) => {
-      const key = row.email || `${row.name}:${row.company}:${row.type}`;
+      const key = row.id || `${row.name}:${row.company}:${row.type}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     })
-    .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+    .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
 }
 
 export async function onRequestOptions() {

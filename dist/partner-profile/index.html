@@ -559,12 +559,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Title</th><th>Type</th></tr></thead>
+            <thead><tr><th>Name</th><th>Company</th><th>Title</th><th>Type</th></tr></thead>
             <tbody>
               ${attendees.map((attendee) => `
                 <tr>
                   <td>${escapeHtml(attendee.name)}</td>
-                  <td>${escapeHtml(attendee.email)}</td>
                   <td>${escapeHtml(attendee.company)}</td>
                   <td>${escapeHtml(attendee.title)}</td>
                   <td>${escapeHtml(attendee.type)}</td>
@@ -668,11 +667,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return {
         configured: true,
         profile: {
-          organizationName: "Example Intelligence Partner",
-          tier: "Partner",
+          organizationName: "Example Research Partner",
+          tier: "Research Partner",
           contacts: [
-            { name: "Avery Chen", email: "avery@example.com", company: "Example Intelligence Partner", title: "Chief Revenue Officer", source: "Partner CRM" },
-            { name: "Morgan Lee", email: "morgan@example.com", company: "Example Intelligence Partner", title: "VP, AI Strategy", source: "Company profile" }
+            { name: "Avery Chen", email: "avery@example.com", company: "Example Research Partner", title: "Chief Revenue Officer", source: "Partner CRM" },
+            { name: "Morgan Lee", email: "morgan@example.com", company: "Example Research Partner", title: "VP, AI Strategy", source: "Company profile" }
           ],
           events: [
             {
@@ -681,9 +680,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               location: "Dallas, TX",
               role: "Partner",
               attendees: [
-                { name: "Avery Chen", email: "avery@example.com", company: "Example Intelligence Partner", title: "Chief Revenue Officer", type: "Partner" },
-                { name: "Jordan Patel", email: "jordan@example.com", company: "Northstar Manufacturing", title: "CIO", type: "Member" },
-                { name: "Taylor Brooks", email: "taylor@example.com", company: "Summit Health", title: "Chief Digital Officer", type: "Guest" }
+                { name: "Avery Chen", company: "Example Research Partner", title: "Chief Revenue Officer", type: "Partner" },
+                { name: "Jordan Patel", company: "Northstar Manufacturing", title: "CIO", type: "Member" },
+                { name: "Taylor Brooks", company: "Summit Health", title: "Chief Digital Officer", type: "Guest" }
               ]
             }
           ],
@@ -694,7 +693,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             {
               date: "2026-10-01",
               subscription: "Quarterly executive subscription",
-              tier: "Tier 3 - Sanctum Partner",
+              tier: "Tier 2 - Summit Partner",
               status: "Active",
               amount: 2500,
               cadence: "per quarter",
