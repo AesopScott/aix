@@ -2,6 +2,9 @@
 /access /access/ 301
 /setup /setup/ 301
 /storage /storage/ 301
+/storage/ /files/index.html 200
+/storage/index.html /files/index.html 200
+/storage/* /files/index.html 200
 /files /files/ 301
 /files/ /files/index.html 200
 /files/* /files/index.html 200
