@@ -115,6 +115,26 @@ function cleanGuestRegistrationType(value) {
   }[cleanString(value).toLowerCase()] || "guest";
 }
 
+function cleanEventShowId(value, fallback = "") {
+  const normalized = cleanString(value).toLowerCase();
+  if (["morning", "am", "10", "10am", "10:00"].includes(normalized)) return "morning";
+  if (["afternoon", "pm", "1", "1pm", "13:00", "1:00"].includes(normalized)) return "afternoon";
+  if (["both", "all", "both-shows"].includes(normalized)) return "both";
+  return fallback;
+}
+
+function eventShowLabel(showId) {
+  return {
+    morning: "Morning show",
+    afternoon: "Afternoon show",
+    both: "Both shows"
+  }[cleanEventShowId(showId)] || "";
+}
+
+function eventShowKey(record = {}) {
+  return cleanEventShowId(record.eventShowId || record.showId || record.eventShow || record.show, "");
+}
+
 function slugify(value) {
   return cleanString(value)
     .toLowerCase()
@@ -169,6 +189,10 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
     eventSlug: cleanString(registration.eventSlug),
     eventName: cleanString(registration.eventName) || eventId || "Registration",
     eventDate: cleanString(registration.eventDate),
+    eventTime: cleanString(registration.eventTime),
+    eventShowId: eventShowKey(registration),
+    eventShowLabel: cleanString(registration.eventShowLabel) || eventShowLabel(registration.eventShowId),
+    eventShowTime: cleanString(registration.eventShowTime) || cleanString(registration.eventTime),
     inviteCode: cleanString(registration.inviteCode),
     intendedGuestName: cleanString(registration.intendedGuestName || registration.invitedName || registration.guestName),
     invitedName: cleanString(registration.invitedName || registration.intendedGuestName || registration.guestName),
@@ -188,7 +212,9 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
 }
 
 function contactEventKey(event = {}) {
-  return cleanString(event.registrationId || event.eventId || event.eventSlug || event.eventName || event.inviteCode || event.registeredAt)
+  const show = eventShowKey(event);
+  const eventSlug = cleanString(event.eventSlug || event.eventName);
+  return cleanString(event.registrationId || event.eventId || (eventSlug && show ? `${eventSlug}:${show}` : eventSlug) || event.inviteCode || event.registeredAt)
     .toLowerCase();
 }
 
@@ -294,6 +320,9 @@ function inviteMeta(inviteRecord) {
     eventName: cleanString(record.eventName),
     eventDate: cleanString(record.eventDate),
     eventTime: cleanString(record.eventTime),
+    eventShowId: eventShowKey(record),
+    eventShowLabel: cleanString(record.eventShowLabel) || eventShowLabel(record.eventShowId),
+    eventShowTime: cleanString(record.eventShowTime) || cleanString(record.eventTime),
     eventStart: cleanString(record.eventStart || record.eventStartDateTime),
     eventEnd: cleanString(record.eventEnd || record.eventEndDateTime),
     eventAccessLink: cleanString(record.eventAccessLink || record.accessLink || record.joinUrl || record.zoomUrl),
@@ -730,7 +759,11 @@ async function markInviteCodeUsedInR2(env, type, code, registration) {
       usedByEmail: registration.email,
       registrationId: registration.id,
       eventName: registration.eventName,
-      eventDate: registration.eventDate
+      eventDate: registration.eventDate,
+      eventTime: registration.eventTime,
+      eventShowId: registration.eventShowId,
+      eventShowLabel: registration.eventShowLabel,
+      eventShowTime: registration.eventShowTime
     }),
     {
       httpMetadata: { contentType: "application/json; charset=utf-8" },
