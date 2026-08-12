@@ -61,11 +61,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 </style>
 <style>
 .guest-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.guest-card{position:relative;min-height:330px;padding:18px;background:linear-gradient(180deg,rgba(27,35,51,.76),rgba(10,15,30,.74));border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.guest-card{position:relative;min-height:330px;padding:18px;background:linear-gradient(180deg,rgba(27,35,51,.76),rgba(10,15,30,.74));border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
 .guest-card:after{content:"";position:absolute;inset:auto 0 0 0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,230,255,.72),transparent)}
 .guest-card.is-placeholder{background:linear-gradient(180deg,rgba(10,15,30,.58),rgba(10,15,30,.38));border-style:dashed}
 .guest-card.is-placeholder h3{color:rgba(255,255,255,.74)}
-.guest-photo{height:160px;margin:-18px -18px 18px;background:rgba(5,9,19,.72);border-bottom:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
+.guest-photo{height:160px;flex:0 0 160px;margin:-18px -18px 18px;background:rgba(5,9,19,.72);border-bottom:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
 .guest-photo img{width:100%;height:100%;object-fit:cover;filter:saturate(.9) contrast(1.05)}
 .guest-initials{width:74px;height:74px;border:1px solid rgba(0,230,255,.58);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-family:Orbitron,sans-serif;font-weight:800;letter-spacing:.08em;background:radial-gradient(circle,rgba(0,230,255,.16),rgba(22,102,255,.08));box-shadow:0 0 28px rgba(0,230,255,.18)}
 .guest-card.is-placeholder .guest-initials{border-style:dashed;color:rgba(0,230,255,.66);background:rgba(0,230,255,.045);box-shadow:none}
@@ -73,14 +73,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 .guest-meta{display:grid;gap:8px;margin-top:14px;color:rgba(255,255,255,.82);font-size:14px;line-height:1.45}
 .guest-meta span{display:flex;gap:8px;align-items:flex-start}
 .guest-meta strong{min-width:72px;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
-.guest-note{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.55}
+.guest-note{margin-top:auto;min-height:38px;padding-top:14px;color:var(--dim);font-size:12px;line-height:1.55}
+.slot-action{width:100%;min-height:44px;flex:0 0 auto;margin-top:18px;border:1px solid rgba(0,230,255,.58);border-radius:4px;background:rgba(0,230,255,.08);color:var(--cyan);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
+.slot-action:hover{background:var(--cyan);border-color:var(--cyan);color:#031018}
 .guest-source{display:inline-flex;margin-bottom:16px;padding:7px 10px;border:1px solid rgba(0,230,255,.28);border-radius:999px;color:var(--cyan);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
 .speaker-count{display:grid;grid-template-columns:minmax(120px,.28fr) repeat(3,minmax(0,1fr));gap:1px;margin-bottom:20px;background:var(--line);border:1px solid var(--line)}
 .speaker-count div{min-height:86px;padding:18px;background:rgba(10,15,30,.82)}
 .speaker-count strong{display:block;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:28px;line-height:1}
 .speaker-count span{display:block;margin-top:9px;color:var(--muted);font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:700;letter-spacing:.13em;line-height:1.45;text-transform:uppercase}
+.slot-modal[hidden]{display:none}.slot-modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:22px;background:rgba(5,9,19,.78);backdrop-filter:blur(14px)}.slot-dialog{width:min(640px,100%);max-height:calc(100vh - 44px);overflow:auto;padding:26px;background:linear-gradient(180deg,rgba(27,35,51,.98),rgba(10,15,30,.98));border:1px solid rgba(0,230,255,.34);border-radius:8px;box-shadow:0 24px 90px rgba(0,0,0,.58)}.slot-dialog-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}.slot-dialog h3{font-family:Fraunces,serif;font-size:32px;line-height:1.05}.slot-dialog p{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.6}.slot-close{width:38px;height:38px;border:1px solid var(--line);border-radius:4px;background:rgba(10,15,30,.7);color:var(--white);font-size:22px;line-height:1;cursor:pointer}.slot-form{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.slot-form label{display:grid;gap:7px;color:var(--muted);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.slot-form input,.slot-form textarea{width:100%;border:1px solid var(--line);border-radius:4px;background:rgba(5,9,19,.76);color:var(--white);font:500 15px/1.4 Inter,sans-serif;padding:12px}.slot-form textarea{min-height:104px;resize:vertical}.slot-wide{grid-column:1/-1}.slot-submit{min-height:46px;border:1px solid var(--cyan);border-radius:4px;background:var(--cyan);color:#031018;font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer}.slot-message{min-height:20px;color:var(--cyan);font-size:13px;line-height:1.5}.slot-message.is-error{color:#ffb6c1}
 @media (max-width:980px){.guest-grid{grid-template-columns:repeat(2,1fr)}}@media (max-width:720px){.guest-grid{grid-template-columns:1fr}}
 @media (max-width:860px){.speaker-count{grid-template-columns:repeat(2,1fr)}}@media (max-width:560px){.speaker-count{grid-template-columns:1fr}}
+@media (max-width:620px){.slot-form{grid-template-columns:1fr}.slot-dialog h3{font-size:28px}}
 </style>
 </head>
 <body>
@@ -131,17 +135,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   const source = document.querySelector("#guestSource");
   const speakerCount = document.querySelector("#speakerCount");
   if (!grid || !source) return;
+  const eventDetails = {
+    slug: "ai-executive-readiness",
+    title: "AI Executive Readiness",
+    date: "Friday, September 4, 2026, 1:00 PM-2:30 PM Central"
+  };
   const placeholderSlots = [
-    { displayName: "Executive featured guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E1", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E2", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E3", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E4", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E5", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E6", note: "Executive featured guest to be announced." },
-    { displayName: "Author featured guest", roleLabel: "Author guest", industry: "Author perspective", title: "To be announced", company: "Author profile to be announced", initials: "AU", note: "Author featured guest to be announced." },
-    { displayName: "Partner featured guest", roleLabel: "Partner guest", industry: "Partner perspective", title: "To be announced", company: "Partner organization to be announced", initials: "P1", note: "Partner featured guest to be announced." },
-    { displayName: "Partner featured guest", roleLabel: "Partner guest", industry: "Partner perspective", title: "To be announced", company: "Partner organization to be announced", initials: "P2", note: "Partner featured guest to be announced." }
+    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E1", note: "Executive featured guest to be announced." },
+    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E2", note: "Executive featured guest to be announced." },
+    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E3", note: "Executive featured guest to be announced." },
+    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E4", note: "Executive featured guest to be announced." },
+    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E5", note: "Executive featured guest to be announced." },
+    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E6", note: "Executive featured guest to be announced." },
+    { displayName: "Author featured guest", slotType: "featured-author", roleLabel: "Author guest", industry: "Author perspective", title: "To be announced", company: "Author profile to be announced", initials: "AU", note: "Author featured guest to be announced." },
+    { displayName: "Partner featured guest", slotType: "featured-partner", roleLabel: "Partner guest", industry: "Partner perspective", title: "To be announced", company: "Partner organization to be announced", initials: "P1", note: "Partner featured guest to be announced." },
+    { displayName: "Partner featured guest", slotType: "featured-partner", roleLabel: "Partner guest", industry: "Partner perspective", title: "To be announced", company: "Partner organization to be announced", initials: "P2", note: "Partner featured guest to be announced." }
   ];
+  let currentSlots = [];
+  let activeSlot = null;
   function escapeHtml(value) {
     return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
   }
@@ -159,15 +170,121 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   function renderMeta(label, value, fallback) {
     return `<span><strong>${escapeHtml(label)}</strong>${escapeHtml(value || fallback)}</span>`;
   }
+  function slotLabel(guest) {
+    const code = guest.slotCode || guest.initials || "";
+    return `${guest.displayName || "Featured guest"} ${code}`.trim();
+  }
+  function createSlotModal() {
+    const modal = document.createElement("div");
+    modal.className = "slot-modal";
+    modal.id = "slotRequestModal";
+    modal.hidden = true;
+    modal.innerHTML = `
+      <div class="slot-dialog" role="dialog" aria-modal="true" aria-labelledby="slotRequestTitle">
+        <div class="slot-dialog-head">
+          <div><h3 id="slotRequestTitle">Request this slot</h3><p id="slotRequestIntro">AI Executive Readiness</p></div>
+          <button class="slot-close" type="button" aria-label="Close request form">&times;</button>
+        </div>
+        <form class="slot-form" id="slotRequestForm">
+          <label>Full name<input name="name" autocomplete="name" required></label>
+          <label>Work email<input name="email" type="email" autocomplete="email" required></label>
+          <label>Company<input name="company" autocomplete="organization" required></label>
+          <label>Title<input name="title" autocomplete="organization-title" required></label>
+          <label class="slot-wide">LinkedIn profile<input name="linkedinProfileUrl" type="url" autocomplete="url" required></label>
+          <label class="slot-wide">Why this fit<textarea name="notes"></textarea></label>
+          <p class="slot-message slot-wide" id="slotRequestMessage" role="status"></p>
+          <button class="slot-submit slot-wide" type="submit">Send Request</button>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+  }
+  const slotModal = createSlotModal();
+  const slotForm = slotModal.querySelector("#slotRequestForm");
+  const slotTitle = slotModal.querySelector("#slotRequestTitle");
+  const slotIntro = slotModal.querySelector("#slotRequestIntro");
+  const slotMessage = slotModal.querySelector("#slotRequestMessage");
+  const closeSlotModal = () => {
+    slotModal.hidden = true;
+    activeSlot = null;
+    slotMessage.textContent = "";
+    slotMessage.classList.remove("is-error");
+  };
+  slotModal.querySelector(".slot-close").addEventListener("click", closeSlotModal);
+  slotModal.addEventListener("click", (event) => {
+    if (event.target === slotModal) closeSlotModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !slotModal.hidden) closeSlotModal();
+  });
+  function openSlotRequest(index) {
+    activeSlot = currentSlots[index];
+    if (!activeSlot) return;
+    slotForm.reset();
+    slotTitle.textContent = `Request ${slotLabel(activeSlot)}`;
+    slotIntro.textContent = `${eventDetails.title} | ${eventDetails.date}`;
+    slotMessage.textContent = "";
+    slotMessage.classList.remove("is-error");
+    slotModal.hidden = false;
+    slotForm.elements.name.focus();
+  }
+  async function submitSlotRequest(event) {
+    event.preventDefault();
+    if (!activeSlot) return;
+    const submitButton = slotForm.querySelector(".slot-submit");
+    const formData = new FormData(slotForm);
+    const payload = {
+      type: "featured-guest-slot",
+      name: formData.get("name"),
+      email: formData.get("email"),
+      company: formData.get("company"),
+      title: formData.get("title"),
+      linkedinProfileUrl: formData.get("linkedinProfileUrl"),
+      notes: formData.get("notes"),
+      sourcePage: window.location.pathname,
+      eventSlug: eventDetails.slug,
+      eventTitle: eventDetails.title,
+      eventDate: eventDetails.date,
+      slotType: activeSlot.slotType,
+      slotLabel: activeSlot.displayName,
+      slotCode: activeSlot.slotCode || activeSlot.initials
+    };
+    if (window.location.protocol === "file:") {
+      slotMessage.textContent = "This request form is ready for the published page.";
+      return;
+    }
+    submitButton.disabled = true;
+    slotMessage.textContent = "Sending request...";
+    slotMessage.classList.remove("is-error");
+    try {
+      const response = await fetch("/api/invite-request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Request could not be sent.");
+      slotMessage.textContent = "Request sent. The MOJO team will review the fit.";
+      slotForm.reset();
+    } catch (error) {
+      slotMessage.textContent = error.message || "Request could not be sent.";
+      slotMessage.classList.add("is-error");
+    } finally {
+      submitButton.disabled = false;
+    }
+  }
+  slotForm.addEventListener("submit", submitSlotRequest);
   function renderGuests(guests, label) {
-    const filledGuests = guests.slice(0, 9);
+    const filledGuests = guests.slice(0, 9).map((guest, index) => ({ ...placeholderSlots[index], ...guest }));
     const visibleSlots = [
       ...filledGuests,
       ...placeholderSlots.slice(0, Math.max(0, 9 - filledGuests.length)).map((slot) => ({ ...slot, isPlaceholder: true }))
     ];
+    currentSlots = visibleSlots;
     source.textContent = label;
     if (speakerCount) speakerCount.textContent = `${filledGuests.length}/9`;
-    grid.innerHTML = visibleSlots.map((guest) => `
+    grid.innerHTML = visibleSlots.map((guest, index) => `
       <article class="guest-card${guest.isPlaceholder ? " is-placeholder" : ""}">
         <div class="guest-photo">${renderPhoto(guest)}</div>
         <h3>${escapeHtml(guest.displayName || "Name withheld")}</h3>
@@ -178,8 +295,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           ${renderMeta("Company", guest.company, guest.companyAllowed ? "Company pending" : "Company withheld")}
         </div>
         <p class="guest-note">${escapeHtml(guest.note || (guest.nameAllowed ? "Name approved for public use." : "Name withheld until publication permission is approved."))}</p>
+        <button class="slot-action" type="button" data-slot-index="${index}">Request this slot</button>
       </article>
     `).join("");
+    grid.querySelectorAll(".slot-action").forEach((button) => {
+      button.addEventListener("click", () => openSlotRequest(Number(button.dataset.slotIndex)));
+    });
   }
   async function loadGuests() {
     renderGuests([], "Featured guest lineup");
