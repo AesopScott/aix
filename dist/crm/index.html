@@ -1224,16 +1224,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div>
         <p class="eyebrow">Guest invite links</p>
         <h2>Create event-tied guest invite links</h2>
-        <p>Select one of the six upcoming Mojo events, choose guest or member registration, and generate the link to send.</p>
+        <p>Select an event, choose whether the guest is featured on-screen, and generate the link to send.</p>
       </div>
       <form class="invite-grid registration-invite-grid" id="registrationInviteForm">
         <label>
-          Registration type
+          Guest role
           <select id="registrationInviteType" name="type">
             <option value="guest">Guest</option>
-            <option value="featured-guest">Featured Guest</option>
-            <option value="presenter">Presenter</option>
-            <option value="roundtable-leader">Round Table Leader</option>
+            <option value="featured-guest">Featured Guest (on screen)</option>
           </select>
         </label>
         <label>
@@ -1270,13 +1268,20 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div>
         <p class="eyebrow">Partner event invites</p>
         <h2>Create hidden partner registration links</h2>
-        <p>Generate a single-use partner invite code tied to an event. The registration page is not linked from the public website.</p>
+        <p>Select an event, choose whether the partner is featured on-screen, and generate the link to send.</p>
       </div>
       <form class="invite-grid" id="partnerInviteForm">
         <label>
           Event
           <select id="partnerInviteEvent" name="eventSlug" required>
             <option value="">Loading events...</option>
+          </select>
+        </label>
+        <label>
+          Partner role
+          <select id="partnerInviteType" name="partnerRegistrationType">
+            <option value="partner">Partner</option>
+            <option value="featured-partner">Featured Partner (on screen)</option>
           </select>
         </label>
         <label>
@@ -1682,6 +1687,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function guestRegistrationTypeLabel(value) {
       const role = String(value || "").toLowerCase();
+      if (role === "featured-partner") return "Featured Partner";
       if (role === "featured-guest") return "Featured Guest";
       if (role === "presenter") return "Presenter";
       if (role === "roundtable-leader" || role === "roundtable") return "Round Table Leader";
@@ -1744,13 +1750,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (strategicRole === "research-contributor") return "Research Contributor";
       if (strategicRole === "sponsor-representative") return "Sponsor Representative";
       if (strategicRole === "partner") return "Partner";
-      const registrationRole = String(event.registrationRole || event.guestRegistrationType || "").toLowerCase();
+      const registrationRole = String(event.registrationRole || event.partnerRegistrationType || event.guestRegistrationType || "").toLowerCase();
+      if (registrationRole === "featured-partner") return "Featured Partner";
       if (registrationRole === "featured-guest") return "Featured Guest";
       if (registrationRole === "presenter") return "Presenter";
       if (registrationRole === "roundtable-leader") return "Round Table Leader";
       if (registrationRole === "guest") return "Guest";
 
       const role = String(event.role || "").toLowerCase();
+      if (role.includes("featured partner")) return "Featured Partner";
       if (role.includes("featured guest")) return "Featured Guest";
       if (role.includes("presenter")) return "Presenter";
       if (role.includes("round table")) return "Round Table Leader";
@@ -2260,6 +2268,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       partnerInviteList.innerHTML = invites.slice(0, 12).map((invite) => {
         const url = partnerRegistrationUrl(invite);
         const qrUrl = qrCodeUrl(url);
+        const role = guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.registrationRole || "partner");
         return `
           <div class="invite-row">
             <div class="invite-qr">
@@ -2268,7 +2277,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             </div>
             <div>
               <strong>${escapeHtml(invite.eventName || "Partner event invite")}</strong>
-              <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(inviteStatusText(invite))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}</p>
+              <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(inviteStatusText(invite))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
               <p>${escapeHtml(url)}</p>
@@ -2388,6 +2397,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.state,
           row.timeZone,
           row.invitationSource,
+          row.partnerProductTypes,
+          row.partnerClientMessaging,
           row.relationshipOwner,
           row.lifecycleStage,
           row.lastContactDate,
@@ -2405,6 +2416,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           ...(row.events || []).flatMap((event) => [event.eventName, event.eventDate, event.role, event.registrationStatus, event.strategicRole, roleLabelFromEvent(event)]),
           ...(row.activity || []).flatMap((entry) => [entry.type, entry.owner, entry.text, entry.nextAction, entry.dueDate]),
           row.partnerTier,
+          row.partnerProductTypes,
+          row.partnerClientMessaging,
           row.crmNotes
         ].some((value) => String(value || "").toLowerCase().includes(search));
       });
@@ -2679,6 +2692,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                     </label>
                   </div>
                   ${row.industry ? `<br><span>${escapeHtml(row.industry)}</span>` : ""}
+                  ${row.partnerProductTypes ? `<br><span>Products: ${escapeHtml(row.partnerProductTypes)}</span>` : ""}
+                  ${row.partnerClientMessaging ? `<br><span>Messaging: ${escapeHtml(row.partnerClientMessaging)}</span>` : ""}
                 </td>
                 <td>
                   <div class="partner-edit-stack">
@@ -2747,6 +2762,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <td>
             <strong>${escapeHtml(row.company || "")}</strong>
             ${row.industry ? `<br><span>${escapeHtml(row.industry)}</span>` : ""}
+            ${row.partnerProductTypes ? `<br><span>Products: ${escapeHtml(row.partnerProductTypes)}</span>` : ""}
+            ${row.partnerClientMessaging ? `<br><span>Messaging: ${escapeHtml(row.partnerClientMessaging)}</span>` : ""}
           </td>
           <td>
             <div class="contact-cell">

@@ -238,7 +238,8 @@
     color:var(--ink-dim);
   }
   input,
-  select{
+  select,
+  textarea{
     width:100%;
     border:0;
     border-bottom:1px solid var(--border);
@@ -249,9 +250,12 @@
     outline:none;
     transition:border-color .24s var(--ease);
   }
+  textarea{ min-height:112px; resize:vertical; line-height:1.5; }
   input:focus,
-  select:focus{ border-color:var(--cyan); }
-  input::placeholder{ color:var(--ink-dim); }
+  select:focus,
+  textarea:focus{ border-color:var(--cyan); }
+  input::placeholder,
+  textarea::placeholder{ color:var(--ink-dim); }
   select option{ background:var(--slate); color:var(--white); }
   input[readonly]{ color:var(--ink); }
   .phone-row{
@@ -497,6 +501,22 @@
               <input type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
             </div>
             <div class="field full">
+              <label for="eventShowId">Show time</label>
+              <select id="eventShowId" name="eventShowId" required>
+                <option value="both">Both shows</option>
+                <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
+                <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label for="partnerProductTypes">Products sold</label>
+              <textarea id="partnerProductTypes" name="partnerProductTypes" placeholder="Describe the product categories, services, or solutions your company sells to clients." rows="4" required></textarea>
+            </div>
+            <div class="field full">
+              <label for="partnerClientMessaging">Typical client messaging</label>
+              <textarea id="partnerClientMessaging" name="partnerClientMessaging" placeholder="Share the usual positioning, pain points, outcomes, or value message you use with potential clients." rows="5" required></textarea>
+            </div>
+            <div class="field full">
               <label for="phone">Mobile phone</label>
               <div class="phone-row">
                 <input type="tel" id="phone" name="phone" placeholder="+1 555 123 4567" autocomplete="tel" required>
@@ -533,6 +553,7 @@
   const inviteInput = document.getElementById('inviteCode');
   const inviteBadge = document.getElementById('inviteBadge');
   const emailInput = document.getElementById('email');
+  const eventShowSelect = document.getElementById('eventShowId');
   const phoneInput = document.getElementById('phone');
   const sendCodeButton = document.getElementById('sendCodeButton');
   const verifyCodeRow = document.getElementById('verifyCodeRow');
@@ -547,6 +568,7 @@
   const verificationStatus = document.getElementById('phoneVerificationStatus');
   const adminPreviewCode = '4321';
   let adminPreviewMode = false;
+  let currentInviteRole = 'partner';
 
   function getInviteCode(){
     const params = new URLSearchParams(window.location.search);
@@ -577,6 +599,28 @@
     return domain === 'gmail.com' || domain === 'googlemail.com';
   }
 
+  function normalizeEventShow(value, fallback = ''){
+    const show = String(value || '').trim().toLowerCase();
+    if (['morning', 'am', '10', '10am', '10:00'].includes(show)) return 'morning';
+    if (['afternoon', 'pm', '1', '1pm', '13:00', '1:00'].includes(show)) return 'afternoon';
+    if (['both', 'all', 'both-shows'].includes(show)) return 'both';
+    return fallback;
+  }
+
+  function configureShowOptions(invite = {}){
+    currentInviteRole = String(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || 'partner').toLowerCase();
+    const featured = currentInviteRole === 'featured-guest' || currentInviteRole === 'featured-partner';
+    const assignedShow = normalizeEventShow(invite.eventShowId || invite.showId || invite.eventShow, '');
+    eventShowSelect.innerHTML = [
+      featured ? '<option value="">Select a show time</option>' : '<option value="both">Both shows</option>',
+      '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
+      '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
+    ].join('');
+    eventShowSelect.value = assignedShow === 'morning' || assignedShow === 'afternoon'
+      ? assignedShow
+      : featured ? '' : 'both';
+  }
+
   function normalizePhone(phone){
     return String(phone || '').replace(/[^\d+]/g, '');
   }
@@ -589,6 +633,7 @@
   }
 
   function unlockRegistration(code, invite = {}){
+    configureShowOptions(invite);
     inviteInput.value = code;
     const label = invite.eventName ? `${invite.eventName} invite` : `Invite ${code}`;
     inviteBadge.textContent = label;
@@ -599,6 +644,7 @@
 
   function unlockAdminPreview(){
     adminPreviewMode = true;
+    configureShowOptions();
     inviteInput.value = adminPreviewCode;
     inviteBadge.textContent = 'Admin preview';
     accessGate.classList.add('hide');
@@ -626,6 +672,7 @@
 
   const incomingInviteCode = getInviteCode();
   const incomingPreviewCode = getPreviewCode();
+  configureShowOptions();
   if (incomingPreviewCode === adminPreviewCode) {
     unlockAdminPreview();
   } else if (incomingInviteCode) {
@@ -744,6 +791,18 @@
       emailInput.focus();
       return;
     }
+    const selectedShow = normalizeEventShow(payload.eventShowId, '');
+    if ((currentInviteRole === 'featured-guest' || currentInviteRole === 'featured-partner') && !['morning', 'afternoon'].includes(selectedShow)) {
+      setMessage(formError, 'Choose either the morning show or afternoon show.', 'error');
+      eventShowSelect.focus();
+      return;
+    }
+    if (!['morning', 'afternoon', 'both'].includes(selectedShow)) {
+      setMessage(formError, 'Choose a valid show time.', 'error');
+      eventShowSelect.focus();
+      return;
+    }
+    payload.eventShowId = selectedShow;
     if (payload.phoneVerificationStatus === 'unverified' || payload.phoneVerificationStatus === 'code_sent') {
       setMessage(formError, 'Verify the phone number first so the registration has a phone confirmation status.', 'error');
       phoneInput.focus();

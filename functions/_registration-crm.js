@@ -107,12 +107,19 @@ function cleanBoolean(value) {
 
 function cleanGuestRegistrationType(value) {
   return {
+    "featured-partner": "featured-partner",
     "featured-guest": "featured-guest",
+    partner: "partner",
     presenter: "presenter",
     roundtable: "roundtable-leader",
     "roundtable-leader": "roundtable-leader",
     guest: "guest"
   }[cleanString(value).toLowerCase()] || "guest";
+}
+
+function cleanOptionalRegistrationType(value) {
+  const raw = cleanString(value);
+  return raw ? cleanGuestRegistrationType(raw) : "";
 }
 
 function cleanEventShowId(value, fallback = "") {
@@ -131,8 +138,62 @@ function eventShowLabel(showId) {
   }[cleanEventShowId(showId)] || "";
 }
 
+function eventShowTime(showId) {
+  return {
+    morning: "10:00 am - 11:30 am CT",
+    afternoon: "1:00 pm - 2:30 pm CT",
+    both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
+  }[cleanEventShowId(showId)] || "";
+}
+
 function eventShowKey(record = {}) {
   return cleanEventShowId(record.eventShowId || record.showId || record.eventShow || record.show, "");
+}
+
+function eventShowMetadata(showId) {
+  const eventShowId = cleanEventShowId(showId);
+  return eventShowId
+    ? {
+        eventShowId,
+        eventShowLabel: eventShowLabel(eventShowId),
+        eventShowTime: eventShowTime(eventShowId),
+        eventTime: eventShowTime(eventShowId)
+      }
+    : {};
+}
+
+function resolveRegistrationShow(registration = {}, invite = {}) {
+  const inviteShow = eventShowKey(invite);
+  const selectedShow = eventShowKey(registration);
+  if (inviteShow === "morning" || inviteShow === "afternoon") return eventShowMetadata(inviteShow);
+  if (selectedShow === "morning" || selectedShow === "afternoon") return eventShowMetadata(selectedShow);
+  if (inviteShow === "both") return eventShowMetadata("both");
+  return eventShowMetadata(selectedShow || inviteShow || "both");
+}
+
+function registrationShowError(type, registration = {}, invite = {}) {
+  if (type !== "guest" && type !== "member" && type !== "partner") return "";
+  const role = cleanGuestRegistrationType(
+    invite.partnerRegistrationType ||
+      invite.guestRegistrationType ||
+      invite.registrationRole ||
+      registration.partnerRegistrationType ||
+      registration.guestRegistrationType ||
+      registration.registrationRole
+  );
+  const inviteShow = eventShowKey(invite);
+  const selectedShow = cleanEventShowId(registration.eventShowId || registration.showId || registration.eventShow, "");
+  const show = inviteShow === "morning" || inviteShow === "afternoon" ? inviteShow : selectedShow;
+  if (role === "featured-guest" && show !== "morning" && show !== "afternoon") {
+    return "Choose either the morning show or afternoon show for featured guest registration.";
+  }
+  if (role === "featured-partner" && show !== "morning" && show !== "afternoon") {
+    return "Choose either the morning show or afternoon show for featured partner registration.";
+  }
+  if (show && !["morning", "afternoon", "both"].includes(show)) {
+    return "Choose a valid show time.";
+  }
+  return "";
 }
 
 function slugify(value) {
@@ -154,13 +215,15 @@ function registrationRoleLabel(type) {
 }
 
 function registrationRoles(type, registration = {}) {
-  const guestRegistrationType = cleanGuestRegistrationType(registration.guestRegistrationType || registration.registrationRole);
+  const guestRegistrationType = cleanGuestRegistrationType(registration.partnerRegistrationType || registration.guestRegistrationType || registration.registrationRole);
   const roles = [];
   if (type === "guest") {
     if (cleanBoolean(registration.isPresenter) || guestRegistrationType === "presenter") roles.push("Presenter");
     if (cleanBoolean(registration.isRoundtableLeader) || guestRegistrationType === "roundtable-leader") roles.push("Round Table Leader");
     if (cleanBoolean(registration.isFeaturedGuest) || guestRegistrationType === "featured-guest") roles.push("Featured Guest");
     if (!roles.length) roles.push("Guest");
+  } else if (type === "partner") {
+    roles.push(guestRegistrationType === "featured-partner" ? "Featured Partner" : registrationRoleLabel(type));
   } else {
     roles.push(registrationRoleLabel(type));
   }
@@ -197,7 +260,8 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
     intendedGuestName: cleanString(registration.intendedGuestName || registration.invitedName || registration.guestName),
     invitedName: cleanString(registration.invitedName || registration.intendedGuestName || registration.guestName),
     guestRegistrationType: cleanGuestRegistrationType(registration.guestRegistrationType || registration.registrationRole),
-    registrationRole: cleanGuestRegistrationType(registration.registrationRole || registration.guestRegistrationType),
+    partnerRegistrationType: cleanOptionalRegistrationType(registration.partnerRegistrationType || registration.registrationRole),
+    registrationRole: cleanGuestRegistrationType(registration.registrationRole || registration.partnerRegistrationType || registration.guestRegistrationType),
     registrationId: cleanString(registration.id),
     registrationType: cleanString(type),
     role: roles.join(", "),
@@ -256,6 +320,9 @@ function cleanPayload(payload, type = "") {
     email: cleanString(payload?.email).toLowerCase(),
     phone: cleanString(payload?.phone),
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
+    eventShowId: cleanEventShowId(payload?.eventShowId || payload?.showId || payload?.eventShow, ""),
+    partnerProductTypes: type === "partner" ? cleanString(payload?.partnerProductTypes, 2000) : "",
+    partnerClientMessaging: type === "partner" ? cleanString(payload?.partnerClientMessaging, 4000) : "",
     publicationUseName: cleanBoolean(payload?.publicationUseName),
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany)
   };
@@ -332,10 +399,12 @@ function inviteMeta(inviteRecord) {
     invitedName: invitePersonName(record),
     guestName: invitePersonName(record),
     guestRegistrationType: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole),
-    registrationRole: cleanGuestRegistrationType(record.registrationRole || record.guestRegistrationType),
+    partnerRegistrationType: cleanOptionalRegistrationType(record.partnerRegistrationType || record.registrationRole),
+    registrationRole: cleanGuestRegistrationType(record.registrationRole || record.partnerRegistrationType || record.guestRegistrationType),
     isPresenter: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "presenter",
     isRoundtableLeader: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "roundtable-leader",
     isFeaturedGuest: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "featured-guest",
+    isFeaturedPartner: cleanGuestRegistrationType(record.partnerRegistrationType || record.registrationRole) === "featured-partner",
     partnerCompany: cleanString(record.partnerCompany),
     partnerContactEmail: cleanString(record.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record.partnerTier)
@@ -554,6 +623,8 @@ function staffRegistrationRows(type, registration = {}) {
     ["Company", registration.company || registration.partnerCompany],
     ["Title", registration.title],
     ["Industry", registration.industry],
+    ["Products sold", type === "partner" ? registration.partnerProductTypes : ""],
+    ["Typical client messaging", type === "partner" ? registration.partnerClientMessaging : ""],
     ["Event", details.name],
     ["Date", details.date],
     ["Time", details.time],
@@ -628,6 +699,8 @@ function validateRegistration(registration, type = "") {
   if (!registration.email) return "Company email is required.";
   if (!isValidEmail(registration.email)) return "Enter a valid email address.";
   if (isBlockedEmail(registration.email)) return "Gmail and Googlemail addresses are not accepted.";
+  if (type === "partner" && !registration.partnerProductTypes) return "Describe the types of products your company sells.";
+  if (type === "partner" && !registration.partnerClientMessaging) return "Describe your typical client messaging.";
   if (!registration.phone) return "Phone number is required.";
   if (!acceptedPhoneStatuses.has(registration.phoneVerificationStatus)) {
     return "Phone verification status is required.";
@@ -739,7 +812,11 @@ async function markInviteCodeUsed(env, type, code, registration) {
       usedBy: registration.name || registration.email,
       usedByName: registration.name,
       usedByEmail: registration.email,
-      registrationId: registration.id
+      registrationId: registration.id,
+      eventTime: registration.eventTime,
+      eventShowId: registration.eventShowId,
+      eventShowLabel: registration.eventShowLabel,
+      eventShowTime: registration.eventShowTime
     })
   );
 }
@@ -857,6 +934,10 @@ export async function upsertRegistrationContact(env, type, registration, config 
     profileKey: type === "partner" ? partnerCompanyKey : companyKey,
     title: cleanString(registration.title),
     phone: cleanString(registration.phone),
+    ...(type === "partner" ? {
+      partnerProductTypes: cleanString(registration.partnerProductTypes, 2000),
+      partnerClientMessaging: cleanString(registration.partnerClientMessaging, 4000)
+    } : {}),
     registrationId: cleanString(registration.id),
     registrationType: cleanString(config.label || type),
     lifecycleStage: "registered",
@@ -970,11 +1051,28 @@ export async function handlePublicRegistration({ request, env }, type) {
       return json({ error: inviteValidation.error }, { status: inviteValidation.status });
     }
 
+    const invite = inviteValidation.invite || {};
+    const showError = registrationShowError(type, registration, invite);
+    if (showError) {
+      await writeRegistrationDebug(env, type, "rejected", {
+        ...debugBase,
+        stage: "show-selection",
+        error: showError
+      });
+      return json({ error: showError }, { status: 400 });
+    }
+    const selectedShow = resolveRegistrationShow(registration, invite);
+
     const createdAt = new Date().toISOString();
     const id = crypto.randomUUID();
+    const eventKey = cleanString(invite.eventSlug || invite.eventName || registration.eventSlug || registration.eventName);
     const record = {
       ...registration,
-      ...(inviteValidation.invite || {}),
+      ...invite,
+      ...selectedShow,
+      eventId: selectedShow.eventShowId && eventKey
+        ? `${eventKey}:${selectedShow.eventShowId}`
+        : cleanString(invite.eventId || registration.eventId || eventKey),
       id,
       createdAt,
       source: config.source,

@@ -293,12 +293,19 @@ function cleanInviteType(value) {
 
 function cleanGuestRegistrationType(value) {
   return {
+    "featured-partner": "featured-partner",
     "featured-guest": "featured-guest",
+    partner: "partner",
     presenter: "presenter",
     roundtable: "roundtable-leader",
     "roundtable-leader": "roundtable-leader",
     guest: "guest"
   }[cleanString(value, 80).toLowerCase()] || "guest";
+}
+
+function cleanOptionalRegistrationType(value) {
+  const raw = cleanString(value, 80);
+  return raw ? cleanGuestRegistrationType(raw) : "";
 }
 
 function cleanEventShowId(value, fallback = "both") {
@@ -367,9 +374,12 @@ function normalizeRecord(key, record) {
     invitedEmail: invitePersonEmail(record),
     invitedName: invitePersonName(record),
     guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
-    registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.guestRegistrationType),
+    partnerRegistrationType: cleanOptionalRegistrationType(record?.partnerRegistrationType || record?.registrationRole),
+    registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.partnerRegistrationType || record?.guestRegistrationType),
     partnerCompany: cleanString(record?.partnerCompany),
     partnerTier: cleanString(record?.partnerTier),
+    partnerProductTypes: cleanString(record?.partnerProductTypes, 2000),
+    partnerClientMessaging: cleanString(record?.partnerClientMessaging, 4000),
     partnerPassword: cleanString(record?.partnerPassword, 120),
     partnerPasswordGeneratedAt: cleanString(record?.partnerPasswordGeneratedAt),
     partnerPasswordGeneratedBy: cleanString(record?.partnerPasswordGeneratedBy),
@@ -436,6 +446,8 @@ function normalizeContactRecord(key, record = {}) {
     phone: cleanString(record.phone),
     source: cleanString(record.source),
     invitationSource: cleanString(record.invitationSource || record.source, 180),
+    partnerProductTypes: cleanString(record.partnerProductTypes, 2000),
+    partnerClientMessaging: cleanString(record.partnerClientMessaging, 4000),
     relationshipOwner: cleanString(record.relationshipOwner, 180),
     lifecycleStage: cleanAllowed(record.lifecycleStage, allowedLifecycleStages, latestEvent.registrationType ? "registered" : "prospect"),
     nextAction: cleanAllowed(record.nextAction, allowedNextActions, "none"),
@@ -478,7 +490,8 @@ function normalizeContactRecord(key, record = {}) {
       intendedGuestName: cleanString(event?.intendedGuestName || event?.invitedName || event?.guestName),
       invitedName: cleanString(event?.invitedName || event?.intendedGuestName || event?.guestName),
       guestRegistrationType: cleanGuestRegistrationType(event?.guestRegistrationType || event?.registrationRole),
-      registrationRole: cleanGuestRegistrationType(event?.registrationRole || event?.guestRegistrationType),
+      partnerRegistrationType: cleanOptionalRegistrationType(event?.partnerRegistrationType || event?.registrationRole),
+      registrationRole: cleanGuestRegistrationType(event?.registrationRole || event?.partnerRegistrationType || event?.guestRegistrationType),
       inviteCode: cleanString(event?.inviteCode),
       registrationId: cleanString(event?.registrationId),
       registrationType: cleanString(event?.registrationType),
@@ -616,8 +629,8 @@ async function registrants(env, type = "member") {
 }
 
 function roleLabelForRow(row = {}, type = "") {
-  const role = cleanGuestRegistrationType(row.guestRegistrationType || row.registrationRole);
-  if (type === "partner") return "Partner Guest";
+  const role = cleanGuestRegistrationType(row.partnerRegistrationType || row.guestRegistrationType || row.registrationRole);
+  if (type === "partner") return role === "featured-partner" || row.isFeaturedPartner ? "Featured Partner" : "Partner Guest";
   if (type === "member") return row.isFeaturedMember ? "Featured Member" : "Member";
   if (role === "presenter" || row.isPresenter) return "Presenter";
   if (role === "roundtable-leader" || row.isRoundtableLeader) return "Round Table Leader";
@@ -660,6 +673,10 @@ function contactFromRegistrant(row = {}, type = "") {
     title: cleanString(row.title),
     industry: cleanString(row.industry),
     phone: cleanString(row.phone),
+    ...(type === "partner" ? {
+      partnerProductTypes: cleanString(row.partnerProductTypes, 2000),
+      partnerClientMessaging: cleanString(row.partnerClientMessaging, 4000)
+    } : {}),
     source: cleanString(row.source || `${type}-registration`),
     registrationId: cleanString(row.id),
     registrationType: cleanString(type),
@@ -681,7 +698,8 @@ function contactFromRegistrant(row = {}, type = "") {
       registrationId: cleanString(row.id),
       registrationType: cleanString(type),
       guestRegistrationType: cleanGuestRegistrationType(row.guestRegistrationType || row.registrationRole),
-      registrationRole: cleanGuestRegistrationType(row.registrationRole || row.guestRegistrationType),
+      partnerRegistrationType: cleanOptionalRegistrationType(row.partnerRegistrationType || row.registrationRole),
+      registrationRole: cleanGuestRegistrationType(row.registrationRole || row.partnerRegistrationType || row.guestRegistrationType),
       role: roleLabelForRow(row, type),
       publicationUseName: row.publicationUseName === true,
       publicationUseCompany: row.publicationUseCompany === true,
@@ -974,7 +992,8 @@ function normalizeInviteCode(key, record) {
     invitedName: invitePersonName(record),
     guestName: invitePersonName(record),
     guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
-    registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.guestRegistrationType),
+    partnerRegistrationType: cleanOptionalRegistrationType(record?.partnerRegistrationType || record?.registrationRole),
+    registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.partnerRegistrationType || record?.guestRegistrationType),
     partnerCompany: cleanString(record?.partnerCompany),
     partnerContactEmail: cleanString(record?.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record?.partnerTier),
@@ -1162,18 +1181,27 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   }
   if (!code) throw new Error("Could not generate a unique partner invite code.");
 
+  const eventShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
+  const eventTime = eventShowTime(eventShowId);
+  const partnerRegistrationType = cleanGuestRegistrationType(payload.partnerRegistrationType || payload.registrationRole || "partner");
   const createdAt = new Date().toISOString();
   const record = {
     type: "partner",
     code,
     status: "active",
-    eventId: cleanString(payload.eventId || payload.eventSlug || payload.eventName, 200),
+    eventId: cleanString(payload.eventId || `${payload.eventSlug || payload.eventName}:${eventShowId}`, 200),
     eventSlug: cleanString(payload.eventSlug, 200),
     eventName: cleanString(payload.eventName, 240),
     eventDate: cleanString(payload.eventDate, 120),
+    eventTime,
+    eventShowId,
+    eventShowLabel: eventShowLabel(eventShowId),
+    eventShowTime: eventTime,
     partnerCompany: cleanString(payload.partnerCompany, 240),
     partnerContactEmail: cleanString(payload.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(payload.partnerTier, 120),
+    partnerRegistrationType,
+    registrationRole: partnerRegistrationType,
     createdAt,
     createdBy: actor
   };
@@ -2076,6 +2104,8 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
       profileKey: companyKey,
       title: cleanString(row.title),
       phone: cleanString(row.phone),
+      partnerProductTypes: cleanString(row.partnerProductTypes, 2000),
+      partnerClientMessaging: cleanString(row.partnerClientMessaging, 4000),
       registrationId: cleanString(row.id),
       registrationType: "partner",
       source: "Partner CRM",
@@ -2196,6 +2226,8 @@ export async function onRequestGet({ request, env, data }) {
         "Next Action Due Date",
         "Email Permission",
         "Topic Interests",
+        "Partner Products Sold",
+        "Partner Client Messaging",
         "Last Updated",
         "Latest Registration",
         "Latest Event",
@@ -2218,6 +2250,8 @@ export async function onRequestGet({ request, env, data }) {
         "Event",
         "Event Date",
         "Partner Tier",
+        "Partner Products Sold",
+        "Partner Client Messaging",
         "Phone Verification",
         "Presenter",
         "Round Table Leader",
@@ -2254,6 +2288,8 @@ export async function onRequestGet({ request, env, data }) {
         row.nextActionDueDate,
         row.emailPermission,
         (row.topicInterests || []).join("; "),
+        row.partnerProductTypes,
+        row.partnerClientMessaging,
         row.updatedAt,
         row.latestRegisteredAt,
         row.latestEventName,
@@ -2276,6 +2312,8 @@ export async function onRequestGet({ request, env, data }) {
         row.eventName,
         row.eventDate,
         row.partnerTier,
+        row.partnerProductTypes,
+        row.partnerClientMessaging,
         row.phoneVerificationStatus,
         row.isPresenter ? "Yes" : "No",
         row.isRoundtableLeader ? "Yes" : "No",
