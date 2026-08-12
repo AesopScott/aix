@@ -88,10 +88,20 @@ function canonicalCrmRedirect(request) {
   return noStoreRedirect(url.toString(), 301);
 }
 
+function canonicalStorageRedirect(request) {
+  const url = new URL(request.url);
+  if (url.pathname !== "/storage" && !url.pathname.startsWith("/storage/")) return null;
+  url.pathname = "/files/";
+  url.search = "";
+  return noStoreRedirect(url.toString(), 302);
+}
+
 export async function onRequest(context) {
   const url = new URL(context.request.url);
   const crmRedirect = canonicalCrmRedirect(context.request);
   if (crmRedirect) return crmRedirect;
+  const storageRedirect = canonicalStorageRedirect(context.request);
+  if (storageRedirect) return storageRedirect;
 
   if (
     isPartnerRegistrationShell(url.pathname) &&
