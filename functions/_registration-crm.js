@@ -9,7 +9,10 @@ const maxFieldLength = 2000;
 const acceptedPhoneStatuses = new Set(["verified"]);
 const blockedEmailDomains = new Set(["gmail.com", "googlemail.com"]);
 const registrationObjectPrefix = "crm/registrations";
+const registrationPhotoObjectPrefix = "crm/registration-photos";
 const inviteUsageObjectPrefix = "crm/invite-usage";
+const maxRegistrationPhotoBytes = 6 * 1024 * 1024;
+const allowedRegistrationPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const guestConfirmationSubject = "Your Mojo AI Summits registration is confirmed";
 const guestConfirmationSenderName = "Angel Mosley";
 const guestConfirmationSenderEmail = "Angel@mojoaisummits.com";
@@ -68,6 +71,31 @@ function cleanString(value) {
   return typeof value === "string"
     ? value.trim().slice(0, maxFieldLength)
     : "";
+}
+
+function safeFileSegment(value, fallback = "file") {
+  return cleanString(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || fallback;
+}
+
+function registrationPhotoPublicUrl(key) {
+  const cleanKey = cleanString(key);
+  return cleanKey ? `/api/crm?photo=${encodeURIComponent(cleanKey)}` : "";
+}
+
+function registrationPhotoObjectKey(type, registration, file) {
+  const createdAt = cleanString(registration.createdAt).replace(/[:.]/g, "-") || Date.now().toString();
+  const emailSegment = safeFileSegment(cleanString(registration.email).split("@")[0], "registrant");
+  const idSegment = safeFileSegment(registration.id, crypto.randomUUID());
+  const nameSegment = safeFileSegment(file?.name, "brief-photo");
+  return `${registrationPhotoObjectPrefix}/${safeFileSegment(type, "registration")}/${emailSegment}/${createdAt}-${idSegment}-${nameSegment}`;
+}
+
+function isImageFile(file) {
+  return file && typeof file === "object" && typeof file.arrayBuffer === "function";
 }
 
 function splitEmailList(value) {
@@ -325,6 +353,63 @@ function cleanPayload(payload, type = "") {
     partnerClientMessaging: type === "partner" ? cleanString(payload?.partnerClientMessaging, 4000) : "",
     publicationUseName: cleanBoolean(payload?.publicationUseName),
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany)
+  };
+}
+
+async function readRegistrationRequest(request, type = "") {
+  const contentType = cleanString(request.headers.get("content-type")).toLowerCase();
+  if (contentType.includes("multipart/form-data")) {
+    const form = await request.formData();
+    return {
+      payload: Object.fromEntries([...form.entries()].filter(([, value]) => typeof value === "string")),
+      photoFile: form.get("briefPhoto") || form.get("photo") || form.get("headshot")
+    };
+  }
+
+  return {
+    payload: await request.json().catch(() => null),
+    photoFile: null
+  };
+}
+
+function validateRegistrationPhoto(file) {
+  if (!isImageFile(file) || !cleanString(file.name)) {
+    return "Upload a rectangular picture for the event brief before submitting registration.";
+  }
+  const type = cleanString(file.type).toLowerCase();
+  if (!allowedRegistrationPhotoTypes.has(type)) {
+    return "Upload the brief picture as a JPG, PNG, or WebP image.";
+  }
+  if (Number(file.size || 0) > maxRegistrationPhotoBytes) {
+    return "Upload a brief picture smaller than 6 MB.";
+  }
+  return "";
+}
+
+async function storeRegistrationPhoto(env, type, registration, file) {
+  const error = validateRegistrationPhoto(file);
+  if (error) throw new Error(error);
+  const key = registrationPhotoObjectKey(type, registration, file);
+  await env.MOJO_SUMMITS_STORAGE.put(key, await file.arrayBuffer(), {
+    httpMetadata: {
+      contentType: cleanString(file.type).toLowerCase(),
+      contentDisposition: `inline; filename="${safeFileSegment(file.name, "brief-photo")}"`
+    },
+    customMetadata: {
+      area: "crm",
+      kind: "registration-photo",
+      type,
+      registrationId: cleanString(registration.id),
+      email: cleanString(registration.email).toLowerCase()
+    }
+  });
+  return {
+    photoKey: key,
+    photoUrl: registrationPhotoPublicUrl(key),
+    photoOriginalName: cleanString(file.name),
+    photoContentType: cleanString(file.type).toLowerCase(),
+    photoSize: Number(file.size || 0),
+    photoUploadedAt: new Date().toISOString()
   };
 }
 
@@ -623,6 +708,7 @@ function staffRegistrationRows(type, registration = {}) {
     ["Company", registration.company || registration.partnerCompany],
     ["Title", registration.title],
     ["Industry", registration.industry],
+    ["Brief photo", registration.photoUrl],
     ["Products sold", type === "partner" ? registration.partnerProductTypes : ""],
     ["Typical client messaging", type === "partner" ? registration.partnerClientMessaging : ""],
     ["Event", details.name],
@@ -934,6 +1020,10 @@ export async function upsertRegistrationContact(env, type, registration, config 
     profileKey: type === "partner" ? partnerCompanyKey : companyKey,
     title: cleanString(registration.title),
     phone: cleanString(registration.phone),
+    photoUrl: cleanString(registration.photoUrl),
+    photoKey: cleanString(registration.photoKey),
+    photoOriginalName: cleanString(registration.photoOriginalName),
+    photoUploadedAt: cleanString(registration.photoUploadedAt),
     ...(type === "partner" ? {
       partnerProductTypes: cleanString(registration.partnerProductTypes, 2000),
       partnerClientMessaging: cleanString(registration.partnerClientMessaging, 4000)
@@ -959,6 +1049,10 @@ export async function upsertRegistrationContact(env, type, registration, config 
       ...contact,
       id: email,
       name: contact.name || cleanString(existing?.name) || email,
+      photoUrl: contact.photoUrl || cleanString(existing?.photoUrl),
+      photoKey: contact.photoKey || cleanString(existing?.photoKey),
+      photoOriginalName: contact.photoOriginalName || cleanString(existing?.photoOriginalName),
+      photoUploadedAt: contact.photoUploadedAt || cleanString(existing?.photoUploadedAt),
       source: cleanString(existing?.source) || contact.source,
       createdAt: cleanString(existing?.createdAt) || now,
       events: mergeContactEvents(existing?.events, type, registration, now)
@@ -1020,7 +1114,7 @@ export async function handlePublicRegistration({ request, env }, type) {
     return json({ error: "Registration R2 storage is not configured." }, { status: 500 });
   }
 
-  const payload = await request.json().catch(() => null);
+  const { payload, photoFile } = await readRegistrationRequest(request, type);
   const registration = normalizeRegistrationForType(type, cleanPayload(payload, type));
   const debugBase = {
     stage: "received",
@@ -1039,6 +1133,17 @@ export async function handlePublicRegistration({ request, env }, type) {
         error: validationError
       });
       return json({ error: validationError }, { status: 400 });
+    }
+    if (type === "guest" || type === "partner") {
+      const photoError = validateRegistrationPhoto(photoFile);
+      if (photoError) {
+        await writeRegistrationDebug(env, type, "rejected", {
+          ...debugBase,
+          stage: "photo-validation",
+          error: photoError
+        });
+        return json({ error: photoError }, { status: 400 });
+      }
     }
 
     const inviteValidation = await validateInviteCode(env, type, registration.inviteCode);
@@ -1082,6 +1187,10 @@ export async function handlePublicRegistration({ request, env }, type) {
       crmUpdatedAt: "",
       crmUpdatedBy: ""
     };
+    const photoRefs = type === "guest" || type === "partner"
+      ? await storeRegistrationPhoto(env, type, record, photoFile)
+      : {};
+    Object.assign(record, photoRefs);
     const contactRefs = contactRefsForRegistration(type, record);
     const storedRecord = {
       ...record,

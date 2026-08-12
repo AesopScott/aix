@@ -275,6 +275,17 @@
     text-decoration:underline;
     text-underline-offset:3px;
   }
+  .file-help{
+    margin:8px 0 0;
+    color:var(--ink-dim);
+    font-size:12px;
+    line-height:1.55;
+  }
+  input[type="file"]{
+    border:1px solid var(--border);
+    padding:12px;
+    background:rgba(10,15,30,.45);
+  }
   .btn-primary,
   .btn-ghost{
     border-radius:2px;
@@ -509,6 +520,11 @@
               </select>
             </div>
             <div class="field full">
+              <label for="briefPhoto">Brief photo</label>
+              <input type="file" id="briefPhoto" name="briefPhoto" accept="image/jpeg,image/png,image/webp" required>
+              <p class="file-help">Upload a rectangular picture of yourself suitable for inclusion in MOJO AI Summits briefs. JPG, PNG, or WebP, up to 6 MB.</p>
+            </div>
+            <div class="field full">
               <label for="partnerProductTypes">Products sold</label>
               <textarea id="partnerProductTypes" name="partnerProductTypes" placeholder="Describe the product categories, services, or solutions your company sells to clients." rows="4" required></textarea>
             </div>
@@ -554,6 +570,7 @@
   const inviteBadge = document.getElementById('inviteBadge');
   const emailInput = document.getElementById('email');
   const eventShowSelect = document.getElementById('eventShowId');
+  const briefPhotoInput = document.getElementById('briefPhoto');
   const phoneInput = document.getElementById('phone');
   const sendCodeButton = document.getElementById('sendCodeButton');
   const verifyCodeRow = document.getElementById('verifyCodeRow');
@@ -706,6 +723,47 @@
     return data;
   }
 
+  async function postForm(url, formData){
+    const response = await fetch(url, {
+      method:'POST',
+      body:formData
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Unable to complete this step.');
+    return data;
+  }
+
+  function selectedBriefPhoto(){
+    return briefPhotoInput.files && briefPhotoInput.files[0] ? briefPhotoInput.files[0] : null;
+  }
+
+  function imageDimensions(file){
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      const url = URL.createObjectURL(file);
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width:image.naturalWidth, height:image.naturalHeight });
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('The brief picture could not be read. Upload a JPG, PNG, or WebP image.'));
+      };
+      image.src = url;
+    });
+  }
+
+  async function validateBriefPhoto(){
+    const file = selectedBriefPhoto();
+    if (!file) return 'Upload a rectangular picture for the event brief before submitting registration.';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return 'Upload the brief picture as a JPG, PNG, or WebP image.';
+    if (file.size > 6 * 1024 * 1024) return 'Upload a brief picture smaller than 6 MB.';
+    const dimensions = await imageDimensions(file).catch((error) => ({ error:error.message }));
+    if (dimensions.error) return dimensions.error;
+    if (dimensions.width <= dimensions.height) return 'Upload a wide rectangular brief picture, not a square or vertical image.';
+    return '';
+  }
+
   sendCodeButton.addEventListener('click', async () => {
     clearMessage(formError);
     const phone = normalizePhone(phoneInput.value);
@@ -775,12 +833,13 @@
       return;
     }
     const formData = new FormData(form);
-    const payload = Object.fromEntries(formData.entries());
+    const payload = Object.fromEntries([...formData.entries()].filter(([, value]) => typeof value === 'string'));
     payload.email = String(payload.email || '').trim();
     payload.phone = normalizePhone(payload.phone);
-    payload.publicationUseName = formData.has('publicationUseName');
-    payload.publicationUseCompany = formData.has('publicationUseCompany');
     payload.phoneVerificationStatus = verificationStatus.value;
+    formData.set('email', payload.email);
+    formData.set('phone', payload.phone);
+    formData.set('phoneVerificationStatus', payload.phoneVerificationStatus);
 
     if (!/^\d{6}$/.test(String(payload.inviteCode || '').trim())) {
       setMessage(formError, 'Enter a valid six-digit invite code.', 'error');
@@ -789,6 +848,12 @@
     if (isBlockedEmail(payload.email)) {
       setMessage(formError, 'Use a company email address. Gmail and Googlemail addresses are not accepted.', 'error');
       emailInput.focus();
+      return;
+    }
+    const photoError = await validateBriefPhoto();
+    if (photoError) {
+      setMessage(formError, photoError, 'error');
+      briefPhotoInput.focus();
       return;
     }
     const selectedShow = normalizeEventShow(payload.eventShowId, '');
@@ -813,7 +878,7 @@
     submitButton.disabled = true;
     submitButton.textContent = 'Submitting...';
     try {
-      await postJson('/api/partner-registration', payload);
+      await postForm('/api/partner-registration', formData);
       form.classList.add('hide');
       success.classList.add('show');
     } catch (error) {
