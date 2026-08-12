@@ -440,6 +440,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             </select>
           </label>
           <label>
+            <span>Receipt description</span>
+            <input name="receiptDescription" id="receiptDescription" placeholder="What was this for?" maxlength="500">
+          </label>
+          <label>
             Event, city, or folder
             <input name="event" placeholder="company, dallas-2027, sponsor-board">
           </label>
@@ -510,6 +514,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const api = "/api/storage";
     const uploadForm = document.querySelector("#uploadForm");
     const uploadNotice = document.querySelector("#uploadNotice");
+    const areaSelect = uploadForm.querySelector('select[name="area"]');
+    const receiptDescriptionInput = document.querySelector("#receiptDescription");
     const listNotice = document.querySelector("#listNotice");
     const tableWrap = document.querySelector("#tableWrap");
     const fileRows = document.querySelector("#fileRows");
@@ -613,6 +619,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return prefixSearch.value.trim();
     }
 
+    function updateReceiptDescriptionRequirement() {
+      const isReceipts = areaSelect.value === "receipts";
+      receiptDescriptionInput.required = isReceipts;
+      receiptDescriptionInput.closest("label").classList.toggle("required-field", isReceipts);
+    }
+
+    areaSelect.addEventListener("change", updateReceiptDescriptionRequirement);
+    updateReceiptDescriptionRequirement();
+
     async function loadFiles() {
       setNotice(listNotice, "Loading files...");
       tableWrap.hidden = true;
@@ -666,6 +681,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
       if (!file || !file.name) {
         setNotice(uploadNotice, "Choose a file first.", "error");
+        return;
+      }
+
+      if (areaSelect.value === "receipts" && !String(formData.get("receiptDescription") || "").trim()) {
+        setNotice(uploadNotice, "Enter a receipt description.", "error");
+        receiptDescriptionInput.focus();
         return;
       }
 
