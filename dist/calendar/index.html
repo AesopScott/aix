@@ -145,8 +145,14 @@
     .nav-actions a:hover,
     .nav-actions a[aria-current="page"] { color: var(--white); }
 
+    .calendar-top {
+      position: relative;
+    }
     .hero {
       padding: clamp(42px, 6vw, 86px) 0 clamp(18px, 3vw, 30px);
+    }
+    .calendar-hero {
+      max-width: calc(100% - clamp(330px, 31vw, 456px));
     }
     .eyebrow {
       display: inline-flex;
@@ -174,6 +180,35 @@
       color: rgba(27, 35, 51, .76);
       font-size: 17px;
       line-height: 1.62;
+    }
+    .calendar-founder-video {
+      position: absolute;
+      right: 0;
+      top: 146px;
+      width: clamp(256px, 21vw, 316px);
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border: 1px solid rgba(0, 230, 255, .34);
+      border-radius: 8px;
+      background: var(--navy);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 22px 46px rgba(10, 15, 30, .22), 0 0 34px rgba(0, 230, 255, .16);
+      z-index: 2;
+    }
+    .calendar-founder-video::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 7px;
+      background: linear-gradient(135deg, rgba(0, 230, 255, .22), transparent 34%, rgba(22, 102, 255, .16));
+      pointer-events: none;
+      z-index: 2;
+    }
+    .calendar-founder-video video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      border-radius: 7px;
     }
     .calendar-controls {
       display: grid;
@@ -532,8 +567,19 @@
     }
 
     @media (max-width: 1280px) {
+      .calendar-hero { max-width: calc(100% - 368px); }
       .event-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .event-card { grid-template-rows: auto auto auto; }
+    }
+    @media (max-width: 1080px) {
+      .calendar-hero { max-width: none; }
+      .calendar-founder-video {
+        position: relative;
+        right: auto;
+        top: auto !important;
+        width: min(420px, 100%);
+        margin: 0 0 24px;
+      }
     }
     @media (max-width: 860px) {
       .wrap {
@@ -548,7 +594,6 @@
       .brand-secondary { font-size: 9.5px; letter-spacing: .32em; padding-left: .32em; }
       .nav-actions { gap: 10px 14px; padding-top: 4px; }
       .nav-actions a { font-size: 10px; letter-spacing: .12em; }
-      .hero { display: block; }
       .attendee-tabs { justify-content: flex-start; margin-top: 24px; }
       .event-grid { grid-template-columns: 1fr; gap: 26px; }
       .event-body { padding: 24px 24px 30px; }
@@ -603,33 +648,39 @@
   </header>
 
   <main>
-    <section class="hero wrap">
-      <div>
-        <span class="eyebrow">Upcoming events</span>
-        <h1>Executive AI Calendar</h1>
-        <p>Browse the current MOJO AI Summits schedule for invitation-only virtual rooms, city summits, and intelligence brief events.</p>
-      </div>
-    </section>
+    <div class="calendar-top wrap">
+      <section class="hero calendar-hero">
+        <div>
+          <span class="eyebrow">Upcoming events</span>
+          <h1>Executive AI Calendar</h1>
+          <p>Browse the current MOJO AI Summits schedule for invitation-only virtual rooms, city summits, and intelligence brief events.</p>
+        </div>
+      </section>
 
-    <section class="calendar-controls wrap" aria-label="Calendar filters">
-      <div class="filter-group" role="group" aria-label="Event format">
-        <span class="filter-label">Format</span>
-        <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="all" aria-pressed="true">All</button>
-        <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="virtual" aria-pressed="false">Virtual</button>
-        <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="in-person" aria-pressed="false">In-person</button>
+      <div class="calendar-founder-video">
+        <video src="/assets/video/robert-haldeman-mojo-ai-summits-calendar.mp4" poster="/assets/video/robert-haldeman-mojo-ai-summits-calendar-poster.jpg" controls playsinline preload="metadata" aria-label="Mojo AI Summits calendar video with Robert Haldeman"></video>
       </div>
-      <div class="filter-group" role="group" aria-label="Cohort">
-        <span class="filter-label">Cohort</span>
-        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all" aria-pressed="true">All</button>
-        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="technology-strategy" aria-pressed="false">Technology Strategy</button>
-        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="integration" aria-pressed="false">Integration</button>
-        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="operations-finance" aria-pressed="false">Operations and Finance</button>
-        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="security-risk" aria-pressed="false">Security and Risk</button>
-        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="business-enablement" aria-pressed="false">Business Enablement</button>
-        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="innovation" aria-pressed="false">Innovation</button>
-        <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all-cohorts" aria-pressed="false">All Cohorts</button>
-      </div>
-    </section>
+
+      <section class="calendar-controls" aria-label="Calendar filters">
+        <div class="filter-group" role="group" aria-label="Event format">
+          <span class="filter-label">Format</span>
+          <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="all" aria-pressed="true">All</button>
+          <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="virtual" aria-pressed="false">Virtual</button>
+          <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="in-person" aria-pressed="false">In-person</button>
+        </div>
+        <div class="filter-group" role="group" aria-label="Cohort">
+          <span class="filter-label">Cohort</span>
+          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all" aria-pressed="true">All</button>
+          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="technology-strategy" aria-pressed="false">Technology Strategy</button>
+          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="integration" aria-pressed="false">Integration</button>
+          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="operations-finance" aria-pressed="false">Operations and Finance</button>
+          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="security-risk" aria-pressed="false">Security and Risk</button>
+          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="business-enablement" aria-pressed="false">Business Enablement</button>
+          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="innovation" aria-pressed="false">Innovation</button>
+          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all-cohorts" aria-pressed="false">All Cohorts</button>
+        </div>
+      </section>
+    </div>
 
     <section class="event-grid wrap" id="all-events" aria-label="All upcoming events">
 
@@ -1009,6 +1060,25 @@
     const filterButtons = Array.from(document.querySelectorAll("[data-filter-kind]"));
     const eventCards = Array.from(document.querySelectorAll(".event-card[data-format][data-cohort]"));
     const filterStatus = document.getElementById("filterStatus");
+    const calendarTop = document.querySelector(".calendar-top");
+    const calendarVideo = document.querySelector(".calendar-founder-video");
+    const formatFilters = document.querySelector(".calendar-controls .filter-group");
+
+    function alignCalendarVideo() {
+      if (!calendarTop || !calendarVideo || !formatFilters) return;
+
+      if (window.matchMedia("(max-width: 1080px)").matches) {
+        calendarVideo.style.top = "";
+        return;
+      }
+
+      const topRect = calendarTop.getBoundingClientRect();
+      const filterRect = formatFilters.getBoundingClientRect();
+      const videoHeight = calendarVideo.offsetHeight;
+      const alignedTop = filterRect.bottom - topRect.top - videoHeight;
+
+      calendarVideo.style.top = `${alignedTop}px`;
+    }
 
     function applyCalendarFilters() {
       let visibleCount = 0;
@@ -1038,6 +1108,10 @@
         applyCalendarFilters();
       });
     });
+
+    alignCalendarVideo();
+    window.addEventListener("load", alignCalendarVideo);
+    window.addEventListener("resize", alignCalendarVideo);
   </script>
   <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
 </body>
