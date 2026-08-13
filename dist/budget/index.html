@@ -175,13 +175,35 @@
 
     .spend-form {
       display: grid;
-      grid-template-columns: minmax(110px, 0.6fr) minmax(110px, 0.6fr) minmax(130px, 0.65fr) minmax(180px, 1fr) minmax(200px, 1.15fr) minmax(120px, 0.6fr) minmax(140px, 0.65fr) minmax(160px, 0.75fr);
+      grid-template-columns: repeat(12, minmax(0, 1fr));
       gap: 0.75rem;
       align-items: end;
     }
 
-    .spend-form .wide {
+    .spend-form > label,
+    .spend-form > button {
+      min-width: 0;
+    }
+
+    .spend-form .compact {
       grid-column: span 2;
+    }
+
+    .spend-form .date-field {
+      grid-column: span 4;
+    }
+
+    .spend-form .category-field {
+      grid-column: span 3;
+    }
+
+    .spend-form .description-field,
+    .spend-form .notes-field {
+      grid-column: span 5;
+    }
+
+    .spend-form .submit-field {
+      grid-column: span 3;
     }
 
     .owner-spend-grid {
@@ -354,9 +376,9 @@
 
     .date-selects {
       display: grid;
-      grid-template-columns: minmax(7.5rem, 1.1fr) minmax(4.8rem, 0.7fr) minmax(5.6rem, 0.8fr);
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 1fr);
       gap: 0.35rem;
-      min-width: 18.5rem;
+      min-width: 0;
     }
 
     .date-selects select {
@@ -391,8 +413,14 @@
 
     @media (max-width: 980px) {
       header, .hero, .toolbar, .grid, .spend-form { grid-template-columns: 1fr; }
-      .spend-form .wide { grid-column: auto; }
-      .date-selects { min-width: 0; }
+      .spend-form .compact,
+      .spend-form .date-field,
+      .spend-form .category-field,
+      .spend-form .description-field,
+      .spend-form .notes-field,
+      .spend-form .submit-field {
+        grid-column: auto;
+      }
     }
   </style>
 <style>
@@ -495,7 +523,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           </div>
         </div>
         <form class="spend-form" id="anticipatedForm">
-          <label>
+          <label class="compact">
             Person
             <select id="anticipatedOwner" required>
               <option value="scott">Scott</option>
@@ -507,7 +535,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <option value="unassigned">Unassigned</option>
             </select>
           </label>
-          <label>
+          <label class="compact">
             Event
             <select id="anticipatedEvent">
               <option value="">No event assigned</option>
@@ -518,7 +546,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <option value="Chicago">Chicago</option>
             </select>
           </label>
-          <label>
+          <label class="date-field">
             Expected Date
             <span class="date-selects">
               <select id="anticipatedMonth" aria-label="Expected month"></select>
@@ -526,19 +554,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <select id="anticipatedYear" aria-label="Expected year"></select>
             </span>
           </label>
-          <label>
+          <label class="category-field">
             Category
             <select id="anticipatedCategory"></select>
           </label>
-          <label class="wide">
+          <label class="description-field">
             Description
             <input id="anticipatedDescription" required placeholder="flight, hotel, supplies">
           </label>
-          <label>
+          <label class="compact">
             Amount
             <input id="anticipatedAmount" type="number" min="0" step="0.01" required placeholder="0.00">
           </label>
-          <label>
+          <label class="compact">
             Frequency
             <select id="anticipatedRecurrence">
               <option value="one-time">One-time</option>
@@ -546,7 +574,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <option value="annual">Annual</option>
             </select>
           </label>
-          <label>
+          <label class="compact">
             Status
             <select id="anticipatedStatus">
               <option value="receipt-needed">Receipt needed</option>
@@ -555,11 +583,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <option value="cancelled">Cancelled</option>
             </select>
           </label>
-          <label class="wide">
+          <label class="notes-field">
             Notes
             <input id="anticipatedNotes" placeholder="approval, card, reimbursement context">
           </label>
-          <button id="anticipatedAddButton" type="submit">Add Spend</button>
+          <button id="anticipatedAddButton" class="submit-field" type="submit">Add Spend</button>
         </form>
         <div class="owner-spend-grid" id="ownerSpend"></div>
         <div class="table-wrap">
