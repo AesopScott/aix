@@ -39,6 +39,22 @@
       --owner-orbit-flow: var(--slate);
       --owner-photo-sound-cinema: var(--cyan);
       --owner-unknown: var(--slate);
+      --status-delivered-bg: #15803D;
+      --status-delivered-fg: #FFFFFF;
+      --status-ready-bg: #BBF7D0;
+      --status-ready-fg: #052E16;
+      --status-testing-bg: #1666FF;
+      --status-testing-fg: #FFFFFF;
+      --status-building-bg: #BFDBFE;
+      --status-building-fg: #0A0F1E;
+      --status-planning-bg: #FACC15;
+      --status-planning-fg: #0A0F1E;
+      --status-defined-bg: #FDBA74;
+      --status-defined-fg: #0A0F1E;
+      --status-undefined-bg: #DC2626;
+      --status-undefined-fg: #FFFFFF;
+      --status-issue-bg: #B91C1C;
+      --status-issue-fg: #FFFFFF;
       --shadow: none;
       --radius: 8px;
       color-scheme: dark;
@@ -659,9 +675,52 @@
     }
 
     .status-select {
-      background: var(--electric-blue);
-      color: var(--white);
-      border-color: var(--electric-blue);
+      border-color: currentColor;
+    }
+
+    .status-delivered {
+      background: var(--status-delivered-bg);
+      color: var(--status-delivered-fg);
+    }
+
+    .status-ready {
+      background: var(--status-ready-bg);
+      color: var(--status-ready-fg);
+    }
+
+    .status-testing {
+      background: var(--status-testing-bg);
+      color: var(--status-testing-fg);
+    }
+
+    .status-building {
+      background: var(--status-building-bg);
+      color: var(--status-building-fg);
+    }
+
+    .status-planning {
+      background: var(--status-planning-bg);
+      color: var(--status-planning-fg);
+    }
+
+    .status-defined {
+      background: var(--status-defined-bg);
+      color: var(--status-defined-fg);
+    }
+
+    .status-undefined {
+      background: var(--status-undefined-bg);
+      color: var(--status-undefined-fg);
+    }
+
+    .status-issue {
+      background: var(--status-issue-bg);
+      color: var(--status-issue-fg);
+    }
+
+    .status-toggle-option[class*="status-"] .filter-count {
+      background: rgba(10, 15, 30, 0.22);
+      color: inherit;
     }
 
     .support-picker {
@@ -1731,7 +1790,7 @@ The following decisions should not be made by one owner alone:
     };
     const priorityOptions = ["Immediate", "High", "Medium", "Low"];
     const deliverableOptions = ["Conversation", "Document", "Contract", "Website", "Event Tracker"];
-    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem", "Delete"];
+    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem"];
     const assignmentStoragePrefix = "mojo-event-assignment:";
     const customItemsStorageKey = "mojo-event-custom-items";
     const deletedItemIdsStorageKey = "mojo-event-deleted-item-ids";
@@ -1776,6 +1835,17 @@ The following decisions should not be made by one owner alone:
     const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     const normalizeOwnerName = (value) => ownerAliases[value] || value;
     const ownerClass = (owner) => ownerColors[owner] || "owner-shared";
+    const statusClasses = {
+      Delivered: "status-delivered",
+      Ready: "status-ready",
+      Testing: "status-testing",
+      Building: "status-building",
+      Planning: "status-planning",
+      Defined: "status-defined",
+      Undefined: "status-undefined",
+      "Issue/problem": "status-issue"
+    };
+    const statusClass = (status) => statusClasses[status] || "status-undefined";
     const escapeHtml = (value) => String(value ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -2551,7 +2621,7 @@ The following decisions should not be made by one owner alone:
       return `
         <div class="status-field">
           <span class="assignment-label">Status</span>
-          <select class="status-select" data-assignment="status" data-item-id="${item.id}" aria-label="Status for ${escapeHtml(item.text)}">
+          <select class="status-select ${statusClass(item.status)}" data-assignment="status" data-item-id="${item.id}" aria-label="Status for ${escapeHtml(item.text)}">
             ${statusOptions.map((status) => `
               <option value="${status}" ${status === item.status ? "selected" : ""}>${status}</option>
             `).join("")}
@@ -2825,6 +2895,7 @@ The following decisions should not be made by one owner alone:
 
       const statusSelect = row.querySelector('select[data-assignment="status"]');
       if (statusSelect) {
+        statusSelect.className = `status-select ${statusClass(item.status)}`;
         statusSelect.value = item.status;
       }
 
@@ -2875,7 +2946,7 @@ The following decisions should not be made by one owner alone:
       `).join("");
 
       document.getElementById("statusToggles").innerHTML = statusOptions.map((status) => `
-        <label class="status-toggle-option ${state.visibleStatuses[status] ? "" : "off"}">
+        <label class="status-toggle-option ${statusClass(status)} ${state.visibleStatuses[status] ? "" : "off"}">
           <span>${escapeHtml(status)} <span class="filter-count">${countByStatus(status)}</span></span>
           <input type="checkbox" data-status-toggle="${escapeHtml(status)}" ${state.visibleStatuses[status] ? "checked" : ""} aria-label="Show ${escapeHtml(status)} items">
         </label>
