@@ -992,6 +992,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
   });
 
+  function campaignAttributionFields(){
+    const params = new URLSearchParams(window.location.search);
+    let referrerHost = "";
+    try {
+      referrerHost = document.referrer ? new URL(document.referrer).hostname : "";
+    } catch (error) {}
+    return {
+      utmSource: params.get("utm_source") || "",
+      utmMedium: params.get("utm_medium") || "",
+      utmCampaign: params.get("utm_campaign") || "",
+      utmContent: params.get("utm_content") || "",
+      utmTerm: params.get("utm_term") || "",
+      landingPath: window.location.pathname,
+      referrerHost
+    };
+  }
+
   partnerSubscriptionForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const submit = partnerSubscriptionForm.querySelector("button[type='submit']");
@@ -1010,7 +1027,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           type: "partner-subscription",
-          ...payload
+          ...payload,
+          ...campaignAttributionFields()
         })
       });
       const result = await response.json().catch(() => ({}));

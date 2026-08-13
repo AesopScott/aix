@@ -554,6 +554,29 @@
     return (params.get('invite') || sessionStorage.getItem('mojoGuestInviteCode') || '').trim();
   }
 
+  function campaignAttributionFields(){
+    const params = new URLSearchParams(window.location.search);
+    let referrerHost = '';
+    try {
+      referrerHost = document.referrer ? new URL(document.referrer).hostname : '';
+    } catch (error) {}
+    return {
+      utmSource: params.get('utm_source') || '',
+      utmMedium: params.get('utm_medium') || '',
+      utmCampaign: params.get('utm_campaign') || '',
+      utmContent: params.get('utm_content') || '',
+      utmTerm: params.get('utm_term') || '',
+      landingPath: window.location.pathname,
+      referrerHost
+    };
+  }
+
+  function appendCampaignAttribution(formData){
+    Object.entries(campaignAttributionFields()).forEach(([key, value]) => {
+      if (value) formData.set(key, value);
+    });
+  }
+
   function setMessage(element, text, type){
     element.textContent = text;
     element.className = `message show ${type || ''}`.trim();
@@ -774,6 +797,7 @@
     formData.set('email', payload.email);
     formData.set('phone', payload.phone);
     formData.set('phoneVerificationStatus', payload.phoneVerificationStatus);
+    appendCampaignAttribution(formData);
 
     if (!/^\d{6}$/.test(String(payload.inviteCode || '').trim())) {
       setMessage(formError, 'Enter a valid six-digit invite code.', 'error');

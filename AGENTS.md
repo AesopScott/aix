@@ -43,6 +43,20 @@ Primary palette:
 
 When creating new assets, preserve the brand direction shown in that guideline image: high-contrast deep navy backgrounds, electric blue/cyan highlights and glows, white typography where needed for legibility, and a polished executive AI events feel.
 
+## Website Analytics, Privacy, and Consent
+
+Before adding or changing website analytics, conversion tracking, advertising tags, cookie behavior, session replay, heatmaps, enrichment scripts, campaign attribution, or public form tracking, read:
+
+`C:\Users\scott\Code\aix\docs\processes\website-analytics-privacy-conversion-standards.md`
+
+Default to Cloudflare/low-data aggregate analytics and first-party operational conversion records. Do not add Google Analytics, Google Tag Manager, ad pixels, retargeting tags, fingerprinting, session replay, local-storage identifiers, or non-essential cookies unless the change also includes the required privacy notice update, consent mechanism, and review record defined in that standard.
+
+Before launching a campaign page or registration funnel change, run:
+
+`node scripts/check-website-analytics-privacy.mjs`
+
+Treat any failure as a launch blocker until Robert, Jodi, or Scott explicitly accepts the risk.
+
 ## Email Administration
 
 Mojo AI Summits company email is configured in Microsoft 365 with Exchange Online. When the user asks to create an email user or mailbox for the company, treat that as a Microsoft 365 user/mailbox task, not as a website CRM record, Cloudflare Access allowlist entry, or repo data change.
