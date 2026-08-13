@@ -117,6 +117,30 @@ function publicFeaturedGuest(registrant, type) {
   };
 }
 
+function publicRegisteredGuest(registrant, type) {
+  const canUseName = registrant?.publicationUseName === true;
+  const canUseCompany = registrant?.publicationUseCompany === true;
+  const canUseTitle = registrant?.publicationUseTitle === true ||
+    registrant?.publicUseTitle === true ||
+    registrant?.publicationUseRole === true;
+  const name = canUseName ? cleanString(registrant?.name, 180) : "";
+  const title = canUseTitle ? cleanString(registrant?.title, 180) : "";
+  const company = canUseCompany ? cleanString(registrant?.company || registrant?.partnerCompany, 180) : "";
+  const industry = cleanString(registrant?.industry || registrant?.organizationType, 140);
+
+  return {
+    type,
+    displayName: name,
+    nameAllowed: canUseName,
+    company,
+    companyAllowed: canUseCompany,
+    title,
+    titleAllowed: canUseTitle,
+    industry,
+    restricted: !name || !company
+  };
+}
+
 async function featuredGuestsForEvent(env, event) {
   const store = env.MOJO_SUMMITS_SETUP_STATE;
   if (!store?.get) return [];
@@ -142,6 +166,35 @@ async function featuredGuestsForEvent(env, event) {
     .slice(0, 9);
 }
 
+async function registeredGuestsForEvent(env, event) {
+  const store = env.MOJO_SUMMITS_SETUP_STATE;
+  if (!store?.get) return [];
+
+  const prefixes = [
+    ["member", "crm:member-registrant:"],
+    ["guest", "crm:guest-registrant:"],
+    ["partner", "crm:partner-registrant:"]
+  ];
+  const grouped = await Promise.all(prefixes.map(async ([type, prefix]) => {
+    const keys = await listKeys(env, prefix);
+    const rows = await Promise.all(keys.map(async (key) => {
+      const record = await store.get(key, "json").catch(() => null);
+      if (!record || !registrantMatchesEvent(record, event) || isFeaturedRegistrant(record)) return null;
+      return publicRegisteredGuest(record, type);
+    }));
+    return rows.filter(Boolean);
+  }));
+
+  return grouped
+    .flat()
+    .sort((left, right) => {
+      const leftLabel = left.displayName || left.company || left.industry || left.title || "";
+      const rightLabel = right.displayName || right.company || right.industry || right.title || "";
+      return leftLabel.localeCompare(rightLabel);
+    })
+    .slice(0, 80);
+}
+
 export async function onRequestGet({ env, params }) {
   const event = getVirtualEvent(params.slug);
   if (!event) return json({ error: "Virtual event not found." }, { status: 404 });
@@ -156,6 +209,7 @@ export async function onRequestGet({ env, params }) {
     ok: true,
     event: publicEvent,
     featuredGuests: await featuredGuestsForEvent(env, event),
+    registeredGuests: await registeredGuestsForEvent(env, event),
     zoomConfigured: Boolean(storedZoom?.joinUrl),
     zoom: publicEvent.locked ? null : publicZoom(storedZoom),
     message: publicEvent.locked
