@@ -24,7 +24,7 @@ const DEFAULT_PHOTOS = {
   charlie: "/assets/images/charlie.png",
   gina: "/assets/images/gina.png",
   jodi: "/assets/images/jodi.png",
-  miller: "",
+  miller: "/assets/images/MillerPixar.png",
   robert: "/assets/images/robert.png",
   ron: "/assets/images/ron.png",
   scott: "/assets/images/scott-pro3-6.png"
