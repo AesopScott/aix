@@ -557,6 +557,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             </label>
           </div>
           <button class="secondary" id="refreshButton" type="button">Refresh List</button>
+          <button class="secondary" id="backfillSubmittersButton" type="button" hidden>Backfill Submitters</button>
         </div>
         <div class="receipt-grid" aria-label="Receipt filters">
           <button class="receipt-filter secondary" type="button" data-receipts="scott">Scott receipts</button>
@@ -604,6 +605,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const folderFilter = document.querySelector("#folderFilter");
     const prefixSearch = document.querySelector("#prefixSearch");
     const refreshButton = document.querySelector("#refreshButton");
+    const backfillSubmittersButton = document.querySelector("#backfillSubmittersButton");
     const receiptButtons = document.querySelectorAll("[data-receipts]");
     const privateOptions = document.querySelectorAll('option[value="private"], option[value="private/"]');
     const state = { isAdmin: false, statuses: {} };
@@ -671,6 +673,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function applyPrivateAccessUi() {
+      backfillSubmittersButton.hidden = !state.isAdmin;
       privateOptions.forEach((option) => {
         option.disabled = !state.isAdmin;
         option.hidden = !state.isAdmin;
@@ -799,6 +802,60 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         } else {
           setNotice(listNotice, error.message, "error");
         }
+      }
+    }
+
+    async function backfillSubmitters() {
+      if (!state.isAdmin) return;
+      if (!window.confirm("Backfill submitter metadata for existing stored files?")) return;
+
+      backfillSubmittersButton.disabled = true;
+      setNotice(listNotice, "Backfilling submitters...");
+
+      let cursor = "";
+      const totals = { scanned: 0, updated: 0, skipped: 0, unknown: 0, failed: 0 };
+
+      try {
+        do {
+          const formData = new FormData();
+          formData.set("mode", "backfill-submitters");
+          formData.set("prefix", "all");
+          formData.set("limit", "20");
+          if (cursor) formData.set("cursor", cursor);
+
+          const data = await fetch(api, {
+            method: "POST",
+            body: formData
+          }).then(readJson);
+
+          totals.scanned += Number(data.scanned || 0);
+          totals.updated += Number(data.updated || 0);
+          totals.skipped += Number(data.skipped || 0);
+          totals.unknown += Number(data.unknown || 0);
+          totals.failed += Number(data.failed || 0);
+          cursor = data.cursor || "";
+
+          setNotice(
+            listNotice,
+            `Backfilling submitters... ${totals.scanned} scanned, ${totals.updated} updated.`
+          );
+        } while (cursor);
+
+        const type = totals.failed ? "error" : "ok";
+        setNotice(
+          listNotice,
+          `Backfill complete: ${totals.updated} updated, ${totals.skipped} already set, ${totals.unknown} unknown, ${totals.failed} failed.`,
+          type
+        );
+        await loadFiles();
+      } catch (error) {
+        if (/sign in/i.test(error.message)) {
+          setAuthNotice(listNotice, error.message);
+        } else {
+          setNotice(listNotice, error.message, "error");
+        }
+      } finally {
+        backfillSubmittersButton.disabled = false;
       }
     }
 
@@ -968,6 +1025,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     refreshButton.addEventListener("click", loadFiles);
+    backfillSubmittersButton.addEventListener("click", backfillSubmitters);
     prefixFilter.addEventListener("change", () => {
       loadFolders(activePrefix(), folderFilter, { placeholder: "All folders" });
       loadFiles();
