@@ -24,7 +24,7 @@ Miller's queue is LinkedIn-first. The CRM provides platform links, prepared sear
 
 The Discovery Queue can now run a public-source discovery pass from a supplied URL, such as a conference sponsor page, public portfolio page, marketplace list, or AI directory page.
 
-The Discovery Queue now includes built-in starter sources so operators do not need to bring source URLs before Vendor Universe can start. The starter library includes conference sponsor lists/prospectuses and AI company directories, and exposes one-click `Run Source` and `Run Starter Sources` actions.
+The Discovery Queue now includes built-in starter sources so operators do not need to bring source URLs before Vendor Universe can start. The starter library includes conference sponsor lists/prospectuses and AI company directories, and exposes `Run Source` and `Run One Starter Source` actions. Source runs intentionally process one source per request with a small company limit so Cloudflare Workers do not exceed per-invocation request limits.
 
 The discovery pass fetches the HTML, extracts outbound company domains, filters common non-company/social/search domains, dedupes by canonical domain, and creates Vendor Universe records with source provenance.
 
@@ -98,7 +98,7 @@ Sponsor evidence is intentionally CRM-style notes and evidence. Spend should be 
 
 ## Walkthroughs
 
-The Partner Prospecting navigation now includes a bottom Walkthroughs button. The view provides operating walkthroughs for Vendor Universe buildout, review/scoring, sponsor evidence, hiring signals, people research, people records, manual outreach tracking, Partner Candidate conversion, and dashboard health. The Vendor Universe walkthrough starts with `Run Starter Sources` as the first action.
+The Partner Prospecting navigation now includes a bottom Walkthroughs button. The view provides operating walkthroughs for Vendor Universe buildout, review/scoring, sponsor evidence, hiring signals, people research, people records, manual outreach tracking, Partner Candidate conversion, and dashboard health. The Vendor Universe walkthrough starts with `Run One Starter Source` or an individual `Run Source` button as the first action.
 
 ## Hiring Signal Sources
 

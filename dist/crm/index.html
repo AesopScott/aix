@@ -603,6 +603,19 @@
       min-width: 13rem;
     }
 
+    .source-run-status {
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.85rem;
+      border: 1px solid rgba(0, 230, 255, 0.2);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.48);
+    }
+
+    .source-run-status strong {
+      color: var(--white);
+    }
+
     .crm-compact-stack details {
       display: grid;
       gap: 0.5rem;
@@ -1854,6 +1867,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     let activePartnerAddCompany = "";
     const partnerCompaniesPerPage = 10;
     let guestMatrixDrafts = loadGuestMatrixDrafts();
+    let prospectingRunStatus = null;
     let state = {
       type: "contacts",
       label: "Contacts",
@@ -3674,6 +3688,33 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return `<div class="prospecting-grid">${items.map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || 0)}</strong></div>`).join("")}</div>`;
     }
 
+    function starterSourceName(sourceId = "") {
+      return (prospectingState?.starterSources || []).find((source) => source.sourceId === sourceId)?.sourceName || "Starter source";
+    }
+
+    function discoveryRunSummary(data = {}) {
+      const discovery = data.discovery;
+      if (discovery) {
+        return `${discovery.sourceName || "Discovery source"} finished with ${discovery.discovered || 0} discovered compan${Number(discovery.discovered || 0) === 1 ? "y" : "ies"}.`;
+      }
+      const batch = data.discoveryBatch;
+      if (batch) {
+        const failed = Number(batch.attempted || 0) - Number(batch.succeeded || 0);
+        return `${batch.succeeded || 0} source${Number(batch.succeeded || 0) === 1 ? "" : "s"} finished, ${batch.discovered || 0} companies discovered${failed ? `, ${failed} source${failed === 1 ? "" : "s"} failed` : ""}.`;
+      }
+      return "Discovery source finished.";
+    }
+
+    function renderProspectingRunStatus() {
+      if (!prospectingRunStatus) return "";
+      return `
+        <div class="source-run-status">
+          <strong>${escapeHtml(prospectingRunStatus.title || "Discovery run")}</strong>
+          <span>${escapeHtml(prospectingRunStatus.message || "")}</span>
+        </div>
+      `;
+    }
+
     function renderStarterSources() {
       const sources = prospectingState?.starterSources || [];
       if (!sources.length) return "";
@@ -3686,7 +3727,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return `
         <div>
           <div class="prospecting-actions prospecting-section-actions">
-            <button class="secondary" type="button" data-run-starter-prospect-sources>Run Starter Sources</button>
+            <button class="secondary" type="button" data-run-starter-prospect-sources>Run One Starter Source</button>
           </div>
           ${[...categoryMap.entries()].map(([category, rows]) => `
             <p class="eyebrow">${escapeHtml(category)}</p>
@@ -3898,6 +3939,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function renderDiscoveryQueue() {
       prospectingContent.innerHTML = `
         ${renderDiscoveryQueueMetrics()}
+        ${renderProspectingRunStatus()}
         ${renderStarterSources()}
         ${renderConferenceSponsorPlaybook()}
         ${renderHiringSignalPanel()}
@@ -3985,7 +4027,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           title: "Build Vendor Universe",
           steps: [
             "Open Discovery Queue.",
-            "Click Run Starter Sources to seed Vendor Universe from the built-in sponsor and AI directory sources.",
+            "Click Run One Starter Source or an individual Run Source button to seed Vendor Universe from the built-in sponsor and AI directory sources.",
             "Use a hiring signal search, the conference sponsor playbook, a public source URL, or the import form when you want to add more companies.",
             "Run Analyze Website for each useful company, or use Analyze Next 10 Websites.",
             "Review each company card and keep only credible AI or AI-enabled companies moving forward."
@@ -4667,18 +4709,50 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
-    async function postPartnerProspecting(payload, successMessage = "Partner prospecting saved.") {
-      setNotice("Saving partner prospecting...");
+    async function postPartnerProspecting(payload, successMessage = "Partner prospecting saved.", options = {}) {
+      setNotice(options.pendingMessage || "Saving partner prospecting...");
       try {
-        prospectingState = await fetch(api, {
+        const data = await fetch(api, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload)
         }).then(readJson);
+        if (data.refreshRequired) {
+          prospectingRunStatus = {
+            title: options.resultTitle || "Discovery run complete",
+            message: discoveryRunSummary(data)
+          };
+          prospectingState = await fetch(`${api}?prospecting=1`).then(readJson);
+        } else {
+          prospectingState = data;
+        }
         render();
-        setNotice(successMessage, "ok");
+        setNotice(options.successFromResponse ? discoveryRunSummary(data) : successMessage, "ok");
+        return data;
       } catch (error) {
+        prospectingRunStatus = {
+          title: options.resultTitle || "Discovery run failed",
+          message: error.message || "Partner prospecting request failed."
+        };
+        if (activeView === "discovery-queue") render();
         showErrorNotice(error, "Partner prospecting request failed.");
+        return null;
+      }
+    }
+
+    async function runProspectingButtonAction(button, runningLabel, action) {
+      const originalLabel = button?.textContent || "";
+      if (button) {
+        button.disabled = true;
+        button.textContent = runningLabel;
+      }
+      try {
+        return await action();
+      } finally {
+        if (button?.isConnected) {
+          button.disabled = false;
+          button.textContent = originalLabel;
+        }
       }
     }
 
@@ -5290,7 +5364,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         await postPartnerProspecting({
           action: "run-partner-prospect-discovery",
           ...prospectingFormPayload(discoveryForm)
-        }, "Discovery source processed.");
+        }, "Discovery source processed.", {
+          pendingMessage: "Running discovery source. This can take a few seconds.",
+          resultTitle: "Discovery source run complete",
+          successFromResponse: true
+        });
         discoveryForm.reset();
         return;
       }
@@ -5386,27 +5464,40 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       if (runAllSourcesButton) {
-        await postPartnerProspecting({
+        await runProspectingButtonAction(runAllSourcesButton, "Running sources...", () => postPartnerProspecting({
           action: "run-all-partner-prospect-sources",
-          limitPerSource: 20,
-          maxSources: 8
-        }, "Active discovery sources processed.");
+          limitPerSource: 8,
+          maxSources: 1
+        }, "One active discovery source processed.", {
+          pendingMessage: "Running one active discovery source. This can take a few seconds.",
+          resultTitle: "Active source run complete",
+          successFromResponse: true
+        }));
         return;
       }
       if (runStarterSourceButton) {
-        await postPartnerProspecting({
+        const sourceName = starterSourceName(runStarterSourceButton.dataset.runStarterProspectSource);
+        await runProspectingButtonAction(runStarterSourceButton, "Running...", () => postPartnerProspecting({
           action: "run-partner-prospect-starter-source",
           sourceId: runStarterSourceButton.dataset.runStarterProspectSource,
-          limit: 30
-        }, "Starter source processed.");
+          limit: 8
+        }, "Starter source processed.", {
+          pendingMessage: `Running ${sourceName}. This can take a few seconds.`,
+          resultTitle: `${sourceName} run complete`,
+          successFromResponse: true
+        }));
         return;
       }
       if (runStarterSourcesButton) {
-        await postPartnerProspecting({
+        await runProspectingButtonAction(runStarterSourcesButton, "Running one source...", () => postPartnerProspecting({
           action: "run-partner-prospect-starter-sources",
-          limitPerSource: 25,
-          maxSources: 6
-        }, "Starter sources processed.");
+          limitPerSource: 8,
+          maxSources: 1
+        }, "Starter source processed.", {
+          pendingMessage: "Running one starter source. Use the individual source buttons to keep adding more.",
+          resultTitle: "Starter source run complete",
+          successFromResponse: true
+        }));
         return;
       }
       if (reviewButton) {

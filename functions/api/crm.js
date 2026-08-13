@@ -554,12 +554,23 @@ function classifyWebsiteText(text = "") {
 async function fetchPublicHtml(url = "") {
   const target = normalizeUrl(url);
   if (!target) throw new Error("A source URL is required.");
-  const response = await fetch(target, {
-    headers: {
-      "accept": "text/html,application/xhtml+xml",
-      "user-agent": "MojoAIProspectingBot/0.1 (+https://mojoaisummits.com)"
-    }
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort("timeout"), 15000);
+  let response;
+  try {
+    response = await fetch(target, {
+      headers: {
+        "accept": "text/html,application/xhtml+xml",
+        "user-agent": "MojoAIProspectingBot/0.1 (+https://mojoaisummits.com)"
+      },
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error(`Fetch timed out for ${target}.`);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) throw new Error(`Fetch failed with ${response.status} for ${target}.`);
   const contentType = response.headers.get("content-type") || "";
   if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
@@ -1628,6 +1639,49 @@ async function saveProspectCompany(env, payload = {}, actor = "") {
   return normalizeProspectCompany(key, next, await prospectPeople(env, companyId), config.weights);
 }
 
+async function saveDiscoveredProspectCompany(env, payload = {}, actor = "", config = null) {
+  if (!cleanString(payload.companyName || payload.company || payload.name) &&
+    !normalizeDomain(payload.canonicalDomain || payload.websiteUrl)) {
+    throw new Error("Company name or domain is required.");
+  }
+  const activeConfig = config || await partnerScoreConfig(env);
+  const companyId = prospectCompanyId(payload);
+  const key = `${PARTNER_PROSPECT_COMPANY_PREFIX}${companyId}`;
+  const previous = await readRawRecord(env, key);
+  const now = new Date().toISOString();
+  const record = {
+    ...(previous || {}),
+    ...payload,
+    companyId,
+    companyName: cleanString(payload.companyName || payload.company || previous?.companyName, 240),
+    canonicalDomain: normalizeDomain(payload.canonicalDomain || payload.websiteUrl || previous?.canonicalDomain),
+    websiteUrl: normalizeUrl(payload.websiteUrl || payload.canonicalDomain || previous?.websiteUrl),
+    linkedinCompanyUrl: normalizeUrl(payload.linkedinCompanyUrl || previous?.linkedinCompanyUrl),
+    sourceUrls: cleanArray([...(cleanArray(previous?.sourceUrls, 30, 500)), ...(cleanArray(payload.sourceUrls, 30, 500))], 30, 500),
+    discoverySources: cleanArray([...(cleanArray(previous?.discoverySources, 20, 160)), ...(cleanArray(payload.discoverySources, 20, 160))], 20, 160),
+    categories: cleanArray(payload.categories ?? previous?.categories, 20, 160),
+    targetExecutiveRoles: cleanArray(payload.targetExecutiveRoles ?? previous?.targetExecutiveRoles ?? payload.targetBuyers, 24, 160),
+    aiVendor: payload.aiVendor === undefined ? previous?.aiVendor !== false : payload.aiVendor !== false,
+    aiNative: payload.aiNative === true || previous?.aiNative === true,
+    assignedTo: cleanString(payload.assignedTo ?? previous?.assignedTo ?? "Miller", 180),
+    dateDiscovered: cleanString(previous?.dateDiscovered) || now.slice(0, 10),
+    createdAt: cleanString(previous?.createdAt) || now,
+    createdBy: cleanString(previous?.createdBy) || actor || "crm",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  };
+  const normalized = normalizeProspectCompany(key, record, [], activeConfig.weights);
+  const next = {
+    ...record,
+    partnerScore: normalized.partnerScore,
+    partnerPriority: normalized.partnerPriority,
+    processingStage: normalized.processingStage,
+    processingStatus: normalized.processingStatus
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+  return normalizeProspectCompany(key, next, [], activeConfig.weights);
+}
+
 async function recalculateProspectCompanyRecord(env, key, record = {}, weights = defaultPartnerScoreWeights, actor = "") {
   const companyId = cleanString(record.companyId, 180) || key.replace(PARTNER_PROSPECT_COMPANY_PREFIX, "");
   const people = await prospectPeople(env, companyId);
@@ -1929,15 +1983,16 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
     sourceUrl,
     sourceType: payload.sourceType || "Public Web"
   }, actor);
-  const limit = cleanNumber(payload.limit, 20, 1, 80);
+  const limit = cleanNumber(payload.limit, 10, 1, 20);
   const now = new Date().toISOString();
   try {
     const { html } = await fetchPublicHtml(sourceUrl);
     const title = htmlTitle(html);
     const candidates = extractCompanyLinks(html, sourceUrl, limit);
     const saved = [];
+    const config = await partnerScoreConfig(env);
     for (const candidate of candidates) {
-      const record = await saveProspectCompany(env, {
+      const record = await saveDiscoveredProspectCompany(env, {
         companyName: candidate.companyName,
         canonicalDomain: candidate.canonicalDomain,
         websiteUrl: candidate.websiteUrl,
@@ -1955,7 +2010,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
             discoveredAt: now
           }
         }
-      }, actor);
+      }, actor, config);
       saved.push(record);
     }
     await env.MOJO_SUMMITS_SETUP_STATE.put(source.key, JSON.stringify({
@@ -2060,14 +2115,14 @@ async function runStarterProspectSource(env, payload = {}, actor = "") {
   if (!source) throw new Error("Starter discovery source was not found.");
   return runSourceDiscovery(env, {
     ...source,
-    limit: payload.limit || 30
+    limit: payload.limit || 10
   }, actor);
 }
 
 async function runStarterProspectSources(env, payload = {}, actor = "") {
   const selectedIds = cleanArray(payload.sourceIds || payload.starterSourceIds, 30, 180);
-  const maxSources = cleanNumber(payload.maxSources, 6, 1, partnerProspectStarterSources.length);
-  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 25, 1, 80);
+  const maxSources = cleanNumber(payload.maxSources, 1, 1, 2);
+  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 8, 1, 12);
   const sources = (selectedIds.length
     ? selectedIds.map(prospectStarterSourceById).filter(Boolean)
     : partnerProspectStarterSources.slice(0, maxSources)
@@ -2100,8 +2155,8 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
 }
 
 async function runAllProspectSources(env, payload = {}, actor = "") {
-  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 20, 1, 80);
-  const maxSources = cleanNumber(payload.maxSources, 8, 1, 30);
+  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 8, 1, 12);
+  const maxSources = cleanNumber(payload.maxSources, 1, 1, 2);
   const sources = (await prospectSources(env))
     .filter((source) => source.status !== "disabled" && source.sourceUrl)
     .slice(0, maxSources);
@@ -4063,7 +4118,9 @@ export async function onRequestPost({ request, env, data }) {
     try {
       const discovery = await runSourceDiscovery(env, payload, access.email);
       return json({
-        ...(await partnerProspectingPayload(env)),
+        ok: true,
+        type: "partner-prospecting",
+        refreshRequired: true,
         discovery
       }, { status: 201 });
     } catch (error) {
@@ -4089,7 +4146,9 @@ export async function onRequestPost({ request, env, data }) {
     try {
       const discovery = await rerunProspectSource(env, payload, access.email);
       return json({
-        ...(await partnerProspectingPayload(env)),
+        ok: true,
+        type: "partner-prospecting",
+        refreshRequired: true,
         discovery
       });
     } catch (error) {
@@ -4102,7 +4161,9 @@ export async function onRequestPost({ request, env, data }) {
     try {
       const discoveryBatch = await runAllProspectSources(env, payload, access.email);
       return json({
-        ...(await partnerProspectingPayload(env)),
+        ok: true,
+        type: "partner-prospecting",
+        refreshRequired: true,
         discoveryBatch
       });
     } catch (error) {
@@ -4114,7 +4175,9 @@ export async function onRequestPost({ request, env, data }) {
     try {
       const discovery = await runStarterProspectSource(env, payload, access.email);
       return json({
-        ...(await partnerProspectingPayload(env)),
+        ok: true,
+        type: "partner-prospecting",
+        refreshRequired: true,
         discovery
       });
     } catch (error) {
@@ -4127,7 +4190,9 @@ export async function onRequestPost({ request, env, data }) {
     try {
       const discoveryBatch = await runStarterProspectSources(env, payload, access.email);
       return json({
-        ...(await partnerProspectingPayload(env)),
+        ok: true,
+        type: "partner-prospecting",
+        refreshRequired: true,
         discoveryBatch
       });
     } catch (error) {
