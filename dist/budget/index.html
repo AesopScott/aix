@@ -154,6 +154,82 @@
 
     .panel { padding: 1.25rem; }
 
+    .section-heading {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      align-items: end;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .section-heading p {
+      max-width: 46rem;
+      font-size: 0.92rem;
+    }
+
+    .spend-panel {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .spend-form {
+      display: grid;
+      grid-template-columns: minmax(110px, 0.6fr) minmax(110px, 0.6fr) minmax(130px, 0.65fr) minmax(180px, 1fr) minmax(200px, 1.15fr) minmax(120px, 0.6fr) minmax(160px, 0.75fr);
+      gap: 0.75rem;
+      align-items: end;
+    }
+
+    .spend-form .wide {
+      grid-column: span 2;
+    }
+
+    .owner-spend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .owner-spend {
+      display: grid;
+      gap: 0.35rem;
+      min-height: 110px;
+      padding: 0.85rem;
+      border: 1px solid rgba(0, 230, 255, 0.16);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.5);
+    }
+
+    .owner-spend strong {
+      color: var(--white);
+      font-size: 1rem;
+      text-transform: capitalize;
+    }
+
+    .owner-spend dl {
+      display: grid;
+      gap: 0.25rem;
+      margin: 0;
+    }
+
+    .owner-spend div {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.8rem;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .owner-spend dd,
+    .owner-spend dt {
+      margin: 0;
+    }
+
+    .owner-spend dd {
+      color: var(--cyan);
+      font-weight: 800;
+    }
+
     label { display: grid; gap: 0.4rem; color: var(--muted-blue); }
 
     input, select, textarea, button {
@@ -266,6 +342,24 @@
       font-size: 0.86rem;
     }
 
+    .inline-input {
+      min-width: 8rem;
+      padding: 0.58rem 0.65rem;
+      font-size: 0.86rem;
+    }
+
+    .inline-input.description {
+      min-width: 16rem;
+    }
+
+    .delete-button {
+      min-width: 5.4rem;
+      padding: 0.58rem 0.65rem;
+      background: rgba(255, 99, 123, 0.12);
+      border-color: rgba(255, 99, 123, 0.42);
+      color: #ffc7d0;
+    }
+
     .reimburse-controls {
       display: grid;
       gap: 0.45rem;
@@ -283,7 +377,8 @@
     }
 
     @media (max-width: 980px) {
-      header, .hero, .toolbar, .grid { grid-template-columns: 1fr; }
+      header, .hero, .toolbar, .grid, .spend-form { grid-template-columns: 1fr; }
+      .spend-form .wide { grid-column: auto; }
     }
   </style>
 <style>
@@ -375,10 +470,94 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
     </section>
 
+    <div id="notice" class="notice">Loading budget ledger...</div>
+
     <div class="grid">
+      <section class="panel spend-panel">
+        <div class="section-heading">
+          <div>
+            <h2>Anticipated Spending</h2>
+            <p>Track expected person-level spending before receipts arrive, then use the receipt ledger below as the source of actuals when costs are backfilled.</p>
+          </div>
+        </div>
+        <form class="spend-form" id="anticipatedForm">
+          <label>
+            Person
+            <select id="anticipatedOwner" required>
+              <option value="scott">Scott</option>
+              <option value="jodi">Jodi</option>
+              <option value="robert">Robert</option>
+              <option value="ron">Ron</option>
+              <option value="angel">Angel</option>
+              <option value="charlie">Charlie</option>
+              <option value="unassigned">Unassigned</option>
+            </select>
+          </label>
+          <label>
+            Event
+            <select id="anticipatedEvent">
+              <option value="">No event assigned</option>
+              <option value="Global">Global</option>
+              <option value="Dallas">Dallas</option>
+              <option value="Denver">Denver</option>
+              <option value="Raleigh">Raleigh</option>
+              <option value="Chicago">Chicago</option>
+            </select>
+          </label>
+          <label>
+            Expected Date
+            <input id="anticipatedDate" type="date">
+          </label>
+          <label>
+            Category
+            <select id="anticipatedCategory"></select>
+          </label>
+          <label class="wide">
+            Description
+            <input id="anticipatedDescription" required placeholder="flight, hotel, supplies">
+          </label>
+          <label>
+            Amount
+            <input id="anticipatedAmount" type="number" min="0" step="0.01" required placeholder="0.00">
+          </label>
+          <label>
+            Status
+            <select id="anticipatedStatus">
+              <option value="receipt-needed">Receipt needed</option>
+              <option value="planned">Planned</option>
+              <option value="receipt-backed">Receipt backed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
+          <label class="wide">
+            Notes
+            <input id="anticipatedNotes" placeholder="approval, card, reimbursement context">
+          </label>
+          <button id="anticipatedAddButton" type="submit">Add Spend</button>
+        </form>
+        <div class="owner-spend-grid" id="ownerSpend"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>Event</th>
+                <th>Expected</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="anticipatedRows"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="panel">
         <h2>Receipt Costs</h2>
-        <div id="notice" class="notice">Loading budget ledger...</div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -427,17 +606,52 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["excluded", "Excluded"],
       ["reviewed", "Reviewed"]
     ];
+    const anticipatedStatuses = [
+      ["planned", "Planned"],
+      ["receipt-needed", "Receipt needed"],
+      ["receipt-backed", "Receipt backed"],
+      ["cancelled", "Cancelled"]
+    ];
+    const owners = [
+      ["scott", "Scott"],
+      ["jodi", "Jodi"],
+      ["robert", "Robert"],
+      ["ron", "Ron"],
+      ["angel", "Angel"],
+      ["charlie", "Charlie"],
+      ["unassigned", "Unassigned"]
+    ];
+    const events = [
+      ["", "No event assigned"],
+      ["Global", "Global"],
+      ["Dallas", "Dallas"],
+      ["Denver", "Denver"],
+      ["Raleigh", "Raleigh"],
+      ["Chicago", "Chicago"]
+    ];
     const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
     const ownerFilter = document.querySelector("#ownerFilter");
     const statusFilter = document.querySelector("#statusFilter");
     const eventFilter = document.querySelector("#eventFilter");
     const searchInput = document.querySelector("#searchInput");
+    const anticipatedForm = document.querySelector("#anticipatedForm");
+    const anticipatedOwner = document.querySelector("#anticipatedOwner");
+    const anticipatedEvent = document.querySelector("#anticipatedEvent");
+    const anticipatedDate = document.querySelector("#anticipatedDate");
+    const anticipatedCategory = document.querySelector("#anticipatedCategory");
+    const anticipatedDescription = document.querySelector("#anticipatedDescription");
+    const anticipatedAmount = document.querySelector("#anticipatedAmount");
+    const anticipatedStatus = document.querySelector("#anticipatedStatus");
+    const anticipatedNotes = document.querySelector("#anticipatedNotes");
+    const anticipatedAddButton = document.querySelector("#anticipatedAddButton");
+    const anticipatedRowsElement = document.querySelector("#anticipatedRows");
+    const ownerSpend = document.querySelector("#ownerSpend");
     const rowsElement = document.querySelector("#rows");
     const notice = document.querySelector("#notice");
     const metrics = document.querySelector("#metrics");
     const refreshButton = document.querySelector("#refreshButton");
     const downloadButton = document.querySelector("#downloadButton");
-    let state = { rows: [], summary: {} };
+    let state = { rows: [], anticipatedRows: [], summary: {} };
 
     function escapeHtml(value) {
       return String(value || "")
@@ -490,6 +704,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         .join("");
     }
 
+    function ownerOptions(selected = "unassigned") {
+      return owners
+        .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`)
+        .join("");
+    }
+
+    function eventOptions(selected = "") {
+      return events
+        .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`)
+        .join("");
+    }
+
+    function anticipatedStatusOptions(selected = "receipt-needed") {
+      return anticipatedStatuses
+        .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`)
+        .join("");
+    }
+
     function receiptViewUrl(key) {
       return `/api/storage?view=1&key=${encodeURIComponent(key)}`;
     }
@@ -508,6 +740,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         needsReimbursement: Boolean(row.needsReimbursement),
         reimbursed: Boolean(row.reimbursed) || row.status === "reimbursed",
         notes: row.notes || ""
+      };
+    }
+
+    function normalizeAnticipatedRow(row) {
+      return {
+        id: row.id || "",
+        owner: row.owner || "unassigned",
+        event: row.event || "",
+        expectedDate: row.expectedDate || "",
+        description: row.description || "",
+        category: row.category || "Unassigned",
+        amount: row.amount || "",
+        status: row.status || "receipt-needed",
+        notes: row.notes || "",
+        receiptKey: row.receiptKey || ""
       };
     }
 
@@ -532,9 +779,73 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       metrics.innerHTML = `
         <div class="metric"><span>Revenue tracked</span><strong>${money.format(summary.revenue || 0)}</strong></div>
         <div class="metric"><span>Receipt costs</span><strong>${money.format(summary.expenses || 0)}</strong></div>
+        <div class="metric"><span>Anticipated costs</span><strong>${money.format(summary.anticipatedExpenses || 0)}</strong></div>
+        <div class="metric loss"><span>Planned less actual</span><strong>${money.format(summary.anticipatedVariance || 0)}</strong></div>
         <div class="metric loss"><span>Net position</span><strong>${money.format(summary.net || 0)}</strong></div>
-        <div class="metric"><span>Needs reimbursement</span><strong>${summary.needsReimbursementCount || 0}</strong></div>
+        <div class="metric"><span>Receipts needed</span><strong>${summary.anticipatedReceiptNeededCount || 0}</strong></div>
       `;
+    }
+
+    function renderOwnerSpend() {
+      const byOwner = state.summary?.anticipatedByOwner || {};
+      const ownerCards = owners
+        .map(([owner, label]) => {
+          const entry = byOwner[owner] || { anticipated: 0, actual: 0, variance: 0, count: 0, receiptNeededCount: 0 };
+          if (!entry.count && !entry.actual) return "";
+          return `
+            <article class="owner-spend">
+              <strong>${escapeHtml(label)}</strong>
+              <dl>
+                <div><dt>Planned</dt><dd>${money.format(entry.anticipated || 0)}</dd></div>
+                <div><dt>Receipts</dt><dd>${money.format(entry.actual || 0)}</dd></div>
+                <div><dt>Variance</dt><dd>${money.format(entry.variance || 0)}</dd></div>
+                <div><dt>Receipt needed</dt><dd>${entry.receiptNeededCount || 0}</dd></div>
+              </dl>
+            </article>
+          `;
+        })
+        .filter(Boolean);
+      ownerSpend.innerHTML = ownerCards.length
+        ? ownerCards.join("")
+        : `<p>No anticipated spending has been added yet.</p>`;
+    }
+
+    function renderAnticipatedRows() {
+      const rows = state.anticipatedRows || [];
+      if (!rows.length) {
+        anticipatedRowsElement.innerHTML = `<tr><td colspan="9">No anticipated spending rows yet.</td></tr>`;
+        return;
+      }
+
+      anticipatedRowsElement.innerHTML = rows.map((row) => `
+        <tr>
+          <td>
+            <select class="inline-select" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="owner">
+              ${ownerOptions(row.owner || "unassigned")}
+            </select>
+          </td>
+          <td>
+            <select class="inline-select" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="event">
+              ${eventOptions(row.event || "")}
+            </select>
+          </td>
+          <td><input class="inline-input" type="date" value="${escapeHtml(row.expectedDate || "")}" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="expectedDate"></td>
+          <td><input class="inline-input description" value="${escapeHtml(row.description || "")}" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="description"></td>
+          <td>
+            <select class="inline-select" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="category">
+              ${taxCategoryOptions(row.category || "Unassigned")}
+            </select>
+          </td>
+          <td><input class="inline-input" type="number" min="0" step="0.01" value="${escapeHtml(row.amount || "")}" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="amount"></td>
+          <td>
+            <select class="inline-select" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="status">
+              ${anticipatedStatusOptions(row.status || "receipt-needed")}
+            </select>
+          </td>
+          <td><input class="inline-input description" value="${escapeHtml(row.notes || "")}" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="notes"></td>
+          <td><button class="delete-button" type="button" data-anticipated-delete="${escapeHtml(row.id)}">Delete</button></td>
+        </tr>
+      `).join("");
     }
 
     function renderRows() {
@@ -583,6 +894,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function render() {
       renderMetrics();
+      renderOwnerSpend();
+      renderAnticipatedRows();
       renderRows();
     }
 
@@ -590,7 +903,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       setNotice("Loading budget ledger...");
       try {
         state = await fetch(api).then(readJson);
-        setNotice(`${state.summary.receiptCount || 0} receipt${state.summary.receiptCount === 1 ? "" : "s"} ingested from storage. ${state.summary.unpricedCount || 0} need amounts.`, "ok");
+        setNotice(`${state.summary.receiptCount || 0} receipt${state.summary.receiptCount === 1 ? "" : "s"} ingested from storage. ${state.summary.anticipatedCount || 0} anticipated spend row${state.summary.anticipatedCount === 1 ? "" : "s"} tracked.`, "ok");
         render();
       } catch (error) {
         setNotice(error.message, "error");
@@ -611,6 +924,60 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       } catch (error) {
         setNotice(error.message, "error");
       }
+    }
+
+    async function saveAnticipatedSpend(row, successMessage = "Anticipated spend saved.") {
+      setNotice("Saving anticipated spend...");
+      try {
+        const data = await fetch(`${api}?action=anticipated`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(row)
+        }).then(readJson);
+        state = data;
+        setNotice(successMessage, "ok");
+        render();
+      } catch (error) {
+        setNotice(error.message, "error");
+      }
+    }
+
+    async function addAnticipatedSpend(event) {
+      event.preventDefault();
+      anticipatedAddButton.disabled = true;
+      try {
+        await saveAnticipatedSpend({
+          owner: anticipatedOwner.value,
+          event: anticipatedEvent.value,
+          expectedDate: anticipatedDate.value,
+          description: anticipatedDescription.value,
+          category: anticipatedCategory.value,
+          amount: anticipatedAmount.value,
+          status: anticipatedStatus.value,
+          notes: anticipatedNotes.value
+        }, "Anticipated spend added.");
+        anticipatedForm.reset();
+        anticipatedCategory.value = "Unassigned";
+        anticipatedStatus.value = "receipt-needed";
+      } finally {
+        anticipatedAddButton.disabled = false;
+      }
+    }
+
+    function updateAnticipatedFromControl(control) {
+      const id = control.dataset.anticipatedId;
+      const field = control.dataset.anticipatedField;
+      if (!id || !field) return;
+      const row = state.anticipatedRows.find((item) => item.id === id);
+      if (!row) return;
+      const next = normalizeAnticipatedRow(row);
+      next[field] = control.value;
+      saveAnticipatedSpend(next, "Anticipated spend updated.");
+    }
+
+    function deleteAnticipatedSpend(id) {
+      if (!id) return;
+      saveAnticipatedSpend({ id, action: "delete", delete: true }, "Anticipated spend removed.");
     }
 
     async function refreshReceipts() {
@@ -676,17 +1043,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       saveReceipt(next, "Receipt updated.");
     });
 
+    anticipatedRowsElement.addEventListener("change", (event) => {
+      if (event.target.dataset.anticipatedId) updateAnticipatedFromControl(event.target);
+    });
+
+    anticipatedRowsElement.addEventListener("click", (event) => {
+      const id = event.target.dataset.anticipatedDelete;
+      if (id) deleteAnticipatedSpend(id);
+    });
+
     [ownerFilter, statusFilter, eventFilter, searchInput].forEach((input) => {
       input.addEventListener("input", renderRows);
       input.addEventListener("change", renderRows);
     });
 
+    anticipatedForm.addEventListener("submit", addAnticipatedSpend);
     refreshButton.addEventListener("click", refreshReceipts);
 
     downloadButton.addEventListener("click", () => {
       window.location.href = `${api}?download=csv`;
     });
 
+    anticipatedCategory.innerHTML = taxCategoryOptions("Unassigned");
     loadBudget();
   </script>
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
