@@ -216,19 +216,26 @@
       padding-bottom: clamp(28px, 4vw, 46px);
     }
     .filter-group {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: 78px minmax(0, 1fr);
       align-items: center;
-      gap: 10px;
+      column-gap: 10px;
+      row-gap: 10px;
     }
     .filter-label {
-      min-width: 78px;
       color: var(--slate);
       font-family: "Space Grotesk", sans-serif;
       font-size: 11px;
       font-weight: 800;
       letter-spacing: .16em;
       text-transform: uppercase;
+    }
+    .filter-options {
+      min-width: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
     }
     .filter-button {
       min-height: 42px;
@@ -607,7 +614,13 @@
         display: flex;
         justify-content: flex-start;
       }
+      .filter-group {
+        grid-template-columns: 1fr;
+      }
       .filter-label {
+        width: 100%;
+      }
+      .filter-options {
         width: 100%;
       }
       .filter-button {
@@ -664,20 +677,24 @@
       <section class="calendar-controls" aria-label="Calendar filters">
         <div class="filter-group" role="group" aria-label="Event format">
           <span class="filter-label">Format</span>
-          <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="all" aria-pressed="true">All</button>
-          <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="virtual" aria-pressed="false">Virtual</button>
-          <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="in-person" aria-pressed="false">In-person</button>
+          <div class="filter-options">
+            <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="all" aria-pressed="true">All</button>
+            <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="virtual" aria-pressed="false">Virtual</button>
+            <button class="filter-button" type="button" data-filter-kind="format" data-filter-value="in-person" aria-pressed="false">In-person</button>
+          </div>
         </div>
         <div class="filter-group" role="group" aria-label="Cohort">
           <span class="filter-label">Cohort</span>
-          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all" aria-pressed="true">All</button>
-          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="technology-strategy" aria-pressed="false">Technology Strategy</button>
-          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="integration" aria-pressed="false">Integration</button>
-          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="operations-finance" aria-pressed="false">Operations and Finance</button>
-          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="security-risk" aria-pressed="false">Security and Risk</button>
-          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="business-enablement" aria-pressed="false">Business Enablement</button>
-          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="innovation" aria-pressed="false">Innovation</button>
-          <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all-cohorts" aria-pressed="false">All Cohorts</button>
+          <div class="filter-options" data-filter-options="cohort">
+            <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all" aria-pressed="true">All</button>
+            <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="technology-strategy" aria-pressed="false">Technology Strategy</button>
+            <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="integration" aria-pressed="false">Integration</button>
+            <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="operations-finance" aria-pressed="false">Operations and Finance</button>
+            <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="security-risk" aria-pressed="false">Security and Risk</button>
+            <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="business-enablement" aria-pressed="false">Business Enablement</button>
+            <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="innovation" aria-pressed="false">Innovation</button>
+            <button class="filter-button" type="button" data-filter-kind="cohort" data-filter-value="all-cohorts" aria-pressed="false">All Cohorts</button>
+          </div>
         </div>
       </section>
     </div>
@@ -1063,12 +1080,28 @@
     const calendarTop = document.querySelector(".calendar-top");
     const calendarVideo = document.querySelector(".calendar-founder-video");
     const formatFilters = document.querySelector(".calendar-controls .filter-group");
+    const cohortOptions = document.querySelector('[data-filter-options="cohort"]');
+
+    function getFirstRowRightEdge(container) {
+      if (!container) return null;
+
+      const buttons = Array.from(container.querySelectorAll(".filter-button"))
+        .filter((button) => button.offsetParent !== null);
+
+      if (!buttons.length) return null;
+
+      const firstRowTop = buttons[0].getBoundingClientRect().top;
+      const firstRowButtons = buttons.filter((button) => Math.abs(button.getBoundingClientRect().top - firstRowTop) < 2);
+
+      return Math.max(...firstRowButtons.map((button) => button.getBoundingClientRect().right));
+    }
 
     function alignCalendarVideo() {
       if (!calendarTop || !calendarVideo || !formatFilters) return;
 
       if (window.matchMedia("(max-width: 1080px)").matches) {
         calendarVideo.style.top = "";
+        calendarVideo.style.right = "";
         return;
       }
 
@@ -1076,8 +1109,12 @@
       const filterRect = formatFilters.getBoundingClientRect();
       const videoHeight = calendarVideo.offsetHeight;
       const alignedTop = filterRect.bottom - topRect.top - videoHeight;
+      const cohortRightEdge = getFirstRowRightEdge(cohortOptions);
 
       calendarVideo.style.top = `${alignedTop}px`;
+      if (cohortRightEdge !== null) {
+        calendarVideo.style.right = `${Math.max(0, topRect.right - cohortRightEdge)}px`;
+      }
     }
 
     function applyCalendarFilters() {
