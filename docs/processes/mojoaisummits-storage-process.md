@@ -54,6 +54,8 @@ Each upload also includes an event, city, or folder value. Example object keys:
 - `media/dallas-2027/2026-07-26T18-10-00-000Z-c3d4e5f6-stage-photo.jpg`
 - `receipts/scott/2026-07-26T18-10-00-000Z-d4e5f6a7-hotel-receipt.pdf`
 
+Large browser uploads use the R2 multipart API through `/api/storage` instead of sending the entire file in one request. The `/files/` page keeps smaller files on the simple form upload path, but switches files at 64 MiB and above to 16 MiB parts, then completes or aborts the multipart session from the same authenticated API. This avoids Cloudflare request body limits for video drafts and other large media while preserving the same object naming and metadata rules.
+
 ## Mojo Auth Setup
 
 Before using the storage portal in production, protect the Storage API through `/access`:
