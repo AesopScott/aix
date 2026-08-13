@@ -494,8 +494,60 @@
     opacity:.5;
     filter: saturate(.5) brightness(.8) contrast(1.15) hue-rotate(160deg) drop-shadow(0 34px 60px rgba(0,0,0,.7));
   }
+  .hero-founder-video{
+    position:absolute;
+    left:clamp(-412px, -26.5vw, -304px);
+    top:44%;
+    width:clamp(220px, 21vw, 360px);
+    aspect-ratio:16 / 9;
+    transform:translateY(-50%);
+    border:1px solid rgba(0,230,255,.34);
+    border-radius:8px;
+    overflow:visible;
+    background:rgba(10,15,30,.72);
+    box-shadow:
+      0 24px 64px rgba(0,0,0,.52),
+      0 0 34px rgba(0,230,255,.16),
+      inset 0 0 0 1px rgba(255,255,255,.06);
+    z-index:2;
+  }
+  .hero-founder-promise{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:calc(100% + 12px);
+    color:rgba(240,248,255,.88);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:clamp(12px, 1vw, 15px);
+    font-weight:700;
+    line-height:1.2;
+    letter-spacing:.08em;
+    text-align:center;
+    text-transform:uppercase;
+    text-shadow:0 0 18px rgba(0,230,255,.22), 0 2px 10px rgba(0,0,0,.72);
+  }
+  .hero-founder-video::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg, rgba(0,230,255,.22), transparent 34%, rgba(22,102,255,.16));
+    border-radius:7px;
+    pointer-events:none;
+    z-index:2;
+  }
+  .hero-founder-video video{
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:cover;
+    border-radius:7px;
+  }
   @media (max-width:860px){
     .hero-boardroom{ width:100vw; height:170px; margin:20px 0 -30px; }
+    .hero-founder-video{ display:none; }
+  }
+  @media (max-width:1180px){
+    .hero-founder-video{ display:none; }
   }
   .hero-sub, .hero-cta-row{
     opacity:0;
@@ -1712,7 +1764,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     </div>
     <span class="eyebrow"><span>Invitation only</span></span>
     <h1><span class="word" style="animation-delay:.05s">Where</span> <span class="word" style="animation-delay:.11s">executive</span> <span class="word" style="animation-delay:.17s">leaders</span><br><span class="word" style="animation-delay:.23s">shape</span> <span class="word grad ai-shimmer" data-text="the" style="animation-delay:.30s">the</span> <span class="word grad ai-shimmer" data-text="future" style="animation-delay:.37s">future</span> <span class="word grad ai-shimmer" data-text="of AI" style="animation-delay:.44s">of AI</span></h1>
-    <div class="hero-boardroom" aria-hidden="true"><img src="assets/boardroom-transparent.png" alt=""></div>
+    <div class="hero-boardroom" aria-hidden="true">
+      <img src="assets/boardroom-transparent.png" alt="">
+      <div class="hero-founder-video">
+        <div class="hero-founder-promise">The Mojo AI Summits Promise</div>
+        <video src="assets/video/scott-schindler-mojo-ai-summits-intro.mp4" poster="assets/video/scott-schindler-mojo-ai-summits-intro-poster.jpg" autoplay muted loop playsinline preload="metadata"></video>
+      </div>
+    </div>
     <p class="hero-sub">Mojo AI Summits is an executive AI intelligence network where leaders don’t just attend, they contribute. We turn peer conversations into published briefs, summit books, and professional visibility, while connecting CxOs and Owners in no-sales, cross-functional discussions.</p>
     <div class="hero-cta-row">
       <button type="button" class="btn-primary" data-modal-open="inviteRequestModal">Request an Invite</button>
