@@ -175,7 +175,7 @@
 
     .spend-form {
       display: grid;
-      grid-template-columns: minmax(110px, 0.6fr) minmax(110px, 0.6fr) minmax(130px, 0.65fr) minmax(180px, 1fr) minmax(200px, 1.15fr) minmax(120px, 0.6fr) minmax(160px, 0.75fr);
+      grid-template-columns: minmax(110px, 0.6fr) minmax(110px, 0.6fr) minmax(130px, 0.65fr) minmax(180px, 1fr) minmax(200px, 1.15fr) minmax(120px, 0.6fr) minmax(140px, 0.65fr) minmax(160px, 0.75fr);
       gap: 0.75rem;
       align-items: end;
     }
@@ -352,6 +352,19 @@
       min-width: 16rem;
     }
 
+    .date-selects {
+      display: grid;
+      grid-template-columns: minmax(7.5rem, 1.1fr) minmax(4.8rem, 0.7fr) minmax(5.6rem, 0.8fr);
+      gap: 0.35rem;
+      min-width: 18.5rem;
+    }
+
+    .date-selects select {
+      min-width: 0;
+      padding: 0.58rem 0.55rem;
+      font-size: 0.86rem;
+    }
+
     .delete-button {
       min-width: 5.4rem;
       padding: 0.58rem 0.65rem;
@@ -379,6 +392,7 @@
     @media (max-width: 980px) {
       header, .hero, .toolbar, .grid, .spend-form { grid-template-columns: 1fr; }
       .spend-form .wide { grid-column: auto; }
+      .date-selects { min-width: 0; }
     }
   </style>
 <style>
@@ -506,7 +520,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           </label>
           <label>
             Expected Date
-            <input id="anticipatedDate" type="date">
+            <span class="date-selects">
+              <select id="anticipatedMonth" aria-label="Expected month"></select>
+              <select id="anticipatedDay" aria-label="Expected day"></select>
+              <select id="anticipatedYear" aria-label="Expected year"></select>
+            </span>
           </label>
           <label>
             Category
@@ -519,6 +537,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <label>
             Amount
             <input id="anticipatedAmount" type="number" min="0" step="0.01" required placeholder="0.00">
+          </label>
+          <label>
+            Frequency
+            <select id="anticipatedRecurrence">
+              <option value="one-time">One-time</option>
+              <option value="monthly">Monthly</option>
+              <option value="annual">Annual</option>
+            </select>
           </label>
           <label>
             Status
@@ -546,6 +572,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 <th>Description</th>
                 <th>Category</th>
                 <th>Amount</th>
+                <th>Frequency</th>
                 <th>Status</th>
                 <th>Notes</th>
                 <th>Action</th>
@@ -612,6 +639,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["receipt-backed", "Receipt backed"],
       ["cancelled", "Cancelled"]
     ];
+    const recurrenceOptions = [
+      ["one-time", "One-time"],
+      ["monthly", "Monthly"],
+      ["annual", "Annual"]
+    ];
     const owners = [
       ["scott", "Scott"],
       ["jodi", "Jodi"],
@@ -629,6 +661,20 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["Raleigh", "Raleigh"],
       ["Chicago", "Chicago"]
     ];
+    const months = [
+      ["01", "January"],
+      ["02", "February"],
+      ["03", "March"],
+      ["04", "April"],
+      ["05", "May"],
+      ["06", "June"],
+      ["07", "July"],
+      ["08", "August"],
+      ["09", "September"],
+      ["10", "October"],
+      ["11", "November"],
+      ["12", "December"]
+    ];
     const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
     const ownerFilter = document.querySelector("#ownerFilter");
     const statusFilter = document.querySelector("#statusFilter");
@@ -637,10 +683,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const anticipatedForm = document.querySelector("#anticipatedForm");
     const anticipatedOwner = document.querySelector("#anticipatedOwner");
     const anticipatedEvent = document.querySelector("#anticipatedEvent");
-    const anticipatedDate = document.querySelector("#anticipatedDate");
+    const anticipatedMonth = document.querySelector("#anticipatedMonth");
+    const anticipatedDay = document.querySelector("#anticipatedDay");
+    const anticipatedYear = document.querySelector("#anticipatedYear");
     const anticipatedCategory = document.querySelector("#anticipatedCategory");
     const anticipatedDescription = document.querySelector("#anticipatedDescription");
     const anticipatedAmount = document.querySelector("#anticipatedAmount");
+    const anticipatedRecurrence = document.querySelector("#anticipatedRecurrence");
     const anticipatedStatus = document.querySelector("#anticipatedStatus");
     const anticipatedNotes = document.querySelector("#anticipatedNotes");
     const anticipatedAddButton = document.querySelector("#anticipatedAddButton");
@@ -722,6 +771,72 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         .join("");
     }
 
+    function recurrenceSelectOptions(selected = "one-time") {
+      return recurrenceOptions
+        .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`)
+        .join("");
+    }
+
+    function dateParts(value = "") {
+      const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return match ? { year: match[1], month: match[2], day: match[3] } : { year: "", month: "", day: "" };
+    }
+
+    function daysInMonth(month, year) {
+      const monthNumber = Number(month);
+      const yearNumber = Number(year) || new Date().getFullYear();
+      if (!monthNumber) return 31;
+      return new Date(yearNumber, monthNumber, 0).getDate();
+    }
+
+    function monthOptions(selected = "") {
+      return `<option value="">Month</option>` + months
+        .map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`)
+        .join("");
+    }
+
+    function dayOptions(selected = "", month = "", year = "") {
+      const maxDay = daysInMonth(month, year);
+      const days = Array.from({ length: maxDay }, (_, index) => String(index + 1).padStart(2, "0"));
+      return `<option value="">Day</option>` + days
+        .map((value) => `<option value="${value}" ${value === selected ? "selected" : ""}>${Number(value)}</option>`)
+        .join("");
+    }
+
+    function yearOptions(selected = "") {
+      const currentYear = new Date().getFullYear();
+      const years = new Set(Array.from({ length: 8 }, (_, index) => String(currentYear - 1 + index)));
+      if (selected) years.add(String(selected));
+      return `<option value="">Year</option>` + [...years]
+        .sort()
+        .map((value) => `<option value="${value}" ${value === selected ? "selected" : ""}>${value}</option>`)
+        .join("");
+    }
+
+    function selectedDate(month, day, year) {
+      if (!month || !day || !year) return "";
+      const maxDay = daysInMonth(month, year);
+      const cleanDay = Math.min(Number(day), maxDay);
+      return `${year}-${month}-${String(cleanDay).padStart(2, "0")}`;
+    }
+
+    function dateSelectorMarkup(id, value = "") {
+      const parts = dateParts(value);
+      return `
+        <span class="date-selects">
+          <select data-anticipated-id="${escapeHtml(id)}" data-anticipated-field="expectedDate" data-date-part="month" aria-label="Expected month">
+            ${monthOptions(parts.month)}
+          </select>
+          <select data-anticipated-id="${escapeHtml(id)}" data-anticipated-field="expectedDate" data-date-part="day" aria-label="Expected day">
+            ${dayOptions(parts.day, parts.month, parts.year)}
+          </select>
+          <select data-anticipated-id="${escapeHtml(id)}" data-anticipated-field="expectedDate" data-date-part="year" aria-label="Expected year">
+            ${yearOptions(parts.year)}
+          </select>
+        </span>
+      `;
+    }
+
     function receiptViewUrl(key) {
       return `/api/storage?view=1&key=${encodeURIComponent(key)}`;
     }
@@ -752,6 +867,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         description: row.description || "",
         category: row.category || "Unassigned",
         amount: row.amount || "",
+        recurrence: row.recurrence || "one-time",
         status: row.status || "receipt-needed",
         notes: row.notes || "",
         receiptKey: row.receiptKey || ""
@@ -779,7 +895,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       metrics.innerHTML = `
         <div class="metric"><span>Revenue tracked</span><strong>${money.format(summary.revenue || 0)}</strong></div>
         <div class="metric"><span>Receipt costs</span><strong>${money.format(summary.expenses || 0)}</strong></div>
-        <div class="metric"><span>Anticipated costs</span><strong>${money.format(summary.anticipatedExpenses || 0)}</strong></div>
+        <div class="metric"><span>Annualized planned</span><strong>${money.format(summary.anticipatedExpenses || 0)}</strong></div>
+        <div class="metric"><span>Monthly recurring</span><strong>${money.format(summary.recurringMonthlyExpenses || 0)}</strong></div>
+        <div class="metric"><span>Annual recurring</span><strong>${money.format(summary.recurringAnnualExpenses || 0)}</strong></div>
         <div class="metric loss"><span>Planned less actual</span><strong>${money.format(summary.anticipatedVariance || 0)}</strong></div>
         <div class="metric loss"><span>Net position</span><strong>${money.format(summary.net || 0)}</strong></div>
         <div class="metric"><span>Receipts needed</span><strong>${summary.anticipatedReceiptNeededCount || 0}</strong></div>
@@ -790,13 +908,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const byOwner = state.summary?.anticipatedByOwner || {};
       const ownerCards = owners
         .map(([owner, label]) => {
-          const entry = byOwner[owner] || { anticipated: 0, actual: 0, variance: 0, count: 0, receiptNeededCount: 0 };
+          const entry = byOwner[owner] || { anticipated: 0, actual: 0, variance: 0, count: 0, receiptNeededCount: 0, recurringMonthly: 0 };
           if (!entry.count && !entry.actual) return "";
           return `
             <article class="owner-spend">
               <strong>${escapeHtml(label)}</strong>
               <dl>
-                <div><dt>Planned</dt><dd>${money.format(entry.anticipated || 0)}</dd></div>
+                <div><dt>Annualized planned</dt><dd>${money.format(entry.anticipated || 0)}</dd></div>
+                <div><dt>Monthly recurring</dt><dd>${money.format(entry.recurringMonthly || 0)}</dd></div>
                 <div><dt>Receipts</dt><dd>${money.format(entry.actual || 0)}</dd></div>
                 <div><dt>Variance</dt><dd>${money.format(entry.variance || 0)}</dd></div>
                 <div><dt>Receipt needed</dt><dd>${entry.receiptNeededCount || 0}</dd></div>
@@ -813,7 +932,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function renderAnticipatedRows() {
       const rows = state.anticipatedRows || [];
       if (!rows.length) {
-        anticipatedRowsElement.innerHTML = `<tr><td colspan="9">No anticipated spending rows yet.</td></tr>`;
+        anticipatedRowsElement.innerHTML = `<tr><td colspan="10">No anticipated spending rows yet.</td></tr>`;
         return;
       }
 
@@ -829,7 +948,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               ${eventOptions(row.event || "")}
             </select>
           </td>
-          <td><input class="inline-input" type="date" value="${escapeHtml(row.expectedDate || "")}" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="expectedDate"></td>
+          <td>${dateSelectorMarkup(row.id, row.expectedDate || "")}</td>
           <td><input class="inline-input description" value="${escapeHtml(row.description || "")}" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="description"></td>
           <td>
             <select class="inline-select" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="category">
@@ -837,6 +956,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             </select>
           </td>
           <td><input class="inline-input" type="number" min="0" step="0.01" value="${escapeHtml(row.amount || "")}" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="amount"></td>
+          <td>
+            <select class="inline-select" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="recurrence">
+              ${recurrenceSelectOptions(row.recurrence || "one-time")}
+            </select>
+          </td>
           <td>
             <select class="inline-select" data-anticipated-id="${escapeHtml(row.id)}" data-anticipated-field="status">
               ${anticipatedStatusOptions(row.status || "receipt-needed")}
@@ -942,6 +1066,45 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    function formSelectedDate() {
+      return selectedDate(anticipatedMonth.value, anticipatedDay.value, anticipatedYear.value);
+    }
+
+    function syncDaySelector(daySelect, month, year, selectedDay = daySelect.value) {
+      daySelect.innerHTML = dayOptions(selectedDay, month, year);
+      if (selectedDay && !daySelect.value) {
+        daySelect.value = String(daysInMonth(month, year)).padStart(2, "0");
+      }
+    }
+
+    function syncFormDaySelector() {
+      syncDaySelector(anticipatedDay, anticipatedMonth.value, anticipatedYear.value);
+    }
+
+    function resetAnticipatedDateSelectors() {
+      anticipatedMonth.value = "";
+      anticipatedYear.value = "";
+      syncDaySelector(anticipatedDay, "", "", "");
+    }
+
+    function dateFromRowControls(control) {
+      const container = control.closest(".date-selects");
+      if (!container) return "";
+      const month = container.querySelector('[data-date-part="month"]')?.value || "";
+      const day = container.querySelector('[data-date-part="day"]')?.value || "";
+      const year = container.querySelector('[data-date-part="year"]')?.value || "";
+      return selectedDate(month, day, year);
+    }
+
+    function syncInlineDaySelector(control) {
+      const container = control.closest(".date-selects");
+      if (!container) return;
+      const month = container.querySelector('[data-date-part="month"]')?.value || "";
+      const day = container.querySelector('[data-date-part="day"]');
+      const year = container.querySelector('[data-date-part="year"]')?.value || "";
+      if (day && control.dataset.datePart !== "day") syncDaySelector(day, month, year);
+    }
+
     async function addAnticipatedSpend(event) {
       event.preventDefault();
       anticipatedAddButton.disabled = true;
@@ -949,16 +1112,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         await saveAnticipatedSpend({
           owner: anticipatedOwner.value,
           event: anticipatedEvent.value,
-          expectedDate: anticipatedDate.value,
+          expectedDate: formSelectedDate(),
           description: anticipatedDescription.value,
           category: anticipatedCategory.value,
           amount: anticipatedAmount.value,
+          recurrence: anticipatedRecurrence.value,
           status: anticipatedStatus.value,
           notes: anticipatedNotes.value
         }, "Anticipated spend added.");
         anticipatedForm.reset();
         anticipatedCategory.value = "Unassigned";
+        anticipatedRecurrence.value = "one-time";
         anticipatedStatus.value = "receipt-needed";
+        resetAnticipatedDateSelectors();
       } finally {
         anticipatedAddButton.disabled = false;
       }
@@ -971,7 +1137,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const row = state.anticipatedRows.find((item) => item.id === id);
       if (!row) return;
       const next = normalizeAnticipatedRow(row);
-      next[field] = control.value;
+      if (field === "expectedDate") {
+        syncInlineDaySelector(control);
+        next.expectedDate = dateFromRowControls(control);
+      } else {
+        next[field] = control.value;
+      }
       saveAnticipatedSpend(next, "Anticipated spend updated.");
     }
 
@@ -1057,6 +1228,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       input.addEventListener("change", renderRows);
     });
 
+    [anticipatedMonth, anticipatedYear].forEach((select) => {
+      select.addEventListener("change", syncFormDaySelector);
+    });
+
     anticipatedForm.addEventListener("submit", addAnticipatedSpend);
     refreshButton.addEventListener("click", refreshReceipts);
 
@@ -1065,6 +1240,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     anticipatedCategory.innerHTML = taxCategoryOptions("Unassigned");
+    anticipatedMonth.innerHTML = monthOptions("");
+    anticipatedYear.innerHTML = yearOptions("");
+    anticipatedDay.innerHTML = dayOptions("", "", "");
     loadBudget();
   </script>
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>

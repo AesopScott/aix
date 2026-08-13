@@ -21,6 +21,7 @@ const allowedStatuses = new Set([
   "reviewed"
 ]);
 const anticipatedStatuses = new Set(["planned", "receipt-needed", "receipt-backed", "cancelled"]);
+const recurrenceCadences = new Set(["one-time", "monthly", "annual"]);
 const taxCategories = new Set([
   "Unassigned",
   "Advertising and marketing",
@@ -492,6 +493,7 @@ function cleanDate(value, fallback = "") {
 function normalizeAnticipatedSpend(record = {}) {
   const id = cleanText(record.id) || crypto.randomUUID();
   const status = anticipatedStatuses.has(record.status) ? record.status : "receipt-needed";
+  const recurrence = recurrenceCadences.has(record.recurrence) ? record.recurrence : "one-time";
   const category = taxCategories.has(record.category) ? record.category : "Unassigned";
   return {
     id,
@@ -501,6 +503,7 @@ function normalizeAnticipatedSpend(record = {}) {
     description: cleanText(record.description || "Anticipated spend"),
     category,
     amount: cleanAmount(record.amount),
+    recurrence,
     status,
     notes: cleanText(record.notes),
     receiptKey: cleanText(record.receiptKey),
@@ -517,12 +520,32 @@ function activeAnticipatedRows(ledger) {
     .filter((row) => row.status !== "cancelled");
 }
 
+function annualizedAnticipatedAmount(row) {
+  const amount = Number(row.amount) || 0;
+  if (row.recurrence === "monthly") return amount * 12;
+  return amount;
+}
+
+function monthlyRecurringAmount(row) {
+  const amount = Number(row.amount) || 0;
+  if (row.recurrence === "monthly") return amount;
+  if (row.recurrence === "annual") return amount / 12;
+  return 0;
+}
+
 function summarize(ledger) {
   const rows = Object.values(ledger.receipts || {});
   const activeRows = rows.filter((row) => row.status !== "excluded" && !row.excluded);
   const totalExpenses = activeRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
   const anticipatedRows = activeAnticipatedRows(ledger);
-  const anticipatedTotal = anticipatedRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const anticipatedTotal = anticipatedRows.reduce((sum, row) => sum + annualizedAnticipatedAmount(row), 0);
+  const anticipatedOneTimeTotal = anticipatedRows
+    .filter((row) => row.recurrence === "one-time")
+    .reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const recurringMonthlyTotal = anticipatedRows.reduce((sum, row) => sum + monthlyRecurringAmount(row), 0);
+  const recurringAnnualTotal = anticipatedRows
+    .filter((row) => row.recurrence !== "one-time")
+    .reduce((sum, row) => sum + annualizedAnticipatedAmount(row), 0);
   const unpricedCount = activeRows.filter((row) => !(Number(row.amount) > 0)).length;
   const needsReview = activeRows.filter((row) => row.status === "needs-review").length;
   const byOwner = {};
@@ -544,12 +567,18 @@ function summarize(ledger) {
     const anticipated = Number(row.amount) || 0;
     const existing = anticipatedByOwner[owner] || {
       anticipated: 0,
+      oneTime: 0,
+      recurringMonthly: 0,
+      recurringAnnual: 0,
       actual: byOwner[owner] || 0,
       variance: 0,
       count: 0,
       receiptNeededCount: 0
     };
-    existing.anticipated += anticipated;
+    existing.anticipated += annualizedAnticipatedAmount(row);
+    if (row.recurrence === "one-time") existing.oneTime += anticipated;
+    existing.recurringMonthly += monthlyRecurringAmount(row);
+    if (row.recurrence !== "one-time") existing.recurringAnnual += annualizedAnticipatedAmount(row);
     existing.count += 1;
     if (row.status === "planned" || row.status === "receipt-needed") existing.receiptNeededCount += 1;
     existing.variance = Number((existing.anticipated - existing.actual).toFixed(2));
@@ -560,6 +589,9 @@ function summarize(ledger) {
     if (!anticipatedByOwner[owner]) {
       anticipatedByOwner[owner] = {
         anticipated: 0,
+        oneTime: 0,
+        recurringMonthly: 0,
+        recurringAnnual: 0,
         actual,
         variance: Number((0 - actual).toFixed(2)),
         count: 0,
@@ -577,6 +609,9 @@ function summarize(ledger) {
     net: Number((0 - totalExpenses).toFixed(2)),
     anticipatedExpenses: Number(anticipatedTotal.toFixed(2)),
     anticipatedVariance: Number((anticipatedTotal - totalExpenses).toFixed(2)),
+    anticipatedOneTimeExpenses: Number(anticipatedOneTimeTotal.toFixed(2)),
+    recurringMonthlyExpenses: Number(recurringMonthlyTotal.toFixed(2)),
+    recurringAnnualExpenses: Number(recurringAnnualTotal.toFixed(2)),
     anticipatedCount: anticipatedRows.length,
     anticipatedReceiptNeededCount: anticipatedRows.filter((row) => row.status === "planned" || row.status === "receipt-needed").length,
     receiptCount: rows.length,
