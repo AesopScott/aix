@@ -34,6 +34,34 @@ function cleanString(value) {
     : "";
 }
 
+function cleanCampaignValue(value) {
+  const clean = cleanString(value).slice(0, 160);
+  if (!clean) return "";
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) return "";
+  if (/^\+?\d[\d\s().-]{7,}$/.test(clean)) return "";
+  return clean.replace(/[<>"]/g, "");
+}
+
+function cleanCampaignAttribution(payload = {}) {
+  const source = payload?.campaignAttribution && typeof payload.campaignAttribution === "object"
+    ? payload.campaignAttribution
+    : payload;
+  const attribution = {
+    source: cleanCampaignValue(source.utmSource || source.utm_source || source.source),
+    medium: cleanCampaignValue(source.utmMedium || source.utm_medium || source.medium),
+    campaign: cleanCampaignValue(source.utmCampaign || source.utm_campaign || source.campaign),
+    content: cleanCampaignValue(source.utmContent || source.utm_content || source.content),
+    term: cleanCampaignValue(source.utmTerm || source.utm_term || source.term),
+    landingPath: cleanCampaignValue(source.landingPath || source.pagePath || source.route),
+    referrerHost: cleanCampaignValue(source.referrerHost)
+  };
+
+  Object.keys(attribution).forEach((key) => {
+    if (!attribution[key]) delete attribution[key];
+  });
+  return attribution;
+}
+
 function cleanArray(value) {
   return Array.isArray(value)
     ? value.map(cleanString).filter(Boolean).slice(0, 12)
@@ -70,6 +98,7 @@ function cleanPayload(payload) {
     slotType: cleanString(payload?.slotType),
     slotLabel: cleanString(payload?.slotLabel),
     slotCode: cleanString(payload?.slotCode),
+    campaignAttribution: cleanCampaignAttribution(payload),
     learningProgramMember: cleanBoolean(payload?.learningProgramMember),
     addons: cleanArray(payload?.addons)
   };
@@ -305,6 +334,7 @@ async function storePartnerCandidateContact(env, record) {
     title: record.title,
     partnerTier: "Partner Candidate",
     source: "partner-subscription-request",
+    campaignAttribution: cleanCampaignAttribution(record.campaignAttribution || record),
     eventId: `partner-subscription:${record.id}`,
     eventName: "Partner subscription information request",
     eventDate: record.createdAt,

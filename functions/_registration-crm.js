@@ -73,6 +73,42 @@ function cleanString(value) {
     : "";
 }
 
+function cleanCampaignValue(value) {
+  const clean = cleanString(value).slice(0, 160);
+  if (!clean) return "";
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) return "";
+  if (/^\+?\d[\d\s().-]{7,}$/.test(clean)) return "";
+  return clean.replace(/[<>"]/g, "");
+}
+
+function cleanCampaignAttribution(payload = {}) {
+  let source = payload;
+  if (typeof payload?.campaignAttribution === "string") {
+    try {
+      source = JSON.parse(payload.campaignAttribution || "{}");
+    } catch {
+      source = {};
+    }
+  } else if (payload?.campaignAttribution && typeof payload.campaignAttribution === "object") {
+    source = payload.campaignAttribution;
+  }
+
+  const attribution = {
+    source: cleanCampaignValue(source.utmSource || source.utm_source || source.source),
+    medium: cleanCampaignValue(source.utmMedium || source.utm_medium || source.medium),
+    campaign: cleanCampaignValue(source.utmCampaign || source.utm_campaign || source.campaign),
+    content: cleanCampaignValue(source.utmContent || source.utm_content || source.content),
+    term: cleanCampaignValue(source.utmTerm || source.utm_term || source.term),
+    landingPath: cleanCampaignValue(source.landingPath || source.pagePath || source.route),
+    referrerHost: cleanCampaignValue(source.referrerHost)
+  };
+
+  Object.keys(attribution).forEach((key) => {
+    if (!attribution[key]) delete attribution[key];
+  });
+  return attribution;
+}
+
 function safeFileSegment(value, fallback = "file") {
   return cleanString(value)
     .toLowerCase()
@@ -299,6 +335,7 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
     attendanceStatus: cleanString(previous.attendanceStatus || registration.attendanceStatus) || "not_recorded",
     attendedAt: cleanString(previous.attendedAt || registration.attendedAt),
     attendanceNotes: cleanString(previous.attendanceNotes),
+    campaignAttribution: cleanCampaignAttribution(registration.campaignAttribution || registration),
     updatedAt: now
   };
 }
@@ -352,7 +389,8 @@ function cleanPayload(payload, type = "") {
     partnerProductTypes: type === "partner" ? cleanString(payload?.partnerProductTypes, 2000) : "",
     partnerClientMessaging: type === "partner" ? cleanString(payload?.partnerClientMessaging, 4000) : "",
     publicationUseName: cleanBoolean(payload?.publicationUseName),
-    publicationUseCompany: cleanBoolean(payload?.publicationUseCompany)
+    publicationUseCompany: cleanBoolean(payload?.publicationUseCompany),
+    campaignAttribution: cleanCampaignAttribution(payload)
   };
 }
 
@@ -1033,6 +1071,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
     lifecycleStage: "registered",
     emailPermission: "transactional-only",
     source: cleanString(config.source || registration.source || `${type}-registration`),
+    campaignAttribution: cleanCampaignAttribution(registration.campaignAttribution || registration),
     updatedAt: now,
     updatedBy
   };

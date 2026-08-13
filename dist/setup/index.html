@@ -1045,8 +1045,8 @@
 
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
-Date: 2026-08-11
-Version: 3.16
+Date: 2026-08-13
+Version: 3.18
 Category: event operations
 
 ## Purpose
@@ -1152,7 +1152,7 @@ These items are company setup work, not recurring per-event work. They should be
 - [ ] Establish Exchange company email accounts, aliases, and shared mailboxes. Owner: Robert. Support: Scott, Jodi.
 - [ ] Purchase and configure an email warming service for new Mojo AI Summits mailboxes. Owner: Scott.
 - [ ] Establish website platform, hosting workflow, launch process, and publishing ownership. Owner: Jodi. Support: Scott, Robert.
-- [ ] Establish website analytics, privacy notices, cookie/consent requirements if needed, and conversion tracking standards. Owner: Jodi. Support: Robert, Scott.
+- [x] Establish website analytics, privacy notices, cookie/consent requirements if needed, and conversion tracking standards. Owner: Jodi. Support: Robert, Scott. Standard: `docs/processes/website-analytics-privacy-conversion-standards.md`.
 - [ ] Establish shared file storage, permissions, naming conventions, and archive rules. Owner: Robert. Support: Charlie, Scott.
 - [ ] Establish company data storage standards for attendee, sponsor, speaker, Member, contract, financial, and event operating records. Owner: Robert. Support: Scott, Charlie.
 - [ ] Establish security policies for account access, data handling, approved tools, vendor access, incident escalation, and periodic access review. Owner: Robert. Support: Scott.
@@ -1206,6 +1206,7 @@ These items scaffold the fall 2026 virtual AI event series. Create a copy of thi
 - [ ] Build the qualified invite list for the event-specific topic. Owner: Ron. Support: Jodi.
 - [ ] Create invite copy, reminder copy, and social/promo copy for the event. Owner: Jodi. Support: Scott, Ron.
 - [ ] Publish or update the virtual event landing page and registration path. Owner: Jodi. Support: Scott.
+- [ ] Run the website analytics launch checklist for this event, including UTM plan, privacy notice review, consent check, and `node scripts/check-website-analytics-privacy.mjs`. Owner: Jodi. Support: Robert, Scott.
 - [ ] Track registration source, attendee qualification, and invite response. Owner: Jodi. Support: Ron.
 - [ ] Prepare day-before attendee reminder and calendar-link support. Owner: Jodi. Support: Charlie.
 
@@ -1289,7 +1290,9 @@ These items scaffold the fall 2026 virtual AI event series. Create a copy of thi
 
 - [ ] Create or update event landing page. Owner: Jodi. Support: Scott.
 - [ ] Publish event name, city, date, venue when confirmed, event promise, audience, sponsor information, and registration path. Owner: Jodi.
-- [ ] Confirm website analytics and conversion tracking. Owner: Jodi.
+- [ ] Run the website analytics launch checklist for this event, including UTM plan, privacy notice review, consent check, conversion outcome mapping, and `node scripts/check-website-analytics-privacy.mjs`. Owner: Jodi. Support: Robert, Scott.
+- [ ] Confirm campaign links use approved UTMs and do not include names, email addresses, phone numbers, invite codes, or private audience notes. Owner: Jodi. Support: Scott.
+- [ ] Confirm first-party registration, invite, booking, and partner request records preserve allowed source attribution for this event. Owner: Scott. Support: Jodi.
 - [ ] Build marketing calendar. Owner: Jodi.
 - [ ] Build email announcement sequence. Owner: Jodi.
 - [ ] Build social media announcement sequence. Owner: Jodi.
@@ -1652,6 +1655,8 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.18 - Added analytics launch control to per-event virtual and in-person checklist workflows.
+- 3.17 - Established website analytics, privacy notice, consent, and conversion tracking standards.
 - 3.16 - Linked calendar items back to their matching master checklist rows.
 - 3.15 - Added a no-due-date filter for setup items missing delivery dates.
 - 3.14 - Simplified priority options to Immediate, High, Medium, and Low.

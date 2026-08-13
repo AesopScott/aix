@@ -60,12 +60,14 @@ Each virtual event should have:
 - Event-specific topic and executive decision framing
 - Featured speaker, moderator, and optional partner participant
 - Registration path, invite copy, reminder sequence, and calendar hold
+- Website analytics launch checklist, UTM plan, privacy notice review, consent check, and launch-gate evidence
 - Run of show with welcome, concise briefing, facilitated exchange, close, and follow-up handoff
 - Speaker briefing notes, discussion prompts, and sponsor boundary notes
 - Recording, transcript, chat, attendee data, and content permission rules
 - Technical rehearsal and backup meeting room process
 - Attendee follow-up, Member nominations, sponsor lead routing, and next-event invitation
 - Post-event metrics: registrations, qualified attendees, live attendance, discussion quality, sponsor leads, Member nominations, and follow-up meetings
+- Source-attribution review using first-party registration, invite, and partner request records
 
 ## Site and Operations Touchpoints
 

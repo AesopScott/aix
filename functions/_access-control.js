@@ -339,6 +339,16 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/sms-terms", "mojoaisummits.com/sms-terms/*"]
   },
   {
+    id: "analytics-launch-control",
+    kind: "page",
+    group: "Team",
+    label: "Analytics Launch Control",
+    summary: "Website analytics, privacy notice, consent, UTM attribution, conversion tracking, and launch-gate operating page.",
+    mode: "allowlist",
+    matches: [{ exact: "/analytics" }, { prefix: "/analytics/" }],
+    domains: ["mojoaisummits.com/analytics", "mojoaisummits.com/analytics/*"]
+  },
+  {
     id: "api-access-config",
     kind: "api",
     group: "APIs",
