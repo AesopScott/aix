@@ -133,19 +133,68 @@ function displayNameFromKey(key) {
   );
 }
 
+function metadataText(metadata = {}, ...keys) {
+  for (const key of keys) {
+    const value = String(metadata?.[key] || "").trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+function normalizedReceiptEvent(metadata = {}) {
+  const eventKey = String(metadata.receiptEventKey || "").trim().toLowerCase();
+  const event = String(metadata.receiptEvent || metadata.event || "").trim();
+  if (!event || eventKey === "global" || event.toLowerCase() === "global") return "";
+  return event;
+}
+
+function normalizedEvent(object) {
+  const metadata = object.customMetadata || {};
+  const receiptArea = metadata.area === "receipts" || String(object.key || "").startsWith("receipts/");
+  if (receiptArea) return normalizedReceiptEvent(metadata);
+
+  const event = String(metadata.event || "").trim();
+  return event.toLowerCase() === "global" ? "" : event;
+}
+
+function submitterFromObject(object) {
+  const metadata = object.customMetadata || {};
+  const submitter = metadataText(
+    metadata,
+    "uploadedBy",
+    "submittedBy",
+    "submitter",
+    "createdBy",
+    "reviewedBy",
+    "updatedBy",
+    "statusUpdatedBy"
+  );
+  if (submitter) return submitter;
+
+  if (metadata.area === "budget" || String(object.key || "").startsWith("budget/")) return "Budget automation";
+  if (metadata.area === "crm" || String(object.key || "").startsWith("crm/")) return "CRM automation";
+  return "";
+}
+
+function shouldBackfillSubmitter(metadata = {}, submitter = "") {
+  if (!submitter) return false;
+  return !metadata.uploadedBy || !metadata.submittedBy || !metadata.submitter;
+}
+
 function objectToRecord(object) {
   const originalName = object.customMetadata?.originalName || displayNameFromKey(object.key);
+  const event = normalizedEvent(object);
 
   return {
     key: object.key,
     name: originalName,
     area: object.customMetadata?.area || "",
-    event: object.customMetadata?.event || "",
+    event,
     receiptOwner: object.customMetadata?.receiptOwner || "",
-    receiptEvent: object.customMetadata?.receiptEvent || "",
+    receiptEvent: event,
     receiptDescription: object.customMetadata?.receiptDescription || "",
     status: object.customMetadata?.status || DEFAULT_STATUS,
-    submitter: object.customMetadata?.uploadedBy || object.customMetadata?.submitter || "",
+    submitter: submitterFromObject(object),
     size: object.size,
     uploaded: object.uploaded ? object.uploaded.toISOString() : "",
     etag: object.etag || "",
@@ -188,6 +237,7 @@ function recordSearchText(record) {
     record.receiptOwner,
     record.receiptEvent,
     record.receiptDescription,
+    record.submitter,
     record.status
   ].join(" ").toLowerCase();
 }
@@ -228,6 +278,81 @@ async function createFolder(request, env, access, form) {
   });
 
   return json({ ok: true, area, folder: folderPath });
+}
+
+async function backfillSubmitters(request, env, access, form) {
+  if (!isAdminAccess(access)) return privateAccessError();
+
+  const rawPrefix = safeKey(form.get("prefix") || "");
+  const prefix = rawPrefix === "all" ? "" : rawPrefix;
+  const cursor = String(form.get("cursor") || "") || undefined;
+  const limit = Math.min(Math.max(Number(form.get("limit") || 20), 1), 50);
+  const now = new Date().toISOString();
+  const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit });
+  const summary = {
+    scanned: 0,
+    updated: 0,
+    skipped: 0,
+    unknown: 0,
+    failed: 0,
+    failures: []
+  };
+
+  for (const object of result.objects || []) {
+    if (isFolderMarkerKey(object.key)) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    summary.scanned += 1;
+    const metadata = object.customMetadata || {};
+    const submitter = submitterFromObject(object);
+
+    if (!submitter) {
+      summary.unknown += 1;
+      continue;
+    }
+
+    if (!shouldBackfillSubmitter(metadata, submitter)) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    try {
+      const stored = await env.MOJO_SUMMITS_STORAGE.get(object.key);
+      if (!stored) {
+        summary.failed += 1;
+        summary.failures.push({ key: object.key, error: "File not found." });
+        continue;
+      }
+
+      await env.MOJO_SUMMITS_STORAGE.put(object.key, stored.body, {
+        httpMetadata: stored.httpMetadata || object.httpMetadata,
+        customMetadata: {
+          ...metadata,
+          uploadedBy: metadata.uploadedBy || submitter,
+          submittedBy: metadata.submittedBy || submitter,
+          submitter: metadata.submitter || submitter,
+          submitterBackfilledBy: access.email,
+          submitterBackfilledAt: now
+        }
+      });
+      summary.updated += 1;
+    } catch (error) {
+      summary.failed += 1;
+      summary.failures.push({
+        key: object.key,
+        error: error?.message || "Backfill failed."
+      });
+    }
+  }
+
+  return json({
+    ok: summary.failed === 0,
+    ...summary,
+    truncated: Boolean(result.truncated),
+    cursor: result.truncated ? result.cursor || "" : ""
+  });
 }
 
 async function listObjects(request, env, access) {
@@ -403,6 +528,7 @@ export async function onRequestPost({ request, env, data }) {
   if (!form) return json({ error: "Expected form data." }, { status: 400 });
 
   if (form.get("mode") === "folder") return createFolder(request, env, access, form);
+  if (form.get("mode") === "backfill-submitters") return backfillSubmitters(request, env, access, form);
 
   const file = form.get("file");
 
@@ -444,6 +570,8 @@ export async function onRequestPost({ request, env, data }) {
     },
     customMetadata: {
       uploadedBy: access.email,
+      submittedBy: access.email,
+      submitter: access.email,
       originalName: file.name,
       area,
       event: trackedEvent,
