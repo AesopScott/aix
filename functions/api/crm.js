@@ -65,6 +65,7 @@ const CONTACT_PHOTO_PREFIX = "crm/contact-photos";
 const PARTNER_PROSPECT_COMPANY_PREFIX = "crm:partner-prospect-company:";
 const PARTNER_PROSPECT_PERSON_PREFIX = "crm:partner-prospect-person:";
 const PARTNER_PROSPECT_AUDIT_PREFIX = "crm:partner-prospect-audit:";
+const PARTNER_PROSPECT_DEBUG_PREFIX = "crm:partner-prospect-debug:";
 const PARTNER_PROSPECT_SOURCE_PREFIX = "crm:partner-prospect-source:";
 const PARTNER_PROSPECT_SCORE_CONFIG_KEY = "crm:partner-prospect-score-config";
 const DEFAULT_UPCOMING_EVENTS = [
@@ -459,9 +460,95 @@ function htmlMetaDescription(html = "") {
 function domainCompanyName(domain = "", fallback = "") {
   const clean = normalizeDomain(domain);
   const segment = clean.split(".")[0] || fallback;
-  return cleanString(segment
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase()), 180);
+  return cleanString(companyLabelTitleCase(segment.replace(/[-_]+/g, " ")), 180);
+}
+
+function companyLabelTitleCase(value = "") {
+  const overrides = new Map([
+    ["1password", "1Password"],
+    ["openai", "OpenAI"],
+    ["ibm", "IBM"],
+    ["aws", "AWS"],
+    ["nvidia", "NVIDIA"],
+    ["servicenow", "ServiceNow"],
+    ["salesforce", "Salesforce"],
+    ["databricks", "Databricks"],
+    ["snowflake", "Snowflake"]
+  ]);
+  return cleanString(value, 180)
+    .split(/\s+/)
+    .map((token) => {
+      const lower = token.toLowerCase();
+      if (overrides.has(lower)) return overrides.get(lower);
+      if (/^\d+[a-z]/i.test(token)) return token.replace(/^(\d+)([a-z])/, (_, digits, letter) => `${digits}${letter.toUpperCase()}`);
+      if (/^[A-Z0-9&.-]{2,}$/.test(token)) return token;
+      return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+function htmlAttribute(value = "", name = "") {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = String(value || "").match(new RegExp(`\\b${escaped}\\s*=\\s*["']([^"']+)["']`, "i"));
+  return htmlDecode(match?.[1] || "");
+}
+
+function genericSponsorLabel(value = "") {
+  const text = cleanString(value, 180).toLowerCase().replace(/\s+/g, " ").trim();
+  if (!text) return true;
+  if (/^(learn more|read more|more info|details|website|visit website|visit site|home|homepage|register|contact|apply|logo|image|view profile)$/i.test(text)) return true;
+  if (/^(?:20\d{2}\s+)?(?:premier|platinum|gold|silver|bronze|diamond|title|presenting|lead|strategic|supporting|community|media|startup|innovation)?\s*(?:sponsor|sponsors|sponsorship|partner|partners|exhibitor|exhibitors|booth|package|tier|level)s?$/i.test(text)) return true;
+  if (/^20\d{2}\s+(?:premier|platinum|gold|silver|bronze|diamond|title|presenting|lead|strategic|supporting|community|media|startup|innovation)\s+/i.test(text) &&
+    /\b(sponsor|partner|exhibitor|package|tier|level)\b/i.test(text)) return true;
+  return false;
+}
+
+function companyNameDecisionFromLink({ domain = "", text = "", innerHtml = "", attributes = "" } = {}) {
+  const candidates = [
+    ["text", text],
+    ["image-alt", htmlAttribute(innerHtml, "alt")],
+    ["image-title", htmlAttribute(innerHtml, "title")],
+    ["image-aria-label", htmlAttribute(innerHtml, "aria-label")],
+    ["link-title", htmlAttribute(attributes, "title")],
+    ["link-aria-label", htmlAttribute(attributes, "aria-label")]
+  ];
+  let rejectedLabel = "";
+  for (const [source, candidate] of candidates) {
+    const clean = cleanString(stripHtml(candidate), 180).replace(/\s+/g, " ").trim();
+    if (!clean) continue;
+    if (genericSponsorLabel(clean)) {
+      if (!rejectedLabel) rejectedLabel = clean;
+      continue;
+    }
+    return {
+      companyName: companyLabelTitleCase(clean),
+      nameSource: source,
+      rawLabel: clean,
+      rejectedLabel
+    };
+  }
+  return {
+    companyName: domainCompanyName(domain),
+    nameSource: "domain",
+    rawLabel: cleanString(text, 180),
+    rejectedLabel
+  };
+}
+
+function companyNameFromLink(options = {}) {
+  return companyNameDecisionFromLink(options).companyName;
+}
+
+function recordDiscoveryDiagnostic(debug, type, entry = {}) {
+  if (!debug || !Array.isArray(debug[type]) || debug[type].length >= 40) return;
+  debug[type].push({
+    href: cleanString(entry.href, 500),
+    domain: normalizeDomain(entry.domain),
+    rawLabel: cleanString(entry.rawLabel, 180),
+    companyName: cleanString(entry.companyName, 180),
+    nameSource: cleanString(entry.nameSource, 80),
+    reason: cleanString(entry.reason, 240)
+  });
 }
 
 function blockedDiscoveryDomain(domain = "") {
@@ -470,13 +557,14 @@ function blockedDiscoveryDomain(domain = "") {
   return [...discoveryBlockedDomains].some((blocked) => normalized === blocked || normalized.endsWith(`.${blocked}`));
 }
 
-function extractCompanyLinks(html = "", sourceUrl = "", limit = 40) {
+function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null) {
   const sourceDomain = normalizeDomain(sourceUrl);
   const links = new Map();
-  const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const anchorPattern = /<a\b([^>]*)href=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi;
   let match;
   while ((match = anchorPattern.exec(String(html || "")))) {
-    const href = cleanString(match[1], 1000);
+    const attributes = `${match[1] || ""} ${match[3] || ""}`;
+    const href = cleanString(match[2], 1000);
     if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) continue;
     let url;
     try {
@@ -486,14 +574,35 @@ function extractCompanyLinks(html = "", sourceUrl = "", limit = 40) {
     }
     if (!["http:", "https:"].includes(url.protocol)) continue;
     const domain = normalizeDomain(url.hostname);
-    if (!domain || blockedDiscoveryDomain(domain) || sameRootDomain(domain, sourceDomain)) continue;
-    const text = stripHtml(match[2]).replace(/\s+/g, " ").trim();
+    const innerHtml = match[4] || "";
+    const text = stripHtml(innerHtml).replace(/\s+/g, " ").trim();
+    if (!domain) {
+      recordDiscoveryDiagnostic(debug, "rejected", { href, rawLabel: text, reason: "missing-domain" });
+      continue;
+    }
+    if (blockedDiscoveryDomain(domain)) {
+      recordDiscoveryDiagnostic(debug, "rejected", { href, domain, rawLabel: text, reason: "blocked-domain" });
+      continue;
+    }
+    if (sameRootDomain(domain, sourceDomain)) {
+      recordDiscoveryDiagnostic(debug, "rejected", { href, domain, rawLabel: text, reason: "same-source-domain" });
+      continue;
+    }
+    const nameDecision = companyNameDecisionFromLink({ domain, text, innerHtml, attributes });
     if (!links.has(domain)) {
       links.set(domain, {
-        companyName: cleanString(text, 180) || domainCompanyName(domain),
+        companyName: nameDecision.companyName,
         canonicalDomain: domain,
         websiteUrl: `${url.protocol}//${domain}/`,
         sourceUrl
+      });
+      recordDiscoveryDiagnostic(debug, "accepted", {
+        href,
+        domain,
+        rawLabel: nameDecision.rawLabel || text,
+        companyName: nameDecision.companyName,
+        nameSource: nameDecision.nameSource,
+        reason: nameDecision.rejectedLabel ? `ignored generic label: ${nameDecision.rejectedLabel}` : "accepted"
       });
     }
     if (links.size >= limit) break;
@@ -1320,6 +1429,10 @@ function prospectPersonId(record = {}) {
 function normalizeProspectCompany(key, record = {}, people = [], weights = defaultPartnerScoreWeights) {
   const companyId = cleanString(record.companyId, 180) || key.replace(PARTNER_PROSPECT_COMPANY_PREFIX, "") || prospectCompanyId(record);
   const canonicalDomain = normalizeDomain(record.canonicalDomain || record.websiteUrl);
+  const storedCompanyName = cleanString(record.companyName || record.name || record.company, 240);
+  const companyName = storedCompanyName && !genericSponsorLabel(storedCompanyName)
+    ? storedCompanyName
+    : domainCompanyName(canonicalDomain, storedCompanyName || companyId);
   const aiRelevanceScore = cleanNumber(record.aiRelevanceScore || record.aiRelevance);
   const enterpriseFocus = cleanNumber(record.enterpriseFocus);
   const score = prospectScore({ ...record, aiRelevanceScore, enterpriseFocus }, weights);
@@ -1330,7 +1443,7 @@ function normalizeProspectCompany(key, record = {}, people = [], weights = defau
   return {
     key,
     companyId,
-    companyName: cleanString(record.companyName || record.name || record.company, 240),
+    companyName,
     canonicalDomain,
     websiteUrl: normalizeUrl(record.websiteUrl || canonicalDomain),
     linkedinCompanyUrl: normalizeUrl(record.linkedinCompanyUrl),
@@ -1516,6 +1629,46 @@ async function writeProspectAudit(env, companyId, entry = {}) {
     createdAt: now,
     ...entry
   }));
+}
+
+async function writeProspectDebug(env, runId = "", entry = {}) {
+  const now = new Date().toISOString();
+  const id = cleanString(runId, 180) || `${now}:${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
+  const record = {
+    id,
+    createdAt: now,
+    ...entry,
+    accepted: Array.isArray(entry.accepted) ? entry.accepted.slice(0, 40) : [],
+    rejected: Array.isArray(entry.rejected) ? entry.rejected.slice(0, 40) : []
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(`${PARTNER_PROSPECT_DEBUG_PREFIX}${id}`, JSON.stringify(record));
+  return record;
+}
+
+async function prospectDebugEntries(env, limit = 12) {
+  const keys = await listKeys(env, PARTNER_PROSPECT_DEBUG_PREFIX);
+  const rows = await Promise.all(keys.slice(-50).map(async (key) => {
+    const record = await readRawRecord(env, key);
+    if (!record) return null;
+    return {
+      key,
+      id: cleanString(record.id, 240) || key.replace(PARTNER_PROSPECT_DEBUG_PREFIX, ""),
+      createdAt: cleanString(record.createdAt, 40),
+      actor: cleanString(record.actor, 180),
+      action: cleanString(record.action, 120),
+      sourceName: cleanString(record.sourceName, 180),
+      sourceUrl: normalizeUrl(record.sourceUrl),
+      sourceTitle: cleanString(record.sourceTitle, 240),
+      status: cleanString(record.status, 80),
+      error: cleanString(record.error, 1000),
+      discovered: cleanNumber(record.discovered, 0, 0, 10000),
+      accepted: Array.isArray(record.accepted) ? record.accepted.slice(0, 20) : [],
+      rejected: Array.isArray(record.rejected) ? record.rejected.slice(0, 20) : []
+    };
+  }));
+  return rows.filter(Boolean)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, limit);
 }
 
 function normalizeProspectSource(key, record = {}) {
@@ -1985,10 +2138,12 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
   }, actor);
   const limit = cleanNumber(payload.limit, 10, 1, 20);
   const now = new Date().toISOString();
+  const debug = { accepted: [], rejected: [] };
+  const debugRunId = `${companySlug(sourceName) || "source"}:${now}`;
   try {
     const { html } = await fetchPublicHtml(sourceUrl);
     const title = htmlTitle(html);
-    const candidates = extractCompanyLinks(html, sourceUrl, limit);
+    const candidates = extractCompanyLinks(html, sourceUrl, limit, debug);
     const saved = [];
     const config = await partnerScoreConfig(env);
     for (const candidate of candidates) {
@@ -2030,6 +2185,17 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       sourceUrl,
       discovered: saved.length
     });
+    await writeProspectDebug(env, debugRunId, {
+      actor,
+      action: "source-discovery",
+      sourceName,
+      sourceUrl,
+      sourceTitle: title,
+      status: "completed",
+      discovered: saved.length,
+      accepted: debug.accepted,
+      rejected: debug.rejected
+    });
     return {
       sourceName,
       sourceUrl,
@@ -2047,6 +2213,16 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       updatedAt: now,
       updatedBy: actor || "crm"
     }));
+    await writeProspectDebug(env, debugRunId, {
+      actor,
+      action: "source-discovery",
+      sourceName,
+      sourceUrl,
+      status: "failed",
+      error: cleanString(error.message, 1000),
+      accepted: debug.accepted,
+      rejected: debug.rejected
+    });
     throw error;
   }
 }
@@ -2426,6 +2602,7 @@ async function partnerProspectingPayload(env) {
   const companies = await prospectCompanies(env);
   const people = await prospectPeople(env);
   const sources = await prospectSources(env);
+  const debug = await prospectDebugEntries(env);
   const nextCompany = companies.find((company) =>
     company.partnerScore >= 60 &&
     !["Partner Candidate", "Research Partner", "Summit Partner", "Strategic Partner"].includes(company.partnerStatus) &&
@@ -2442,6 +2619,7 @@ async function partnerProspectingPayload(env) {
     companies,
     people,
     sources,
+    debug,
     nextCompany,
     nextPeople: nextCompany ? people.filter((person) => person.companyId === nextCompany.companyId) : []
   };

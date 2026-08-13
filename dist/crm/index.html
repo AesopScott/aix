@@ -147,6 +147,51 @@
       border-color: rgba(0, 230, 255, 0.34);
     }
 
+    .company-index {
+      display: grid;
+      gap: 0.4rem;
+      max-height: 22rem;
+      overflow: auto;
+      padding: 0.5rem;
+      border: 1px solid rgba(0, 230, 255, 0.18);
+      border-radius: 7px;
+      background: rgba(10, 15, 30, 0.46);
+    }
+
+    .company-index-header {
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted-blue);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .side-nav .company-index button {
+      min-height: 2rem;
+      padding: 0.45rem 0.5rem;
+      border-color: transparent;
+      font-size: 0.78rem;
+      line-height: 1.25;
+    }
+
+    .side-nav .company-index button.active {
+      color: var(--cyan);
+      border-color: rgba(0, 230, 255, 0.48);
+      background: rgba(0, 230, 255, 0.1);
+    }
+
+    .prospect-card.selected {
+      border-color: rgba(0, 230, 255, 0.72);
+      box-shadow: 0 0 0 1px rgba(0, 230, 255, 0.22), 0 16px 36px rgba(0, 0, 0, 0.24);
+    }
+
+    .prospect-card[data-edit-prospect-card] {
+      cursor: pointer;
+    }
+
     .crm-content {
       grid-column: 2;
       display: grid;
@@ -1376,6 +1421,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button type="button" data-view="prospecting-dashboard">Dashboard</button>
           <button type="button" data-view="prospecting-walkthroughs">Walkthroughs</button>
         </div>
+        <div class="company-index" id="prospectingCompanyIndex" aria-label="Prospecting company index"></div>
         <button type="button" data-view="registration-debug">Registration Debug</button>
       </aside>
 
@@ -1818,6 +1864,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const prospectingTitle = document.querySelector("#prospectingTitle");
     const prospectingSubtitle = document.querySelector("#prospectingSubtitle");
     const prospectingContent = document.querySelector("#prospectingContent");
+    const prospectingCompanyIndex = document.querySelector("#prospectingCompanyIndex");
     const recordViewTypes = {
       contacts: "contacts",
       guest: "guest",
@@ -1865,6 +1912,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     let registrationInviteStatusFilter = "all";
     let partnerCompanyPage = 1;
     let activePartnerAddCompany = "";
+    let activeProspectingCompanyId = "";
+    let activeProspectingEditCompanyId = "";
     const partnerCompaniesPerPage = 10;
     let guestMatrixDrafts = loadGuestMatrixDrafts();
     let prospectingRunStatus = null;
@@ -2556,8 +2605,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       });
     }
 
-    function setActiveView(view) {
+    function setActiveView(view, options = {}) {
       activeView = view || "contacts";
+      if (!options.keepCompanyFilter) {
+        activeProspectingCompanyId = "";
+        activeProspectingEditCompanyId = "";
+      }
       if (activeView === "partners-company") partnerCompanyPage = 1;
       syncViewPanels();
       if (isRecordsView()) {
@@ -3313,6 +3366,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return prospectingState?.companies || [];
     }
 
+    function sortedProspectCompanies() {
+      return [...prospectCompanies()].sort((a, b) =>
+        String(a.companyName || a.canonicalDomain || "").localeCompare(String(b.companyName || b.canonicalDomain || ""))
+      );
+    }
+
+    function renderProspectingCompanyIndex() {
+      if (!prospectingCompanyIndex) return;
+      const companies = sortedProspectCompanies();
+      prospectingCompanyIndex.innerHTML = `
+        <div class="company-index-header">
+          <span>Companies</span>
+          ${activeProspectingCompanyId ? '<button class="compact secondary" type="button" data-clear-prospect-company-filter>All</button>' : `<span>${escapeHtml(companies.length)}</span>`}
+        </div>
+        ${companies.map((company) => `
+          <button type="button" class="${company.companyId === activeProspectingCompanyId ? "active" : ""}" data-filter-prospect-company="${escapeHtml(company.companyId)}">
+            ${escapeHtml(company.companyName || company.canonicalDomain || "Unnamed company")}
+          </button>
+        `).join("") || '<span class="crm-compact-meta">No companies yet.</span>'}
+      `;
+    }
+
     function prospectPeople() {
       return prospectingState?.people || [];
     }
@@ -3392,8 +3467,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function prospectCompanyCard(company = {}, options = {}) {
       const people = prospectPeopleForCompany(company.companyId);
       const why = company.classificationReason || company.description || "No classification explanation recorded yet.";
+      const selected = company.companyId === activeProspectingEditCompanyId;
       return `
-        <article class="prospect-card">
+        <article class="prospect-card ${selected ? "selected" : ""}" data-edit-prospect-card="${escapeHtml(company.companyId)}">
           <div class="prospect-row">
             <div>
               <h3>${escapeHtml(company.companyName || company.canonicalDomain || "Unnamed company")}</h3>
@@ -3419,6 +3495,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           ${company.sponsorshipNotes ? `<p>${escapeHtml(company.sponsorshipNotes)}</p>` : ""}
           <p>${escapeHtml(people.length)} people identified | ${escapeHtml(company.outreach?.peopleAttempted || 0)} attempted | ${escapeHtml(company.outreach?.meetings || 0)} meetings</p>
           <div class="prospecting-actions">
+            <button class="compact ${selected ? "" : "secondary"}" type="button" data-edit-prospect-company="${escapeHtml(company.companyId)}">${selected ? "Editing" : "Edit"}</button>
             ${company.websiteUrl ? `<a class="compact secondary button-link" href="${escapeHtml(company.websiteUrl)}" target="_blank" rel="noopener">Website</a>` : ""}
             ${company.linkedinCompanyUrl ? `<a class="compact secondary button-link" href="${escapeHtml(company.linkedinCompanyUrl)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}
             ${options.convert ? `<button class="compact" type="button" data-convert-prospect-company="${escapeHtml(company.companyId)}">Convert to Partner Candidate</button>` : ""}
@@ -3470,22 +3547,29 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function renderProspectingCompanyForm() {
+      const company = activeProspectingEditCompanyId
+        ? prospectCompanies().find((row) => row.companyId === activeProspectingEditCompanyId)
+        : null;
       return `
         <form class="prospecting-form" data-prospect-company-form>
-          <label>Company Name<input name="companyName" required placeholder="Acme AI"></label>
-          <label>Canonical Domain<input name="canonicalDomain" placeholder="acme.ai"></label>
-          <label>Website<input name="websiteUrl" placeholder="https://acme.ai"></label>
-          <label>Company LinkedIn<input name="linkedinCompanyUrl" placeholder="https://linkedin.com/company/acme-ai"></label>
-          <label>Primary Category<input name="primaryCategory" placeholder="AI Governance"></label>
-          <label>Categories<input name="categories" placeholder="AI Security, AI Governance"></label>
-          <label>Employee Range<input name="employeeRange" placeholder="201-1000"></label>
-          <label>Funding Stage<input name="fundingStage" placeholder="Series B"></label>
-          <label>AI Relevance<input name="aiRelevanceScore" type="number" min="0" max="100" value="80"></label>
-          <label>Enterprise Focus<input name="enterpriseFocus" type="number" min="0" max="100" value="75"></label>
-          <label>Target Roles<input name="targetExecutiveRoles" placeholder="CIO, CISO, Chief AI Officer"></label>
-          <label>Discovery Sources<input name="discoverySources" placeholder="G2, Web Discovery"></label>
-          <label class="span-full">Why This Company<textarea name="classificationReason" placeholder="Fit explanation Miller can trust."></textarea></label>
-          <button type="submit">Save Company</button>
+          ${company ? `<input type="hidden" name="companyId" value="${escapeHtml(company.companyId)}">` : ""}
+          <label>Company Name<input name="companyName" required placeholder="Acme AI" value="${escapeHtml(company?.companyName || "")}"></label>
+          <label>Canonical Domain<input name="canonicalDomain" placeholder="acme.ai" value="${escapeHtml(company?.canonicalDomain || "")}"></label>
+          <label>Website<input name="websiteUrl" placeholder="https://acme.ai" value="${escapeHtml(company?.websiteUrl || "")}"></label>
+          <label>Company LinkedIn<input name="linkedinCompanyUrl" placeholder="https://linkedin.com/company/acme-ai" value="${escapeHtml(company?.linkedinCompanyUrl || "")}"></label>
+          <label>Primary Category<input name="primaryCategory" placeholder="AI Governance" value="${escapeHtml(company?.primaryCategory || "")}"></label>
+          <label>Categories<input name="categories" placeholder="AI Security, AI Governance" value="${escapeHtml((company?.categories || []).join(", "))}"></label>
+          <label>Employee Range<input name="employeeRange" placeholder="201-1000" value="${escapeHtml(company?.employeeRange || "")}"></label>
+          <label>Funding Stage<input name="fundingStage" placeholder="Series B" value="${escapeHtml(company?.fundingStage || "")}"></label>
+          <label>AI Relevance<input name="aiRelevanceScore" type="number" min="0" max="100" value="${escapeHtml(company?.aiRelevanceScore ?? 80)}"></label>
+          <label>Enterprise Focus<input name="enterpriseFocus" type="number" min="0" max="100" value="${escapeHtml(company?.enterpriseFocus ?? 75)}"></label>
+          <label>Target Roles<input name="targetExecutiveRoles" placeholder="CIO, CISO, Chief AI Officer" value="${escapeHtml((company?.targetExecutiveRoles || []).join(", "))}"></label>
+          <label>Discovery Sources<input name="discoverySources" placeholder="G2, Web Discovery" value="${escapeHtml((company?.discoverySources || []).join(", "))}"></label>
+          <label class="span-full">Why This Company<textarea name="classificationReason" placeholder="Fit explanation Miller can trust.">${escapeHtml(company?.classificationReason || "")}</textarea></label>
+          <div class="prospecting-actions span-full">
+            <button type="submit">${company ? "Save Company Changes" : "Save Company"}</button>
+            ${company ? '<button class="secondary" type="button" data-clear-prospect-company-edit>Cancel Edit</button>' : ""}
+          </div>
         </form>
       `;
     }
@@ -3660,6 +3744,41 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       `;
     }
 
+    function renderDiscoveryDebug() {
+      const logs = prospectingState?.debug || [];
+      if (!logs.length) return '<p>No discovery debug logs yet.</p>';
+      return `
+        <div class="prospecting-grid">
+          ${logs.map((log) => `
+            <article class="queue-card">
+              <h3>${escapeHtml(log.sourceName || "Discovery run")}</h3>
+              <div class="crm-compact-pills">
+                <span class="pill ${log.status === "failed" ? "warn" : ""}">${escapeHtml(log.status || "unknown")}</span>
+                <span class="pill">${escapeHtml(log.discovered || 0)} discovered</span>
+                <span class="pill">${escapeHtml((log.accepted || []).length)} accepted links</span>
+                <span class="pill">${escapeHtml((log.rejected || []).length)} rejected links</span>
+              </div>
+              <p>${escapeHtml(log.createdAt ? formatDate(log.createdAt) : "")}</p>
+              ${log.sourceUrl ? `<p><a href="${escapeHtml(log.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(log.sourceUrl)}</a></p>` : ""}
+              ${log.error ? `<p>${escapeHtml(log.error)}</p>` : ""}
+              <details>
+                <summary>Accepted Links</summary>
+                ${(log.accepted || []).map((entry) => `
+                  <p>${escapeHtml(entry.companyName || "")} | ${escapeHtml(entry.domain || "")} | ${escapeHtml(entry.nameSource || "")}${entry.rawLabel ? ` | raw: ${escapeHtml(entry.rawLabel)}` : ""}${entry.reason ? ` | ${escapeHtml(entry.reason)}` : ""}</p>
+                `).join("") || "<p>No accepted links recorded.</p>"}
+              </details>
+              <details>
+                <summary>Rejected Links</summary>
+                ${(log.rejected || []).map((entry) => `
+                  <p>${escapeHtml(entry.domain || "")}${entry.rawLabel ? ` | raw: ${escapeHtml(entry.rawLabel)}` : ""} | ${escapeHtml(entry.reason || "")}</p>
+                `).join("") || "<p>No rejected links recorded.</p>"}
+              </details>
+            </article>
+          `).join("")}
+        </div>
+      `;
+    }
+
     function renderScoringConfigForm() {
       const weights = prospectingState?.scoreConfig?.weights || prospectingState?.scoreWeights || {};
       return `
@@ -3759,13 +3878,26 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function renderVendorUniverse() {
-      const companies = prospectCompanies();
+      const allCompanies = prospectCompanies();
+      const selectedCompany = activeProspectingCompanyId
+        ? allCompanies.find((company) => company.companyId === activeProspectingCompanyId)
+        : null;
+      const companies = selectedCompany ? [selectedCompany] : allCompanies;
       prospectingContent.innerHTML = `
         <div class="prospecting-grid">
-          <div class="metric"><span>Companies Discovered</span><strong>${prospectingState?.dashboard?.companiesDiscovered || 0}</strong></div>
-          <div class="metric"><span>Qualified AI Vendors</span><strong>${prospectingState?.dashboard?.qualifiedAiVendors || 0}</strong></div>
-          <div class="metric"><span>People Identified</span><strong>${prospectingState?.dashboard?.peopleIdentified || 0}</strong></div>
+          <div class="metric"><span>${selectedCompany ? "Selected Company" : "Companies Discovered"}</span><strong>${selectedCompany ? 1 : prospectingState?.dashboard?.companiesDiscovered || 0}</strong></div>
+          <div class="metric"><span>Qualified AI Vendors</span><strong>${selectedCompany ? (selectedCompany.aiVendor && selectedCompany.partnerScore >= 60 ? 1 : 0) : prospectingState?.dashboard?.qualifiedAiVendors || 0}</strong></div>
+          <div class="metric"><span>People Identified</span><strong>${selectedCompany ? selectedCompany.peopleCount || 0 : prospectingState?.dashboard?.peopleIdentified || 0}</strong></div>
         </div>
+        ${selectedCompany ? `
+          <div class="source-run-status">
+            <strong>${escapeHtml(selectedCompany.companyName || "Selected company")}</strong>
+            <span>Vendor Universe is filtered to this company.</span>
+            <div class="prospecting-actions">
+              <button class="compact secondary" type="button" data-clear-prospect-company-filter>Show All Companies</button>
+            </div>
+          </div>
+        ` : ""}
         ${renderProspectingCompanyForm()}
         <div class="prospecting-grid">${companies.map((company) => prospectCompanyCard(company)).join("") || '<p>No vendor companies have been added yet.</p>'}</div>
       `;
@@ -3952,6 +4084,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <div>
           <p class="eyebrow">Discovery Sources</p>
           ${renderDiscoverySources()}
+        </div>
+        <div>
+          <p class="eyebrow">Discovery Debug</p>
+          ${renderDiscoveryDebug()}
         </div>
         <div class="prospecting-grid">
           ${prospectCompanies().map((company) => `
@@ -4629,6 +4765,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function render() {
       syncViewPanels();
       renderMetrics();
+      renderProspectingCompanyIndex();
       if (isProspectingView()) {
         renderProspecting();
         return;
@@ -5302,6 +5439,20 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       button.addEventListener("click", () => setActiveView(button.dataset.view));
     });
 
+    prospectingCompanyIndex.addEventListener("click", (event) => {
+      const companyButton = event.target.closest("[data-filter-prospect-company]");
+      const clearButton = event.target.closest("[data-clear-prospect-company-filter]");
+      if (clearButton) {
+        activeProspectingCompanyId = "";
+        activeProspectingEditCompanyId = "";
+        setActiveView("vendor-universe");
+        return;
+      }
+      if (!companyButton) return;
+      activeProspectingCompanyId = companyButton.dataset.filterProspectCompany || "";
+      setActiveView("vendor-universe", { keepCompanyFilter: true });
+    });
+
     clearFiltersButton.addEventListener("click", () => {
       partnerCompanyPage = 1;
       activePartnerAddCompany = "";
@@ -5353,11 +5504,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!companyForm && !personForm && !discoveryForm && !importForm && !scoreConfigForm && !peopleSearchForm && !sponsorEvidenceForm) return;
       event.preventDefault();
       if (companyForm) {
+        const payload = prospectingFormPayload(companyForm);
+        if (payload.companyId) activeProspectingEditCompanyId = payload.companyId;
         await postPartnerProspecting({
           action: "save-partner-prospect-company",
-          ...prospectingFormPayload(companyForm)
+          ...payload
         }, "Partner prospect company saved.");
-        companyForm.reset();
+        if (!payload.companyId) companyForm.reset();
         return;
       }
       if (discoveryForm) {
@@ -5418,6 +5571,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const runAllSourcesButton = event.target.closest("[data-run-all-prospect-sources]");
       const runStarterSourceButton = event.target.closest("[data-run-starter-prospect-source]");
       const runStarterSourcesButton = event.target.closest("[data-run-starter-prospect-sources]");
+      const clearCompanyFilterButton = event.target.closest("[data-clear-prospect-company-filter]");
+      const editCompanyButton = event.target.closest("[data-edit-prospect-company]");
+      const editCompanyCard = event.target.closest("[data-edit-prospect-card]");
+      const clearCompanyEditButton = event.target.closest("[data-clear-prospect-company-edit]");
       const reviewButton = event.target.closest("[data-review-prospect-company]");
       const categorySaveButton = event.target.closest("[data-review-category-save]");
       const scoreSaveButton = event.target.closest("[data-review-score-save]");
@@ -5432,6 +5589,33 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           personKey: actionButton.dataset.prospectPersonKey,
           outreachAction: actionButton.dataset.prospectPersonAction
         }, `${actionButton.dataset.prospectPersonAction} recorded.`);
+        return;
+      }
+      if (clearCompanyFilterButton) {
+        activeProspectingCompanyId = "";
+        activeProspectingEditCompanyId = "";
+        render();
+        return;
+      }
+      if (editCompanyButton) {
+        activeProspectingEditCompanyId = editCompanyButton.dataset.editProspectCompany || "";
+        activeProspectingCompanyId = activeProspectingEditCompanyId;
+        activeView = "vendor-universe";
+        render();
+        prospectingContent.querySelector("[data-prospect-company-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (editCompanyCard && !event.target.closest("button, a, input, select, textarea, summary, details, label")) {
+        activeProspectingEditCompanyId = editCompanyCard.dataset.editProspectCard || "";
+        activeProspectingCompanyId = activeProspectingEditCompanyId;
+        activeView = "vendor-universe";
+        render();
+        prospectingContent.querySelector("[data-prospect-company-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (clearCompanyEditButton) {
+        activeProspectingEditCompanyId = "";
+        render();
         return;
       }
       if (retryButton) {

@@ -26,6 +26,8 @@ The Discovery Queue can now run a public-source discovery pass from a supplied U
 
 The Discovery Queue now includes built-in starter sources so operators do not need to bring source URLs before Vendor Universe can start. The starter library includes conference sponsor lists/prospectuses and AI company directories, and exposes `Run Source` and `Run One Starter Source` actions. Source runs intentionally process one source per request with a small company limit so Cloudflare Workers do not exceed per-invocation request limits.
 
+Discovery runs now write bounded CRM debug records. The Discovery Queue exposes a Discovery Debug panel showing source URL, status, accepted link names/domains, rejected link labels/domains, and the reason a company name was chosen or rejected. Sponsor-tier labels such as `2026 premier sponsor` are treated as labels, not company names; the extractor falls back to logo alt/title text or the linked domain when labels are generic.
+
 The discovery pass fetches the HTML, extracts outbound company domains, filters common non-company/social/search domains, dedupes by canonical domain, and creates Vendor Universe records with source provenance.
 
 Each discovered company can then run website analysis. The first implementation uses transparent keyword/category signals to classify AI relevance, enterprise focus, likely category, target executive roles, partner score, and queue status. It is intentionally replaceable by a model-backed classifier later.
