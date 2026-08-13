@@ -1792,7 +1792,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <div>
           <p class="eyebrow">Partner Prospecting</p>
           <h2 id="prospectingTitle">Vendor Universe</h2>
-          <p id="prospectingSubtitle">Rank AI-enabled companies, identify the right people, and prepare Miller's LinkedIn-first workflow.</p>
+          <p id="prospectingSubtitle">Rank AI-enabled technology companies, identify the right people, and prepare Miller's LinkedIn-first workflow.</p>
         </div>
         <button class="secondary" type="button" id="refreshProspectingButton">Refresh Prospecting</button>
       </div>
@@ -1872,7 +1872,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       "partners-company": "partner"
     };
     const prospectingViews = {
-      "vendor-universe": ["Vendor Universe", "Company-level AI vendor database."],
+      "vendor-universe": ["Vendor Universe", "Company-level AI-enabled technology prospect database."],
       "partner-targets": ["Partner Targets", "Ranked companies ready for prioritization."],
       "research-queue": ["Research Queue", "Prepare manual people searches and track lead lists."],
       "prospect-people": ["People", "Buying and influence committees by company."],
@@ -3484,7 +3484,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             ${company.reviewStatus ? `<span class="pill">${escapeHtml(company.reviewStatus)}</span>` : ""}
           </div>
           <p>${escapeHtml(why)}</p>
-          <div class="crm-compact-pills">${prospectPills(company.categories, "No AI category")}</div>
+          <div class="crm-compact-pills">${prospectPills(company.categories, "No prospect category")}</div>
           ${company.sponsoredEvents?.length || company.sponsorshipFit || company.sponsorshipEstimatedSpend ? `
             <div class="crm-compact-pills">
               ${prospectPills(company.sponsoredEvents, "No sponsor evidence")}
@@ -3606,8 +3606,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <option value="Public Web">Public Web</option>
               <option value="Conference Sponsor List">Conference Sponsor List</option>
               <option value="Conference Sponsorship Prospectus">Conference Sponsorship Prospectus</option>
+              <option value="Event Sponsor Crawl">Event Sponsor Crawl</option>
               <option value="VC Portfolio">VC Portfolio</option>
-              <option value="AI Directory">AI Directory</option>
+              <option value="AI-Enabled Tech List">AI-Enabled Tech List</option>
+              <option value="Cybersecurity List">Cybersecurity List</option>
+              <option value="SaaS / Software List">SaaS / Software List</option>
+              <option value="Cloud / IT List">Cloud / IT List</option>
               <option value="Marketplace">Marketplace</option>
               <option value="Funding / News">Funding / News</option>
               <option value="Hiring Platform / Job Board">Hiring Platform / Job Board</option>
@@ -3764,7 +3768,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const candidates = Number(batch.candidates || batch.discovered || 0);
         const target = Number(batch.targetNewCompanies || 0);
         const targetText = target ? ` toward ${target} new` : "";
-        const exhaustedText = batch.exhausted ? ", starter sources exhausted before target" : "";
+        const exhaustedText = batch.exhausted ? ", large source pool exhausted before target" : "";
         return `${batch.succeeded || 0} source${Number(batch.succeeded || 0) === 1 ? "" : "s"} finished${targetText}: ${candidates} candidates checked, ${batch.discovered || 0} new saved${skipped ? `, ${skipped} already known` : ""}${failed ? `, ${failed} source${failed === 1 ? "" : "s"} failed` : ""}${exhaustedText}.`;
       }
       return "Discovery source finished.";
@@ -3783,8 +3787,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function renderStarterSources() {
       const sources = prospectingState?.starterSources || [];
       if (!sources.length) return "";
+      const visibleSources = sources.filter((source, index) => index < 48 || source.category === "Event Sponsor Crawls" || source.lastRunAt || source.lastRunStatus === "failed");
+      const hiddenCount = Math.max(0, sources.length - visibleSources.length);
       const categoryMap = new Map();
-      for (const source of sources) {
+      for (const source of visibleSources) {
         const category = source.category || "Starter Sources";
         if (!categoryMap.has(category)) categoryMap.set(category, []);
         categoryMap.get(category).push(source);
@@ -3794,6 +3800,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <div class="prospecting-actions prospecting-section-actions">
             <button class="secondary" type="button" data-run-starter-prospect-sources>Find 50 New Companies</button>
           </div>
+          ${hiddenCount ? `<p class="helper-text">Showing ${visibleSources.length} source cards. The one-click discovery run rotates through ${sources.length} built-in sources until it finds 50 new companies.</p>` : ""}
           ${[...categoryMap.entries()].map(([category, rows]) => `
             <p class="eyebrow">${escapeHtml(category)}</p>
             <div class="prospecting-grid">
@@ -4185,10 +4192,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           title: "Build Vendor Universe",
           steps: [
             "Open Discovery Queue.",
-            "Click Run One Starter Source or an individual Run Source button to seed Vendor Universe from the built-in sponsor and AI directory sources.",
+            "Click Find 50 New Companies or an individual Run Source button to seed Vendor Universe from built-in SaaS, cyber, cloud, software, event sponsor crawls, and AI-enabled technology sources.",
             "Use a hiring signal search, the conference sponsor playbook, a public source URL, or the import form when you want to add more companies.",
             "Run Analyze Website for each useful company, or use Analyze Next 10 Websites.",
-            "Review each company card and keep only credible AI or AI-enabled companies moving forward."
+            "Review each company card and keep credible AI-budget-relevant technology companies moving forward."
           ],
           result: "Companies land in Vendor Universe with source history, category signals, AI relevance, and processing status."
         },
@@ -4206,7 +4213,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           title: "Find Companies From Sponsor Evidence",
           steps: [
             "Open Discovery Queue.",
-            "Use Conference Sponsor Playbook to search sponsor pages, prospectuses, pricing clues, and sponsor-company lists.",
+            "Use Conference Sponsor Playbook and Event Sponsor Crawl sources to find companies sponsoring AI, IT, security, CIO, CISO, MSP, and enterprise technology events.",
             "Add selected companies by source URL, import, or manual company entry.",
             "Save sponsored events, evidence URLs, spend clues, themes, and notes on the company card."
           ],
@@ -4266,7 +4273,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           title: "Read Dashboard Health",
           steps: [
             "Open Dashboard.",
-            "Review discovered companies, AI vendors, people identified, lead lists, sponsor evidence, meetings, and partner stages.",
+            "Review discovered companies, qualified technology prospects, people identified, lead lists, sponsor evidence, meetings, and partner stages.",
             "Use source performance to see which sources produce qualified, ready, contacted, responding, and meeting-ready companies.",
             "Tune scoring weights only when the ranked list consistently feels wrong."
           ],
@@ -4316,7 +4323,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const dashboard = prospectingState?.dashboard || {};
         metrics.innerHTML = `
           <div class="metric"><span>Companies discovered</span><strong>${dashboard.companiesDiscovered || 0}</strong></div>
-          <div class="metric"><span>Qualified AI vendors</span><strong>${dashboard.qualifiedAiVendors || 0}</strong></div>
+          <div class="metric"><span>Qualified tech prospects</span><strong>${dashboard.qualifiedAiVendors || 0}</strong></div>
           <div class="metric"><span>Immediate targets</span><strong>${dashboard.immediateTargets || 0}</strong></div>
           <div class="metric"><span>Meetings</span><strong>${dashboard.meetings || 0}</strong></div>
         `;
@@ -4919,7 +4926,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const originalLabel = button?.textContent || "";
       const targetNewCompanies = 50;
       const perStepNewCap = 10;
-      const maxSteps = Math.max(1, prospectingState?.starterSources?.length || 9);
+      const starterSourceCount = prospectingState?.starterSources?.length || 620;
+      const maxSteps = Math.max(1000, starterSourceCount * 2);
       const totals = { attempted: 0, succeeded: 0, candidates: 0, discovered: 0, skippedExisting: 0, failed: 0 };
       if (button) {
         button.disabled = true;
@@ -4930,7 +4938,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           const remaining = targetNewCompanies - totals.discovered;
           prospectingRunStatus = {
             title: "Finding 50 new companies",
-            message: `Checking starter source ${step + 1} of ${maxSteps}. ${totals.discovered} new saved, ${totals.skippedExisting} already known.`
+            message: `Checking source batch ${step + 1}. ${totals.discovered} new saved, ${totals.skippedExisting} already known. Continuing until 50 new are saved.`
           };
           render();
           setNotice(prospectingRunStatus.message, "ok");
@@ -4963,7 +4971,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const exhausted = totals.discovered < targetNewCompanies;
         prospectingRunStatus = {
           title: exhausted ? "Starter discovery finished" : "50 new companies found",
-          message: `${totals.succeeded} source${totals.succeeded === 1 ? "" : "s"} finished. ${totals.discovered} new saved, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked${totals.failed ? `, ${totals.failed} failed` : ""}${exhausted ? ", starter source pass complete before hitting 50" : ""}.`
+          message: `${totals.succeeded} source${totals.succeeded === 1 ? "" : "s"} finished. ${totals.discovered} new saved, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked${totals.failed ? `, ${totals.failed} failed` : ""}${exhausted ? ", large source pool exhausted before 50 new companies" : ""}.`
         };
         render();
         setNotice(prospectingRunStatus.message, "ok");

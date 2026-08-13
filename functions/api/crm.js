@@ -185,7 +185,157 @@ const defaultPartnerScoreWeights = {
   marketPresence: 5,
   recentGrowthFunding: 5
 };
+const builtInDirectoryStarterTopics = [
+  ["software-companies", "Software"],
+  ["information-technology-companies", "Information Technology"],
+  ["cloud-companies", "Cloud"],
+  ["cybersecurity-companies", "Cybersecurity"],
+  ["big-data-analytics-companies", "Big Data Analytics"],
+  ["big-data-companies", "Big Data"],
+  ["business-intelligence-companies", "Business Intelligence"],
+  ["automation-companies", "Automation"],
+  ["app-development-companies", "App Development"],
+  ["developer-tools-companies", "Developer Tools"],
+  ["data-privacy-companies", "Data Privacy"],
+  ["database-companies", "Database"]
+];
+const builtInDirectoryStarterPageCount = 50;
+const builtInDirectoryStarterSources = builtInDirectoryStarterTopics.flatMap(([slug, label]) =>
+  Array.from({ length: builtInDirectoryStarterPageCount }, (_, index) => {
+    const page = index + 1;
+    return {
+      sourceId: `starter-built-in-directory-${slug}-page-${page}`,
+      sourceName: `Built In ${label} Directory Page ${page}`,
+      sourceType: `${label} Company Directory`,
+      sourceUrl: `https://builtin.com/companies/type/${slug}${page > 1 ? `?page=${page}` : ""}`,
+      description: `Paged Built In ${label.toLowerCase()} directory source used to keep finding new AI-leveraging technology prospects after article roundups and known companies are exhausted.`,
+      category: "AI-Enabled Tech Lists"
+    };
+  })
+);
+const eventSponsorCrawlStarterSources = [
+  ["starter-event-crawl-ai4", "Ai4 Event Sponsor Crawl", "https://ai4.io/", "Ai4's Las Vegas AI event site; crawl sponsor, exhibitor, and partner pages for companies already investing in applied AI event audiences."],
+  ["starter-event-crawl-ai4-sponsors", "Ai4 Sponsors & Exhibitors Crawl", "https://ai4.io/sponsors-exhibitors/", "Ai4 sponsor and exhibitor page; strong source for AI vendors and AI-leveraging technology sponsors."],
+  ["starter-event-crawl-black-hat-usa", "Black Hat USA Sponsor Crawl", "https://blackhat.com/us-26/event-sponsors.html", "Black Hat USA Las Vegas sponsor page; crawl sponsor tiers, exhibitors, AI Zone, Startup City, and security vendor links."],
+  ["starter-event-crawl-black-hat-business-hall", "Black Hat USA Business Hall Crawl", "https://blackhat.com/us-26/business-hall.html", "Black Hat USA Business Hall page; crawl exhibitor and solution-provider references from a major Las Vegas cybersecurity event."],
+  ["starter-event-crawl-black-hat-sponsorship", "Black Hat Sponsorship Hub Crawl", "https://blackhat.com/html/sponsors.html", "Black Hat sponsorship hub; crawl current sponsor and event opportunity pages for security vendors."],
+  ["starter-event-crawl-defcon-recon-village", "DEF CON Recon Village Sponsor Crawl", "https://reconvillage.org/reconvillage-2026-defcon-34/sponsors", "DEF CON Recon Village sponsor page; crawl for cybersecurity community sponsors and security vendors."],
+  ["starter-event-crawl-defcon-ai-village", "DEF CON AI Village Sponsor Crawl", "https://aivillage.org/events/defcon-34/", "DEF CON AI Village event page; crawl for AI security sponsors, partners, and village supporters."],
+  ["starter-event-crawl-dattocon", "DattoCon Sponsor Crawl", "https://www.dattocon.com/sponsors/", "DattoCon sponsor page; crawl MSP, cybersecurity, backup, automation, and IT channel vendors."],
+  ["starter-event-crawl-kaseya-connect-sponsor", "Kaseya Connect Sponsor Crawl", "https://events.kaseya.com/sponsorship/", "Kaseya global events sponsorship hub; crawl for IT operations, MSP, cybersecurity, and channel ecosystem sponsors."],
+  ["starter-event-crawl-kaseya-connect-na", "Kaseya Connect North America Sponsor Crawl", "https://www.kaseyaconnect.com/sponsors/", "Kaseya Connect North America sponsor page; crawl MSP, IT operations, backup, automation, and cybersecurity vendors."],
+  ["starter-event-crawl-kaseya-connect-europe", "Kaseya Connect Europe Sponsor Crawl", "https://www.kaseyaconnect.com/europe/sponsors/", "Kaseya Connect Europe sponsor page; crawl exposed IT, MSP, security, and channel sponsor companies."],
+  ["starter-event-crawl-kaseya-connect-apac", "Kaseya Connect APAC Sponsor Crawl", "https://www.kaseyaconnect.com/apac/sponsors/", "Kaseya Connect APAC sponsor page; crawl MSP, IT operations, and security ecosystem sponsors."],
+  ["starter-event-crawl-gds-summits", "GDS Group Summits Sponsor Crawl", "https://gdsgroup.com/experiences/summits/", "GDS executive summit site; crawl security, CIO, CISO, IT, and technology partner pages."],
+  ["starter-event-crawl-gds-security-insight", "GDS Security Insight Summit Crawl", "https://gdsgroup.com/events/physical-summit/security-insight-summit-fall-edition/", "GDS Security Insight Summit page; crawl for cybersecurity partners and sponsor references."],
+  ["starter-event-crawl-gds-tech-leaders", "GDS Tech Leaders Insight Summit Crawl", "https://gdsgroup.com/events/physical-summit/tech-leaders-insight-summit-autumn-edition/", "GDS tech leaders summit page; crawl for CIO, CISO, IT, and AI-ready enterprise partner signals."],
+  ["starter-event-crawl-millennium-ciso", "Millennium Alliance CISO Events Crawl", "https://mill-all.com/ciso-conferences/", "Millennium Alliance CISO event hub; crawl CISO conference and assembly pages for solution providers."],
+  ["starter-event-crawl-millennium-ciso-sponsors", "Millennium Alliance CISO Sponsors Crawl", "https://mill-all.com/ciso-sponsors/", "Millennium Alliance CISO sponsor page; crawl sponsor and partner links for security vendors."],
+  ["starter-event-crawl-cisoxc", "CISO XC Sponsor Crawl", "https://www.cisoxc.com/", "CISO XC cybersecurity executive event site; crawl partner and event pages for trusted security sponsors."],
+  ["starter-event-crawl-evanta-ciso", "Evanta CISO Sponsor Crawl", "https://www.evanta.com/ciso", "Evanta CISO community hub; crawl executive summit pages for key and program sponsors."],
+  ["starter-event-crawl-evanta-new-york-ciso", "Evanta New York CISO Summit Crawl", "https://www.evanta.com/ciso/new-york/new-york-ciso-executive-summit-8439", "Evanta New York CISO Executive Summit page with key sponsor and program sponsor sections."],
+  ["starter-event-crawl-infosec-world", "InfoSec World Sponsor Crawl", "https://www.infosecworldusa.com/", "InfoSec World cybersecurity event site; crawl sponsor, CISO summit, and partner pages."],
+  ["starter-event-crawl-secureworld", "SecureWorld Sponsor Crawl", "https://www.secureworld.io/events", "SecureWorld cybersecurity events hub; crawl event and sponsorship pages for security sponsors."],
+  ["starter-event-crawl-secureworld-sponsorship", "SecureWorld Sponsorship Crawl", "https://info.secureworld.io/conference-sponsorship-2026", "SecureWorld 2026 sponsorship page; crawl for sponsor partner evidence."],
+  ["starter-event-crawl-innovate-cybersecurity", "Innovate Cybersecurity Summit Crawl", "https://www.innovatecybersecuritysummit.com/", "Innovate Cybersecurity Summit; crawl for reverse-expo sponsors and security solution providers."],
+  ["starter-event-crawl-ciso-forum", "CISO Forum Sponsor Crawl", "https://www.cisoforum.com/sponsors/", "CISO Forum sponsor page; crawl for enterprise cybersecurity sponsor companies."],
+  ["starter-event-crawl-pulse-ciso-360", "Pulse CISO 360 Sponsor Crawl", "https://www.pulseconferences.com/conference/cyber-360-exchange/why-sponsor-2/", "Pulse CISO 360 sponsorship page; crawl for cyber exchange sponsor companies."],
+  ["starter-event-crawl-generis-cio-cyber", "Generis CIO & Cybersecurity Summit Crawl", "https://cioamerica.com/", "Generis American CIO & Cybersecurity Summit; crawl for CIO, CISO, IT, and security sponsors."],
+  ["starter-event-crawl-foundry-cio100", "Foundry CIO 100 Partner Crawl", "https://event.foundryco.com/cio100-symposium-and-awards/become-a-partner/", "Foundry CIO 100 partner page; crawl for CIO and enterprise technology sponsors."],
+  ["starter-event-crawl-enterprise-connect", "Enterprise Connect Sponsor Crawl", "https://exhibitors.enterpriseconnect.com/", "Enterprise Connect sponsors and exhibitors; crawl for AI-enabled communications and enterprise software vendors."],
+  ["starter-event-crawl-generative-ai-expo", "Generative AI Expo Sponsor Crawl", "https://www.generativeaiexpo.com/east/become-an-exhibitor.aspx", "Generative AI Expo sponsorship page; crawl for enterprise AI and technology exhibitors."],
+  ["starter-event-crawl-generative-ai-summit", "Generative AI Summit Sponsors Crawl", "https://www.aidataanalytics.network/events-generativeaisummit/sponsors", "Generative AI Summit sponsors page; crawl for AI and analytics vendors."],
+  ["starter-event-crawl-ai-defense-summit", "AI for Defense Summit Sponsor Crawl", "https://ai.dsigroup.org/sponsor/", "AI for Defense Summit sponsor page; crawl for AI, defense, cyber, and data vendors."],
+  ["starter-event-crawl-fortinus-ciso-uae", "Fortinus CISO & Enterprise Security Crawl", "https://events.fortinusevents.com/CISOUAE26", "Fortinus CISO and enterprise security summit; crawl for cybersecurity and AI leadership sponsors."],
+  ["starter-event-crawl-inspired-ciso-benelux", "Inspired CISO Summit Crawl", "https://www.inspiredbusinessmedia.com/summit/ciso-inspired-summit-amsterdam", "Inspired Business Media CISO summit page; crawl for cybersecurity sponsor and partner signals."],
+  ["starter-event-crawl-inspired-cio-uk", "Inspired CIO Summit Crawl", "https://www.inspiredbusinessmedia.com/summit/cio-inspired-summit-uk-2026", "Inspired Business Media CIO summit page; crawl for IT, cloud, data, and security sponsors."],
+  ["starter-event-crawl-gbi-ciso", "GBI CISO Summit Crawl", "https://www.gbiimpact.com/summits/ciso-new-york-summit", "GBI Impact CISO summit page; crawl for cybersecurity sponsor and partner companies."],
+  ["starter-event-crawl-elite-cio-ciso", "Elite CIO/CISO Summit Crawl", "https://www.eliteb2bevents.com/elite-summits", "Elite B2B CIO/CISO summit hub; crawl for IT and security sponsor signals."]
+].map(([sourceId, sourceName, sourceUrl, description]) => ({
+  sourceId,
+  sourceName,
+  sourceType: "Event Sponsor Crawl",
+  sourceUrl,
+  description,
+  category: "Event Sponsor Crawls",
+  crawlSponsorPages: true,
+  crawlPageLimit: 6
+}));
 const partnerProspectStarterSources = [
+  {
+    sourceId: "starter-built-in-saas-companies",
+    sourceName: "Built In SaaS Companies",
+    sourceType: "SaaS Company Roundup",
+    sourceUrl: "https://builtin.com/articles/saas-companies",
+    description: "High-yield SaaS company roundup with many vendors likely to use AI in product, marketing, operations, or customer workflows.",
+    category: "AI-Enabled Tech Lists"
+  },
+  {
+    sourceId: "starter-built-in-b2b-saas-companies",
+    sourceName: "Built In B2B SaaS Companies",
+    sourceType: "B2B SaaS Company Roundup",
+    sourceUrl: "https://builtin.com/articles/top-b2b-saas-companies",
+    description: "B2B SaaS vendors with strong enterprise buying-center overlap and likely AI adoption pressure.",
+    category: "AI-Enabled Tech Lists"
+  },
+  {
+    sourceId: "starter-built-in-cloud-companies",
+    sourceName: "Built In Cloud Companies",
+    sourceType: "Cloud Company Roundup",
+    sourceUrl: "https://builtin.com/articles/cloud-computing-companies",
+    description: "Cloud, infrastructure, data, and security vendors that commonly sell into AI transformation budgets.",
+    category: "AI-Enabled Tech Lists"
+  },
+  {
+    sourceId: "starter-built-in-enterprise-software",
+    sourceName: "Built In Enterprise Software Companies",
+    sourceType: "Enterprise Software Roundup",
+    sourceUrl: "https://builtin.com/articles/enterprise-software-companies",
+    description: "Enterprise software companies whose products increasingly leverage AI, automation, analytics, and workflow intelligence.",
+    category: "AI-Enabled Tech Lists"
+  },
+  {
+    sourceId: "starter-built-in-cybersecurity-companies",
+    sourceName: "Built In Cybersecurity Companies",
+    sourceType: "Cybersecurity Company Roundup",
+    sourceUrl: "https://builtin.com/articles/cyber-security-companies",
+    description: "Cybersecurity companies are high-interest prospects because AI adoption increases security, governance, and risk pressure.",
+    category: "AI-Enabled Tech Lists"
+  },
+  {
+    sourceId: "starter-cyber-100",
+    sourceName: "Cyber 100 Companies",
+    sourceType: "Cybersecurity Company List",
+    sourceUrl: "https://onlinedegrees.sandiego.edu/top-100-cybersecurity-companies/",
+    description: "Large cybersecurity company list used to seed AI-security and AI-risk sponsor prospects.",
+    category: "AI-Enabled Tech Lists"
+  },
+  {
+    sourceId: "starter-built-in-software-development-companies",
+    sourceName: "Built In Software Development Companies",
+    sourceType: "Software Development Company Roundup",
+    sourceUrl: "https://builtin.com/articles/software-development-companies",
+    description: "Large software-development vendor roundup; these companies are strong prospects because AI is changing product, engineering, customer, and executive buying workflows.",
+    category: "AI-Enabled Tech Lists"
+  },
+  {
+    sourceId: "starter-built-in-cloud-storage-companies",
+    sourceName: "Built In Cloud Storage Companies",
+    sourceType: "Cloud Storage Company Roundup",
+    sourceUrl: "https://builtin.com/articles/data-storage-management",
+    description: "Cloud storage, file, and data-platform companies that sell into infrastructure modernization and AI-readiness budgets.",
+    category: "AI-Enabled Tech Lists"
+  },
+  {
+    sourceId: "starter-built-in-it-companies-india",
+    sourceName: "Built In IT Companies India",
+    sourceType: "IT Services Company Roundup",
+    sourceUrl: "https://builtin.com/articles/top-it-companies-in-india",
+    description: "Large IT services and consulting companies that help enterprises adopt AI, cloud, security, automation, and digital transformation programs.",
+    category: "AI-Enabled Tech Lists"
+  },
+  ...eventSponsorCrawlStarterSources,
+  ...builtInDirectoryStarterSources,
   {
     sourceId: "starter-ai4-sponsors",
     sourceName: "Ai4 Sponsors & Exhibitors",
@@ -233,30 +383,6 @@ const partnerProspectStarterSources = [
     sourceUrl: "https://partners.london.theaisummit.com/",
     description: "Sponsor and exhibitor list for an enterprise AI summit.",
     category: "Conference Sponsors"
-  },
-  {
-    sourceId: "starter-forbes-ai-50",
-    sourceName: "Forbes AI 50",
-    sourceType: "AI Directory",
-    sourceUrl: "https://www.forbes.com/lists/ai50/",
-    description: "Curated AI company list for high-signal vendor discovery.",
-    category: "AI Directories"
-  },
-  {
-    sourceId: "starter-built-in-ai-companies",
-    sourceName: "Built In AI Companies",
-    sourceType: "AI Directory",
-    sourceUrl: "https://builtin.com/artificial-intelligence/ai-companies-roundup",
-    description: "Public AI company roundup that can seed the Vendor Universe.",
-    category: "AI Directories"
-  },
-  {
-    sourceId: "starter-ai-directory",
-    sourceName: "AI Directory",
-    sourceType: "AI Directory",
-    sourceUrl: "https://www.aidirectory.org/",
-    description: "Broad AI/ML company directory for additional vendor discovery.",
-    category: "AI Directories"
   }
 ];
 const discoveryBlockedDomains = new Set([
@@ -267,14 +393,49 @@ const discoveryBlockedDomains = new Set([
   "x.com",
   "youtube.com",
   "youtu.be",
+  "discord.com",
+  "discord.gg",
+  "addevent.com",
+  "forms.gle",
+  "cvent.com",
+  "cvent.me",
+  "events.kaseya.com",
   "tiktok.com",
   "medium.com",
   "substack.com",
   "github.com",
+  "github.blog",
+  "awesome.re",
+  "generativeaicompanies.tech",
   "crunchbase.com",
+  "dealroom.co",
+  "pitchbook.com",
+  "cbinsights.com",
+  "tracxn.com",
+  "cybersecurityventures.com",
+  "cybersecurity-excellence-awards.com",
+  "investopedia.com",
+  "techcrunch.com",
+  "time.com",
+  "programs.com",
+  "research.com",
   "g2.com",
   "producthunt.com",
   "wellfound.com",
+  "startupschool.org",
+  "bookface-images.s3.amazonaws.com",
+  "amazonaws.com",
+  "form.jotform.com",
+  "w1.buysub.com",
+  "parsintl.com",
+  "youradchoices.com",
+  "pages.scmagazine.com",
+  "cyberriskalliance.com",
+  "gartner.com",
+  "piersixty.com",
+  "thehighlinehotel.com",
+  "themoorenyc.com",
+  "dreamhotels.com",
   "google.com",
   "bing.com",
   "duckduckgo.com",
@@ -496,11 +657,28 @@ function htmlAttribute(value = "", name = "") {
 function genericSponsorLabel(value = "") {
   const text = cleanString(value, 180).toLowerCase().replace(/\s+/g, " ").trim();
   if (!text) return true;
-  if (/^(learn more|read more|more info|details|website|visit website|visit site|home|homepage|register|contact|apply|logo|image|view profile)$/i.test(text)) return true;
+  if (/^(learn more|read more|more info|details|website|visit website|visit site|home|homepage|register|register now|contact|apply|logo|image|view profile|explore all events|keep me updated|add to calendar|sponsors? & exhibitors?)$/i.test(text)) return true;
   if (/^(?:20\d{2}\s+)?(?:premier|platinum|gold|silver|bronze|diamond|title|presenting|lead|strategic|supporting|community|media|startup|innovation)?\s*(?:sponsor|sponsors|sponsorship|partner|partners|exhibitor|exhibitors|booth|package|tier|level)s?$/i.test(text)) return true;
   if (/^20\d{2}\s+(?:premier|platinum|gold|silver|bronze|diamond|title|presenting|lead|strategic|supporting|community|media|startup|innovation)\s+/i.test(text) &&
     /\b(sponsor|partner|exhibitor|package|tier|level)\b/i.test(text)) return true;
   return false;
+}
+
+function weakCompanyLabel(value = "") {
+  const text = cleanString(value, 180).replace(/\s+/g, " ").trim();
+  if (!text) return true;
+  const words = text.split(/\s+/);
+  if (words.length > 7) return true;
+  if (/\s\/\s/.test(text)) return true;
+  if (/[.!?]$/.test(text) && words.length > 3) return true;
+  if (/[$€£]\d|\d+%|["“”]|\b(percent|trillion|billion|million|according|report|study|article|research|said|says|read|watch|download|subscribe|newsletter|privacy|terms|careers|jobs|hiring|damage|inflicted|sensitive information|pioneer|provider|award|awards|blog|cybercrime|market cap|agenda at a glance|sponsorships|attending companies)\b/i.test(text)) return true;
+  return false;
+}
+
+function prospectCandidateDomain(domain = "") {
+  let normalized = normalizeDomain(domain);
+  normalized = normalized.replace(/^(careers|jobs|about|investors|ir|blog|resources)\./i, "");
+  return normalized;
 }
 
 function companyNameDecisionFromLink({ domain = "", text = "", innerHtml = "", attributes = "" } = {}) {
@@ -514,9 +692,13 @@ function companyNameDecisionFromLink({ domain = "", text = "", innerHtml = "", a
   ];
   let rejectedLabel = "";
   for (const [source, candidate] of candidates) {
-    const clean = cleanString(stripHtml(candidate), 180).replace(/\s+/g, " ").trim();
+    const clean = cleanString(stripHtml(candidate), 180).replace(/\s+/g, " ").replace(/\s+(?:logo|image)$/i, "").trim();
     if (!clean) continue;
     if (genericSponsorLabel(clean)) {
+      if (!rejectedLabel) rejectedLabel = clean;
+      continue;
+    }
+    if (weakCompanyLabel(clean)) {
       if (!rejectedLabel) rejectedLabel = clean;
       continue;
     }
@@ -529,7 +711,7 @@ function companyNameDecisionFromLink({ domain = "", text = "", innerHtml = "", a
   }
   return {
     companyName: domainCompanyName(domain),
-    nameSource: "domain",
+    nameSource: rejectedLabel ? "domain-fallback" : "domain",
     rawLabel: cleanString(text, 180),
     rejectedLabel
   };
@@ -553,20 +735,22 @@ function recordDiscoveryDiagnostic(debug, type, entry = {}) {
 
 function discoveryCategoryForSource(source = {}) {
   const text = `${source.sourceName || ""} ${source.sourceType || ""} ${source.category || ""} ${source.description || ""}`.toLowerCase();
+  if (/cyber|security|risk|zero trust|threat/.test(text)) return "Cybersecurity";
+  if (/cloud|infrastructure|devops|platform|data/.test(text)) return "Cloud / IT Infrastructure";
+  if (/b2b saas|saas/.test(text)) return "B2B SaaS";
+  if (/enterprise software|workflow|automation|software/.test(text)) return "Enterprise Software";
   if (/governance|responsible|trust|risk|compliance/.test(text)) return "AI Governance";
-  if (/security|cyber/.test(text)) return "AI Security";
-  if (/data|analytics/.test(text)) return "AI Data";
-  if (/agent|automation|workflow/.test(text)) return "AI Automation";
-  if (/sponsor|conference|summit|expo|exhibitor|partner/.test(text)) return "AI Event Sponsor";
-  if (/directory|forbes|companies|startup/.test(text)) return "AI Company Directory";
-  return "AI Vendor";
+  if (/agent|ai|machine learning|generative/.test(text)) return "AI-Enabled Software";
+  if (/sponsor|conference|summit|expo|exhibitor|partner/.test(text)) return "Technology Event Sponsor";
+  return "AI-Enabled Technology";
 }
 
 function discoveryDescriptionForCandidate(candidate = {}, source = {}, title = "") {
   const sourceType = cleanString(source.sourceType || "discovery source", 120);
   const sourceName = cleanString(source.sourceName || "starter source", 160);
   const pageTitle = cleanString(title, 240);
-  return cleanString(`${candidate.companyName || candidate.canonicalDomain} was found from ${sourceName}, a ${sourceType}${pageTitle ? ` page titled "${pageTitle}"` : ""}.`, 1000);
+  const candidateDescription = cleanString(candidate.description, 900);
+  return cleanString(`${candidate.companyName || candidate.canonicalDomain} was found from ${sourceName}, a ${sourceType}${pageTitle ? ` page titled "${pageTitle}"` : ""}.${candidateDescription ? ` Source description: ${candidateDescription}` : ""}`, 1400);
 }
 
 function discoveryReasonForCandidate(candidate = {}, source = {}, title = "") {
@@ -574,45 +758,150 @@ function discoveryReasonForCandidate(candidate = {}, source = {}, title = "") {
   const sourceName = cleanString(source.sourceName || "starter source", 160);
   const label = cleanString(candidate.rawLabel || candidate.companyName || candidate.canonicalDomain, 180);
   const titleText = cleanString(title, 240);
-  return cleanString(`Discovered as ${label} from ${sourceName}. Initial category is ${category}; website analysis should confirm AI relevance and fill deeper company details.${titleText ? ` Source page title: ${titleText}.` : ""}`, 1200);
+  return cleanString(`Discovered as ${label} from ${sourceName}. Initial category is ${category}; treat this as an AI-enabled or AI-budget-relevant technology prospect, then use website analysis or human review to confirm the specific AI leverage and sponsorship interest.${titleText ? ` Source page title: ${titleText}.` : ""}`, 1200);
 }
 
 function blockedDiscoveryDomain(domain = "") {
   const normalized = normalizeDomain(domain);
   if (!normalized) return true;
+  if (!normalized.includes(".")) return true;
   return [...discoveryBlockedDomains].some((blocked) => normalized === blocked || normalized.endsWith(`.${blocked}`));
 }
 
-function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null) {
-  const sourceDomain = normalizeDomain(sourceUrl);
+function sourceWantsSponsorCrawl(source = {}, payload = {}) {
+  const text = `${source.sourceType || ""} ${source.category || ""} ${source.sourceName || ""} ${source.description || ""}`.toLowerCase();
+  return payload.crawlSponsorPages === true || source.crawlSponsorPages === true || /\bevent sponsor crawl\b|organizer sponsor crawl|sponsor crawl/.test(text);
+}
+
+function sponsorPageScore(href = "", text = "") {
+  const haystack = `${href || ""} ${stripHtml(text || "")}`.toLowerCase();
+  let score = 0;
+  if (/\bsponsors?\b|sponsorship|sponsor-exhibitor|sponsors-exhibitors/.test(haystack)) score += 8;
+  if (/\bexhibitors?\b|exhibit hall|business hall|expo hall/.test(haystack)) score += 7;
+  if (/\bpartners?\b|solution providers?|vendors?\b/.test(haystack)) score += 4;
+  if (/\bmarketplace|showcase|startup city|ai zone|innovation hub|business hall/.test(haystack)) score += 3;
+  if (/\battending companies|companies attending|supplier directory/.test(haystack)) score += 3;
+  if (/\bcontact|privacy|terms|login|register|agenda|speaker|venue|hotel|travel|faq\b/.test(haystack) && score < 7) score -= 4;
+  return score;
+}
+
+function extractSponsorCrawlLinks(html = "", sourceUrl = "", limit = 6, debug = null) {
+  const sourceRoot = normalizeDomain(sourceUrl);
+  const currentUrl = normalizeUrl(sourceUrl);
   const links = new Map();
   const anchorPattern = /<a\b([^>]*)href=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi;
   let match;
   while ((match = anchorPattern.exec(String(html || "")))) {
-    const attributes = `${match[1] || ""} ${match[3] || ""}`;
     const href = cleanString(match[2], 1000);
-    if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) continue;
+    const innerHtml = match[4] || "";
+    const text = stripHtml(innerHtml).replace(/\s+/g, " ").trim();
     let url;
     try {
-      url = new URL(href, normalizeUrl(sourceUrl || "https://example.com"));
+      url = new URL(href, currentUrl || "https://example.com");
     } catch {
       continue;
     }
     if (!["http:", "https:"].includes(url.protocol)) continue;
     const domain = normalizeDomain(url.hostname);
-    const innerHtml = match[4] || "";
-    const text = stripHtml(innerHtml).replace(/\s+/g, " ").trim();
+    if (!sameRootDomain(domain, sourceRoot)) continue;
+    url.hash = "";
+    const normalized = normalizeUrl(url.toString());
+    if (!normalized || normalized === currentUrl) continue;
+    if (/\.(pdf|png|jpe?g|gif|webp|svg|zip|ics)$/i.test(url.pathname)) continue;
+    const score = sponsorPageScore(normalized, text);
+    if (score <= 0) continue;
+    const previous = links.get(normalized);
+    if (!previous || previous.score < score) {
+      links.set(normalized, { url: normalized, text, score });
+    }
+  }
+  const sorted = [...links.values()]
+    .sort((a, b) => b.score - a.score || a.url.length - b.url.length)
+    .slice(0, limit);
+  for (const link of sorted) {
+    recordDiscoveryDiagnostic(debug, "accepted", {
+      href: link.url,
+      rawLabel: link.text,
+      reason: `sponsor-page-crawl:${link.score}`
+    });
+  }
+  return sorted.map((link) => link.url);
+}
+
+function mergeDiscoveryCandidates(candidateGroups = [], limit = 75) {
+  const merged = new Map();
+  for (const group of candidateGroups) {
+    for (const candidate of group.candidates || []) {
+      if (merged.size >= limit) break;
+      const key = candidate.canonicalDomain ? `domain:${candidate.canonicalDomain}` : `name:${companySlug(candidate.companyName)}`;
+      if (!key || merged.has(key)) continue;
+      merged.set(key, {
+        ...candidate,
+        sourceUrl: candidate.sourceUrl || group.url,
+        sourcePageTitle: candidate.sourcePageTitle || group.title,
+        sourcePageRole: group.role || ""
+      });
+    }
+    if (merged.size >= limit) break;
+  }
+  return [...merged.values()];
+}
+
+function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null) {
+  const sourceDomain = normalizeDomain(sourceUrl);
+  const links = new Map();
+  function addNamedCandidate(companyName = "", sourceProfileUrl = "", description = "", reason = "structured-list-name") {
+    if (links.size >= limit) return;
+    const clean = cleanString(stripHtml(companyName), 180).replace(/\s+/g, " ").replace(/\s+(?:logo|image)$/i, "").trim();
+    if (!clean || genericSponsorLabel(clean) || weakCompanyLabel(clean)) {
+      recordDiscoveryDiagnostic(debug, "rejected", { href: sourceProfileUrl || sourceUrl, rawLabel: companyName, reason: "weak-structured-name" });
+      return;
+    }
+    const slug = companySlug(clean);
+    if (!slug) return;
+    const key = `name:${slug}`;
+    if (links.has(key)) return;
+    const profileUrl = normalizeUrl(sourceProfileUrl);
+    links.set(key, {
+      companyName: companyLabelTitleCase(clean),
+      canonicalDomain: "",
+      websiteUrl: "",
+      sourceUrl,
+      sourceProfileUrl: profileUrl,
+      description: cleanString(description, 1000),
+      rawLabel: clean,
+      nameSource: "structured-list-name"
+    });
+    recordDiscoveryDiagnostic(debug, "accepted", {
+      href: profileUrl || sourceUrl,
+      rawLabel: clean,
+      companyName: companyLabelTitleCase(clean),
+      nameSource: "structured-list-name",
+      reason
+    });
+  }
+  function addCandidate(href = "", text = "", innerHtml = "", attributes = "", reason = "accepted") {
+    if (links.size >= limit) return;
+    if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) return;
+    let url;
+    try {
+      url = new URL(href, normalizeUrl(sourceUrl || "https://example.com"));
+    } catch {
+      return;
+    }
+    if (!["http:", "https:"].includes(url.protocol)) return;
+    const domain = prospectCandidateDomain(url.hostname);
     if (!domain) {
       recordDiscoveryDiagnostic(debug, "rejected", { href, rawLabel: text, reason: "missing-domain" });
-      continue;
+      return;
     }
     if (blockedDiscoveryDomain(domain)) {
       recordDiscoveryDiagnostic(debug, "rejected", { href, domain, rawLabel: text, reason: "blocked-domain" });
-      continue;
+      return;
     }
     if (sameRootDomain(domain, sourceDomain)) {
       recordDiscoveryDiagnostic(debug, "rejected", { href, domain, rawLabel: text, reason: "same-source-domain" });
-      continue;
+      return;
     }
     const nameDecision = companyNameDecisionFromLink({ domain, text, innerHtml, attributes });
     if (!links.has(domain)) {
@@ -630,10 +919,61 @@ function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null
         rawLabel: nameDecision.rawLabel || text,
         companyName: nameDecision.companyName,
         nameSource: nameDecision.nameSource,
-        reason: nameDecision.rejectedLabel ? `ignored generic label: ${nameDecision.rejectedLabel}` : "accepted"
+        reason: nameDecision.rejectedLabel ? `ignored generic label: ${nameDecision.rejectedLabel}` : reason
       });
     }
-    if (links.size >= limit) break;
+  }
+
+  const decoded = htmlDecode(String(html || ""));
+  const scriptPattern = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  let scriptMatch;
+  while ((scriptMatch = scriptPattern.exec(String(html || ""))) && links.size < limit) {
+    const attributes = scriptMatch[1] || "";
+    if (!/ld(?:\+|&#x2b;|&#43;)json/i.test(attributes)) continue;
+    try {
+      const data = JSON.parse(htmlDecode(scriptMatch[2] || "").trim());
+      const visit = (value) => {
+        if (links.size >= limit || value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+          value.forEach(visit);
+          return;
+        }
+        if (typeof value !== "object") return;
+        const type = cleanString(value["@type"], 80).toLowerCase();
+        const name = cleanString(value.name, 180);
+        const profileUrl = normalizeUrl(value.url);
+        const description = cleanString(value.description, 1000);
+        if (name && (type.includes("listitem") || /\/company\//i.test(profileUrl)) && !/^top\b/i.test(name)) {
+          addNamedCandidate(name, profileUrl, description, "json-ld-item-list");
+        }
+        Object.values(value).forEach(visit);
+      };
+      visit(data);
+    } catch (error) {
+      recordDiscoveryDiagnostic(debug, "rejected", { href: sourceUrl, reason: `json-ld-parse-failed: ${error.message}` });
+    }
+  }
+
+  const structuredCompanyPattern = /"name"\s*:\s*"([^"]{2,160})"[\s\S]{0,1600}?"website"\s*:\s*"(https?:\/\/[^"]+)"/gi;
+  let structuredMatch;
+  while ((structuredMatch = structuredCompanyPattern.exec(decoded)) && links.size < limit) {
+    addCandidate(structuredMatch[2], structuredMatch[1], structuredMatch[1], "", "structured-company-record");
+  }
+
+  const markdownLinkPattern = /\[([^\]]{2,160})\]\((https?:\/\/[^)\s]+)\)/g;
+  let markdownMatch;
+  while ((markdownMatch = markdownLinkPattern.exec(decoded)) && links.size < limit) {
+    addCandidate(markdownMatch[2], markdownMatch[1], markdownMatch[1], "", "markdown-link");
+  }
+
+  const anchorPattern = /<a\b([^>]*)href=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi;
+  let match;
+  while ((match = anchorPattern.exec(String(html || ""))) && links.size < limit) {
+    const attributes = `${match[1] || ""} ${match[3] || ""}`;
+    const href = cleanString(match[2], 1000);
+    const innerHtml = match[4] || "";
+    const text = stripHtml(innerHtml).replace(/\s+/g, " ").trim();
+    addCandidate(href, text, innerHtml, attributes, "anchor-link");
   }
   return [...links.values()];
 }
@@ -710,10 +1050,17 @@ async function fetchPublicHtml(url = "") {
   }
   if (!response.ok) throw new Error(`Fetch failed with ${response.status} for ${target}.`);
   const contentType = response.headers.get("content-type") || "";
-  if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
+  if (contentType &&
+    !contentType.includes("text/html") &&
+    !contentType.includes("application/xhtml") &&
+    !contentType.includes("text/plain") &&
+    !contentType.includes("text/markdown")) {
     throw new Error("Discovery source did not return HTML.");
   }
   const html = await response.text();
+  if (/cf-chl|__cf_chl_|Checking your browser|Just a moment/i.test(html)) {
+    throw new Error(`Discovery source is protected by an anti-bot challenge for ${target}.`);
+  }
   return { url: target, html: cleanString(html, 500000) };
 }
 
@@ -1698,6 +2045,8 @@ function normalizeProspectSource(key, record = {}) {
     sourceName: cleanString(record.sourceName || record.name || record.source, 180),
     sourceType: cleanString(record.sourceType || record.type || "Public Web", 120),
     sourceUrl: normalizeUrl(record.sourceUrl || record.url),
+    description: cleanString(record.description, 1000),
+    category: cleanString(record.category, 160),
     status: cleanString(record.status, 80) || "active",
     lastRunAt: cleanString(record.lastRunAt, 40),
     lastRunBy: cleanString(record.lastRunBy, 180),
@@ -1735,6 +2084,8 @@ async function saveProspectSource(env, payload = {}, actor = "") {
     sourceName,
     sourceType: cleanString(payload.sourceType || existing?.sourceType || "Public Web", 120),
     sourceUrl,
+    description: cleanString(payload.description ?? existing?.description, 1000),
+    category: cleanString(payload.category ?? existing?.category, 160),
     status: cleanString(payload.status || existing?.status || "active", 80),
     createdAt: cleanString(existing?.createdAt) || now,
     createdBy: cleanString(existing?.createdBy) || actor || "crm",
@@ -2153,9 +2504,12 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
   if (!sourceUrl) throw new Error("A discovery source URL is required.");
   const sourceName = cleanString(payload.sourceName || payload.discoverySource || payload.source || "Web Discovery", 160);
   const source = await saveProspectSource(env, {
+    sourceId: payload.sourceId || payload.starterSourceId,
     sourceName,
     sourceUrl,
-    sourceType: payload.sourceType || "Public Web"
+    sourceType: payload.sourceType || "Public Web",
+    category: payload.category,
+    description: payload.description
   }, actor);
   const limit = cleanNumber(payload.limit, 25, 1, 75);
   const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew || payload.targetRemaining || limit, limit, 1, 75);
@@ -2165,7 +2519,35 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
   try {
     const { html } = await fetchPublicHtml(sourceUrl);
     const title = htmlTitle(html);
-    const candidates = extractCompanyLinks(html, sourceUrl, limit, debug);
+    const shouldCrawlSponsorPages = sourceWantsSponsorCrawl({ ...source, ...payload }, payload);
+    const crawlPageLimit = cleanNumber(payload.crawlPageLimit || payload.maxSponsorPages || source.crawlPageLimit, 6, 0, 8);
+    const discoveryPages = [{ url: sourceUrl, html, title, role: "source" }];
+    if (shouldCrawlSponsorPages && crawlPageLimit > 0) {
+      const sponsorPageUrls = extractSponsorCrawlLinks(html, sourceUrl, crawlPageLimit, debug);
+      for (const sponsorPageUrl of sponsorPageUrls) {
+        try {
+          const sponsorPage = await fetchPublicHtml(sponsorPageUrl);
+          discoveryPages.push({
+            url: sponsorPageUrl,
+            html: sponsorPage.html,
+            title: htmlTitle(sponsorPage.html),
+            role: "sponsor-page"
+          });
+        } catch (pageError) {
+          recordDiscoveryDiagnostic(debug, "rejected", {
+            href: sponsorPageUrl,
+            reason: `sponsor-page-fetch-failed: ${pageError.message}`
+          });
+        }
+      }
+    }
+    const candidatePages = shouldCrawlSponsorPages
+      ? discoveryPages.filter((page) => page.role === "sponsor-page" || sponsorPageScore(page.url, page.title) > 0)
+      : discoveryPages;
+    const candidates = mergeDiscoveryCandidates(candidatePages.map((page) => ({
+      ...page,
+      candidates: extractCompanyLinks(page.html, page.url, limit, debug)
+    })), limit);
     const saved = [];
     const existingCompanies = Array.isArray(payload.existingCompanies) ? payload.existingCompanies : await prospectCompanies(env);
     const seenCompanyIds = payload.seenCompanyIds instanceof Set
@@ -2196,20 +2578,20 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
         companyName: candidate.companyName,
         canonicalDomain: candidate.canonicalDomain,
         websiteUrl: candidate.websiteUrl,
-        description: discoveryDescriptionForCandidate(candidate, source, title),
-        classificationReason: discoveryReasonForCandidate(candidate, source, title),
+        description: discoveryDescriptionForCandidate(candidate, source, candidate.sourcePageTitle || title),
+        classificationReason: discoveryReasonForCandidate(candidate, source, candidate.sourcePageTitle || title),
         primaryCategory: category,
         categories: [category],
         aiRelevanceScore: /directory|forbes|ai/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? 70 : 55,
         enterpriseFocus: /sponsor|conference|summit|expo|enterprise/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? 75 : 60,
         sponsorshipFit: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? "Needs Review" : "",
         sponsoredEvents: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? [sourceName] : [],
-        sponsorEvidenceUrls: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? [sourceUrl] : [],
+        sponsorEvidenceUrls: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? cleanArray([sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 40, 500) : [],
         sponsorshipNotes: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`)
-          ? `Found on ${sourceName}; verify sponsorship level and spend manually.`
+          ? `Found on ${sourceName}${candidate.sourceUrl && candidate.sourceUrl !== sourceUrl ? ` via ${candidate.sourceUrl}` : ""}; verify sponsorship level and spend manually.`
           : "",
         discoverySources: [sourceName],
-        sourceUrls: [sourceUrl],
+        sourceUrls: cleanArray([sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 30, 500),
         processingStage: "DOMAIN NORMALIZATION",
         processingStatus: "DISCOVERED",
         provenance: {
@@ -2218,6 +2600,9 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
             sourceType: source.sourceType,
             sourcePageTitle: title,
             url: sourceUrl,
+            candidateSourceUrl: candidate.sourceUrl || "",
+            candidateSourcePageTitle: candidate.sourcePageTitle || "",
+            sourceProfileUrl: candidate.sourceProfileUrl || "",
             valueState: "SOURCE_PROVIDED",
             discoveredAt: now
           }
@@ -2259,6 +2644,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       candidates: candidates.length,
       discovered: saved.length,
       skippedExisting,
+      crawledPages: discoveryPages.map((page) => ({ url: page.url, title: page.title, role: page.role })),
       accepted: debug.accepted,
       rejected: debug.rejected,
       skipped: debug.skipped
@@ -2267,6 +2653,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       sourceName,
       sourceUrl,
       sourceTitle: title,
+      crawledPages: discoveryPages.map((page) => ({ url: page.url, title: page.title, role: page.role })),
       candidates: candidates.length,
       discovered: saved.length,
       skippedExisting,
