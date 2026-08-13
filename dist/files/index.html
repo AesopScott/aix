@@ -325,6 +325,15 @@
       word-break: break-word;
     }
 
+    .file-status-cell {
+      min-width: 8rem;
+    }
+
+    .file-status-cell select {
+      min-width: 7.5rem;
+      padding-right: 2.25rem;
+    }
+
     .actions {
       display: flex;
       gap: 0.45rem;
@@ -456,8 +465,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <label>
             Receipt event
             <select name="receiptEvent">
-              <option value="" selected>&lt;none&gt;</option>
-              <option value="global">Global</option>
+              <option value="global" selected>Global</option>
               <option value="dallas">Dallas</option>
               <option value="denver">Denver</option>
               <option value="raleigh">Raleigh</option>
@@ -777,8 +785,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           .map((file) => `
             <tr>
               <td class="file-key" title="${escapeHtml(file.key)}">${escapeHtml(displayName(file))}</td>
-              <td>${escapeHtml(file.receiptEvent || file.event || "")}</td>
-              <td>
+              <td>${escapeHtml(file.receiptEvent || file.event || "Global")}</td>
+              <td class="file-status-cell">
                 <select data-status="${encodeURIComponent(file.key)}">
                   ${statusOptionsHtml(file.status)}
                 </select>
