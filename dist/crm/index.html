@@ -3559,12 +3559,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <label>Company LinkedIn<input name="linkedinCompanyUrl" placeholder="https://linkedin.com/company/acme-ai" value="${escapeHtml(company?.linkedinCompanyUrl || "")}"></label>
           <label>Primary Category<input name="primaryCategory" placeholder="AI Governance" value="${escapeHtml(company?.primaryCategory || "")}"></label>
           <label>Categories<input name="categories" placeholder="AI Security, AI Governance" value="${escapeHtml((company?.categories || []).join(", "))}"></label>
+          <label>Source URLs<input name="sourceUrls" placeholder="https://source-page.example" value="${escapeHtml((company?.sourceUrls || []).join(", "))}"></label>
           <label>Employee Range<input name="employeeRange" placeholder="201-1000" value="${escapeHtml(company?.employeeRange || "")}"></label>
           <label>Funding Stage<input name="fundingStage" placeholder="Series B" value="${escapeHtml(company?.fundingStage || "")}"></label>
           <label>AI Relevance<input name="aiRelevanceScore" type="number" min="0" max="100" value="${escapeHtml(company?.aiRelevanceScore ?? 80)}"></label>
           <label>Enterprise Focus<input name="enterpriseFocus" type="number" min="0" max="100" value="${escapeHtml(company?.enterpriseFocus ?? 75)}"></label>
           <label>Target Roles<input name="targetExecutiveRoles" placeholder="CIO, CISO, Chief AI Officer" value="${escapeHtml((company?.targetExecutiveRoles || []).join(", "))}"></label>
           <label>Discovery Sources<input name="discoverySources" placeholder="G2, Web Discovery" value="${escapeHtml((company?.discoverySources || []).join(", "))}"></label>
+          <label class="span-full">Description<textarea name="description" placeholder="What we know about the company so far.">${escapeHtml(company?.description || "")}</textarea></label>
           <label class="span-full">Why This Company<textarea name="classificationReason" placeholder="Fit explanation Miller can trust.">${escapeHtml(company?.classificationReason || "")}</textarea></label>
           <div class="prospecting-actions span-full">
             <button type="submit">${company ? "Save Company Changes" : "Save Company"}</button>
@@ -3744,6 +3746,82 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       `;
     }
 
+    function starterSourceName(sourceId = "") {
+      return (prospectingState?.starterSources || []).find((source) => source.sourceId === sourceId)?.sourceName || "Starter source";
+    }
+
+    function discoveryRunSummary(data = {}) {
+      const discovery = data.discovery;
+      if (discovery) {
+        const skipped = Number(discovery.skippedExisting || 0);
+        const candidates = Number(discovery.candidates || discovery.discovered || 0);
+        return `${discovery.sourceName || "Discovery source"} finished: ${candidates} candidates checked, ${discovery.discovered || 0} new compan${Number(discovery.discovered || 0) === 1 ? "y" : "ies"} saved${skipped ? `, ${skipped} already known` : ""}.`;
+      }
+      const batch = data.discoveryBatch;
+      if (batch) {
+        const failed = Number(batch.attempted || 0) - Number(batch.succeeded || 0);
+        const skipped = Number(batch.skippedExisting || 0);
+        const candidates = Number(batch.candidates || batch.discovered || 0);
+        const target = Number(batch.targetNewCompanies || 0);
+        const targetText = target ? ` toward ${target} new` : "";
+        const exhaustedText = batch.exhausted ? ", starter sources exhausted before target" : "";
+        return `${batch.succeeded || 0} source${Number(batch.succeeded || 0) === 1 ? "" : "s"} finished${targetText}: ${candidates} candidates checked, ${batch.discovered || 0} new saved${skipped ? `, ${skipped} already known` : ""}${failed ? `, ${failed} source${failed === 1 ? "" : "s"} failed` : ""}${exhaustedText}.`;
+      }
+      return "Discovery source finished.";
+    }
+
+    function renderProspectingRunStatus() {
+      if (!prospectingRunStatus) return "";
+      return `
+        <div class="source-run-status">
+          <strong>${escapeHtml(prospectingRunStatus.title || "Discovery run")}</strong>
+          <span>${escapeHtml(prospectingRunStatus.message || "")}</span>
+        </div>
+      `;
+    }
+
+    function renderStarterSources() {
+      const sources = prospectingState?.starterSources || [];
+      if (!sources.length) return "";
+      const categoryMap = new Map();
+      for (const source of sources) {
+        const category = source.category || "Starter Sources";
+        if (!categoryMap.has(category)) categoryMap.set(category, []);
+        categoryMap.get(category).push(source);
+      }
+      return `
+        <div>
+          <div class="prospecting-actions prospecting-section-actions">
+            <button class="secondary" type="button" data-run-starter-prospect-sources>Find 50 New Companies</button>
+          </div>
+          ${[...categoryMap.entries()].map(([category, rows]) => `
+            <p class="eyebrow">${escapeHtml(category)}</p>
+            <div class="prospecting-grid">
+              ${rows.map((source) => `
+                <article class="queue-card">
+                  <h3>${escapeHtml(source.sourceName)}</h3>
+                  <div class="crm-compact-pills">
+                    <span class="pill">${escapeHtml(source.sourceType || "Public Web")}</span>
+                    <span class="pill">${escapeHtml(source.category || "Starter Source")}</span>
+                    ${source.lastRunStatus ? `<span class="pill">${escapeHtml(source.lastRunStatus)}</span>` : ""}
+                    ${source.discoveredCount ? `<span class="pill">${escapeHtml(source.discoveredCount)} new saved</span>` : ""}
+                    ${source.skippedExistingCount ? `<span class="pill">${escapeHtml(source.skippedExistingCount)} already known</span>` : ""}
+                  </div>
+                  <p>${escapeHtml(source.description || "")}</p>
+                  ${source.lastRunAt ? `<p>Last run: ${escapeHtml(formatDate(source.lastRunAt))}</p>` : ""}
+                  ${source.lastRunError ? `<p>${escapeHtml(source.lastRunError)}</p>` : ""}
+                  <p><a href="${escapeHtml(source.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(source.sourceUrl)}</a></p>
+                  <div class="prospecting-actions">
+                    <button class="compact secondary" type="button" data-run-starter-prospect-source="${escapeHtml(source.sourceId)}">Run Source</button>
+                  </div>
+                </article>
+              `).join("")}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
     function renderDiscoveryDebug() {
       const logs = prospectingState?.debug || [];
       if (!logs.length) return '<p>No discovery debug logs yet.</p>';
@@ -3755,6 +3833,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <div class="crm-compact-pills">
                 <span class="pill ${log.status === "failed" ? "warn" : ""}">${escapeHtml(log.status || "unknown")}</span>
                 <span class="pill">${escapeHtml(log.discovered || 0)} discovered</span>
+                <span class="pill">${escapeHtml(log.candidates || 0)} candidates</span>
+                <span class="pill">${escapeHtml(log.skippedExisting || 0)} already known</span>
                 <span class="pill">${escapeHtml((log.accepted || []).length)} accepted links</span>
                 <span class="pill">${escapeHtml((log.rejected || []).length)} rejected links</span>
               </div>
@@ -3766,6 +3846,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 ${(log.accepted || []).map((entry) => `
                   <p>${escapeHtml(entry.companyName || "")} | ${escapeHtml(entry.domain || "")} | ${escapeHtml(entry.nameSource || "")}${entry.rawLabel ? ` | raw: ${escapeHtml(entry.rawLabel)}` : ""}${entry.reason ? ` | ${escapeHtml(entry.reason)}` : ""}</p>
                 `).join("") || "<p>No accepted links recorded.</p>"}
+              </details>
+              <details>
+                <summary>Already Known</summary>
+                ${(log.skipped || []).map((entry) => `
+                  <p>${escapeHtml(entry.companyName || "")} | ${escapeHtml(entry.domain || "")}${entry.reason ? ` | ${escapeHtml(entry.reason)}` : ""}</p>
+                `).join("") || "<p>No already-known companies recorded.</p>"}
               </details>
               <details>
                 <summary>Rejected Links</summary>
@@ -3805,70 +3891,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ["Needs Review", queue.needsReview]
       ];
       return `<div class="prospecting-grid">${items.map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || 0)}</strong></div>`).join("")}</div>`;
-    }
-
-    function starterSourceName(sourceId = "") {
-      return (prospectingState?.starterSources || []).find((source) => source.sourceId === sourceId)?.sourceName || "Starter source";
-    }
-
-    function discoveryRunSummary(data = {}) {
-      const discovery = data.discovery;
-      if (discovery) {
-        return `${discovery.sourceName || "Discovery source"} finished with ${discovery.discovered || 0} discovered compan${Number(discovery.discovered || 0) === 1 ? "y" : "ies"}.`;
-      }
-      const batch = data.discoveryBatch;
-      if (batch) {
-        const failed = Number(batch.attempted || 0) - Number(batch.succeeded || 0);
-        return `${batch.succeeded || 0} source${Number(batch.succeeded || 0) === 1 ? "" : "s"} finished, ${batch.discovered || 0} companies discovered${failed ? `, ${failed} source${failed === 1 ? "" : "s"} failed` : ""}.`;
-      }
-      return "Discovery source finished.";
-    }
-
-    function renderProspectingRunStatus() {
-      if (!prospectingRunStatus) return "";
-      return `
-        <div class="source-run-status">
-          <strong>${escapeHtml(prospectingRunStatus.title || "Discovery run")}</strong>
-          <span>${escapeHtml(prospectingRunStatus.message || "")}</span>
-        </div>
-      `;
-    }
-
-    function renderStarterSources() {
-      const sources = prospectingState?.starterSources || [];
-      if (!sources.length) return "";
-      const categoryMap = new Map();
-      for (const source of sources) {
-        const category = source.category || "Starter Sources";
-        if (!categoryMap.has(category)) categoryMap.set(category, []);
-        categoryMap.get(category).push(source);
-      }
-      return `
-        <div>
-          <div class="prospecting-actions prospecting-section-actions">
-            <button class="secondary" type="button" data-run-starter-prospect-sources>Run One Starter Source</button>
-          </div>
-          ${[...categoryMap.entries()].map(([category, rows]) => `
-            <p class="eyebrow">${escapeHtml(category)}</p>
-            <div class="prospecting-grid">
-              ${rows.map((source) => `
-                <article class="queue-card">
-                  <h3>${escapeHtml(source.sourceName)}</h3>
-                  <div class="crm-compact-pills">
-                    <span class="pill">${escapeHtml(source.sourceType || "Public Web")}</span>
-                    <span class="pill">${escapeHtml(source.category || "Starter Source")}</span>
-                  </div>
-                  <p>${escapeHtml(source.description || "")}</p>
-                  <p><a href="${escapeHtml(source.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(source.sourceUrl)}</a></p>
-                  <div class="prospecting-actions">
-                    <button class="compact secondary" type="button" data-run-starter-prospect-source="${escapeHtml(source.sourceId)}">Run Source</button>
-                  </div>
-                </article>
-              `).join("")}
-            </div>
-          `).join("")}
-        </div>
-      `;
     }
 
     function renderProspectingTabs() {
@@ -4893,6 +4915,73 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    async function runStarterDiscoveryToTarget(button) {
+      const originalLabel = button?.textContent || "";
+      const targetNewCompanies = 50;
+      const perStepNewCap = 10;
+      const maxSteps = Math.max(1, prospectingState?.starterSources?.length || 9);
+      const totals = { attempted: 0, succeeded: 0, candidates: 0, discovered: 0, skippedExisting: 0, failed: 0 };
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Finding companies...";
+      }
+      try {
+        for (let step = 0; step < maxSteps && totals.discovered < targetNewCompanies; step += 1) {
+          const remaining = targetNewCompanies - totals.discovered;
+          prospectingRunStatus = {
+            title: "Finding 50 new companies",
+            message: `Checking starter source ${step + 1} of ${maxSteps}. ${totals.discovered} new saved, ${totals.skippedExisting} already known.`
+          };
+          render();
+          setNotice(prospectingRunStatus.message, "ok");
+          const data = await fetch(api, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "run-partner-prospect-starter-sources",
+              limitPerSource: 50,
+              maxSources: 1,
+              targetNewCompanies: Math.min(perStepNewCap, remaining)
+            })
+          }).then(readJson);
+          const batch = data.discoveryBatch || {};
+          const result = (batch.results || []).find((row) => row.ok) || (batch.results || [])[0] || {};
+          totals.attempted += Number(batch.attempted || 0);
+          totals.succeeded += Number(batch.succeeded || 0);
+          totals.candidates += Number(batch.candidates || 0);
+          totals.discovered += Number(batch.discovered || 0);
+          totals.skippedExisting += Number(batch.skippedExisting || 0);
+          totals.failed += Math.max(0, Number(batch.attempted || 0) - Number(batch.succeeded || 0));
+          prospectingRunStatus = {
+            title: "Finding 50 new companies",
+            message: `${result.sourceName || "Starter source"} checked. ${totals.discovered} new saved, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked.`
+          };
+          render();
+          if (!Number(batch.attempted || 0)) break;
+        }
+        prospectingState = await fetch(`${api}?prospecting=1`).then(readJson);
+        const exhausted = totals.discovered < targetNewCompanies;
+        prospectingRunStatus = {
+          title: exhausted ? "Starter discovery finished" : "50 new companies found",
+          message: `${totals.succeeded} source${totals.succeeded === 1 ? "" : "s"} finished. ${totals.discovered} new saved, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked${totals.failed ? `, ${totals.failed} failed` : ""}${exhausted ? ", starter source pass complete before hitting 50" : ""}.`
+        };
+        render();
+        setNotice(prospectingRunStatus.message, "ok");
+      } catch (error) {
+        prospectingRunStatus = {
+          title: "Starter discovery failed",
+          message: error.message || "Starter discovery could not finish."
+        };
+        render();
+        showErrorNotice(error, "Starter discovery could not finish.");
+      } finally {
+        if (button?.isConnected) {
+          button.disabled = false;
+          button.textContent = originalLabel;
+        }
+      }
+    }
+
     function prospectingFormPayload(form) {
       return Object.fromEntries(new FormData(form).entries());
     }
@@ -5664,7 +5753,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         await runProspectingButtonAction(runStarterSourceButton, "Running...", () => postPartnerProspecting({
           action: "run-partner-prospect-starter-source",
           sourceId: runStarterSourceButton.dataset.runStarterProspectSource,
-          limit: 8
+          limit: 50,
+          targetNewCompanies: 10
         }, "Starter source processed.", {
           pendingMessage: `Running ${sourceName}. This can take a few seconds.`,
           resultTitle: `${sourceName} run complete`,
@@ -5673,15 +5763,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       if (runStarterSourcesButton) {
-        await runProspectingButtonAction(runStarterSourcesButton, "Running one source...", () => postPartnerProspecting({
-          action: "run-partner-prospect-starter-sources",
-          limitPerSource: 8,
-          maxSources: 1
-        }, "Starter source processed.", {
-          pendingMessage: "Running one starter source. Use the individual source buttons to keep adding more.",
-          resultTitle: "Starter source run complete",
-          successFromResponse: true
-        }));
+        await runStarterDiscoveryToTarget(runStarterSourcesButton);
         return;
       }
       if (reviewButton) {

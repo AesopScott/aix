@@ -551,6 +551,32 @@ function recordDiscoveryDiagnostic(debug, type, entry = {}) {
   });
 }
 
+function discoveryCategoryForSource(source = {}) {
+  const text = `${source.sourceName || ""} ${source.sourceType || ""} ${source.category || ""} ${source.description || ""}`.toLowerCase();
+  if (/governance|responsible|trust|risk|compliance/.test(text)) return "AI Governance";
+  if (/security|cyber/.test(text)) return "AI Security";
+  if (/data|analytics/.test(text)) return "AI Data";
+  if (/agent|automation|workflow/.test(text)) return "AI Automation";
+  if (/sponsor|conference|summit|expo|exhibitor|partner/.test(text)) return "AI Event Sponsor";
+  if (/directory|forbes|companies|startup/.test(text)) return "AI Company Directory";
+  return "AI Vendor";
+}
+
+function discoveryDescriptionForCandidate(candidate = {}, source = {}, title = "") {
+  const sourceType = cleanString(source.sourceType || "discovery source", 120);
+  const sourceName = cleanString(source.sourceName || "starter source", 160);
+  const pageTitle = cleanString(title, 240);
+  return cleanString(`${candidate.companyName || candidate.canonicalDomain} was found from ${sourceName}, a ${sourceType}${pageTitle ? ` page titled "${pageTitle}"` : ""}.`, 1000);
+}
+
+function discoveryReasonForCandidate(candidate = {}, source = {}, title = "") {
+  const category = discoveryCategoryForSource(source);
+  const sourceName = cleanString(source.sourceName || "starter source", 160);
+  const label = cleanString(candidate.rawLabel || candidate.companyName || candidate.canonicalDomain, 180);
+  const titleText = cleanString(title, 240);
+  return cleanString(`Discovered as ${label} from ${sourceName}. Initial category is ${category}; website analysis should confirm AI relevance and fill deeper company details.${titleText ? ` Source page title: ${titleText}.` : ""}`, 1200);
+}
+
 function blockedDiscoveryDomain(domain = "") {
   const normalized = normalizeDomain(domain);
   if (!normalized) return true;
@@ -594,7 +620,9 @@ function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null
         companyName: nameDecision.companyName,
         canonicalDomain: domain,
         websiteUrl: `${url.protocol}//${domain}/`,
-        sourceUrl
+        sourceUrl,
+        rawLabel: nameDecision.rawLabel || text,
+        nameSource: nameDecision.nameSource
       });
       recordDiscoveryDiagnostic(debug, "accepted", {
         href,
@@ -1605,19 +1633,7 @@ async function prospectCompanies(env) {
 }
 
 async function findProspectCompany(env, payload = {}) {
-  const companies = await prospectCompanies(env);
-  const requestedKey = cleanString(payload.key || payload.companyKey, 500);
-  const requestedId = cleanString(payload.companyId, 180);
-  const domain = normalizeDomain(payload.canonicalDomain || payload.websiteUrl);
-  const linkedin = cleanString(payload.linkedinCompanyUrl, 500).toLowerCase().replace(/\/+$/, "");
-  const name = companySlug(payload.companyName || payload.company || payload.name);
-  return companies.find((company) =>
-    (requestedKey && company.key === requestedKey) ||
-    (requestedId && company.companyId === requestedId) ||
-    (domain && company.canonicalDomain === domain) ||
-    (linkedin && cleanString(company.linkedinCompanyUrl, 500).toLowerCase().replace(/\/+$/, "") === linkedin) ||
-    (name && companySlug(company.companyName) === name)
-  );
+  return findProspectCompanyInList(await prospectCompanies(env), payload);
 }
 
 async function writeProspectAudit(env, companyId, entry = {}) {
@@ -1639,7 +1655,8 @@ async function writeProspectDebug(env, runId = "", entry = {}) {
     createdAt: now,
     ...entry,
     accepted: Array.isArray(entry.accepted) ? entry.accepted.slice(0, 40) : [],
-    rejected: Array.isArray(entry.rejected) ? entry.rejected.slice(0, 40) : []
+    rejected: Array.isArray(entry.rejected) ? entry.rejected.slice(0, 40) : [],
+    skipped: Array.isArray(entry.skipped) ? entry.skipped.slice(0, 40) : []
   };
   await env.MOJO_SUMMITS_SETUP_STATE.put(`${PARTNER_PROSPECT_DEBUG_PREFIX}${id}`, JSON.stringify(record));
   return record;
@@ -1662,8 +1679,11 @@ async function prospectDebugEntries(env, limit = 12) {
       status: cleanString(record.status, 80),
       error: cleanString(record.error, 1000),
       discovered: cleanNumber(record.discovered, 0, 0, 10000),
+      candidates: cleanNumber(record.candidates, 0, 0, 10000),
+      skippedExisting: cleanNumber(record.skippedExisting, 0, 0, 10000),
       accepted: Array.isArray(record.accepted) ? record.accepted.slice(0, 20) : [],
-      rejected: Array.isArray(record.rejected) ? record.rejected.slice(0, 20) : []
+      rejected: Array.isArray(record.rejected) ? record.rejected.slice(0, 20) : [],
+      skipped: Array.isArray(record.skipped) ? record.skipped.slice(0, 20) : []
     };
   }));
   return rows.filter(Boolean)
@@ -1684,6 +1704,7 @@ function normalizeProspectSource(key, record = {}) {
     lastRunStatus: cleanString(record.lastRunStatus, 80),
     lastRunError: cleanString(record.lastRunError, 1000),
     discoveredCount: cleanNumber(record.discoveredCount, 0, 0, 1000000),
+    skippedExistingCount: cleanNumber(record.skippedExistingCount, 0, 0, 1000000),
     createdAt: cleanString(record.createdAt),
     createdBy: cleanString(record.createdBy, 180),
     updatedAt: cleanString(record.updatedAt),
@@ -2136,21 +2157,57 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
     sourceUrl,
     sourceType: payload.sourceType || "Public Web"
   }, actor);
-  const limit = cleanNumber(payload.limit, 10, 1, 20);
+  const limit = cleanNumber(payload.limit, 25, 1, 75);
+  const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew || payload.targetRemaining || limit, limit, 1, 75);
   const now = new Date().toISOString();
-  const debug = { accepted: [], rejected: [] };
+  const debug = { accepted: [], rejected: [], skipped: [] };
   const debugRunId = `${companySlug(sourceName) || "source"}:${now}`;
   try {
     const { html } = await fetchPublicHtml(sourceUrl);
     const title = htmlTitle(html);
     const candidates = extractCompanyLinks(html, sourceUrl, limit, debug);
     const saved = [];
+    const existingCompanies = Array.isArray(payload.existingCompanies) ? payload.existingCompanies : await prospectCompanies(env);
+    const seenCompanyIds = payload.seenCompanyIds instanceof Set
+      ? payload.seenCompanyIds
+      : new Set(existingCompanies.map((company) => company.companyId).filter(Boolean));
+    let skippedExisting = 0;
     const config = await partnerScoreConfig(env);
+    const category = discoveryCategoryForSource(source);
     for (const candidate of candidates) {
+      const candidatePayload = {
+        companyName: candidate.companyName,
+        canonicalDomain: candidate.canonicalDomain,
+        websiteUrl: candidate.websiteUrl
+      };
+      const candidateId = prospectCompanyId(candidatePayload);
+      const existing = findProspectCompanyInList(existingCompanies, candidatePayload);
+      if ((candidateId && seenCompanyIds.has(candidateId)) || existing) {
+        skippedExisting += 1;
+        debug.skipped.push({
+          companyName: candidate.companyName,
+          domain: candidate.canonicalDomain,
+          url: candidate.websiteUrl,
+          reason: existing ? "already in Vendor Universe" : "duplicate in this discovery run"
+        });
+        continue;
+      }
       const record = await saveDiscoveredProspectCompany(env, {
         companyName: candidate.companyName,
         canonicalDomain: candidate.canonicalDomain,
         websiteUrl: candidate.websiteUrl,
+        description: discoveryDescriptionForCandidate(candidate, source, title),
+        classificationReason: discoveryReasonForCandidate(candidate, source, title),
+        primaryCategory: category,
+        categories: [category],
+        aiRelevanceScore: /directory|forbes|ai/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? 70 : 55,
+        enterpriseFocus: /sponsor|conference|summit|expo|enterprise/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? 75 : 60,
+        sponsorshipFit: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? "Needs Review" : "",
+        sponsoredEvents: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? [sourceName] : [],
+        sponsorEvidenceUrls: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`) ? [sourceUrl] : [],
+        sponsorshipNotes: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`)
+          ? `Found on ${sourceName}; verify sponsorship level and spend manually.`
+          : "",
         discoverySources: [sourceName],
         sourceUrls: [sourceUrl],
         processingStage: "DOMAIN NORMALIZATION",
@@ -2167,6 +2224,10 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
         }
       }, actor, config);
       saved.push(record);
+      existingCompanies.push(record);
+      if (record.companyId) seenCompanyIds.add(record.companyId);
+      if (candidateId) seenCompanyIds.add(candidateId);
+      if (saved.length >= targetNewCompanies) break;
     }
     await env.MOJO_SUMMITS_SETUP_STATE.put(source.key, JSON.stringify({
       ...source,
@@ -2175,6 +2236,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       lastRunStatus: "completed",
       lastRunError: "",
       discoveredCount: Number(source.discoveredCount || 0) + saved.length,
+      skippedExistingCount: Number(source.skippedExistingCount || 0) + skippedExisting,
       updatedAt: now,
       updatedBy: actor || "crm"
     }));
@@ -2183,7 +2245,9 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       action: "source-discovery",
       sourceName,
       sourceUrl,
-      discovered: saved.length
+      candidates: candidates.length,
+      discovered: saved.length,
+      skippedExisting
     });
     await writeProspectDebug(env, debugRunId, {
       actor,
@@ -2192,16 +2256,22 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       sourceUrl,
       sourceTitle: title,
       status: "completed",
+      candidates: candidates.length,
       discovered: saved.length,
+      skippedExisting,
       accepted: debug.accepted,
-      rejected: debug.rejected
+      rejected: debug.rejected,
+      skipped: debug.skipped
     });
     return {
       sourceName,
       sourceUrl,
       sourceTitle: title,
+      candidates: candidates.length,
       discovered: saved.length,
-      companies: saved
+      skippedExisting,
+      companies: saved,
+      skipped: debug.skipped
     };
   } catch (error) {
     await env.MOJO_SUMMITS_SETUP_STATE.put(source.key, JSON.stringify({
@@ -2221,10 +2291,134 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       status: "failed",
       error: cleanString(error.message, 1000),
       accepted: debug.accepted,
-      rejected: debug.rejected
+      rejected: debug.rejected,
+      skipped: debug.skipped
     });
     throw error;
   }
+}
+
+function prospectStarterSourceById(sourceId = "") {
+  const cleaned = cleanString(sourceId, 180);
+  return partnerProspectStarterSources.find((source) => source.sourceId === cleaned || companySlug(source.sourceName) === cleaned) || null;
+}
+
+function prospectCompanyMatchesPayload(company = {}, payload = {}) {
+  const requestedKey = cleanString(payload.key || payload.companyKey, 500);
+  const requestedId = cleanString(payload.companyId, 180);
+  const domain = normalizeDomain(payload.canonicalDomain || payload.websiteUrl);
+  const linkedin = cleanString(payload.linkedinCompanyUrl, 500).toLowerCase().replace(/\/+$/, "");
+  const name = companySlug(payload.companyName || payload.company || payload.name);
+  return (requestedKey && company.key === requestedKey) ||
+    (requestedId && company.companyId === requestedId) ||
+    (domain && company.canonicalDomain === domain) ||
+    (linkedin && cleanString(company.linkedinCompanyUrl, 500).toLowerCase().replace(/\/+$/, "") === linkedin) ||
+    (name && companySlug(company.companyName) === name);
+}
+
+function findProspectCompanyInList(companies = [], payload = {}) {
+  return companies.find((company) => prospectCompanyMatchesPayload(company, payload)) || null;
+}
+
+async function starterSourcesWithRunState(env, savedSourceRows = null) {
+  const savedSources = Array.isArray(savedSourceRows) ? savedSourceRows : await prospectSources(env);
+  const savedById = new Map(savedSources.map((source) => [source.sourceId, source]));
+  return partnerProspectStarterSources.map((source, index) => {
+    const saved = savedById.get(source.sourceId) || {};
+    return {
+      ...source,
+      runOrder: index,
+      lastRunAt: cleanString(saved.lastRunAt, 40),
+      lastRunBy: cleanString(saved.lastRunBy, 180),
+      lastRunStatus: cleanString(saved.lastRunStatus, 80),
+      lastRunError: cleanString(saved.lastRunError, 1000),
+      discoveredCount: cleanNumber(saved.discoveredCount, 0, 0, 1000000),
+      skippedExistingCount: cleanNumber(saved.skippedExistingCount, 0, 0, 1000000),
+      updatedAt: cleanString(saved.updatedAt, 40)
+    };
+  });
+}
+
+function starterSourcesForRun(sources = [], maxSources = 1) {
+  return [...sources]
+    .sort((a, b) => {
+      const aLast = a.lastRunAt ? Date.parse(a.lastRunAt) || 0 : 0;
+      const bLast = b.lastRunAt ? Date.parse(b.lastRunAt) || 0 : 0;
+      if (aLast !== bLast) return aLast - bLast;
+      return Number(a.runOrder || 0) - Number(b.runOrder || 0);
+    })
+    .slice(0, maxSources);
+}
+
+async function runStarterProspectSource(env, payload = {}, actor = "") {
+  const source = prospectStarterSourceById(payload.sourceId || payload.starterSourceId);
+  if (!source) throw new Error("Starter discovery source was not found.");
+  return runSourceDiscovery(env, {
+    ...source,
+    limit: payload.limit || 75,
+    targetNewCompanies: payload.targetNewCompanies || payload.targetNew || 50
+  }, actor);
+}
+
+async function runStarterProspectSources(env, payload = {}, actor = "") {
+  const selectedIds = cleanArray(payload.sourceIds || payload.starterSourceIds, 30, 180);
+  const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew, 50, 1, 200);
+  const maxSources = cleanNumber(payload.maxSources, partnerProspectStarterSources.length, 1, partnerProspectStarterSources.length);
+  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 75, 1, 75);
+  const starterSources = await starterSourcesWithRunState(env);
+  const selectedSet = new Set(selectedIds);
+  const sources = selectedIds.length
+    ? starterSources.filter((source) => selectedSet.has(source.sourceId) || selectedSet.has(companySlug(source.sourceName)))
+    : starterSourcesForRun(starterSources, maxSources);
+  const existingCompanies = await prospectCompanies(env);
+  const seenCompanyIds = new Set(existingCompanies.map((company) => company.companyId).filter(Boolean));
+  const results = [];
+  for (const source of sources) {
+    const remaining = targetNewCompanies - results.reduce((sum, result) => sum + Number(result.discovered || 0), 0);
+    if (remaining <= 0) break;
+    try {
+      const result = await runSourceDiscovery(env, {
+        ...source,
+        limit: limitPerSource,
+        targetRemaining: remaining,
+        existingCompanies,
+        seenCompanyIds
+      }, actor);
+      results.push({
+        sourceId: source.sourceId,
+        sourceName: source.sourceName,
+        ok: true,
+        candidates: result.candidates,
+        discovered: result.discovered,
+        skippedExisting: result.skippedExisting
+      });
+    } catch (error) {
+      results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: false, error: cleanString(error.message, 500) });
+    }
+  }
+  const discovered = results.reduce((sum, result) => sum + Number(result.discovered || 0), 0);
+  const candidates = results.reduce((sum, result) => sum + Number(result.candidates || 0), 0);
+  const skippedExisting = results.reduce((sum, result) => sum + Number(result.skippedExisting || 0), 0);
+  await writeProspectAudit(env, "starter-sources", {
+    actor,
+    action: "run-starter-discovery-sources",
+    attempted: results.length,
+    succeeded: results.filter((result) => result.ok).length,
+    targetNewCompanies,
+    candidates,
+    discovered,
+    skippedExisting
+  });
+  return {
+    attempted: results.length,
+    succeeded: results.filter((result) => result.ok).length,
+    targetNewCompanies,
+    candidates,
+    discovered,
+    skippedExisting,
+    exhausted: discovered < targetNewCompanies && results.length >= sources.length,
+    results
+  };
 }
 
 async function importProspectCompanies(env, payload = {}, actor = "") {
@@ -2279,55 +2473,6 @@ async function rerunProspectSource(env, payload = {}, actor = "") {
     sourceUrl: source.sourceUrl,
     limit: payload.limit || 20
   }, actor);
-}
-
-function prospectStarterSourceById(sourceId = "") {
-  const cleaned = cleanString(sourceId, 180);
-  return partnerProspectStarterSources.find((source) => source.sourceId === cleaned || companySlug(source.sourceName) === cleaned) || null;
-}
-
-async function runStarterProspectSource(env, payload = {}, actor = "") {
-  const source = prospectStarterSourceById(payload.sourceId || payload.starterSourceId);
-  if (!source) throw new Error("Starter discovery source was not found.");
-  return runSourceDiscovery(env, {
-    ...source,
-    limit: payload.limit || 10
-  }, actor);
-}
-
-async function runStarterProspectSources(env, payload = {}, actor = "") {
-  const selectedIds = cleanArray(payload.sourceIds || payload.starterSourceIds, 30, 180);
-  const maxSources = cleanNumber(payload.maxSources, 1, 1, 2);
-  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 8, 1, 12);
-  const sources = (selectedIds.length
-    ? selectedIds.map(prospectStarterSourceById).filter(Boolean)
-    : partnerProspectStarterSources.slice(0, maxSources)
-  );
-  const results = [];
-  for (const source of sources) {
-    try {
-      const result = await runSourceDiscovery(env, {
-        ...source,
-        limit: limitPerSource
-      }, actor);
-      results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: true, discovered: result.discovered });
-    } catch (error) {
-      results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: false, error: cleanString(error.message, 500) });
-    }
-  }
-  await writeProspectAudit(env, "starter-sources", {
-    actor,
-    action: "run-starter-discovery-sources",
-    attempted: results.length,
-    succeeded: results.filter((result) => result.ok).length,
-    discovered: results.reduce((sum, result) => sum + Number(result.discovered || 0), 0)
-  });
-  return {
-    attempted: results.length,
-    succeeded: results.filter((result) => result.ok).length,
-    discovered: results.reduce((sum, result) => sum + Number(result.discovered || 0), 0),
-    results
-  };
 }
 
 async function runAllProspectSources(env, payload = {}, actor = "") {
@@ -2602,6 +2747,7 @@ async function partnerProspectingPayload(env) {
   const companies = await prospectCompanies(env);
   const people = await prospectPeople(env);
   const sources = await prospectSources(env);
+  const starterSources = await starterSourcesWithRunState(env, sources);
   const debug = await prospectDebugEntries(env);
   const nextCompany = companies.find((company) =>
     company.partnerScore >= 60 &&
@@ -2615,7 +2761,7 @@ async function partnerProspectingPayload(env) {
     scoreWeights: scoreConfig.weights,
     dashboard: prospectDashboard(companies, people),
     queue: prospectQueueSummary(companies, sources),
-    starterSources: partnerProspectStarterSources,
+    starterSources,
     companies,
     people,
     sources,
