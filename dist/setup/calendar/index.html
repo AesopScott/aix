@@ -35,6 +35,22 @@
       --owner-unknown: var(--slate);
       --complete-green: #18A058;
       --overdue-red: #E5484D;
+      --status-delivered-bg: #15803D;
+      --status-delivered-fg: #FFFFFF;
+      --status-ready-bg: #BBF7D0;
+      --status-ready-fg: #052E16;
+      --status-testing-bg: #1666FF;
+      --status-testing-fg: #FFFFFF;
+      --status-building-bg: #BFDBFE;
+      --status-building-fg: #0A0F1E;
+      --status-planning-bg: #FACC15;
+      --status-planning-fg: #0A0F1E;
+      --status-defined-bg: #FDBA74;
+      --status-defined-fg: #0A0F1E;
+      --status-undefined-bg: #DC2626;
+      --status-undefined-fg: #FFFFFF;
+      --status-issue-bg: #B91C1C;
+      --status-issue-fg: #FFFFFF;
       --radius: 8px;
       color-scheme: dark;
     }
@@ -288,8 +304,21 @@
     .owner-photo-sound-cinema { background: var(--owner-photo-sound-cinema); }
     .owner-unknown { background: var(--owner-unknown); color: var(--white); }
     .owner-shared, .owner-all { background: var(--cyan); }
-    .day-chip.complete { background: var(--complete-green); color: var(--white); }
-    .day-chip.overdue { background: var(--overdue-red); color: var(--white); }
+    .day-chip.complete {
+      box-shadow: inset 0 0 0 1px var(--status-delivered-fg);
+    }
+
+    .day-chip.overdue {
+      box-shadow: inset 0 0 0 2px var(--overdue-red);
+    }
+    .status-delivered { background: var(--status-delivered-bg); color: var(--status-delivered-fg); }
+    .status-ready { background: var(--status-ready-bg); color: var(--status-ready-fg); }
+    .status-testing { background: var(--status-testing-bg); color: var(--status-testing-fg); }
+    .status-building { background: var(--status-building-bg); color: var(--status-building-fg); }
+    .status-planning { background: var(--status-planning-bg); color: var(--status-planning-fg); }
+    .status-defined { background: var(--status-defined-bg); color: var(--status-defined-fg); }
+    .status-undefined { background: var(--status-undefined-bg); color: var(--status-undefined-fg); }
+    .status-issue { background: var(--status-issue-bg); color: var(--status-issue-fg); }
 
     .day-cell.empty-day {
       justify-content: center;
@@ -357,9 +386,7 @@
     }
 
     .pill.status-pill {
-      background: var(--navy);
-      border: 1px solid var(--line);
-      color: var(--ink);
+      border: 1px solid currentColor;
     }
 
     .empty-note {
@@ -441,7 +468,7 @@
     const ownerAliases = { "Pakistani Marketing Team": "Orbit Flow" };
     const priorityOptions = ["Immediate", "High", "Medium", "Low"];
     const deliverableOptions = ["Conversation", "Document", "Contract", "Website", "Event Tracker"];
-    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem", "Delete"];
+    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem"];
     const sharedStateEndpoint = "/api/setup-state";
     const sharedSyncIntervalMs = 5000;
 
@@ -449,6 +476,17 @@
     const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     const normalizeOwnerName = (value) => ownerAliases[value] || value;
     const ownerClass = (owner) => ownerColors[owner] || "owner-shared";
+    const statusClasses = {
+      Delivered: "status-delivered",
+      Ready: "status-ready",
+      Testing: "status-testing",
+      Building: "status-building",
+      Planning: "status-planning",
+      Defined: "status-defined",
+      Undefined: "status-undefined",
+      "Issue/problem": "status-issue"
+    };
+    const statusClass = (status) => statusClasses[status] || "status-undefined";
     const escapeHtml = (value) => String(value ?? "")
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -636,10 +674,9 @@
 
     function renderLegend() {
       const owners = view.owner === "All" ? editableOwners : [view.owner];
-      const statusLegend = `
-        <span class="legend-item"><span class="legend-dot complete"></span>Complete</span>
-        <span class="legend-item"><span class="legend-dot overdue"></span>Overdue</span>
-      `;
+      const statusLegend = statusOptions.map((status) => `
+        <span class="legend-item"><span class="legend-dot ${statusClass(status)}"></span>${escapeHtml(status)}</span>
+      `).join("");
       const ownerLegend = owners.map((owner) => `
         <span class="legend-item"><span class="legend-dot ${ownerClass(owner)}"></span>${escapeHtml(owner)}</span>
       `).join("");
@@ -680,7 +717,7 @@
       const badgeOwner = isSupportMatch ? `Support: ${view.owner}` : item.owner;
       const stateClass = calendarStateClass(item);
       return `
-        <a class="day-chip ${ownerClass(item.owner)} ${stateClass}" href="${setupItemUrl(item)}" title="${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">
+        <a class="day-chip ${statusClass(item.status)} ${stateClass}" href="${setupItemUrl(item)}" title="${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">
           ${escapeHtml(item.text.length > 60 ? `${item.text.slice(0, 57)}...` : item.text)}
           <span class="chip-status">${escapeHtml(badgeOwner)} • ${escapeHtml(item.status)}</span>
         </a>
@@ -736,7 +773,7 @@
           <span class="text">${escapeHtml(item.text)}</span>
           <span class="meta">
             <span class="pill ${ownerClass(item.owner)}">${escapeHtml(item.owner)}</span>
-            <span class="pill status-pill">${escapeHtml(item.status)}</span>
+            <span class="pill status-pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span>
           </span>
         </div>
       `).join("");
