@@ -544,32 +544,7 @@
     border-radius:7px;
   }
   @media (max-width:1180px){
-    .hero-boardroom{
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      width:min(620px, calc(100vw - 40px));
-      height:auto;
-      margin:24px auto 26px;
-      pointer-events:auto;
-      gap:32px;
-    }
-    .hero-boardroom::before{
-      top:34px;
-      bottom:auto;
-    }
-    .hero-boardroom img{
-      width:100%;
-      max-width:600px;
-    }
-    .hero-founder-video{
-      position:relative;
-      left:auto;
-      top:auto;
-      width:min(520px, 100%);
-      transform:none;
-      order:2;
-    }
+    .hero-founder-video{ display:none; }
   }
   @media (max-width:860px){
     header,
@@ -581,13 +556,32 @@
       overflow:hidden;
     }
     .hero-boardroom{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
       width:min(100%, calc(100vw - 32px));
+      height:auto;
       margin:20px auto 24px;
+      pointer-events:auto;
       gap:28px;
     }
+    .hero-boardroom::before{
+      top:34px;
+      bottom:auto;
+    }
+    .hero-boardroom img{
+      width:100%;
+      max-width:600px;
+    }
     .hero-founder-video{
+      display:block;
+      position:relative;
+      left:auto;
+      top:auto;
       width:100%;
       max-width:420px;
+      transform:none;
+      order:2;
     }
     .hero-founder-promise{
       font-size:12px;
