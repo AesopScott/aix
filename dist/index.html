@@ -42,7 +42,7 @@
   }
 
   *{ box-sizing: border-box; }
-  html{ scroll-behavior: smooth; }
+  html{ scroll-behavior: smooth; overflow-x:hidden; }
   section{ scroll-margin-top: 96px; }
   #topics,
   #experience,
@@ -543,12 +543,56 @@
     object-fit:cover;
     border-radius:7px;
   }
-  @media (max-width:860px){
-    .hero-boardroom{ width:100vw; height:170px; margin:20px 0 -30px; }
-    .hero-founder-video{ display:none; }
-  }
   @media (max-width:1180px){
-    .hero-founder-video{ display:none; }
+    .hero-boardroom{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      width:min(620px, calc(100vw - 40px));
+      height:auto;
+      margin:24px auto 26px;
+      pointer-events:auto;
+      gap:32px;
+    }
+    .hero-boardroom::before{
+      top:34px;
+      bottom:auto;
+    }
+    .hero-boardroom img{
+      width:100%;
+      max-width:600px;
+    }
+    .hero-founder-video{
+      position:relative;
+      left:auto;
+      top:auto;
+      width:min(520px, 100%);
+      transform:none;
+      order:2;
+    }
+  }
+  @media (max-width:860px){
+    header,
+    nav,
+    .bg-aurora,
+    .grain,
+    .hero-glow{
+      max-width:100vw;
+      overflow:hidden;
+    }
+    .hero-boardroom{
+      width:min(100%, calc(100vw - 32px));
+      margin:20px auto 24px;
+      gap:28px;
+    }
+    .hero-founder-video{
+      width:100%;
+      max-width:420px;
+    }
+    .hero-founder-promise{
+      font-size:12px;
+      letter-spacing:.06em;
+    }
   }
   .hero-sub, .hero-cta-row{
     opacity:0;
