@@ -24,6 +24,8 @@ Miller's queue is LinkedIn-first. The CRM provides platform links, prepared sear
 
 The Discovery Queue can now run a public-source discovery pass from a supplied URL, such as a conference sponsor page, public portfolio page, marketplace list, or AI directory page.
 
+The Discovery Queue now includes built-in starter sources so operators do not need to bring source URLs before Vendor Universe can start. The starter library includes conference sponsor lists/prospectuses and AI company directories, and exposes one-click `Run Source` and `Run Starter Sources` actions.
+
 The discovery pass fetches the HTML, extracts outbound company domains, filters common non-company/social/search domains, dedupes by canonical domain, and creates Vendor Universe records with source provenance.
 
 Each discovered company can then run website analysis. The first implementation uses transparent keyword/category signals to classify AI relevance, enterprise focus, likely category, target executive roles, partner score, and queue status. It is intentionally replaceable by a model-backed classifier later.
@@ -96,7 +98,7 @@ Sponsor evidence is intentionally CRM-style notes and evidence. Spend should be 
 
 ## Walkthroughs
 
-The Partner Prospecting navigation now includes a bottom Walkthroughs button. The view provides operating walkthroughs for Vendor Universe buildout, review/scoring, sponsor evidence, hiring signals, people research, people records, manual outreach tracking, Partner Candidate conversion, and dashboard health.
+The Partner Prospecting navigation now includes a bottom Walkthroughs button. The view provides operating walkthroughs for Vendor Universe buildout, review/scoring, sponsor evidence, hiring signals, people research, people records, manual outreach tracking, Partner Candidate conversion, and dashboard health. The Vendor Universe walkthrough starts with `Run Starter Sources` as the first action.
 
 ## Hiring Signal Sources
 
@@ -123,9 +125,11 @@ Verified with:
 - In-memory review/scoring workflow for human review actions, category override, score override, scoring config persistence, score recalculation, and source quality rollups.
 - In-memory Phase C workflow for people-search mission state, manual lead-list details, role persistence, and queue/dashboard counters.
 - In-memory sponsor evidence workflow for sponsored events, evidence URLs, sponsor fit, spend clues, themes, notes, and dashboard counter.
+- In-memory starter-source workflow for built-in source payload, one-click starter source run, and discovered company creation.
 - Local Wrangler Pages server on `http://127.0.0.1:8788`.
 - Local `GET /api/crm?prospecting=1` check with `scoreConfig` and `sourcePerformance` present.
 - Local `GET /crm/` check with Research Queue controls present.
 - Local `GET /crm/` check with Hiring Signals and `Hiring Platform / Job Board` source type present.
 - Local `GET /crm/` check with Conference Sponsor Playbook, sponsor evidence forms, and `Conference Sponsorship Prospectus` source type present.
 - Local `GET /crm/` check with Walkthroughs button and walkthrough content present.
+- Local `GET /api/crm?prospecting=1` check with built-in `starterSources` present.

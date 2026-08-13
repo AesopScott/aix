@@ -184,6 +184,80 @@ const defaultPartnerScoreWeights = {
   marketPresence: 5,
   recentGrowthFunding: 5
 };
+const partnerProspectStarterSources = [
+  {
+    sourceId: "starter-ai4-sponsors",
+    sourceName: "Ai4 Sponsors & Exhibitors",
+    sourceType: "Conference Sponsor List",
+    sourceUrl: "https://ai4.io/sponsors-exhibitors/",
+    description: "Large AI event sponsor and exhibitor page with companies already investing in AI-event audiences.",
+    category: "Conference Sponsors"
+  },
+  {
+    sourceId: "starter-the-ai-conference-sponsors",
+    sourceName: "The AI Conference Sponsorship Opportunities",
+    sourceType: "Conference Sponsorship Prospectus",
+    sourceUrl: "https://aiconference.com/sponsors/",
+    description: "Enterprise AI sponsorship page with sponsor/exhibitor package context and vendor audience fit.",
+    category: "Conference Sponsors"
+  },
+  {
+    sourceId: "starter-responsible-ai-summit",
+    sourceName: "Responsible AI Summit Sponsors",
+    sourceType: "Conference Sponsor List",
+    sourceUrl: "https://www.aidataanalytics.network/events-responsible-ai-summit",
+    description: "Responsible AI and governance event with partner/sponsor signals for AI governance vendors.",
+    category: "Conference Sponsors"
+  },
+  {
+    sourceId: "starter-ai-gov-world",
+    sourceName: "AI Gov World Sponsors",
+    sourceType: "Conference Sponsor List",
+    sourceUrl: "https://aiworldconference.ai/",
+    description: "AI governance conference page with sponsor and partner signals.",
+    category: "Conference Sponsors"
+  },
+  {
+    sourceId: "starter-ai-plus-expo",
+    sourceName: "AI+ Expo Sponsors",
+    sourceType: "Conference Sponsor List",
+    sourceUrl: "https://expo.scsp.ai/",
+    description: "AI expo sponsor page showing organizations supporting a public AI event audience.",
+    category: "Conference Sponsors"
+  },
+  {
+    sourceId: "starter-ai-summit-london",
+    sourceName: "The AI Summit London Sponsors",
+    sourceType: "Conference Sponsor List",
+    sourceUrl: "https://partners.london.theaisummit.com/",
+    description: "Sponsor and exhibitor list for an enterprise AI summit.",
+    category: "Conference Sponsors"
+  },
+  {
+    sourceId: "starter-forbes-ai-50",
+    sourceName: "Forbes AI 50",
+    sourceType: "AI Directory",
+    sourceUrl: "https://www.forbes.com/lists/ai50/",
+    description: "Curated AI company list for high-signal vendor discovery.",
+    category: "AI Directories"
+  },
+  {
+    sourceId: "starter-built-in-ai-companies",
+    sourceName: "Built In AI Companies",
+    sourceType: "AI Directory",
+    sourceUrl: "https://builtin.com/artificial-intelligence/ai-companies-roundup",
+    description: "Public AI company roundup that can seed the Vendor Universe.",
+    category: "AI Directories"
+  },
+  {
+    sourceId: "starter-ai-directory",
+    sourceName: "AI Directory",
+    sourceType: "AI Directory",
+    sourceUrl: "https://www.aidirectory.org/",
+    description: "Broad AI/ML company directory for additional vendor discovery.",
+    category: "AI Directories"
+  }
+];
 const discoveryBlockedDomains = new Set([
   "facebook.com",
   "instagram.com",
@@ -1976,6 +2050,55 @@ async function rerunProspectSource(env, payload = {}, actor = "") {
   }, actor);
 }
 
+function prospectStarterSourceById(sourceId = "") {
+  const cleaned = cleanString(sourceId, 180);
+  return partnerProspectStarterSources.find((source) => source.sourceId === cleaned || companySlug(source.sourceName) === cleaned) || null;
+}
+
+async function runStarterProspectSource(env, payload = {}, actor = "") {
+  const source = prospectStarterSourceById(payload.sourceId || payload.starterSourceId);
+  if (!source) throw new Error("Starter discovery source was not found.");
+  return runSourceDiscovery(env, {
+    ...source,
+    limit: payload.limit || 30
+  }, actor);
+}
+
+async function runStarterProspectSources(env, payload = {}, actor = "") {
+  const selectedIds = cleanArray(payload.sourceIds || payload.starterSourceIds, 30, 180);
+  const maxSources = cleanNumber(payload.maxSources, 6, 1, partnerProspectStarterSources.length);
+  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 25, 1, 80);
+  const sources = (selectedIds.length
+    ? selectedIds.map(prospectStarterSourceById).filter(Boolean)
+    : partnerProspectStarterSources.slice(0, maxSources)
+  );
+  const results = [];
+  for (const source of sources) {
+    try {
+      const result = await runSourceDiscovery(env, {
+        ...source,
+        limit: limitPerSource
+      }, actor);
+      results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: true, discovered: result.discovered });
+    } catch (error) {
+      results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: false, error: cleanString(error.message, 500) });
+    }
+  }
+  await writeProspectAudit(env, "starter-sources", {
+    actor,
+    action: "run-starter-discovery-sources",
+    attempted: results.length,
+    succeeded: results.filter((result) => result.ok).length,
+    discovered: results.reduce((sum, result) => sum + Number(result.discovered || 0), 0)
+  });
+  return {
+    attempted: results.length,
+    succeeded: results.filter((result) => result.ok).length,
+    discovered: results.reduce((sum, result) => sum + Number(result.discovered || 0), 0),
+    results
+  };
+}
+
 async function runAllProspectSources(env, payload = {}, actor = "") {
   const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 20, 1, 80);
   const maxSources = cleanNumber(payload.maxSources, 8, 1, 30);
@@ -2260,6 +2383,7 @@ async function partnerProspectingPayload(env) {
     scoreWeights: scoreConfig.weights,
     dashboard: prospectDashboard(companies, people),
     queue: prospectQueueSummary(companies, sources),
+    starterSources: partnerProspectStarterSources,
     companies,
     people,
     sources,
@@ -3983,6 +4107,31 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Discovery sources could not be run." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "run-partner-prospect-starter-source") {
+    try {
+      const discovery = await runStarterProspectSource(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        discovery
+      });
+    } catch (error) {
+      const status = /not found|required|Fetch failed|HTML/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Starter discovery source could not be run." }, { status });
+    }
+  }
+
+  if (payload?.action === "run-partner-prospect-starter-sources") {
+    try {
+      const discoveryBatch = await runStarterProspectSources(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        discoveryBatch
+      });
+    } catch (error) {
+      return json({ error: error.message || "Starter discovery sources could not be run." }, { status: 500 });
     }
   }
 
