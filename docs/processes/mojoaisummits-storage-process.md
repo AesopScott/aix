@@ -56,6 +56,8 @@ Each upload also includes an event, city, or folder value. Example object keys:
 
 Large browser uploads use the R2 multipart API through `/api/storage` instead of sending the entire file in one request. The `/files/` page keeps smaller files on the simple form upload path, but switches files at 64 MiB and above to 16 MiB parts, then completes or aborts the multipart session from the same authenticated API. This avoids Cloudflare request body limits for video drafts and other large media while preserving the same object naming and metadata rules.
 
+Downloads require an additional email-code verification step. The `/files/` page itself, file listing, uploads, folder creation, renames, status updates, and deletes use the normal Mojo Auth session only. When a user clicks Download, the browser calls `/api/storage?mode=download-mfa-start` with the object key, the API emails a 6-digit code to the signed-in Mojo Auth email address through Microsoft Graph, and `/api/storage?mode=download-mfa-verify` sets a short-lived HttpOnly download cookie after the correct code is entered. The code expires after 10 minutes, has a maximum of 5 attempts, and the verified download session lasts 15 minutes.
+
 ## Mojo Auth Setup
 
 Before using the storage portal in production, protect the Storage API through `/access`:
@@ -127,4 +129,6 @@ Before declaring storage ready:
 - After enabling access control, confirm `/storage/` requires Mojo Auth login when no external Cloudflare Access rule intercepts it.
 - After enabling access control, confirm `/api/storage` requires Mojo Auth login.
 - Confirm an approved user can upload, list, download, and delete a test file.
+- Confirm an approved user can upload and list without a download MFA prompt.
+- Confirm a download attempt sends an email code and only downloads after the code is verified.
 - Confirm an unapproved user cannot access either route.
