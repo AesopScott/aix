@@ -314,6 +314,10 @@ function cleanSearch(value) {
   return String(value || "").trim().toLowerCase().slice(0, 120);
 }
 
+function cleanSubmitterFilter(value) {
+  return String(value || "").trim().toLowerCase().slice(0, 120);
+}
+
 function recordSearchText(record) {
   return [
     record.key,
@@ -326,6 +330,23 @@ function recordSearchText(record) {
     record.submitter,
     record.status
   ].join(" ").toLowerCase();
+}
+
+function sortFileRecords(records, sort) {
+  const sorted = [...records];
+  const nameText = (record) => displayNameFromKey(record.name || record.key).toLowerCase();
+
+  if (sort === "size-asc") {
+    sorted.sort((a, b) => Number(a.size || 0) - Number(b.size || 0) || nameText(a).localeCompare(nameText(b)));
+    return sorted;
+  }
+
+  if (sort === "size-desc") {
+    sorted.sort((a, b) => Number(b.size || 0) - Number(a.size || 0) || nameText(a).localeCompare(nameText(b)));
+    return sorted;
+  }
+
+  return records;
 }
 
 function buildUploadPlan(form, access, fileName, fileType = "") {
@@ -604,6 +625,12 @@ async function listObjects(request, env, access) {
   const cursor = url.searchParams.get("cursor") || undefined;
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 100), 1), 500);
   const search = cleanSearch(url.searchParams.get("search"));
+  const submitter = cleanSubmitterFilter(url.searchParams.get("submitter"));
+  const requestedSort = String(url.searchParams.get("sort") || "").trim().toLowerCase();
+  const sort = new Set(["size-desc", "size-asc"]).has(requestedSort)
+    ? requestedSort
+    : "storage";
+  const mustScanAll = sort.startsWith("size-");
   const objects = [];
   let nextCursor = cursor;
   let truncated = false;
@@ -617,21 +644,17 @@ async function listObjects(request, env, access) {
     const records = result.objects
       .filter((object) => !isFolderMarkerKey(object.key))
       .map(objectToRecord)
-      .filter((record) => canReadPrivate || !isPrivateKey(record.key));
-    objects.push(
-      ...(
-        search
-          ? records.filter((record) => recordSearchText(record).includes(search))
-          : records
-      )
-    );
+      .filter((record) => canReadPrivate || !isPrivateKey(record.key))
+      .filter((record) => !search || recordSearchText(record).includes(search))
+      .filter((record) => !submitter || String(record.submitter || "").toLowerCase().includes(submitter));
+    objects.push(...records);
     nextCursor = result.truncated ? result.cursor : undefined;
     truncated = Boolean(result.truncated);
-  } while (search && truncated && objects.length < limit);
+  } while ((mustScanAll || search || submitter) && truncated && (mustScanAll || objects.length < limit));
 
   return json({
-    objects: objects.slice(0, limit),
-    truncated,
+    objects: sortFileRecords(objects, sort).slice(0, limit),
+    truncated: mustScanAll ? false : truncated,
     cursor: nextCursor || "",
     folders: folderLabels,
     statuses: fileStatuses

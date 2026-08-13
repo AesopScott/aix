@@ -58,6 +58,8 @@ Large browser uploads use the R2 multipart API through `/api/storage` instead of
 
 Downloads require an additional email-code verification step. The `/files/` page itself, file listing, uploads, folder creation, renames, status updates, and deletes use the normal Mojo Auth session only. When a user clicks Download, the browser calls `/api/storage?mode=download-mfa-start` with the object key, the API emails a 6-digit code to the signed-in Mojo Auth email address through Microsoft Graph, and `/api/storage?mode=download-mfa-verify` sets a short-lived HttpOnly download cookie after the correct code is entered. The code expires after 10 minutes, has a maximum of 5 attempts, and the verified download session lasts 15 minutes.
 
+The file list supports area, folder, text search, submitter filtering, and object-size sorting so admins can quickly find large files or uploads from a specific person.
+
 ## Mojo Auth Setup
 
 Before using the storage portal in production, protect the Storage API through `/access`:

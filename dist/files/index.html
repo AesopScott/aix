@@ -265,7 +265,7 @@
 
     .row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 0.75rem;
     }
 
@@ -604,6 +604,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               Search files
               <input id="prefixSearch" placeholder="deck, invoice, dallas">
             </label>
+            <label>
+              Submitter
+              <input id="submitterFilter" placeholder="Scott, Jodi, email">
+            </label>
+            <label>
+              Sort
+              <select id="sortFilter">
+                <option value="storage" selected>Storage order</option>
+                <option value="size-desc">Largest first</option>
+                <option value="size-asc">Smallest first</option>
+              </select>
+            </label>
           </div>
           <button class="secondary" id="refreshButton" type="button">Refresh List</button>
           <button class="secondary" id="backfillSubmittersButton" type="button" hidden>Backfill Submitters</button>
@@ -674,6 +686,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const prefixFilter = document.querySelector("#prefixFilter");
     const folderFilter = document.querySelector("#folderFilter");
     const prefixSearch = document.querySelector("#prefixSearch");
+    const submitterFilter = document.querySelector("#submitterFilter");
+    const sortFilter = document.querySelector("#sortFilter");
     const refreshButton = document.querySelector("#refreshButton");
     const backfillSubmittersButton = document.querySelector("#backfillSubmittersButton");
     const receiptButtons = document.querySelectorAll("[data-receipts]");
@@ -979,6 +993,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return prefixSearch.value.trim();
     }
 
+    function activeSubmitter() {
+      return submitterFilter.value.trim();
+    }
+
+    function activeSort() {
+      return sortFilter.value;
+    }
+
     function activeFolder() {
       return folderFilter.value;
     }
@@ -1038,6 +1060,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (folder) url.searchParams.set("folder", folder);
         const search = activeSearch();
         if (search) url.searchParams.set("search", search);
+        const submitter = activeSubmitter();
+        if (submitter) url.searchParams.set("submitter", submitter);
+        const sort = activeSort();
+        if (sort && sort !== "storage") url.searchParams.set("sort", sort);
         const data = await fetch(url).then(readJson);
         if (data.statuses) state.statuses = data.statuses;
 
@@ -1319,6 +1345,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       window.clearTimeout(searchTimer);
       searchTimer = window.setTimeout(loadFiles, 250);
     });
+    submitterFilter.addEventListener("input", () => {
+      window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(loadFiles, 250);
+    });
+    sortFilter.addEventListener("change", loadFiles);
     receiptButtons.forEach((button) => {
       button.addEventListener("click", () => {
         prefixFilter.value = "receipts/";
