@@ -55,6 +55,8 @@
       --status-undefined-fg: #FFFFFF;
       --status-issue-bg: #B91C1C;
       --status-issue-fg: #FFFFFF;
+      --status-event-specific-bg: #00E6FF;
+      --status-event-specific-fg: #0A0F1E;
       --shadow: none;
       --radius: 8px;
       color-scheme: dark;
@@ -716,6 +718,11 @@
     .status-issue {
       background: var(--status-issue-bg);
       color: var(--status-issue-fg);
+    }
+
+    .status-event-specific {
+      background: var(--status-event-specific-bg);
+      color: var(--status-event-specific-fg);
     }
 
     .status-toggle-option[class*="status-"] .filter-count {
@@ -1714,6 +1721,7 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.19 - Added Event specific as a setup item status.
 - 3.18 - Added analytics launch control to per-event virtual and in-person checklist workflows.
 - 3.17 - Established website analytics, privacy notice, consent, and conversion tracking standards.
 - 3.16 - Linked calendar items back to their matching master checklist rows.
@@ -1790,7 +1798,7 @@ The following decisions should not be made by one owner alone:
     };
     const priorityOptions = ["Immediate", "High", "Medium", "Low"];
     const deliverableOptions = ["Conversation", "Document", "Contract", "Website", "Event Tracker"];
-    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem"];
+    const statusOptions = ["Undefined", "Defined", "Planning", "Building", "Testing", "Ready", "Delivered", "Issue/problem", "Event specific"];
     const assignmentStoragePrefix = "mojo-event-assignment:";
     const customItemsStorageKey = "mojo-event-custom-items";
     const deletedItemIdsStorageKey = "mojo-event-deleted-item-ids";
@@ -1845,7 +1853,8 @@ The following decisions should not be made by one owner alone:
       Planning: "status-planning",
       Defined: "status-defined",
       Undefined: "status-undefined",
-      "Issue/problem": "status-issue"
+      "Issue/problem": "status-issue",
+      "Event specific": "status-event-specific"
     };
     const statusClass = (status) => statusClasses[status] || "status-undefined";
     const escapeHtml = (value) => String(value ?? "")
