@@ -3674,6 +3674,43 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return `<div class="prospecting-grid">${items.map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || 0)}</strong></div>`).join("")}</div>`;
     }
 
+    function renderStarterSources() {
+      const sources = prospectingState?.starterSources || [];
+      if (!sources.length) return "";
+      const categoryMap = new Map();
+      for (const source of sources) {
+        const category = source.category || "Starter Sources";
+        if (!categoryMap.has(category)) categoryMap.set(category, []);
+        categoryMap.get(category).push(source);
+      }
+      return `
+        <div>
+          <div class="prospecting-actions prospecting-section-actions">
+            <button class="secondary" type="button" data-run-starter-prospect-sources>Run Starter Sources</button>
+          </div>
+          ${[...categoryMap.entries()].map(([category, rows]) => `
+            <p class="eyebrow">${escapeHtml(category)}</p>
+            <div class="prospecting-grid">
+              ${rows.map((source) => `
+                <article class="queue-card">
+                  <h3>${escapeHtml(source.sourceName)}</h3>
+                  <div class="crm-compact-pills">
+                    <span class="pill">${escapeHtml(source.sourceType || "Public Web")}</span>
+                    <span class="pill">${escapeHtml(source.category || "Starter Source")}</span>
+                  </div>
+                  <p>${escapeHtml(source.description || "")}</p>
+                  <p><a href="${escapeHtml(source.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(source.sourceUrl)}</a></p>
+                  <div class="prospecting-actions">
+                    <button class="compact secondary" type="button" data-run-starter-prospect-source="${escapeHtml(source.sourceId)}">Run Source</button>
+                  </div>
+                </article>
+              `).join("")}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
     function renderProspectingTabs() {
       prospectingTabs.innerHTML = Object.entries(prospectingViews).map(([view, [label]]) =>
         `<button class="compact secondary ${activeView === view ? "active" : ""}" type="button" data-view="${escapeHtml(view)}">${escapeHtml(label)}</button>`
@@ -3861,6 +3898,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function renderDiscoveryQueue() {
       prospectingContent.innerHTML = `
         ${renderDiscoveryQueueMetrics()}
+        ${renderStarterSources()}
         ${renderConferenceSponsorPlaybook()}
         ${renderHiringSignalPanel()}
         ${renderDiscoverySourceForm()}
@@ -3947,7 +3985,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           title: "Build Vendor Universe",
           steps: [
             "Open Discovery Queue.",
-            "Run a public source URL, use a hiring signal search, use the conference sponsor playbook, or paste companies into the import form.",
+            "Click Run Starter Sources to seed Vendor Universe from the built-in sponsor and AI directory sources.",
+            "Use a hiring signal search, the conference sponsor playbook, a public source URL, or the import form when you want to add more companies.",
             "Run Analyze Website for each useful company, or use Analyze Next 10 Websites.",
             "Review each company card and keep only credible AI or AI-enabled companies moving forward."
           ],
@@ -5299,6 +5338,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const batchAnalyzeButton = event.target.closest("[data-batch-analyze-prospects]");
       const rerunSourceButton = event.target.closest("[data-rerun-prospect-source]");
       const runAllSourcesButton = event.target.closest("[data-run-all-prospect-sources]");
+      const runStarterSourceButton = event.target.closest("[data-run-starter-prospect-source]");
+      const runStarterSourcesButton = event.target.closest("[data-run-starter-prospect-sources]");
       const reviewButton = event.target.closest("[data-review-prospect-company]");
       const categorySaveButton = event.target.closest("[data-review-category-save]");
       const scoreSaveButton = event.target.closest("[data-review-score-save]");
@@ -5350,6 +5391,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           limitPerSource: 20,
           maxSources: 8
         }, "Active discovery sources processed.");
+        return;
+      }
+      if (runStarterSourceButton) {
+        await postPartnerProspecting({
+          action: "run-partner-prospect-starter-source",
+          sourceId: runStarterSourceButton.dataset.runStarterProspectSource,
+          limit: 30
+        }, "Starter source processed.");
+        return;
+      }
+      if (runStarterSourcesButton) {
+        await postPartnerProspecting({
+          action: "run-partner-prospect-starter-sources",
+          limitPerSource: 25,
+          maxSources: 6
+        }, "Starter sources processed.");
         return;
       }
       if (reviewButton) {
