@@ -81,9 +81,20 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 .speaker-count div{min-height:86px;padding:18px;background:rgba(10,15,30,.82)}
 .speaker-count strong{display:block;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:28px;line-height:1}
 .speaker-count span{display:block;margin-top:9px;color:var(--muted);font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:700;letter-spacing:.13em;line-height:1.45;text-transform:uppercase}
+.registered-guests{margin-top:34px;border-top:1px solid var(--line);padding-top:30px}
+.registered-head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:16px}
+.registered-head h3{font-family:Space Grotesk,sans-serif;font-size:22px;line-height:1.2}
+.registered-head p{max-width:520px;color:var(--muted);font-size:14px;line-height:1.6}
+.registered-list{display:grid;border:1px solid var(--line);background:var(--line)}
+.registered-row{display:grid;grid-template-columns:minmax(160px,.8fr) minmax(160px,.65fr) minmax(160px,.7fr);gap:1px;background:var(--line)}
+.registered-row.is-restricted{grid-template-columns:minmax(160px,.8fr) minmax(160px,.65fr)}
+.registered-row span{min-height:54px;padding:14px 16px;background:rgba(10,15,30,.82);color:rgba(255,255,255,.84);font-size:14px;line-height:1.45}
+.registered-row strong{display:block;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
+.registered-empty{padding:18px;background:rgba(10,15,30,.82);color:var(--dim);font-size:13px;line-height:1.6}
 .slot-modal[hidden]{display:none}.slot-modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:22px;background:rgba(5,9,19,.78);backdrop-filter:blur(14px)}.slot-dialog{width:min(640px,100%);max-height:calc(100vh - 44px);overflow:auto;padding:26px;background:linear-gradient(180deg,rgba(27,35,51,.98),rgba(10,15,30,.98));border:1px solid rgba(0,230,255,.34);border-radius:8px;box-shadow:0 24px 90px rgba(0,0,0,.58)}.slot-dialog-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}.slot-dialog h3{font-family:Fraunces,serif;font-size:32px;line-height:1.05}.slot-dialog p{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.6}.slot-close{width:38px;height:38px;border:1px solid var(--line);border-radius:4px;background:rgba(10,15,30,.7);color:var(--white);font-size:22px;line-height:1;cursor:pointer}.slot-form{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.slot-form label{display:grid;gap:7px;color:var(--muted);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.slot-form input,.slot-form textarea{width:100%;border:1px solid var(--line);border-radius:4px;background:rgba(5,9,19,.76);color:var(--white);font:500 15px/1.4 Inter,sans-serif;padding:12px}.slot-form textarea{min-height:104px;resize:vertical}.slot-wide{grid-column:1/-1}.slot-submit{min-height:46px;border:1px solid var(--cyan);border-radius:4px;background:var(--cyan);color:#031018;font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer}.slot-message{min-height:20px;color:var(--cyan);font-size:13px;line-height:1.5}.slot-message.is-error{color:#ffb6c1}
 @media (max-width:980px){.guest-grid{grid-template-columns:repeat(2,1fr)}}@media (max-width:720px){.guest-grid{grid-template-columns:1fr}}
 @media (max-width:860px){.speaker-count{grid-template-columns:repeat(2,1fr)}}@media (max-width:560px){.speaker-count{grid-template-columns:1fr}}
+@media (max-width:760px){.registered-head{display:grid}.registered-row{grid-template-columns:1fr}}
 @media (max-width:620px){.slot-form{grid-template-columns:1fr}.slot-dialog h3{font-size:28px}}
 </style>
 </head>
@@ -114,7 +125,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     <section aria-label="Event facts"><div class="metric-band"><div class="metric"><strong>90</strong><span>Minutes from 1:00 PM to 2:30 PM Central</span></div><div class="metric"><strong>08</strong><span>Moderated readiness questions</span></div><div class="metric"><strong>09</strong><span>Executives in the room</span></div><div class="metric"><strong>01</strong><span>Invite path into the cohort</span></div></div></section>
     <section class="section-pad" id="format"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Operating format</span><h2>A working room for leaders who own the AI decision.</h2></div><p>This is not a passive webinar. The session is designed to surface what leaders are actually seeing, where decisions are stuck, and which operating questions deserve deeper summit work.</p></div><div class="format-grid"><article class="format-card"><span>Stage 01</span><h3>Executive Framing Keynote</h3><p>A concise opening view of national AI adoption momentum, business pressure, and the leadership questions executives need to settle.</p></article><article class="format-card"><span>Stage 02</span><h3>Readiness Diagnostic Discussion</h3><p>Moderated prompts let each executive compare adoption posture, governance maturity, measurement gaps, and risk tolerance.</p></article><article class="format-card"><span>Stage 03</span><h3>Summit Cohort Invitation Path</h3><p>Qualified participants can be routed into the fall series, member nominations, executive research briefs, and 2027 summit planning.</p></article></div></div></section>
     <section class="room-section"><div class="wrap room-inner"><div><span class="eyebrow">The room</span><h2>Small enough for candor. Senior enough to matter.</h2><p class="room-copy">The point is not to agree on a slogan about AI. The point is to compare where leadership teams are moving, where they are hesitating, who has real ownership, and how trust is being earned with employees, customers, boards, and regulators.</p></div><dl class="rules"><div><dt>Audience</dt><dd>Executives and senior operators accountable for AI strategy, business value, risk, technology, data, or workforce adoption.</dd></div><div><dt>Access</dt><dd>Invitation-only, capped at nine executive participants for a moderated exchange rather than broadcast attendance.</dd></div><div><dt>Outcome</dt><dd>A clearer readiness baseline and a path into the MOJO AI Summits cohort for deeper peer work.</dd></div></dl></div></section>
-    <section class="section-pad" id="featured-guests"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Featured guests</span><h2>Meet the leaders helping shape the conversation.</h2></div><p>As featured guests are confirmed, this page will highlight the public details they have approved to share: name, role, organization, industry, and photo when available.</p></div><div class="speaker-count" aria-label="Featured guest count"><div><strong id="speakerCount">0/9</strong><span>Featured guests confirmed</span></div><div><strong>6</strong><span>Executive featured guests</span></div><div><strong>1</strong><span>Author featured guest</span></div><div><strong>2</strong><span>Partner featured guests</span></div></div><span class="guest-source" id="guestSource">Featured guest lineup</span><div class="guest-grid" id="featuredGuestGrid" aria-live="polite"></div></div></section>
+    <section class="section-pad" id="featured-guests"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Featured guests</span><h2>Meet the leaders helping shape the conversation.</h2></div><p>As featured guests are confirmed, this page will highlight the public details they have approved to share: name, role, organization, industry, and photo when available.</p></div><div class="speaker-count" aria-label="Featured guest count"><div><strong id="speakerCount">0/9</strong><span>Featured guests confirmed</span></div><div><strong>6</strong><span>Executive featured guests</span></div><div><strong>1</strong><span>Author featured guest</span></div><div><strong>2</strong><span>Partner featured guests</span></div></div><span class="guest-source" id="guestSource">Featured guest lineup</span><div class="guest-grid" id="featuredGuestGrid" aria-live="polite"></div><div class="registered-guests" id="registeredGuests"><div class="registered-head"><div><span class="eyebrow">Registered guests</span><h3>Confirmed participants</h3></div><p>The public list reflects only the details each guest has approved for this event.</p></div><div class="registered-list" id="registeredGuestList" aria-live="polite"></div></div></div></section>
     <section class="section-pad" id="topics"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Moderated prompts</span><h2>The questions every AI leadership team is already carrying.</h2></div><p>The discussion is built around eight live questions. Each one is designed to expose operating reality, not produce generic optimism.</p></div><div class="topic-grid">
       <article class="topic"><span class="topic-number">01</span><div><h3>Are we still advancing AI adoption?</h3><p>Are organizations moving forward, stalled, or regressing nationally, and what forces explain the change?</p></div></article>
       <article class="topic"><span class="topic-number">02</span><div><h3>Are we moving away from frontier models?</h3><p>If teams are shifting toward smaller, specialized, open, private, or embedded models, how fast is it happening and at what risk?</p></div></article>
@@ -134,6 +145,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   const grid = document.querySelector("#featuredGuestGrid");
   const source = document.querySelector("#guestSource");
   const speakerCount = document.querySelector("#speakerCount");
+  const registeredList = document.querySelector("#registeredGuestList");
   if (!grid || !source) return;
   const eventDetails = {
     slug: "ai-executive-readiness",
@@ -169,6 +181,27 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   }
   function renderMeta(label, value, fallback) {
     return `<span><strong>${escapeHtml(label)}</strong>${escapeHtml(value || fallback)}</span>`;
+  }
+  function renderRegisteredGuests(guests = []) {
+    if (!registeredList) return;
+    const rows = Array.isArray(guests) ? guests.slice(0, 80) : [];
+    if (!rows.length) {
+      registeredList.innerHTML = `<div class="registered-empty">Registered guest list will appear here as event details are approved for public display.</div>`;
+      return;
+    }
+    registeredList.innerHTML = rows.map((guest) => {
+      const restricted = guest.restricted || !guest.nameAllowed || !guest.companyAllowed;
+      const primary = restricted ? (guest.industry || "Industry pending") : guest.displayName;
+      const secondary = guest.titleAllowed && guest.title ? guest.title : (guest.title || "Title pending");
+      const tertiary = guest.companyAllowed && guest.company ? guest.company : "";
+      return `
+        <div class="registered-row${restricted ? " is-restricted" : ""}">
+          <span><strong>${restricted ? "Industry" : "Name"}</strong>${escapeHtml(primary)}</span>
+          <span><strong>Title</strong>${escapeHtml(secondary)}</span>
+          ${restricted ? "" : `<span><strong>Company</strong>${escapeHtml(tertiary)}</span>`}
+        </div>
+      `;
+    }).join("");
   }
   function slotLabel(guest) {
     const code = guest.slotCode || guest.initials || "";
@@ -304,14 +337,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   }
   async function loadGuests() {
     renderGuests([], "Featured guest lineup");
+    renderRegisteredGuests([]);
     if (window.location.protocol === "file:") return;
     try {
       const response = await fetch("/api/virtual-events/ai-executive-readiness", { cache: "no-store" });
       const payload = await response.json();
       const guests = Array.isArray(payload.featuredGuests) ? payload.featuredGuests : [];
+      const registeredGuests = Array.isArray(payload.registeredGuests) ? payload.registeredGuests : [];
       if (guests.length) renderGuests(guests, "Live lineup");
+      renderRegisteredGuests(registeredGuests);
     } catch (error) {
       renderGuests([], "Featured guest lineup");
+      renderRegisteredGuests([]);
     }
   }
   loadGuests();
