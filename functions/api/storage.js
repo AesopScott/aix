@@ -144,7 +144,8 @@ function metadataText(metadata = {}, ...keys) {
 function normalizedReceiptEvent(metadata = {}) {
   const eventKey = String(metadata.receiptEventKey || "").trim().toLowerCase();
   const event = String(metadata.receiptEvent || metadata.event || "").trim();
-  if (!event || eventKey === "global" || event.toLowerCase() === "global") return "";
+  if (eventKey && receiptEvents[eventKey]) return receiptEvents[eventKey];
+  if (!event || event.toLowerCase() === "global") return receiptEvents.global;
   return event;
 }
 
@@ -154,31 +155,48 @@ function normalizedEvent(object) {
   if (receiptArea) return normalizedReceiptEvent(metadata);
 
   const event = String(metadata.event || "").trim();
-  return event.toLowerCase() === "global" ? "" : event;
+  if (!event || event.toLowerCase() === "global") return receiptEvents.global;
+  return event;
+}
+
+function isSystemSubmitter(value) {
+  return /^(budget|crm)\s+automation$/i.test(String(value || "").trim());
+}
+
+function submitterForAccess(access = {}) {
+  return String(access.name || access.email || "").trim();
 }
 
 function submitterFromObject(object) {
   const metadata = object.customMetadata || {};
-  const submitter = metadataText(
-    metadata,
-    "uploadedBy",
-    "submittedBy",
+  const submitterFields = [
     "submitter",
+    "submittedBy",
+    "uploadedBy",
     "createdBy",
     "reviewedBy",
     "updatedBy",
     "statusUpdatedBy"
-  );
-  if (submitter) return submitter;
+  ];
 
-  if (metadata.area === "budget" || String(object.key || "").startsWith("budget/")) return "Budget automation";
-  if (metadata.area === "crm" || String(object.key || "").startsWith("crm/")) return "CRM automation";
+  for (const field of submitterFields) {
+    const submitter = metadataText(metadata, field);
+    if (submitter && !isSystemSubmitter(submitter)) return submitter;
+  }
+
   return "";
 }
 
 function shouldBackfillSubmitter(metadata = {}, submitter = "") {
   if (!submitter) return false;
-  return !metadata.uploadedBy || !metadata.submittedBy || !metadata.submitter;
+  return (
+    !metadata.uploadedBy ||
+    !metadata.submittedBy ||
+    !metadata.submitter ||
+    isSystemSubmitter(metadata.uploadedBy) ||
+    isSystemSubmitter(metadata.submittedBy) ||
+    isSystemSubmitter(metadata.submitter)
+  );
 }
 
 function objectToRecord(object) {
@@ -330,9 +348,9 @@ async function backfillSubmitters(request, env, access, form) {
         httpMetadata: stored.httpMetadata || object.httpMetadata,
         customMetadata: {
           ...metadata,
-          uploadedBy: metadata.uploadedBy || submitter,
-          submittedBy: metadata.submittedBy || submitter,
-          submitter: metadata.submitter || submitter,
+          uploadedBy: metadata.uploadedBy && !isSystemSubmitter(metadata.uploadedBy) ? metadata.uploadedBy : submitter,
+          submittedBy: metadata.submittedBy && !isSystemSubmitter(metadata.submittedBy) ? metadata.submittedBy : submitter,
+          submitter: metadata.submitter && !isSystemSubmitter(metadata.submitter) ? metadata.submitter : submitter,
           submitterBackfilledBy: access.email,
           submitterBackfilledAt: now
         }
@@ -543,7 +561,7 @@ export async function onRequestPost({ request, env, data }) {
 
   const rawReceiptOwner = String(form.get("receiptOwner") || "").toLowerCase();
   const receiptOwner = receiptOwners.has(rawReceiptOwner) ? rawReceiptOwner : "";
-  const rawReceiptEvent = String(form.get("receiptEvent") || "").toLowerCase();
+  const rawReceiptEvent = String(form.get("receiptEvent") || "global").toLowerCase();
   const receiptEventKey = Object.prototype.hasOwnProperty.call(receiptEvents, rawReceiptEvent)
     ? rawReceiptEvent
     : "";
@@ -563,6 +581,7 @@ export async function onRequestPost({ request, env, data }) {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const id = crypto.randomUUID().slice(0, 8);
   const key = `${area}/${event}/${stamp}-${id}-${originalName}`;
+  const submitter = submitterForAccess(access);
 
   await env.MOJO_SUMMITS_STORAGE.put(key, file.stream(), {
     httpMetadata: {
@@ -570,8 +589,8 @@ export async function onRequestPost({ request, env, data }) {
     },
     customMetadata: {
       uploadedBy: access.email,
-      submittedBy: access.email,
-      submitter: access.email,
+      submittedBy: submitter,
+      submitter,
       originalName: file.name,
       area,
       event: trackedEvent,
