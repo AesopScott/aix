@@ -4926,19 +4926,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const originalLabel = button?.textContent || "";
       const targetNewCompanies = 50;
       const perStepNewCap = 10;
-      const starterSourceCount = prospectingState?.starterSources?.length || 620;
-      const maxSteps = Math.max(1000, starterSourceCount * 2);
+      prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
+      const sourceQueue = (prospectingState?.starterSources || []).filter((source) => source.sourceId);
+      const starterSourceCount = sourceQueue.length || 620;
+      const maxSteps = starterSourceCount;
+      const startingCompanyCount = Number(prospectingState?.dashboard?.companiesDiscovered || prospectCompanies().length || 0);
+      let confirmedNewCompanies = 0;
       const totals = { attempted: 0, succeeded: 0, candidates: 0, discovered: 0, skippedExisting: 0, failed: 0 };
       if (button) {
         button.disabled = true;
         button.textContent = "Finding companies...";
       }
       try {
-        for (let step = 0; step < maxSteps && totals.discovered < targetNewCompanies; step += 1) {
-          const remaining = targetNewCompanies - totals.discovered;
+        for (let step = 0; step < maxSteps && confirmedNewCompanies < targetNewCompanies; step += 1) {
+          const source = sourceQueue[step];
+          const remaining = targetNewCompanies - confirmedNewCompanies;
           prospectingRunStatus = {
             title: "Finding 50 new companies",
-            message: `Checking source batch ${step + 1}. ${totals.discovered} new saved, ${totals.skippedExisting} already known. Continuing until 50 new are saved.`
+            message: `Checking ${source?.sourceName || `source ${step + 1}`} (${step + 1} of ${starterSourceCount}). ${confirmedNewCompanies} confirmed in Vendor Universe. Continuing until 50 new are visible.`
           };
           render();
           setNotice(prospectingRunStatus.message, "ok");
@@ -4947,6 +4952,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               action: "run-partner-prospect-starter-sources",
+              sourceIds: source?.sourceId ? [source.sourceId] : [],
               limitPerSource: 50,
               maxSources: 1,
               targetNewCompanies: Math.min(perStepNewCap, remaining)
@@ -4960,18 +4966,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           totals.discovered += Number(batch.discovered || 0);
           totals.skippedExisting += Number(batch.skippedExisting || 0);
           totals.failed += Math.max(0, Number(batch.attempted || 0) - Number(batch.succeeded || 0));
+          await new Promise((resolve) => setTimeout(resolve, 700));
+          prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
+          const currentCompanyCount = Number(prospectingState?.dashboard?.companiesDiscovered || prospectCompanies().length || 0);
+          confirmedNewCompanies = Math.max(0, currentCompanyCount - startingCompanyCount);
           prospectingRunStatus = {
             title: "Finding 50 new companies",
-            message: `${result.sourceName || "Starter source"} checked. ${totals.discovered} new saved, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked.`
+            message: `${result.sourceName || source?.sourceName || "Starter source"} checked. ${confirmedNewCompanies} confirmed in Vendor Universe, ${totals.discovered} API-reported saves, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked.`
           };
           render();
           if (!Number(batch.attempted || 0)) break;
         }
-        prospectingState = await fetch(`${api}?prospecting=1`).then(readJson);
-        const exhausted = totals.discovered < targetNewCompanies;
+        prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
+        const finalCompanyCount = Number(prospectingState?.dashboard?.companiesDiscovered || prospectCompanies().length || 0);
+        confirmedNewCompanies = Math.max(0, finalCompanyCount - startingCompanyCount);
+        const exhausted = confirmedNewCompanies < targetNewCompanies;
         prospectingRunStatus = {
           title: exhausted ? "Starter discovery finished" : "50 new companies found",
-          message: `${totals.succeeded} source${totals.succeeded === 1 ? "" : "s"} finished. ${totals.discovered} new saved, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked${totals.failed ? `, ${totals.failed} failed` : ""}${exhausted ? ", large source pool exhausted before 50 new companies" : ""}.`
+          message: `${totals.succeeded} source${totals.succeeded === 1 ? "" : "s"} finished. ${confirmedNewCompanies} confirmed in Vendor Universe, ${totals.discovered} API-reported saves, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked${totals.failed ? `, ${totals.failed} failed` : ""}${exhausted ? ", large source pool exhausted before 50 new companies were visible" : ""}.`
         };
         render();
         setNotice(prospectingRunStatus.message, "ok");
