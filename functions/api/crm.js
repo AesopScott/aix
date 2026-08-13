@@ -62,6 +62,11 @@ const PHONE_VERIFICATION_DEBUG_PREFIX = "crm:phone-verification-debug:";
 const R2_REGISTRATION_PREFIX = "crm/registrations";
 const OVERFLOW_REGISTRATION_PREFIX = "crm-overflow/registrations";
 const CONTACT_PHOTO_PREFIX = "crm/contact-photos";
+const PARTNER_PROSPECT_COMPANY_PREFIX = "crm:partner-prospect-company:";
+const PARTNER_PROSPECT_PERSON_PREFIX = "crm:partner-prospect-person:";
+const PARTNER_PROSPECT_AUDIT_PREFIX = "crm:partner-prospect-audit:";
+const PARTNER_PROSPECT_SOURCE_PREFIX = "crm:partner-prospect-source:";
+const PARTNER_PROSPECT_SCORE_CONFIG_KEY = "crm:partner-prospect-score-config";
 const DEFAULT_UPCOMING_EVENTS = [
   {
     slug: "ai-executive-readiness",
@@ -167,6 +172,72 @@ const allowedTopicTracks = new Set([
 const maxFieldLength = 2000;
 const guestInviteEmailCc = ["angel@mojoaisummits.com", "scott@mojoaisummits.com"];
 const EMAIL_LOG_PREFIX = "crm:email-log:";
+const defaultPartnerScoreWeights = {
+  aiRelevance: 20,
+  enterpriseFocus: 15,
+  executiveAudienceOverlap: 15,
+  companySize: 10,
+  fundingRevenueCapacity: 10,
+  eventSponsorshipHistory: 10,
+  marketingMaturity: 5,
+  partnershipTeam: 5,
+  marketPresence: 5,
+  recentGrowthFunding: 5
+};
+const discoveryBlockedDomains = new Set([
+  "facebook.com",
+  "instagram.com",
+  "linkedin.com",
+  "twitter.com",
+  "x.com",
+  "youtube.com",
+  "youtu.be",
+  "tiktok.com",
+  "medium.com",
+  "substack.com",
+  "github.com",
+  "crunchbase.com",
+  "g2.com",
+  "producthunt.com",
+  "wellfound.com",
+  "google.com",
+  "bing.com",
+  "duckduckgo.com",
+  "wikipedia.org"
+]);
+const aiCategorySignals = [
+  ["AI Security", ["ai security", "model security", "llm security", "prompt injection", "ai risk", "security posture"]],
+  ["AI Governance", ["ai governance", "responsible ai", "model governance", "ai compliance", "ai policy", "trustworthy ai"]],
+  ["AI Observability", ["ai observability", "model monitoring", "llm observability", "evals", "model evaluation"]],
+  ["MLOps", ["mlops", "machine learning operations", "model deployment", "feature store", "model registry"]],
+  ["AI Agents", ["ai agent", "agents", "agentic", "workflow automation", "autonomous agent"]],
+  ["Developer AI", ["developer tools", "code assistant", "software development", "devtools", "coding agent"]],
+  ["Vector/Search/Data Infrastructure", ["vector database", "semantic search", "rag", "retrieval", "knowledge graph", "data infrastructure"]],
+  ["Foundation Models / LLMs", ["foundation model", "large language model", "llm", "generative ai model"]],
+  ["Cloud AI", ["cloud ai", "ai cloud", "managed ai", "ai platform"]],
+  ["Generative Media", ["image generation", "video generation", "audio generation", "synthetic media", "creative ai"]],
+  ["Voice/Speech AI", ["voice ai", "speech recognition", "text to speech", "conversational ai"]],
+  ["Computer Vision", ["computer vision", "visual ai", "image recognition", "video analytics"]],
+  ["Robotics/Autonomy", ["robotics", "autonomous", "autonomy", "robot"]],
+  ["Healthcare AI", ["healthcare ai", "clinical ai", "medical ai", "patient"]],
+  ["Financial AI", ["financial ai", "fintech ai", "banking ai", "fraud detection"]],
+  ["Legal AI", ["legal ai", "contract ai", "legaltech", "e-discovery"]],
+  ["HR AI", ["hr ai", "talent ai", "recruiting ai", "workforce ai"]],
+  ["Sales AI", ["sales ai", "revenue intelligence", "sales automation", "sales engagement"]],
+  ["Marketing AI", ["marketing ai", "personalization", "campaign optimization", "content generation"]],
+  ["Customer Service AI", ["customer service ai", "contact center ai", "support automation", "chatbot"]],
+  ["AI Consulting / Systems Integrator", ["ai consulting", "systems integrator", "implementation partner", "digital transformation"]]
+];
+const executiveBuyerSignals = [
+  ["CIO", ["cio", "information officer", "it leader", "enterprise technology"]],
+  ["CTO", ["cto", "technology leader", "engineering leader"]],
+  ["CISO", ["ciso", "security leader", "cybersecurity"]],
+  ["Chief AI Officer", ["chief ai officer", "caio", "ai leader", "ai strategy"]],
+  ["COO", ["coo", "operations leader", "operating model"]],
+  ["CMO", ["cmo", "marketing leader", "growth leader"]],
+  ["CRO", ["cro", "revenue leader", "sales leader"]],
+  ["General Counsel", ["general counsel", "legal", "compliance"]]
+];
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -236,6 +307,309 @@ function cleanTopicTracks(value) {
     .filter(Boolean)
     .filter((item, index, list) => list.indexOf(item) === index)
     .slice(0, 12);
+}
+
+function cleanArray(value, maxItems = 24, maxLength = 240) {
+  const raw = Array.isArray(value) ? value : cleanString(value, 4000).split(/[,;\n]/);
+  return raw
+    .map((item) => cleanString(item, maxLength))
+    .filter(Boolean)
+    .filter((item, index, list) => list.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index)
+    .slice(0, maxItems);
+}
+
+function cleanNumber(value, fallback = 0, min = 0, max = 100) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(number)));
+}
+
+function normalizeDomain(value = "") {
+  const raw = cleanString(value, 300).toLowerCase();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    return url.hostname.replace(/^www\./, "");
+  } catch {
+    return raw
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .split(/[/?#]/)[0]
+      .replace(/[^a-z0-9.-]/g, "")
+      .replace(/^\.+|\.+$/g, "");
+  }
+}
+
+function normalizeUrl(value = "") {
+  const raw = cleanString(value, 500);
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+function sameRootDomain(left = "", right = "") {
+  const normalize = (value) => normalizeDomain(value).split(".").slice(-2).join(".");
+  return normalize(left) && normalize(left) === normalize(right);
+}
+
+function htmlDecode(value = "") {
+  return String(value || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ");
+}
+
+function stripHtml(value = "") {
+  return htmlDecode(String(value || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim());
+}
+
+function htmlTitle(html = "") {
+  const title = String(html || "").match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  return cleanString(stripHtml(title), 240);
+}
+
+function htmlMetaDescription(html = "") {
+  const match = String(html || "").match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)["'][^>]*>/i) ||
+    String(html || "").match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["'](?:description|og:description)["'][^>]*>/i);
+  return cleanString(htmlDecode(match?.[1] || ""), 1000);
+}
+
+function domainCompanyName(domain = "", fallback = "") {
+  const clean = normalizeDomain(domain);
+  const segment = clean.split(".")[0] || fallback;
+  return cleanString(segment
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase()), 180);
+}
+
+function blockedDiscoveryDomain(domain = "") {
+  const normalized = normalizeDomain(domain);
+  if (!normalized) return true;
+  return [...discoveryBlockedDomains].some((blocked) => normalized === blocked || normalized.endsWith(`.${blocked}`));
+}
+
+function extractCompanyLinks(html = "", sourceUrl = "", limit = 40) {
+  const sourceDomain = normalizeDomain(sourceUrl);
+  const links = new Map();
+  const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+  while ((match = anchorPattern.exec(String(html || "")))) {
+    const href = cleanString(match[1], 1000);
+    if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) continue;
+    let url;
+    try {
+      url = new URL(href, normalizeUrl(sourceUrl || "https://example.com"));
+    } catch {
+      continue;
+    }
+    if (!["http:", "https:"].includes(url.protocol)) continue;
+    const domain = normalizeDomain(url.hostname);
+    if (!domain || blockedDiscoveryDomain(domain) || sameRootDomain(domain, sourceDomain)) continue;
+    const text = stripHtml(match[2]).replace(/\s+/g, " ").trim();
+    if (!links.has(domain)) {
+      links.set(domain, {
+        companyName: cleanString(text, 180) || domainCompanyName(domain),
+        canonicalDomain: domain,
+        websiteUrl: `${url.protocol}//${domain}/`,
+        sourceUrl
+      });
+    }
+    if (links.size >= limit) break;
+  }
+  return [...links.values()];
+}
+
+function signalScore(text = "", terms = []) {
+  const haystack = String(text || "").toLowerCase();
+  return terms.reduce((score, term) => score + (haystack.includes(term) ? 1 : 0), 0);
+}
+
+function classifyWebsiteText(text = "") {
+  const haystack = String(text || "").toLowerCase();
+  const categoryHits = aiCategorySignals
+    .map(([category, terms]) => ({ category, hits: signalScore(haystack, terms) }))
+    .filter((entry) => entry.hits > 0)
+    .sort((a, b) => b.hits - a.hits);
+  const buyerHits = executiveBuyerSignals
+    .map(([role, terms]) => ({ role, hits: signalScore(haystack, terms) }))
+    .filter((entry) => entry.hits > 0)
+    .sort((a, b) => b.hits - a.hits);
+  const aiTerms = [
+    "artificial intelligence",
+    " ai ",
+    "machine learning",
+    "generative ai",
+    "large language model",
+    " llm",
+    "automation",
+    "predictive",
+    "model",
+    "agent"
+  ];
+  const enterpriseTerms = ["enterprise", "security", "governance", "compliance", "platform", "workflow", "global", "teams", "customers", "business"];
+  const aiHits = signalScore(` ${haystack} `, aiTerms);
+  const enterpriseHits = signalScore(haystack, enterpriseTerms);
+  const categories = categoryHits.map((entry) => entry.category).slice(0, 5);
+  const targetBuyers = buyerHits.map((entry) => entry.role).slice(0, 6);
+  const aiRelevance = cleanNumber(Math.min(100, 25 + aiHits * 12 + categoryHits.reduce((sum, entry) => sum + entry.hits, 0) * 8), aiHits ? 55 : 25);
+  const enterpriseFocus = cleanNumber(Math.min(100, 30 + enterpriseHits * 8 + targetBuyers.length * 7), enterpriseHits ? 55 : 35);
+  return {
+    isAiVendor: aiHits > 0 || categoryHits.length > 0,
+    aiNative: aiHits >= 3 || haystack.includes("generative ai") || haystack.includes("large language model"),
+    aiRelevance,
+    enterpriseFocus,
+    eventPartnerFit: cleanNumber((aiRelevance + enterpriseFocus + (targetBuyers.length ? 80 : 45)) / 3),
+    categories,
+    targetBuyers,
+    reason: categories.length
+      ? `Website language matched ${categories.slice(0, 3).join(", ")} signals${targetBuyers.length ? ` and target buyer roles including ${targetBuyers.slice(0, 3).join(", ")}` : ""}.`
+      : aiHits
+        ? "Website language indicates AI-enabled products or services, but category needs human review."
+        : "No strong AI vendor signal found in the fetched website text."
+  };
+}
+
+async function fetchPublicHtml(url = "") {
+  const target = normalizeUrl(url);
+  if (!target) throw new Error("A source URL is required.");
+  const response = await fetch(target, {
+    headers: {
+      "accept": "text/html,application/xhtml+xml",
+      "user-agent": "MojoAIProspectingBot/0.1 (+https://mojoaisummits.com)"
+    }
+  });
+  if (!response.ok) throw new Error(`Fetch failed with ${response.status} for ${target}.`);
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
+    throw new Error("Discovery source did not return HTML.");
+  }
+  const html = await response.text();
+  return { url: target, html: cleanString(html, 500000) };
+}
+
+function parseCsvLine(line = "") {
+  const values = [];
+  let current = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+    if (char === '"' && quoted && next === '"') {
+      current += '"';
+      index += 1;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (char === "," && !quoted) {
+      values.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  values.push(current.trim());
+  return values;
+}
+
+function parseCompanyImportRows(value = "") {
+  const lines = String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!lines.length) return [];
+  const firstValues = parseCsvLine(lines[0]).map((item) => item.toLowerCase());
+  const hasHeader = firstValues.some((item) =>
+    ["company", "companyname", "company name", "domain", "canonicaldomain", "canonical domain", "website", "websiteurl", "website url"].includes(item)
+  );
+  const headers = hasHeader
+    ? firstValues.map((item) => item.replace(/\s+/g, ""))
+    : ["companyname", "canonicaldomain", "websiteurl", "linkedincompanyurl", "primarycategory", "categories", "sourceurls"];
+  const dataLines = hasHeader ? lines.slice(1) : lines;
+  return dataLines.map((line) => {
+    const values = parseCsvLine(line);
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || "";
+    });
+    return {
+      companyName: row.companyname || row.company || row.name,
+      canonicalDomain: row.canonicaldomain || row.domain,
+      websiteUrl: row.websiteurl || row.website || row.url,
+      linkedinCompanyUrl: row.linkedincompanyurl || row.linkedin,
+      primaryCategory: row.primarycategory || row.category,
+      categories: row.categories,
+      sourceUrls: row.sourceurls || row.sourceurl,
+      description: row.description,
+      classificationReason: row.reason || row.classificationreason
+    };
+  }).filter((row) => cleanString(row.companyName || row.canonicalDomain || row.websiteUrl));
+}
+
+function priorityBand(score = 0) {
+  const value = cleanNumber(score);
+  if (value >= 90) return "Immediate";
+  if (value >= 75) return "Tier A";
+  if (value >= 60) return "Tier B";
+  if (value >= 40) return "Nurture";
+  return "Database Only";
+}
+
+function companySizeScore(value = "") {
+  const normalized = cleanString(value).toLowerCase();
+  if (/(201|1001|5001|10000|\d{3,})/.test(normalized)) return 85;
+  if (/(51|50|200)/.test(normalized)) return 65;
+  if (/(1-|2-|10|small|startup)/.test(normalized)) return 45;
+  return 50;
+}
+
+function prospectScore(record = {}, weights = defaultPartnerScoreWeights) {
+  if (record.partnerScoreOverride !== undefined && record.partnerScoreOverride !== null && record.partnerScoreOverride !== "") {
+    return cleanNumber(record.partnerScoreOverride);
+  }
+  const signals = {
+    aiRelevance: cleanNumber(record.aiRelevanceScore),
+    enterpriseFocus: cleanNumber(record.enterpriseFocus),
+    executiveAudienceOverlap: cleanArray(record.targetExecutiveRoles).length ? 85 : 50,
+    companySize: companySizeScore(record.employeeRange || record.employeeCount),
+    fundingRevenueCapacity: cleanString(record.fundingStage || record.fundingTotal || record.revenueEstimate) ? 70 : 45,
+    eventSponsorshipHistory: cleanNumber(record.eventSponsorshipHistoryScore, 45),
+    marketingMaturity: cleanNumber(record.marketingMaturityScore, 50),
+    partnershipTeam: cleanNumber(record.partnershipTeamScore, cleanArray(record.targetExecutiveRoles).some((role) => /partner|alliance|ecosystem/i.test(role)) ? 80 : 45),
+    marketPresence: cleanString(record.headquartersCountry || record.headquartersState || record.headquartersCity) ? 65 : 45,
+    recentGrowthFunding: cleanNumber(record.recentGrowthFundingScore, cleanString(record.fundingStage || record.fundingTotal) ? 70 : 45)
+  };
+  const totalWeight = Object.values(weights).reduce((sum, value) => sum + Number(value || 0), 0) || 100;
+  const weighted = Object.entries(weights).reduce((sum, [key, weight]) => sum + (signals[key] || 0) * Number(weight || 0), 0);
+  return cleanNumber(weighted / totalWeight);
+}
+
+function cleanScoreWeights(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  return Object.fromEntries(Object.entries(defaultPartnerScoreWeights).map(([key, fallback]) => [
+    key,
+    cleanNumber(source[key], fallback, 0, 100)
+  ]));
+}
+
+async function partnerScoreConfig(env) {
+  const stored = await readRawRecord(env, PARTNER_PROSPECT_SCORE_CONFIG_KEY);
+  return {
+    key: PARTNER_PROSPECT_SCORE_CONFIG_KEY,
+    weights: cleanScoreWeights(stored?.weights || stored),
+    updatedAt: cleanString(stored?.updatedAt),
+    updatedBy: cleanString(stored?.updatedBy, 180)
+  };
 }
 
 function normalizeActivity(entry = {}) {
@@ -360,6 +734,7 @@ function normalizeRecord(key, record) {
     email: cleanString(record?.email).toLowerCase(),
     phone: cleanString(record?.phone),
     inviteCode: cleanString(record?.inviteCode),
+    invitedBy: cleanString(record?.invitedBy || record?.inviter || record?.invitedByName || record?.createdBy, 180),
     phoneVerificationStatus: cleanString(record?.phoneVerificationStatus) || "unverified",
     eventId: cleanString(record?.eventId),
     eventSlug: cleanString(record?.eventSlug),
@@ -446,6 +821,7 @@ function normalizeContactRecord(key, record = {}) {
     phone: cleanString(record.phone),
     source: cleanString(record.source),
     invitationSource: cleanString(record.invitationSource || record.source, 180),
+    invitedBy: cleanString(record.invitedBy || record.inviter || record.invitedByName || latestEvent.invitedBy, 180),
     partnerProductTypes: cleanString(record.partnerProductTypes, 2000),
     partnerClientMessaging: cleanString(record.partnerClientMessaging, 4000),
     relationshipOwner: cleanString(record.relationshipOwner, 180),
@@ -489,6 +865,7 @@ function normalizeContactRecord(key, record = {}) {
       eventShowTime: cleanString(event?.eventShowTime) || cleanString(event?.eventTime),
       intendedGuestName: cleanString(event?.intendedGuestName || event?.invitedName || event?.guestName),
       invitedName: cleanString(event?.invitedName || event?.intendedGuestName || event?.guestName),
+      invitedBy: cleanString(event?.invitedBy || event?.inviter || event?.invitedByName, 180),
       guestRegistrationType: cleanGuestRegistrationType(event?.guestRegistrationType || event?.registrationRole),
       partnerRegistrationType: cleanOptionalRegistrationType(event?.partnerRegistrationType || event?.registrationRole),
       registrationRole: cleanGuestRegistrationType(event?.registrationRole || event?.partnerRegistrationType || event?.guestRegistrationType),
@@ -651,6 +1028,7 @@ function contactFromRegistrant(row = {}, type = "") {
       title: cleanString(row.title),
       industry: cleanString(row.industry),
       phone: cleanString(row.phone),
+      invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
       source: cleanString(row.source || "manual-partner"),
       registrationId: cleanString(row.id),
       registrationType: "partner",
@@ -673,6 +1051,7 @@ function contactFromRegistrant(row = {}, type = "") {
     title: cleanString(row.title),
     industry: cleanString(row.industry),
     phone: cleanString(row.phone),
+    invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
     ...(type === "partner" ? {
       partnerProductTypes: cleanString(row.partnerProductTypes, 2000),
       partnerClientMessaging: cleanString(row.partnerClientMessaging, 4000)
@@ -695,6 +1074,7 @@ function contactFromRegistrant(row = {}, type = "") {
       eventShowLabel: cleanString(row.eventShowLabel) || (rowShowId ? eventShowLabel(rowShowId) : ""),
       eventShowTime: cleanString(row.eventShowTime) || cleanString(row.eventTime),
       inviteCode: cleanString(row.inviteCode),
+      invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
       registrationId: cleanString(row.id),
       registrationType: cleanString(type),
       guestRegistrationType: cleanGuestRegistrationType(row.guestRegistrationType || row.registrationRole),
@@ -759,6 +1139,7 @@ function mergeContactRows(storedRows, derivedRows) {
       location: cleanString(row.location) || cleanString(previous.location),
       phone: cleanString(row.phone) || cleanString(previous.phone),
       invitationSource: cleanString(row.invitationSource) || cleanString(previous.invitationSource),
+      invitedBy: cleanString(row.invitedBy) || cleanString(previous.invitedBy),
       relationshipOwner: cleanString(row.relationshipOwner) || cleanString(previous.relationshipOwner),
       lifecycleStage: cleanString(row.lifecycleStage) || cleanString(previous.lifecycleStage),
       nextAction: cleanString(row.nextAction) || cleanString(previous.nextAction),
@@ -838,6 +1219,1053 @@ function normalizeEmailLogEntry(key, record = {}) {
 
 async function readRawRecord(env, key) {
   return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+}
+
+function prospectCompanyId(record = {}) {
+  const domain = normalizeDomain(record.canonicalDomain || record.websiteUrl);
+  const linkedin = companySlug(cleanString(record.linkedinCompanyUrl, 300).replace(/^https?:\/\/(www\.)?linkedin\.com\/company\//i, ""));
+  return cleanString(record.companyId, 160) || domain.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || linkedin || companySlug(record.companyName) || `company-${Date.now()}`;
+}
+
+function prospectPersonId(record = {}) {
+  const linkedin = cleanString(record.linkedinUrl, 500).toLowerCase().replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, "").replace(/\/+$/, "");
+  return cleanString(record.personId, 180) || companySlug(linkedin) || companySlug(record.fullName || [record.firstName, record.lastName].filter(Boolean).join(" ")) || `person-${Date.now()}`;
+}
+
+function normalizeProspectCompany(key, record = {}, people = [], weights = defaultPartnerScoreWeights) {
+  const companyId = cleanString(record.companyId, 180) || key.replace(PARTNER_PROSPECT_COMPANY_PREFIX, "") || prospectCompanyId(record);
+  const canonicalDomain = normalizeDomain(record.canonicalDomain || record.websiteUrl);
+  const aiRelevanceScore = cleanNumber(record.aiRelevanceScore || record.aiRelevance);
+  const enterpriseFocus = cleanNumber(record.enterpriseFocus);
+  const score = prospectScore({ ...record, aiRelevanceScore, enterpriseFocus }, weights);
+  const partnerStatus = cleanString(record.partnerStatus, 120) || (score >= 60 ? "Partner Target" : "Vendor Universe");
+  const processingStage = cleanString(record.processingStage, 120) || (people.length ? "READY FOR OUTREACH" : "PEOPLE DISCOVERY");
+  const processingStatus = cleanString(record.processingStatus, 80) || "DISCOVERED";
+  const rollup = outreachRollup(people);
+  return {
+    key,
+    companyId,
+    companyName: cleanString(record.companyName || record.name || record.company, 240),
+    canonicalDomain,
+    websiteUrl: normalizeUrl(record.websiteUrl || canonicalDomain),
+    linkedinCompanyUrl: normalizeUrl(record.linkedinCompanyUrl),
+    description: cleanString(record.description, 4000),
+    aiVendor: record.aiVendor !== false,
+    aiNative: record.aiNative === true,
+    aiRelevanceScore,
+    aiRelevance: aiRelevanceScore,
+    classificationReason: cleanString(record.classificationReason || record.reason, 4000),
+    primaryCategory: cleanString(record.primaryCategory || cleanArray(record.categories)[0], 160),
+    categories: cleanArray(record.categories, 20, 160),
+    products: cleanArray(record.products, 30, 180),
+    employeeCount: cleanString(record.employeeCount, 80),
+    employeeRange: cleanString(record.employeeRange || record.companySize, 80),
+    revenueEstimate: cleanString(record.revenueEstimate, 120),
+    fundingTotal: cleanString(record.fundingTotal, 120),
+    fundingStage: cleanString(record.fundingStage, 120),
+    headquartersCountry: cleanString(record.headquartersCountry, 120),
+    headquartersState: cleanString(record.headquartersState, 120),
+    headquartersCity: cleanString(record.headquartersCity, 120),
+    b2b: record.b2b !== false,
+    enterpriseFocus,
+    targetIndustries: cleanArray(record.targetIndustries, 24, 160),
+    targetExecutiveRoles: cleanArray(record.targetExecutiveRoles || record.targetBuyers, 24, 160),
+    partnerScore: score,
+    partnerScoreOverride: record.partnerScoreOverride === undefined || record.partnerScoreOverride === null || record.partnerScoreOverride === ""
+      ? ""
+      : cleanNumber(record.partnerScoreOverride),
+    partnerPriority: cleanString(record.partnerPriority, 80) || priorityBand(score),
+    partnerStatus,
+    discoverySources: cleanArray(record.discoverySources || record.sources, 20, 160),
+    sourceUrls: cleanArray(record.sourceUrls, 30, 500),
+    provenance: record.provenance && typeof record.provenance === "object" ? record.provenance : {},
+    assignedTo: cleanString(record.assignedTo || "Miller", 180),
+    processingStage,
+    processingStatus,
+    processingError: cleanString(record.processingError, 1000),
+    retryCount: cleanNumber(record.retryCount, 0, 0, 999),
+    dateDiscovered: cleanString(record.dateDiscovered, 40),
+    lastVerified: cleanString(record.lastVerified, 40),
+    lastEnriched: cleanString(record.lastEnriched, 40),
+    lastContactAt: cleanString(record.lastContactAt, 40),
+    convertedPartnerKey: cleanString(record.convertedPartnerKey, 300),
+    convertedAt: cleanString(record.convertedAt, 40),
+    convertedBy: cleanString(record.convertedBy, 180),
+    humanVerifiedAt: cleanString(record.humanVerifiedAt, 40),
+    humanVerifiedBy: cleanString(record.humanVerifiedBy, 180),
+    reviewStatus: cleanString(record.reviewStatus, 80),
+    reviewedAt: cleanString(record.reviewedAt, 40),
+    reviewedBy: cleanString(record.reviewedBy, 180),
+    sponsoredEvents: cleanArray(record.sponsoredEvents, 40, 240),
+    sponsorEvidenceUrls: cleanArray(record.sponsorEvidenceUrls || record.evidenceUrls, 40, 500),
+    sponsorshipFit: cleanString(record.sponsorshipFit, 120),
+    sponsorshipEstimatedSpend: cleanString(record.sponsorshipEstimatedSpend || record.estimatedSponsorshipSpend, 120),
+    sponsorshipThemes: cleanArray(record.sponsorshipThemes || record.sponsorshipValues, 24, 160),
+    sponsorshipNotes: cleanString(record.sponsorshipNotes || record.evidenceNotes, 4000),
+    sponsorEvidenceUpdatedAt: cleanString(record.sponsorEvidenceUpdatedAt, 40),
+    sponsorEvidenceUpdatedBy: cleanString(record.sponsorEvidenceUpdatedBy, 180),
+    peopleSearchStatus: cleanString(record.peopleSearchStatus, 120) || "Not Started",
+    peopleSearchRoles: cleanArray(record.peopleSearchRoles, 24, 160),
+    peopleSearchQuery: cleanString(record.peopleSearchQuery, 500),
+    peopleSearchNotes: cleanString(record.peopleSearchNotes, 4000),
+    peopleSearchPreparedAt: cleanString(record.peopleSearchPreparedAt, 40),
+    peopleSearchPreparedBy: cleanString(record.peopleSearchPreparedBy, 180),
+    peopleSearchCompletedAt: cleanString(record.peopleSearchCompletedAt, 40),
+    peopleSearchCompletedBy: cleanString(record.peopleSearchCompletedBy, 180),
+    manualLeadListName: cleanString(record.manualLeadListName, 240),
+    manualLeadListUrl: normalizeUrl(record.manualLeadListUrl),
+    manualLeadListOwner: cleanString(record.manualLeadListOwner, 180),
+    manualLeadListUpdatedAt: cleanString(record.manualLeadListUpdatedAt, 40),
+    scoreAudit: Array.isArray(record.scoreAudit) ? record.scoreAudit.slice(-50) : [],
+    createdAt: cleanString(record.createdAt),
+    createdBy: cleanString(record.createdBy, 180),
+    updatedAt: cleanString(record.updatedAt),
+    updatedBy: cleanString(record.updatedBy, 180),
+    peopleCount: people.length,
+    outreach: rollup
+  };
+}
+
+function normalizeProspectPerson(key, record = {}) {
+  const fullName = cleanString(record.fullName || record.name || [record.firstName, record.lastName].filter(Boolean).join(" "), 240);
+  const fallbackName = splitName(fullName);
+  return {
+    key,
+    personId: cleanString(record.personId, 180) || key.split(":").pop() || prospectPersonId(record),
+    companyId: cleanString(record.companyId, 180),
+    firstName: cleanString(record.firstName || fallbackName.firstName, 120),
+    lastName: cleanString(record.lastName || fallbackName.lastName, 120),
+    fullName: fullName || cleanString(record.linkedinUrl, 240),
+    title: cleanString(record.title, 240),
+    seniority: cleanString(record.seniority, 120),
+    department: cleanString(record.department, 120),
+    persona: cleanString(record.persona, 120),
+    linkedinUrl: normalizeUrl(record.linkedinUrl),
+    email: cleanString(record.email, 180).toLowerCase(),
+    phone: cleanString(record.phone, 80),
+    source: cleanString(record.source, 120),
+    sourceUrl: normalizeUrl(record.sourceUrl),
+    priorityScore: cleanNumber(record.priorityScore, 50),
+    outreachStatus: cleanString(record.outreachStatus, 120) || "Not Contacted",
+    assignedTo: cleanString(record.assignedTo || "Miller", 180),
+    connectionRequestedAt: cleanString(record.connectionRequestedAt, 40),
+    connectedAt: cleanString(record.connectedAt, 40),
+    firstMessageAt: cleanString(record.firstMessageAt, 40),
+    lastMessageAt: cleanString(record.lastMessageAt, 40),
+    respondedAt: cleanString(record.respondedAt, 40),
+    meetingAt: cleanString(record.meetingAt, 40),
+    notRelevantAt: cleanString(record.notRelevantAt, 40),
+    skippedAt: cleanString(record.skippedAt, 40),
+    notes: cleanString(record.notes, 4000),
+    lastVerified: cleanString(record.lastVerified, 40),
+    createdAt: cleanString(record.createdAt),
+    createdBy: cleanString(record.createdBy, 180),
+    updatedAt: cleanString(record.updatedAt),
+    updatedBy: cleanString(record.updatedBy, 180)
+  };
+}
+
+function outreachRollup(people = []) {
+  return {
+    peopleIdentified: people.length,
+    peopleAttempted: people.filter((person) => person.connectionRequestedAt || person.firstMessageAt || person.lastMessageAt).length,
+    connectionsPending: people.filter((person) => person.connectionRequestedAt && !person.connectedAt).length,
+    connectionsAccepted: people.filter((person) => Boolean(person.connectedAt)).length,
+    messagesSent: people.filter((person) => person.firstMessageAt || person.lastMessageAt).length,
+    responses: people.filter((person) => Boolean(person.respondedAt)).length,
+    meetings: people.filter((person) => Boolean(person.meetingAt)).length
+  };
+}
+
+async function prospectPeople(env, companyId = "") {
+  const prefix = companyId
+    ? `${PARTNER_PROSPECT_PERSON_PREFIX}${companyId}:`
+    : PARTNER_PROSPECT_PERSON_PREFIX;
+  const keys = await listKeys(env, prefix);
+  const rows = await Promise.all(keys.map(async (key) => {
+    const record = await readRawRecord(env, key);
+    return record ? normalizeProspectPerson(key, record) : null;
+  }));
+  return rows.filter(Boolean).sort((a, b) => (b.priorityScore - a.priorityScore) || String(a.fullName).localeCompare(String(b.fullName)));
+}
+
+async function prospectCompanies(env) {
+  const config = await partnerScoreConfig(env);
+  const people = await prospectPeople(env);
+  const peopleByCompany = new Map();
+  for (const person of people) {
+    if (!peopleByCompany.has(person.companyId)) peopleByCompany.set(person.companyId, []);
+    peopleByCompany.get(person.companyId).push(person);
+  }
+  const keys = await listKeys(env, PARTNER_PROSPECT_COMPANY_PREFIX);
+  const rows = await Promise.all(keys.map(async (key) => {
+    const record = await readRawRecord(env, key);
+    const companyId = cleanString(record?.companyId, 180) || key.replace(PARTNER_PROSPECT_COMPANY_PREFIX, "");
+    return record ? normalizeProspectCompany(key, record, peopleByCompany.get(companyId) || [], config.weights) : null;
+  }));
+  return rows.filter(Boolean).sort((a, b) => (b.partnerScore - a.partnerScore) || String(a.companyName).localeCompare(String(b.companyName)));
+}
+
+async function findProspectCompany(env, payload = {}) {
+  const companies = await prospectCompanies(env);
+  const requestedKey = cleanString(payload.key || payload.companyKey, 500);
+  const requestedId = cleanString(payload.companyId, 180);
+  const domain = normalizeDomain(payload.canonicalDomain || payload.websiteUrl);
+  const linkedin = cleanString(payload.linkedinCompanyUrl, 500).toLowerCase().replace(/\/+$/, "");
+  const name = companySlug(payload.companyName || payload.company || payload.name);
+  return companies.find((company) =>
+    (requestedKey && company.key === requestedKey) ||
+    (requestedId && company.companyId === requestedId) ||
+    (domain && company.canonicalDomain === domain) ||
+    (linkedin && cleanString(company.linkedinCompanyUrl, 500).toLowerCase().replace(/\/+$/, "") === linkedin) ||
+    (name && companySlug(company.companyName) === name)
+  );
+}
+
+async function writeProspectAudit(env, companyId, entry = {}) {
+  const now = new Date().toISOString();
+  const id = `${companyId}:${now}:${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
+  await env.MOJO_SUMMITS_SETUP_STATE.put(`${PARTNER_PROSPECT_AUDIT_PREFIX}${id}`, JSON.stringify({
+    id,
+    companyId,
+    createdAt: now,
+    ...entry
+  }));
+}
+
+function normalizeProspectSource(key, record = {}) {
+  return {
+    key,
+    sourceId: cleanString(record.sourceId, 180) || key.replace(PARTNER_PROSPECT_SOURCE_PREFIX, ""),
+    sourceName: cleanString(record.sourceName || record.name || record.source, 180),
+    sourceType: cleanString(record.sourceType || record.type || "Public Web", 120),
+    sourceUrl: normalizeUrl(record.sourceUrl || record.url),
+    status: cleanString(record.status, 80) || "active",
+    lastRunAt: cleanString(record.lastRunAt, 40),
+    lastRunBy: cleanString(record.lastRunBy, 180),
+    lastRunStatus: cleanString(record.lastRunStatus, 80),
+    lastRunError: cleanString(record.lastRunError, 1000),
+    discoveredCount: cleanNumber(record.discoveredCount, 0, 0, 1000000),
+    createdAt: cleanString(record.createdAt),
+    createdBy: cleanString(record.createdBy, 180),
+    updatedAt: cleanString(record.updatedAt),
+    updatedBy: cleanString(record.updatedBy, 180)
+  };
+}
+
+async function prospectSources(env) {
+  const keys = await listKeys(env, PARTNER_PROSPECT_SOURCE_PREFIX);
+  const rows = await Promise.all(keys.map(async (key) => {
+    const record = await readRawRecord(env, key);
+    return record ? normalizeProspectSource(key, record) : null;
+  }));
+  return rows.filter(Boolean).sort((a, b) => String(b.lastRunAt || b.updatedAt || b.createdAt).localeCompare(String(a.lastRunAt || a.updatedAt || a.createdAt)));
+}
+
+async function saveProspectSource(env, payload = {}, actor = "") {
+  const sourceName = cleanString(payload.sourceName || payload.name || payload.source || "Web Discovery", 180);
+  const sourceUrl = normalizeUrl(payload.sourceUrl || payload.url);
+  if (!sourceUrl) throw new Error("A discovery source URL is required.");
+  const sourceId = cleanString(payload.sourceId, 180) || companySlug(`${sourceName}-${normalizeDomain(sourceUrl)}`) || `source-${Date.now()}`;
+  const key = `${PARTNER_PROSPECT_SOURCE_PREFIX}${sourceId}`;
+  const existing = await readRawRecord(env, key);
+  const now = new Date().toISOString();
+  const record = {
+    ...(existing || {}),
+    sourceId,
+    sourceName,
+    sourceType: cleanString(payload.sourceType || existing?.sourceType || "Public Web", 120),
+    sourceUrl,
+    status: cleanString(payload.status || existing?.status || "active", 80),
+    createdAt: cleanString(existing?.createdAt) || now,
+    createdBy: cleanString(existing?.createdBy) || actor || "crm",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  return normalizeProspectSource(key, record);
+}
+
+async function saveProspectCompany(env, payload = {}, actor = "") {
+  if (!cleanString(payload.companyName || payload.company || payload.name) &&
+    !normalizeDomain(payload.canonicalDomain || payload.websiteUrl) &&
+    !cleanString(payload.companyId || payload.key || payload.companyKey, 500)) {
+    throw new Error("Company name or domain is required.");
+  }
+  const existing = await findProspectCompany(env, payload);
+  const config = await partnerScoreConfig(env);
+  const now = new Date().toISOString();
+  const companyId = cleanString(existing?.companyId, 180) || prospectCompanyId(payload);
+  const key = cleanString(existing?.key, 500) || `${PARTNER_PROSPECT_COMPANY_PREFIX}${companyId}`;
+  const previous = existing?.key ? await readRawRecord(env, existing.key) : null;
+  const scoreChanged = payload.partnerScoreOverride !== undefined &&
+    cleanString(payload.partnerScoreOverride) !== cleanString(previous?.partnerScoreOverride);
+  const record = {
+    ...(previous || {}),
+    ...payload,
+    companyId,
+    companyName: cleanString(payload.companyName || payload.company || previous?.companyName, 240),
+    canonicalDomain: normalizeDomain(payload.canonicalDomain || payload.websiteUrl || previous?.canonicalDomain),
+    websiteUrl: normalizeUrl(payload.websiteUrl || payload.canonicalDomain || previous?.websiteUrl),
+    linkedinCompanyUrl: normalizeUrl(payload.linkedinCompanyUrl || previous?.linkedinCompanyUrl),
+    sourceUrls: cleanArray(payload.sourceUrls ?? previous?.sourceUrls, 30, 500),
+    discoverySources: cleanArray(payload.discoverySources ?? previous?.discoverySources, 20, 160),
+    categories: cleanArray(payload.categories ?? previous?.categories, 20, 160),
+    products: cleanArray(payload.products ?? previous?.products, 30, 180),
+    targetIndustries: cleanArray(payload.targetIndustries ?? previous?.targetIndustries, 24, 160),
+    targetExecutiveRoles: cleanArray(payload.targetExecutiveRoles ?? previous?.targetExecutiveRoles ?? payload.targetBuyers, 24, 160),
+    sponsoredEvents: cleanArray(payload.sponsoredEvents ?? previous?.sponsoredEvents, 40, 240),
+    sponsorEvidenceUrls: cleanArray(payload.sponsorEvidenceUrls ?? payload.evidenceUrls ?? previous?.sponsorEvidenceUrls, 40, 500),
+    sponsorshipFit: cleanString(payload.sponsorshipFit ?? previous?.sponsorshipFit, 120),
+    sponsorshipEstimatedSpend: cleanString(payload.sponsorshipEstimatedSpend ?? payload.estimatedSponsorshipSpend ?? previous?.sponsorshipEstimatedSpend, 120),
+    sponsorshipThemes: cleanArray(payload.sponsorshipThemes ?? payload.sponsorshipValues ?? previous?.sponsorshipThemes, 24, 160),
+    sponsorshipNotes: cleanString(payload.sponsorshipNotes ?? payload.evidenceNotes ?? previous?.sponsorshipNotes, 4000),
+    sponsorEvidenceUpdatedAt: (payload.sponsorshipNotes !== undefined || payload.sponsoredEvents !== undefined || payload.sponsorEvidenceUrls !== undefined)
+      ? now
+      : cleanString(previous?.sponsorEvidenceUpdatedAt, 40),
+    sponsorEvidenceUpdatedBy: (payload.sponsorshipNotes !== undefined || payload.sponsoredEvents !== undefined || payload.sponsorEvidenceUrls !== undefined)
+      ? actor || "crm"
+      : cleanString(previous?.sponsorEvidenceUpdatedBy, 180),
+    aiVendor: payload.aiVendor === undefined ? previous?.aiVendor !== false : payload.aiVendor !== false,
+    aiNative: payload.aiNative === true || previous?.aiNative === true,
+    assignedTo: cleanString(payload.assignedTo ?? previous?.assignedTo ?? "Miller", 180),
+    dateDiscovered: cleanString(previous?.dateDiscovered) || now.slice(0, 10),
+    createdAt: cleanString(previous?.createdAt) || now,
+    createdBy: cleanString(previous?.createdBy) || actor || "crm",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  };
+  const normalized = normalizeProspectCompany(key, record, await prospectPeople(env, companyId), config.weights);
+  const next = {
+    ...record,
+    partnerScore: normalized.partnerScore,
+    partnerPriority: normalized.partnerPriority,
+    processingStage: normalized.processingStage,
+    processingStatus: normalized.processingStatus,
+    scoreAudit: scoreChanged
+      ? [
+        ...(Array.isArray(previous?.scoreAudit) ? previous.scoreAudit : []),
+        { at: now, by: actor || "crm", from: previous?.partnerScoreOverride ?? "", to: normalized.partnerScoreOverride }
+      ].slice(-50)
+      : (Array.isArray(previous?.scoreAudit) ? previous.scoreAudit : [])
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+  if (scoreChanged) await writeProspectAudit(env, companyId, { actor, action: "score-override", from: previous?.partnerScoreOverride ?? "", to: normalized.partnerScoreOverride });
+  return normalizeProspectCompany(key, next, await prospectPeople(env, companyId), config.weights);
+}
+
+async function recalculateProspectCompanyRecord(env, key, record = {}, weights = defaultPartnerScoreWeights, actor = "") {
+  const companyId = cleanString(record.companyId, 180) || key.replace(PARTNER_PROSPECT_COMPANY_PREFIX, "");
+  const people = await prospectPeople(env, companyId);
+  const normalized = normalizeProspectCompany(key, record, people, weights);
+  const now = new Date().toISOString();
+  const next = {
+    ...record,
+    companyId,
+    partnerScore: normalized.partnerScore,
+    partnerPriority: priorityBand(normalized.partnerScore),
+    partnerStatus: cleanString(record.partnerStatus) || normalized.partnerStatus,
+    updatedAt: now,
+    updatedBy: actor || cleanString(record.updatedBy, 180) || "crm"
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+  return normalizeProspectCompany(key, next, people, weights);
+}
+
+async function savePartnerScoreConfig(env, payload = {}, actor = "") {
+  const now = new Date().toISOString();
+  const weights = cleanScoreWeights(payload.weights || payload);
+  const record = {
+    key: PARTNER_PROSPECT_SCORE_CONFIG_KEY,
+    weights,
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(PARTNER_PROSPECT_SCORE_CONFIG_KEY, JSON.stringify(record));
+
+  const keys = await listKeys(env, PARTNER_PROSPECT_COMPANY_PREFIX);
+  let recalculated = 0;
+  for (const key of keys) {
+    const company = await readRawRecord(env, key);
+    if (!company) continue;
+    await recalculateProspectCompanyRecord(env, key, company, weights, actor);
+    recalculated += 1;
+  }
+  await writeProspectAudit(env, "score-config", {
+    actor,
+    action: "score-config-updated",
+    recalculated,
+    weights
+  });
+  return { ...record, recalculated };
+}
+
+async function reviewProspectCompany(env, payload = {}, actor = "") {
+  const company = await findProspectCompany(env, payload);
+  if (!company) throw new Error("Prospect company was not found.");
+  const previous = await readRawRecord(env, company.key);
+  if (!previous) throw new Error("Prospect company was not found.");
+  const config = await partnerScoreConfig(env);
+  const now = new Date().toISOString();
+  const reviewAction = cleanString(payload.reviewAction || payload.reviewStatus || "human-verified", 120);
+  const patch = {
+    reviewedAt: now,
+    reviewedBy: actor || "crm",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  };
+
+  if (reviewAction === "mark-ai-vendor") {
+    patch.aiVendor = true;
+    patch.reviewStatus = "Human Verified AI Vendor";
+    patch.humanVerifiedAt = now;
+    patch.humanVerifiedBy = actor || "crm";
+    patch.processingStatus = company.partnerScore >= 60 ? "READY FOR OUTREACH" : "NEEDS REVIEW";
+  } else if (reviewAction === "mark-not-ai-vendor") {
+    patch.aiVendor = false;
+    patch.partnerStatus = "Vendor Universe";
+    patch.reviewStatus = "Not AI Vendor";
+    patch.processingStatus = "NEEDS REVIEW";
+  } else if (reviewAction === "needs-review") {
+    patch.reviewStatus = "Needs Review";
+    patch.processingStatus = "NEEDS REVIEW";
+  } else if (reviewAction === "override-category") {
+    const primaryCategory = cleanString(payload.primaryCategory || payload.category, 160);
+    const categories = cleanArray(payload.categories, 20, 160);
+    if (!primaryCategory && !categories.length) throw new Error("Category is required.");
+    patch.primaryCategory = primaryCategory || categories[0];
+    patch.categories = cleanArray([primaryCategory, ...categories, ...(company.categories || [])], 20, 160);
+    patch.reviewStatus = "Category Override";
+    patch.humanVerifiedAt = previous.humanVerifiedAt || now;
+    patch.humanVerifiedBy = previous.humanVerifiedBy || actor || "crm";
+  } else if (reviewAction === "override-score") {
+    const rawScoreOverride = String(payload.partnerScoreOverride ?? payload.partnerScore ?? "").trim().slice(0, 40);
+    patch.partnerScoreOverride = rawScoreOverride === "" ? "" : cleanNumber(rawScoreOverride, company.partnerScore, 0, 100);
+    patch.reviewStatus = "Score Override";
+    patch.scoreAudit = [
+      ...(Array.isArray(previous.scoreAudit) ? previous.scoreAudit : []),
+      { at: now, by: actor || "crm", from: previous.partnerScoreOverride ?? previous.partnerScore ?? "", to: patch.partnerScoreOverride }
+    ].slice(-50);
+  } else {
+    patch.reviewStatus = "Human Verified";
+    patch.humanVerifiedAt = now;
+    patch.humanVerifiedBy = actor || "crm";
+  }
+
+  if (payload.aiVendor !== undefined) patch.aiVendor = cleanBoolean(payload.aiVendor);
+  if (payload.primaryCategory && reviewAction !== "override-category") patch.primaryCategory = cleanString(payload.primaryCategory, 160);
+  if (payload.partnerScoreOverride !== undefined && reviewAction !== "override-score") {
+    const rawScoreOverride = String(payload.partnerScoreOverride ?? "").trim().slice(0, 40);
+    patch.partnerScoreOverride = rawScoreOverride === "" ? "" : cleanNumber(rawScoreOverride, company.partnerScore, 0, 100);
+  }
+
+  const merged = { ...previous, ...patch };
+  const normalized = normalizeProspectCompany(company.key, merged, await prospectPeople(env, company.companyId), config.weights);
+  const next = {
+    ...merged,
+    partnerScore: normalized.partnerScore,
+    partnerPriority: priorityBand(normalized.partnerScore),
+    partnerStatus: cleanString(merged.partnerStatus) || normalized.partnerStatus
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify(next));
+  await writeProspectAudit(env, company.companyId, {
+    actor,
+    action: "human-review",
+    reviewAction,
+    reviewStatus: next.reviewStatus,
+    partnerScore: next.partnerScore
+  });
+  return normalizeProspectCompany(company.key, next, await prospectPeople(env, company.companyId), config.weights);
+}
+
+async function saveProspectPeopleSearchMission(env, payload = {}, actor = "") {
+  const company = await findProspectCompany(env, payload);
+  if (!company) throw new Error("Prospect company was not found.");
+  const previous = await readRawRecord(env, company.key);
+  if (!previous) throw new Error("Prospect company was not found.");
+  const config = await partnerScoreConfig(env);
+  const now = new Date().toISOString();
+  const status = cleanString(payload.peopleSearchStatus || payload.searchStatus || "Search Prepared", 120);
+  const completed = /complete|done|people added/i.test(status);
+  const record = {
+    ...previous,
+    peopleSearchStatus: status,
+    peopleSearchRoles: cleanArray(payload.peopleSearchRoles || payload.targetRoles || previous.peopleSearchRoles || company.targetExecutiveRoles, 24, 160),
+    peopleSearchQuery: cleanString(payload.peopleSearchQuery || previous.peopleSearchQuery, 500),
+    peopleSearchNotes: cleanString(payload.peopleSearchNotes ?? payload.notes ?? previous.peopleSearchNotes, 4000),
+    peopleSearchPreparedAt: cleanString(previous.peopleSearchPreparedAt) || now,
+    peopleSearchPreparedBy: cleanString(previous.peopleSearchPreparedBy, 180) || actor || "crm",
+    peopleSearchCompletedAt: completed ? now : cleanString(previous.peopleSearchCompletedAt, 40),
+    peopleSearchCompletedBy: completed ? actor || "crm" : cleanString(previous.peopleSearchCompletedBy, 180),
+    manualLeadListName: cleanString(payload.manualLeadListName || previous.manualLeadListName, 240),
+    manualLeadListUrl: normalizeUrl(payload.manualLeadListUrl || previous.manualLeadListUrl),
+    manualLeadListOwner: cleanString(payload.manualLeadListOwner || previous.manualLeadListOwner || actor, 180),
+    manualLeadListUpdatedAt: now,
+    processingStage: cleanString(previous.processingStage) || "PEOPLE RESEARCH",
+    processingStatus: cleanString(previous.processingStatus) || "READY FOR PEOPLE SEARCH",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  };
+  const normalized = normalizeProspectCompany(company.key, record, await prospectPeople(env, company.companyId), config.weights);
+  const next = {
+    ...record,
+    partnerScore: normalized.partnerScore,
+    partnerPriority: normalized.partnerPriority,
+    partnerStatus: cleanString(record.partnerStatus) || normalized.partnerStatus
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify(next));
+  await writeProspectAudit(env, company.companyId, {
+    actor,
+    action: "manual-people-search",
+    status: next.peopleSearchStatus,
+    leadListName: next.manualLeadListName,
+    leadListUrl: next.manualLeadListUrl
+  });
+  return normalizeProspectCompany(company.key, next, await prospectPeople(env, company.companyId), config.weights);
+}
+
+async function saveProspectPerson(env, payload = {}, actor = "") {
+  const companyId = cleanString(payload.companyId, 180);
+  if (!companyId) throw new Error("Company is required before adding a prospect person.");
+  const company = (await prospectCompanies(env)).find((row) => row.companyId === companyId);
+  if (!company) throw new Error("Prospect company was not found.");
+  const people = await prospectPeople(env, companyId);
+  const linkedin = cleanString(payload.linkedinUrl, 500).toLowerCase().replace(/\/+$/, "");
+  const fullName = cleanString(payload.fullName || payload.name || [payload.firstName, payload.lastName].filter(Boolean).join(" "), 240);
+  const normalizedName = companySlug(fullName);
+  const existing = people.find((person) =>
+    (payload.key && person.key === payload.key) ||
+    (linkedin && cleanString(person.linkedinUrl, 500).toLowerCase().replace(/\/+$/, "") === linkedin) ||
+    (normalizedName && companySlug(person.fullName) === normalizedName)
+  );
+  const now = new Date().toISOString();
+  const personId = cleanString(existing?.personId, 180) || prospectPersonId({ ...payload, fullName });
+  const key = cleanString(existing?.key, 500) || `${PARTNER_PROSPECT_PERSON_PREFIX}${companyId}:${personId}`;
+  const previous = existing?.key ? await readRawRecord(env, existing.key) : null;
+  const record = {
+    ...(previous || {}),
+    ...payload,
+    personId,
+    companyId,
+    fullName,
+    linkedinUrl: normalizeUrl(payload.linkedinUrl || previous?.linkedinUrl),
+    assignedTo: cleanString(payload.assignedTo ?? previous?.assignedTo ?? company.assignedTo ?? "Miller", 180),
+    createdAt: cleanString(previous?.createdAt) || now,
+    createdBy: cleanString(previous?.createdBy) || actor || "crm",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  const existingCompany = await readRawRecord(env, company.key);
+  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+    ...(existingCompany || {}),
+    processingStage: "READY FOR OUTREACH",
+    processingStatus: "READY FOR OUTREACH",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  }));
+  return normalizeProspectPerson(key, record);
+}
+
+async function analyzeProspectWebsite(env, payload = {}, actor = "") {
+  const company = await findProspectCompany(env, payload);
+  if (!company) throw new Error("Prospect company was not found.");
+  const targetUrl = normalizeUrl(payload.websiteUrl || company.websiteUrl || company.canonicalDomain);
+  if (!targetUrl) throw new Error("Company website URL is required before analysis.");
+  const config = await partnerScoreConfig(env);
+  const now = new Date().toISOString();
+  const existing = await readRawRecord(env, company.key);
+  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+    ...(existing || {}),
+    processingStage: "WEBSITE ANALYSIS",
+    processingStatus: "RUNNING",
+    processingError: "",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  }));
+
+  try {
+    const { html } = await fetchPublicHtml(targetUrl);
+    const title = htmlTitle(html);
+    const description = htmlMetaDescription(html);
+    const text = stripHtml(html).slice(0, 18000);
+    const classification = classifyWebsiteText(`${title}\n${description}\n${text}`);
+    const previous = await readRawRecord(env, company.key);
+    const sourceUrls = cleanArray([...(company.sourceUrls || []), targetUrl], 30, 500);
+    const categories = cleanArray([...classification.categories, ...(company.categories || [])], 20, 160);
+    const targetExecutiveRoles = cleanArray([...classification.targetBuyers, ...(company.targetExecutiveRoles || [])], 24, 160);
+    const record = {
+      ...(previous || {}),
+      description: description || cleanString(previous?.description, 4000) || title,
+      aiVendor: classification.isAiVendor,
+      aiNative: classification.aiNative,
+      aiRelevanceScore: classification.aiRelevance,
+      enterpriseFocus: classification.enterpriseFocus,
+      primaryCategory: categories[0] || cleanString(previous?.primaryCategory, 160),
+      categories,
+      targetExecutiveRoles,
+      classificationReason: classification.reason,
+      sourceUrls,
+      provenance: {
+        ...(previous?.provenance && typeof previous.provenance === "object" ? previous.provenance : {}),
+        websiteAnalysis: {
+          source: "WEBSITE_ANALYSIS",
+          url: targetUrl,
+          valueState: "AI_INFERRED",
+          verifiedAt: now
+        }
+      },
+      lastVerified: now.slice(0, 10),
+      lastEnriched: now.slice(0, 10),
+      processingStage: "AI CLASSIFICATION",
+      processingStatus: classification.isAiVendor ? "READY FOR OUTREACH" : "NEEDS REVIEW",
+      processingError: "",
+      updatedAt: now,
+      updatedBy: actor || "crm"
+    };
+    const normalized = normalizeProspectCompany(company.key, record, await prospectPeople(env, company.companyId), config.weights);
+    await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+      ...record,
+      partnerScore: normalized.partnerScore,
+      partnerPriority: normalized.partnerPriority,
+      partnerStatus: cleanString(record.partnerStatus) || normalized.partnerStatus
+    }));
+    await writeProspectAudit(env, company.companyId, { actor, action: "website-analysis", url: targetUrl, isAiVendor: classification.isAiVendor });
+    return normalizeProspectCompany(company.key, await readRawRecord(env, company.key), await prospectPeople(env, company.companyId), config.weights);
+  } catch (error) {
+    const failed = await readRawRecord(env, company.key);
+    await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+      ...(failed || {}),
+      processingStage: "WEBSITE ANALYSIS",
+      processingStatus: "FAILED",
+      processingError: cleanString(error.message || "Website analysis failed.", 1000),
+      updatedAt: new Date().toISOString(),
+      updatedBy: actor || "crm"
+    }));
+    throw error;
+  }
+}
+
+async function runSourceDiscovery(env, payload = {}, actor = "") {
+  const sourceUrl = normalizeUrl(payload.sourceUrl || payload.url);
+  if (!sourceUrl) throw new Error("A discovery source URL is required.");
+  const sourceName = cleanString(payload.sourceName || payload.discoverySource || payload.source || "Web Discovery", 160);
+  const source = await saveProspectSource(env, {
+    sourceName,
+    sourceUrl,
+    sourceType: payload.sourceType || "Public Web"
+  }, actor);
+  const limit = cleanNumber(payload.limit, 20, 1, 80);
+  const now = new Date().toISOString();
+  try {
+    const { html } = await fetchPublicHtml(sourceUrl);
+    const title = htmlTitle(html);
+    const candidates = extractCompanyLinks(html, sourceUrl, limit);
+    const saved = [];
+    for (const candidate of candidates) {
+      const record = await saveProspectCompany(env, {
+        companyName: candidate.companyName,
+        canonicalDomain: candidate.canonicalDomain,
+        websiteUrl: candidate.websiteUrl,
+        discoverySources: [sourceName],
+        sourceUrls: [sourceUrl],
+        processingStage: "DOMAIN NORMALIZATION",
+        processingStatus: "DISCOVERED",
+        provenance: {
+          discovery: {
+            source: sourceName,
+            sourceType: source.sourceType,
+            sourcePageTitle: title,
+            url: sourceUrl,
+            valueState: "SOURCE_PROVIDED",
+            discoveredAt: now
+          }
+        }
+      }, actor);
+      saved.push(record);
+    }
+    await env.MOJO_SUMMITS_SETUP_STATE.put(source.key, JSON.stringify({
+      ...source,
+      lastRunAt: now,
+      lastRunBy: actor || "crm",
+      lastRunStatus: "completed",
+      lastRunError: "",
+      discoveredCount: Number(source.discoveredCount || 0) + saved.length,
+      updatedAt: now,
+      updatedBy: actor || "crm"
+    }));
+    await writeProspectAudit(env, companySlug(sourceName) || "source-discovery", {
+      actor,
+      action: "source-discovery",
+      sourceName,
+      sourceUrl,
+      discovered: saved.length
+    });
+    return {
+      sourceName,
+      sourceUrl,
+      sourceTitle: title,
+      discovered: saved.length,
+      companies: saved
+    };
+  } catch (error) {
+    await env.MOJO_SUMMITS_SETUP_STATE.put(source.key, JSON.stringify({
+      ...source,
+      lastRunAt: now,
+      lastRunBy: actor || "crm",
+      lastRunStatus: "failed",
+      lastRunError: cleanString(error.message || "Discovery source failed.", 1000),
+      updatedAt: now,
+      updatedBy: actor || "crm"
+    }));
+    throw error;
+  }
+}
+
+async function importProspectCompanies(env, payload = {}, actor = "") {
+  const sourceName = cleanString(payload.sourceName || payload.discoverySource || "Bulk Import", 160);
+  const sourceUrl = normalizeUrl(payload.sourceUrl || payload.url);
+  const rows = Array.isArray(payload.rows)
+    ? payload.rows
+    : parseCompanyImportRows(payload.importText || payload.csv || payload.companiesText);
+  if (!rows.length) throw new Error("Paste at least one company row before importing.");
+  const now = new Date().toISOString();
+  const saved = [];
+  for (const row of rows.slice(0, 500)) {
+    const company = await saveProspectCompany(env, {
+      ...row,
+      discoverySources: cleanArray([sourceName, ...(cleanArray(row.discoverySources || row.sources))], 20, 160),
+      sourceUrls: cleanArray([sourceUrl, ...(cleanArray(row.sourceUrls, 30, 500))], 30, 500),
+      processingStage: cleanString(row.processingStage) || "DUPLICATE CHECK",
+      processingStatus: cleanString(row.processingStatus) || "DISCOVERED",
+      provenance: {
+        ...(row.provenance && typeof row.provenance === "object" ? row.provenance : {}),
+        bulkImport: {
+          source: sourceName,
+          url: sourceUrl,
+          valueState: "SOURCE_PROVIDED",
+          importedAt: now
+        }
+      }
+    }, actor);
+    saved.push(company);
+  }
+  await writeProspectAudit(env, companySlug(sourceName) || "bulk-import", {
+    actor,
+    action: "bulk-import",
+    sourceName,
+    sourceUrl,
+    imported: saved.length
+  });
+  return { sourceName, sourceUrl, imported: saved.length, companies: saved };
+}
+
+async function rerunProspectSource(env, payload = {}, actor = "") {
+  const sourceId = cleanString(payload.sourceId, 180);
+  const key = sourceId
+    ? `${PARTNER_PROSPECT_SOURCE_PREFIX}${sourceId}`
+    : cleanString(payload.sourceKey || payload.key, 500);
+  const record = key ? await readRawRecord(env, key) : null;
+  if (!record) throw new Error("Discovery source was not found.");
+  const source = normalizeProspectSource(key, record);
+  return runSourceDiscovery(env, {
+    sourceName: source.sourceName,
+    sourceType: source.sourceType,
+    sourceUrl: source.sourceUrl,
+    limit: payload.limit || 20
+  }, actor);
+}
+
+async function runAllProspectSources(env, payload = {}, actor = "") {
+  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 20, 1, 80);
+  const maxSources = cleanNumber(payload.maxSources, 8, 1, 30);
+  const sources = (await prospectSources(env))
+    .filter((source) => source.status !== "disabled" && source.sourceUrl)
+    .slice(0, maxSources);
+  const results = [];
+  for (const source of sources) {
+    try {
+      const result = await runSourceDiscovery(env, {
+        sourceName: source.sourceName,
+        sourceType: source.sourceType,
+        sourceUrl: source.sourceUrl,
+        limit: limitPerSource
+      }, actor);
+      results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: true, discovered: result.discovered });
+    } catch (error) {
+      results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: false, error: cleanString(error.message, 500) });
+    }
+  }
+  await writeProspectAudit(env, "run-all-sources", {
+    actor,
+    action: "run-all-discovery-sources",
+    attempted: results.length,
+    succeeded: results.filter((result) => result.ok).length,
+    discovered: results.reduce((sum, result) => sum + Number(result.discovered || 0), 0)
+  });
+  return {
+    attempted: results.length,
+    succeeded: results.filter((result) => result.ok).length,
+    discovered: results.reduce((sum, result) => sum + Number(result.discovered || 0), 0),
+    results
+  };
+}
+
+async function batchAnalyzeProspectWebsites(env, payload = {}, actor = "") {
+  const limit = cleanNumber(payload.limit, 10, 1, 25);
+  const companies = await prospectCompanies(env);
+  const candidates = companies
+    .filter((company) =>
+      !company.lastEnriched &&
+      company.websiteUrl &&
+      !["RUNNING"].includes(company.processingStatus)
+    )
+    .slice(0, limit);
+  const results = [];
+  for (const company of candidates) {
+    try {
+      const analyzed = await analyzeProspectWebsite(env, { companyId: company.companyId }, actor);
+      results.push({ companyId: company.companyId, companyName: company.companyName, ok: true, partnerScore: analyzed.partnerScore });
+    } catch (error) {
+      results.push({ companyId: company.companyId, companyName: company.companyName, ok: false, error: cleanString(error.message, 500) });
+    }
+  }
+  await writeProspectAudit(env, "batch-analysis", {
+    actor,
+    action: "batch-website-analysis",
+    attempted: results.length,
+    succeeded: results.filter((result) => result.ok).length
+  });
+  return { attempted: results.length, succeeded: results.filter((result) => result.ok).length, results };
+}
+
+async function recordProspectOutreach(env, payload = {}, actor = "") {
+  const key = cleanString(payload.personKey || payload.key, 500);
+  const existing = key ? await readRawRecord(env, key) : null;
+  if (!existing) throw new Error("Prospect person was not found.");
+  const now = new Date().toISOString();
+  const action = cleanString(payload.outreachAction || payload.status || payload.actionName, 120);
+  const actionMap = {
+    "Connection Sent": { outreachStatus: "Connection Sent", connectionRequestedAt: now },
+    "Already Connected": { outreachStatus: "Connected", connectedAt: now },
+    "Message Sent": { outreachStatus: "Message Sent", firstMessageAt: existing.firstMessageAt || now, lastMessageAt: now },
+    "Responded": { outreachStatus: "Responded", respondedAt: now },
+    "Meeting Scheduled": { outreachStatus: "Meeting Scheduled", meetingAt: now },
+    "Not Relevant": { outreachStatus: "Not Relevant", notRelevantAt: now },
+    "Skip": { outreachStatus: "Skipped", skippedAt: now }
+  };
+  const patch = actionMap[action];
+  if (!patch) throw new Error("Unsupported outreach action.");
+  const record = {
+    ...existing,
+    ...patch,
+    notes: cleanString(payload.notes ?? existing.notes, 4000),
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  const companyKey = `${PARTNER_PROSPECT_COMPANY_PREFIX}${cleanString(existing.companyId, 180)}`;
+  const company = await readRawRecord(env, companyKey);
+  if (company) {
+    await env.MOJO_SUMMITS_SETUP_STATE.put(companyKey, JSON.stringify({
+      ...company,
+      partnerStatus: ["Vendor Universe", "Partner Target", "Ready For Outreach"].includes(cleanString(company.partnerStatus)) ? "In Outreach" : company.partnerStatus,
+      lastContactAt: now,
+      updatedAt: now,
+      updatedBy: actor || "crm"
+    }));
+  }
+  await writeProspectAudit(env, existing.companyId, { actor, action: "outreach", personKey: key, outreachAction: action });
+  return normalizeProspectPerson(key, record);
+}
+
+async function retryProspectStage(env, payload = {}, actor = "") {
+  const company = await findProspectCompany(env, payload);
+  if (!company) throw new Error("Prospect company was not found.");
+  const existing = await readRawRecord(env, company.key);
+  const now = new Date().toISOString();
+  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+    ...(existing || {}),
+    processingStatus: "DISCOVERED",
+    processingError: "",
+    retryCount: Number(existing?.retryCount || 0) + 1,
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  }));
+  await writeProspectAudit(env, company.companyId, { actor, action: "retry-stage", stage: company.processingStage });
+}
+
+async function convertProspectCompany(env, payload = {}, actor = "") {
+  const company = await findProspectCompany(env, payload);
+  if (!company) throw new Error("Prospect company was not found.");
+  const people = await prospectPeople(env, company.companyId);
+  const now = new Date().toISOString();
+  const slug = companySlug(company.companyName);
+  const companyKey = `partner-company:${slug}`;
+  const existingCompany = await readRawRecord(env, companyKey);
+  const contacts = Array.isArray(existingCompany?.contacts) ? existingCompany.contacts : [];
+  const contactMap = new Map(contacts.map((entry) => [
+    cleanString(entry?.email).toLowerCase() || cleanString(entry?.linkedinUrl).toLowerCase() || cleanString(entry?.name).toLowerCase(),
+    entry
+  ]));
+  for (const person of people) {
+    const identity = cleanString(person.email).toLowerCase() || cleanString(person.linkedinUrl).toLowerCase() || cleanString(person.fullName).toLowerCase();
+    if (!identity) continue;
+    contactMap.set(identity, {
+      ...(contactMap.get(identity) || {}),
+      id: person.email || person.personId,
+      email: person.email,
+      name: person.fullName,
+      company: company.companyName,
+      companySlug: slug,
+      title: person.title,
+      source: "Partner Prospecting",
+      updatedAt: now,
+      updatedBy: actor || "crm"
+    });
+  }
+  await env.MOJO_SUMMITS_SETUP_STATE.put(companyKey, JSON.stringify({
+    ...(existingCompany || {}),
+    organizationName: cleanString(existingCompany?.organizationName || company.companyName, 240),
+    company: company.companyName,
+    companySlug: slug,
+    tier: "Partner Candidate",
+    status: "partner-candidate",
+    contacts: [...contactMap.values()],
+    source: cleanString(existingCompany?.source) || "Partner Prospecting",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  }));
+  const existingProspect = await readRawRecord(env, company.key);
+  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+    ...(existingProspect || {}),
+    partnerStatus: "Partner Candidate",
+    convertedPartnerKey: companyKey,
+    convertedAt: now,
+    convertedBy: actor || "crm",
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  }));
+  await writeProspectAudit(env, company.companyId, { actor, action: "convert-to-partner-candidate", partnerKey: companyKey });
+  return { companyKey };
+}
+
+function prospectDashboard(companies = [], people = []) {
+  const sourceRows = new Map();
+  for (const company of companies) {
+    const sources = company.discoverySources.length ? company.discoverySources : ["Manual"];
+    for (const source of sources) {
+      const row = sourceRows.get(source) || {
+        source,
+        companies: 0,
+        qualified: 0,
+        ready: 0,
+        contacted: 0,
+        responses: 0,
+        meetings: 0,
+        partners: 0,
+        totalScore: 0,
+        avgScore: 0
+      };
+      row.companies += 1;
+      if (company.aiVendor && company.partnerScore >= 60) row.qualified += 1;
+      if (company.processingStatus === "READY FOR OUTREACH") row.ready += 1;
+      if (company.outreach.peopleAttempted > 0) row.contacted += 1;
+      if (company.outreach.responses > 0) row.responses += 1;
+      row.meetings += company.outreach.meetings || 0;
+      if (["Partner Candidate", "Research Partner", "Summit Partner", "Strategic Partner"].includes(company.partnerStatus)) row.partners += 1;
+      row.totalScore += cleanNumber(company.partnerScore, 0, 0, 100);
+      row.avgScore = row.companies ? Math.round(row.totalScore / row.companies) : 0;
+      sourceRows.set(source, row);
+    }
+  }
+  const contacted = companies.filter((company) => company.outreach.peopleAttempted > 0).length;
+  const responses = companies.filter((company) => company.outreach.responses > 0).length;
+  const meetings = companies.filter((company) => company.outreach.meetings > 0).length;
+  const candidates = companies.filter((company) => company.partnerStatus === "Partner Candidate").length;
+  return {
+    companiesDiscovered: companies.length,
+    qualifiedAiVendors: companies.filter((company) => company.aiVendor && company.partnerScore >= 60).length,
+    immediateTargets: companies.filter((company) => company.partnerPriority === "Immediate").length,
+    tierATargets: companies.filter((company) => company.partnerPriority === "Tier A").length,
+    peopleIdentified: people.length,
+    companiesNeedingPeopleSearch: companies.filter((company) => company.partnerScore >= 60 && !company.peopleCount).length,
+    peopleSearchPrepared: companies.filter((company) => !["", "Not Started"].includes(cleanString(company.peopleSearchStatus))).length,
+    manualLeadListsBuilt: companies.filter((company) => company.manualLeadListUrl || /lead list built|people added|complete|done/i.test(company.peopleSearchStatus)).length,
+    companiesWithSponsorEvidence: companies.filter((company) =>
+      company.sponsoredEvents.length ||
+      company.sponsorEvidenceUrls.length ||
+      company.sponsorshipNotes ||
+      company.sponsorshipEstimatedSpend
+    ).length,
+    companiesContacted: contacted,
+    connectionRequests: people.filter((person) => person.connectionRequestedAt).length,
+    connectionsAccepted: people.filter((person) => person.connectedAt).length,
+    messagesSent: people.filter((person) => person.firstMessageAt || person.lastMessageAt).length,
+    responses: people.filter((person) => person.respondedAt).length,
+    meetings: people.filter((person) => person.meetingAt).length,
+    partnerCandidates: candidates,
+    researchPartners: companies.filter((company) => company.partnerStatus === "Research Partner").length,
+    summitPartners: companies.filter((company) => company.partnerStatus === "Summit Partner").length,
+    strategicPartners: companies.filter((company) => company.partnerStatus === "Strategic Partner").length,
+    conversionRates: {
+      contactedToResponse: contacted ? Math.round((responses / contacted) * 100) : 0,
+      responseToMeeting: responses ? Math.round((meetings / responses) * 100) : 0,
+      meetingToPartnerCandidate: meetings ? Math.round((candidates / meetings) * 100) : 0,
+      candidateToPaidPartner: candidates
+        ? Math.round((companies.filter((company) => ["Research Partner", "Summit Partner", "Strategic Partner"].includes(company.partnerStatus)).length / candidates) * 100)
+        : 0
+    },
+    sourcePerformance: [...sourceRows.values()]
+      .map(({ totalScore, ...row }) => row)
+      .sort((a, b) => b.partners - a.partners || b.meetings - a.meetings || b.responses - a.responses || b.qualified - a.qualified || b.avgScore - a.avgScore)
+  };
+}
+
+function prospectQueueSummary(companies = [], sources = []) {
+  return {
+    sourcesActive: sources.filter((source) => source.status !== "disabled").length,
+    sourcesFailed: sources.filter((source) => source.lastRunStatus === "failed").length,
+    discovered: companies.filter((company) => company.processingStatus === "DISCOVERED").length,
+    needsAnalysis: companies.filter((company) => !company.lastEnriched && company.websiteUrl).length,
+    failed: companies.filter((company) => company.processingStatus === "FAILED" || company.processingError).length,
+    readyForOutreach: companies.filter((company) => company.processingStatus === "READY FOR OUTREACH").length,
+    needsReview: companies.filter((company) => company.processingStatus === "NEEDS REVIEW").length,
+    needsPeopleSearch: companies.filter((company) => company.partnerScore >= 60 && !company.peopleCount).length,
+    peopleSearchPrepared: companies.filter((company) => !["", "Not Started"].includes(cleanString(company.peopleSearchStatus))).length,
+    manualLeadListsBuilt: companies.filter((company) => company.manualLeadListUrl || /lead list built|people added|complete|done/i.test(company.peopleSearchStatus)).length,
+    sponsorEvidenceCompanies: companies.filter((company) =>
+      company.sponsoredEvents.length ||
+      company.sponsorEvidenceUrls.length ||
+      company.sponsorshipNotes ||
+      company.sponsorshipEstimatedSpend
+    ).length
+  };
+}
+
+async function partnerProspectingPayload(env) {
+  const scoreConfig = await partnerScoreConfig(env);
+  const companies = await prospectCompanies(env);
+  const people = await prospectPeople(env);
+  const sources = await prospectSources(env);
+  const nextCompany = companies.find((company) =>
+    company.partnerScore >= 60 &&
+    !["Partner Candidate", "Research Partner", "Summit Partner", "Strategic Partner"].includes(company.partnerStatus) &&
+    company.outreach.peopleAttempted < Math.max(1, company.peopleCount)
+  ) || null;
+  return {
+    ok: true,
+    type: "partner-prospecting",
+    scoreConfig,
+    scoreWeights: scoreConfig.weights,
+    dashboard: prospectDashboard(companies, people),
+    queue: prospectQueueSummary(companies, sources),
+    companies,
+    people,
+    sources,
+    nextCompany,
+    nextPeople: nextCompany ? people.filter((person) => person.companyId === nextCompany.companyId) : []
+  };
 }
 
 async function registrationDiagnostics(env) {
@@ -997,6 +2425,7 @@ function normalizeInviteCode(key, record) {
     partnerCompany: cleanString(record?.partnerCompany),
     partnerContactEmail: cleanString(record?.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record?.partnerTier),
+    invitedBy: cleanString(record?.invitedBy || record?.inviter || record?.invitedByName || record?.createdBy, 180),
     createdAt: cleanString(record?.createdAt),
     createdBy: cleanString(record?.createdBy),
     usedAt: cleanString(record?.usedAt),
@@ -1153,6 +2582,7 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     eventShowId,
     eventShowLabel: eventShowLabel(eventShowId),
     eventShowTime: eventTime,
+    invitedBy: cleanString(payload.invitedBy || payload.inviter || payload.invitedByName || actor, 180),
     intendedGuestName,
     intendedGuestEmail,
     invitedEmail: intendedGuestEmail,
@@ -1197,6 +2627,7 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
     eventShowId,
     eventShowLabel: eventShowLabel(eventShowId),
     eventShowTime: eventTime,
+    invitedBy: cleanString(payload.invitedBy || payload.inviter || payload.invitedByName || actor, 180),
     partnerCompany: cleanString(payload.partnerCompany, 240),
     partnerContactEmail: cleanString(payload.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(payload.partnerTier, 120),
@@ -1706,6 +3137,7 @@ async function updateContact(env, payload = {}, actor = "") {
     timeZone: cleanString(payload.timeZone ?? existing?.timeZone, 120),
     location: cleanString(payload.location ?? existing?.location, 180),
     invitationSource: cleanString(payload.invitationSource ?? existing?.invitationSource, 180),
+    invitedBy: cleanString(payload.invitedBy ?? payload.inviter ?? payload.invitedByName ?? existing?.invitedBy, 180),
     relationshipOwner: cleanString(payload.relationshipOwner ?? existing?.relationshipOwner, 180),
     lifecycleStage: cleanAllowed(payload.lifecycleStage ?? existing?.lifecycleStage, allowedLifecycleStages, "prospect"),
     nextAction: cleanAllowed(payload.nextAction ?? existing?.nextAction, allowedNextActions, "none"),
@@ -2193,6 +3625,10 @@ export async function onRequestGet({ request, env, data }) {
     return json(await registrationDiagnostics(env));
   }
 
+  if (url.searchParams.has("prospecting")) {
+    return json(await partnerProspectingPayload(env));
+  }
+
   const type = cleanType(url.searchParams.get("type"));
   const config = registrantTypes[type];
   const isContacts = type === "contacts";
@@ -2219,6 +3655,7 @@ export async function onRequestGet({ request, env, data }) {
         "State",
         "Time Zone",
         "Invitation Source",
+        "Invited By",
         "Relationship Owner",
         "Lifecycle Stage",
         "Last Contact Date",
@@ -2281,6 +3718,7 @@ export async function onRequestGet({ request, env, data }) {
         row.state,
         row.timeZone,
         row.invitationSource,
+        row.invitedBy,
         row.relationshipOwner,
         row.lifecycleStage,
         row.lastContactDate,
@@ -2471,6 +3909,182 @@ export async function onRequestPost({ request, env, data }) {
   }
 
   const payload = await request.json().catch(() => null);
+  if (payload?.action === "save-partner-prospect-company") {
+    try {
+      const company = await saveProspectCompany(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        company
+      }, { status: 201 });
+    } catch (error) {
+      const status = /required|not found/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Partner prospect company could not be saved." }, { status });
+    }
+  }
+
+  if (payload?.action === "save-partner-prospect-person") {
+    try {
+      const person = await saveProspectPerson(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        person
+      }, { status: 201 });
+    } catch (error) {
+      const status = /required|not found/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Partner prospect person could not be saved." }, { status });
+    }
+  }
+
+  if (payload?.action === "run-partner-prospect-discovery") {
+    try {
+      const discovery = await runSourceDiscovery(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        discovery
+      }, { status: 201 });
+    } catch (error) {
+      const status = /required|Fetch failed|HTML/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Partner prospect discovery could not run." }, { status });
+    }
+  }
+
+  if (payload?.action === "import-partner-prospect-companies") {
+    try {
+      const imported = await importProspectCompanies(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        imported
+      }, { status: 201 });
+    } catch (error) {
+      const status = /Paste at least|required/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Partner prospect companies could not be imported." }, { status });
+    }
+  }
+
+  if (payload?.action === "rerun-partner-prospect-source") {
+    try {
+      const discovery = await rerunProspectSource(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        discovery
+      });
+    } catch (error) {
+      const status = /not found|required|Fetch failed|HTML/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Discovery source could not be rerun." }, { status });
+    }
+  }
+
+  if (payload?.action === "run-all-partner-prospect-sources") {
+    try {
+      const discoveryBatch = await runAllProspectSources(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        discoveryBatch
+      });
+    } catch (error) {
+      return json({ error: error.message || "Discovery sources could not be run." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "analyze-partner-prospect-website") {
+    try {
+      const company = await analyzeProspectWebsite(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        company
+      });
+    } catch (error) {
+      const status = /required|not found|Fetch failed|HTML/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Partner prospect website could not be analyzed." }, { status });
+    }
+  }
+
+  if (payload?.action === "batch-analyze-partner-prospect-websites") {
+    try {
+      const batch = await batchAnalyzeProspectWebsites(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        batch
+      });
+    } catch (error) {
+      return json({ error: error.message || "Partner prospect websites could not be batch analyzed." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "review-partner-prospect-company") {
+    try {
+      const company = await reviewProspectCompany(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        company
+      });
+    } catch (error) {
+      const status = /required|not found/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Partner prospect review could not be saved." }, { status });
+    }
+  }
+
+  if (payload?.action === "save-partner-score-config") {
+    try {
+      const scoreConfig = await savePartnerScoreConfig(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        scoreConfig
+      });
+    } catch (error) {
+      return json({ error: error.message || "Partner scoring config could not be saved." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "save-partner-people-search-mission") {
+    try {
+      const company = await saveProspectPeopleSearchMission(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        company
+      });
+    } catch (error) {
+      const status = /required|not found/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "People search mission could not be saved." }, { status });
+    }
+  }
+
+  if (payload?.action === "record-partner-prospect-outreach") {
+    try {
+      const person = await recordProspectOutreach(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        person
+      });
+    } catch (error) {
+      const status = /not found|unsupported/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Partner prospect outreach could not be recorded." }, { status });
+    }
+  }
+
+  if (payload?.action === "retry-partner-prospect-stage") {
+    try {
+      await retryProspectStage(env, payload, access.email);
+      return json(await partnerProspectingPayload(env));
+    } catch (error) {
+      const status = /not found/i.test(error.message || "") ? 404 : 500;
+      return json({ error: error.message || "Partner prospect stage could not be retried." }, { status });
+    }
+  }
+
+  if (payload?.action === "convert-partner-prospect") {
+    try {
+      const converted = await convertProspectCompany(env, payload, access.email);
+      return json({
+        ...(await partnerProspectingPayload(env)),
+        converted
+      });
+    } catch (error) {
+      const status = /not found/i.test(error.message || "") ? 404 : 500;
+      return json({ error: error.message || "Partner prospect could not be converted." }, { status });
+    }
+  }
+
   if (payload?.action === "generate-member-password") {
     try {
       const result = await createMemberPassword(env, payload, access.email);

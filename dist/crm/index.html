@@ -142,8 +142,16 @@
       border-color: rgba(255, 99, 123, 0.36);
     }
 
+    .side-nav-group.prospecting-pipeline {
+      background: rgba(22, 102, 255, 0.18);
+      border-color: rgba(0, 230, 255, 0.34);
+    }
+
     .crm-content {
-      display: contents;
+      grid-column: 2;
+      display: grid;
+      gap: 1rem;
+      align-content: start;
       min-width: 0;
       max-width: 100%;
     }
@@ -185,6 +193,20 @@
       border-color: rgba(255, 99, 123, 0.46);
     }
 
+    .prospecting-panel,
+    body[data-pipeline-group="prospecting"] .view-section[data-view-panel="records"] > .toolbar,
+    body[data-pipeline-group="prospecting"] .view-section[data-view-panel="records"] > .panel {
+      background:
+        linear-gradient(180deg, rgba(22, 102, 255, 0.24), rgba(10, 15, 30, 0.78)),
+        var(--slate);
+      border-color: rgba(0, 230, 255, 0.46);
+    }
+
+    .crm-content .prospecting-panel {
+      grid-column: 1;
+      width: 100%;
+    }
+
     .hero {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
@@ -200,7 +222,7 @@
     }
 
     .crm-content .hero {
-      grid-column: 2;
+      grid-column: 1;
       margin-bottom: 0;
       min-height: 220px;
     }
@@ -848,6 +870,154 @@
       min-width: 7rem;
     }
 
+    .prospecting-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: start;
+      flex-wrap: wrap;
+    }
+
+    .prospecting-tabs,
+    .prospecting-actions,
+    .linkedin-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: center;
+    }
+
+    .prospecting-tabs button {
+      width: auto;
+      min-height: 2.35rem;
+      padding: 0.55rem 0.75rem;
+    }
+
+    .prospecting-tabs button.active {
+      color: var(--white);
+      border-color: rgba(0, 230, 255, 0.72);
+      background: rgba(22, 102, 255, 0.32);
+    }
+
+    .prospecting-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .prospecting-section-actions {
+      margin-top: 1rem;
+    }
+
+    .prospect-card,
+    .next-prospect-card,
+    .queue-card {
+      display: grid;
+      gap: 0.8rem;
+      padding: 1rem;
+      border: 1px solid rgba(0, 230, 255, 0.22);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.56);
+    }
+
+    .prospect-card h3,
+    .next-prospect-card h3,
+    .queue-card h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0;
+    }
+
+    .prospecting-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .prospecting-form .span-2,
+    .prospecting-form .span-full {
+      grid-column: 1 / -1;
+    }
+
+    .prospect-review {
+      display: grid;
+      gap: 0.65rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .prospect-review-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+      gap: 0.55rem;
+      align-items: end;
+    }
+
+    .prospect-review-grid input {
+      min-height: 2.35rem;
+    }
+
+    .search-query {
+      overflow-wrap: anywhere;
+      padding: 0.75rem;
+      border: 1px solid rgba(0, 230, 255, 0.16);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--white);
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+
+    .prospect-score {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 3.25rem;
+      height: 3.25rem;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 230, 255, 0.58);
+      color: var(--cyan);
+      font-weight: 900;
+      font-size: 1.1rem;
+      box-shadow: inset 0 0 22px rgba(0, 230, 255, 0.16);
+    }
+
+    .prospect-list {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .prospect-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: start;
+      padding: 0.85rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .prospect-row:last-child { border-bottom: 0; }
+
+    .source-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    .source-table th,
+    .source-table td {
+      padding: 0.7rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: left;
+    }
+
     .invite-row {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
@@ -1058,6 +1228,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button type="button" data-view="guest-partner-invite-links">Guest Partner Invite Links</button>
           <button type="button" data-view="manual-partners">Add Partner</button>
           <button type="button" data-view="partners-company">Partners by Company</button>
+        </div>
+        <div class="side-nav-group prospecting-pipeline" aria-label="Partner prospecting">
+          <button type="button" data-view="vendor-universe">Vendor Universe</button>
+          <button type="button" data-view="partner-targets">Partner Targets</button>
+          <button type="button" data-view="research-queue">Research Queue</button>
+          <button type="button" data-view="prospect-people">People</button>
+          <button type="button" data-view="outreach-queue">Outreach Queue</button>
+          <button type="button" data-view="prospecting-pipeline">Partner Pipeline</button>
+          <button type="button" data-view="discovery-queue">Discovery Queue</button>
+          <button type="button" data-view="prospecting-dashboard">Dashboard</button>
         </div>
         <button type="button" data-view="registration-debug">Registration Debug</button>
       </aside>
@@ -1386,6 +1566,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <button class="secondary" type="button" id="refreshRegistrationDebug">Refresh Debug</button>
       <div id="registrationDebugContent" class="debug-list"></div>
     </section>
+
+    <section class="invite-panel view-section prospecting-panel" id="partnerProspectingPanel" data-view-panel="partner-prospecting" hidden>
+      <div class="prospecting-header">
+        <div>
+          <p class="eyebrow">Partner Prospecting</p>
+          <h2 id="prospectingTitle">Vendor Universe</h2>
+          <p id="prospectingSubtitle">Rank AI-enabled companies, identify the right people, and prepare Miller's LinkedIn-first workflow.</p>
+        </div>
+        <button class="secondary" type="button" id="refreshProspectingButton">Refresh Prospecting</button>
+      </div>
+      <div class="prospecting-tabs" id="prospectingTabs" aria-label="Partner prospecting sections"></div>
+      <div id="prospectingContent"></div>
+    </section>
       </div>
     </div>
   </main>
@@ -1437,12 +1630,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const addManualPartnerContact = document.querySelector("#addManualPartnerContact");
     const registrationDebugContent = document.querySelector("#registrationDebugContent");
     const refreshRegistrationDebug = document.querySelector("#refreshRegistrationDebug");
+    const refreshProspectingButton = document.querySelector("#refreshProspectingButton");
+    const prospectingTabs = document.querySelector("#prospectingTabs");
+    const prospectingTitle = document.querySelector("#prospectingTitle");
+    const prospectingSubtitle = document.querySelector("#prospectingSubtitle");
+    const prospectingContent = document.querySelector("#prospectingContent");
     const recordViewTypes = {
       contacts: "contacts",
       guest: "guest",
       member: "member",
       "partners-company": "partner"
     };
+    const prospectingViews = {
+      "vendor-universe": ["Vendor Universe", "Company-level AI vendor database."],
+      "partner-targets": ["Partner Targets", "Ranked companies ready for prioritization."],
+      "research-queue": ["Research Queue", "Prepare manual people searches and track lead lists."],
+      "prospect-people": ["People", "Buying and influence committees by company."],
+      "outreach-queue": ["Outreach Queue", "The next company and people Miller should work."],
+      "prospecting-pipeline": ["Partner Pipeline", "Prospects flowing toward Partner Candidate and paid partner stages."],
+      "discovery-queue": ["Discovery Queue", "Processing status, failures, and retry controls."],
+      "prospecting-dashboard": ["Dashboard", "Funnel health and discovery source performance."]
+    };
+    const prospectingViewSet = new Set(Object.keys(prospectingViews));
     let activeView = "contacts";
     let registrationInviteStatusFilter = "all";
     let partnerCompanyPage = 1;
@@ -1458,6 +1667,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       upcomingEvents: []
     };
     let registrationDebug = null;
+    let prospectingState = null;
     const fallbackMojoEvents = [
       { slug: "ai-executive-readiness", title: "AI Executive Readiness", date: "Friday, September 4, 2026", format: "Virtual" },
       { slug: "ai-data-readiness-and-knowledge-strategy", title: "AI Data Readiness and Knowledge Strategy", date: "Friday, September 18, 2026", format: "Virtual" },
@@ -2002,6 +2212,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function activeLabel() {
+      if (isProspectingView()) return prospectingViews[activeView]?.[0] || "Partner Prospecting";
       if (activeView === "guest") return "Guest";
       if (activeView === "partners-company") return "Partners by Company";
       return state.label || (state.type === "contacts" ? "Contacts" : state.type === "partner" ? "Partner" : "Member");
@@ -2018,6 +2229,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function pipelineGroupForView(view = activeView) {
       if (["guest-invite-links", "create-guest-invite-links", "guest", "member"].includes(view)) return "guest";
       if (["guest-partner-invite-links", "manual-partners", "partners-company"].includes(view)) return "partner";
+      if (isProspectingView(view)) return "prospecting";
       return "";
     }
 
@@ -2035,6 +2247,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const panelView = panel.dataset.viewPanel;
         panel.hidden = panelView === "records"
           ? !isRecordsView()
+          : panelView === "partner-prospecting"
+            ? !isProspectingView()
           : panelView !== activeView;
       });
     }
@@ -2053,6 +2267,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
       if (activeView === "registration-debug") {
         loadRegistrationDebug();
+        return;
+      }
+      if (isProspectingView()) {
+        loadPartnerProspecting();
         return;
       }
       render();
@@ -2448,9 +2666,689 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       });
     }
 
+    function isProspectingView(view = activeView) {
+      return prospectingViewSet.has(view);
+    }
+
+    function prospectCompanies() {
+      return prospectingState?.companies || [];
+    }
+
+    function prospectPeople() {
+      return prospectingState?.people || [];
+    }
+
+    function prospectPeopleForCompany(companyId) {
+      return prospectPeople().filter((person) => person.companyId === companyId);
+    }
+
+    function prospectPills(values = [], empty = "Unassigned") {
+      const list = Array.isArray(values) ? values.filter(Boolean) : [];
+      return list.length
+        ? list.slice(0, 5).map((value) => `<span class="pill">${escapeHtml(value)}</span>`).join("")
+        : `<span class="pill warn">${escapeHtml(empty)}</span>`;
+    }
+
+    function prospectCompanyOptions(selected = "") {
+      const companies = prospectCompanies();
+      return [
+        '<option value="">Select company</option>',
+        ...companies.map((company) => `<option value="${escapeHtml(company.companyId)}" ${company.companyId === selected ? "selected" : ""}>${escapeHtml(company.companyName || company.canonicalDomain || company.companyId)}</option>`)
+      ].join("");
+    }
+
+    function prospectLocation(company = {}) {
+      return [company.headquartersCity, company.headquartersState, company.headquartersCountry].filter(Boolean).join(", ");
+    }
+
+    const prospectScoreWeightLabels = {
+      aiRelevance: "AI relevance",
+      enterpriseFocus: "Enterprise focus",
+      executiveAudienceOverlap: "Executive overlap",
+      companySize: "Company size",
+      fundingRevenueCapacity: "Funding / revenue",
+      eventSponsorshipHistory: "Sponsorship history",
+      marketingMaturity: "Marketing maturity",
+      partnershipTeam: "Partner team",
+      marketPresence: "Market presence",
+      recentGrowthFunding: "Recent growth"
+    };
+
+    const defaultPeopleSearchRoles = ["Strategic Partnerships", "Alliances", "Partner Marketing", "Chief Marketing Officer", "Chief Revenue Officer", "Chief AI Officer"];
+    const peopleSearchStatuses = ["Not Started", "Search Prepared", "Lead List Built", "People Added", "Needs Help", "Done"];
+
+    function peopleSearchRoles(company = {}) {
+      const roles = Array.isArray(company.peopleSearchRoles) && company.peopleSearchRoles.length
+        ? company.peopleSearchRoles
+        : Array.isArray(company.targetExecutiveRoles) && company.targetExecutiveRoles.length
+          ? company.targetExecutiveRoles
+          : defaultPeopleSearchRoles;
+      return roles.slice(0, 8);
+    }
+
+    function peopleSearchQuery(company = {}) {
+      if (company.peopleSearchQuery) return company.peopleSearchQuery;
+      const companyName = company.companyName || company.canonicalDomain || "";
+      const roles = peopleSearchRoles(company);
+      return [`"${companyName}"`, roles.map((role) => `"${role}"`).join(" OR ")].filter(Boolean).join(" ");
+    }
+
+    function peopleSearchLinks(company = {}) {
+      const query = peopleSearchQuery(company);
+      const companyName = company.companyName || company.canonicalDomain || "";
+      const roleText = peopleSearchRoles(company).join(" OR ");
+      const encodedQuery = encodeURIComponent(query);
+      const encodedCompanyRoles = encodeURIComponent(`${companyName} ${roleText}`.trim());
+      return [
+        ["People Search", `https://www.linkedin.com/search/results/people/?keywords=${encodedCompanyRoles}`],
+        ["Sales Navigator", `https://www.linkedin.com/sales/search/people?keywords=${encodedCompanyRoles}`],
+        ["Web Search", `https://www.google.com/search?q=${encodeURIComponent(`site:linkedin.com/in ${query}`)}`]
+      ].map(([label, url]) => ({ label, url, query: encodedQuery }));
+    }
+
+    function peopleSearchStatusOptions(selected = "Not Started") {
+      return peopleSearchStatuses.map((status) => `<option value="${escapeHtml(status)}" ${status === selected ? "selected" : ""}>${escapeHtml(status)}</option>`).join("");
+    }
+
+    function prospectCompanyCard(company = {}, options = {}) {
+      const people = prospectPeopleForCompany(company.companyId);
+      const why = company.classificationReason || company.description || "No classification explanation recorded yet.";
+      return `
+        <article class="prospect-card">
+          <div class="prospect-row">
+            <div>
+              <h3>${escapeHtml(company.companyName || company.canonicalDomain || "Unnamed company")}</h3>
+              <p>${escapeHtml([company.primaryCategory, company.employeeRange, prospectLocation(company)].filter(Boolean).join(" | "))}</p>
+            </div>
+            <span class="prospect-score">${escapeHtml(company.partnerScore || 0)}</span>
+          </div>
+          <div class="crm-compact-pills">
+            <span class="pill">${escapeHtml(company.partnerPriority || "Database Only")}</span>
+            <span class="pill">${escapeHtml(company.partnerStatus || "Vendor Universe")}</span>
+            <span class="pill">${escapeHtml(company.assignedTo || "Miller")}</span>
+            ${company.reviewStatus ? `<span class="pill">${escapeHtml(company.reviewStatus)}</span>` : ""}
+          </div>
+          <p>${escapeHtml(why)}</p>
+          <div class="crm-compact-pills">${prospectPills(company.categories, "No AI category")}</div>
+          ${company.sponsoredEvents?.length || company.sponsorshipFit || company.sponsorshipEstimatedSpend ? `
+            <div class="crm-compact-pills">
+              ${prospectPills(company.sponsoredEvents, "No sponsor evidence")}
+              ${company.sponsorshipFit ? `<span class="pill">${escapeHtml(company.sponsorshipFit)}</span>` : ""}
+              ${company.sponsorshipEstimatedSpend ? `<span class="pill">${escapeHtml(company.sponsorshipEstimatedSpend)}</span>` : ""}
+            </div>
+          ` : ""}
+          ${company.sponsorshipNotes ? `<p>${escapeHtml(company.sponsorshipNotes)}</p>` : ""}
+          <p>${escapeHtml(people.length)} people identified | ${escapeHtml(company.outreach?.peopleAttempted || 0)} attempted | ${escapeHtml(company.outreach?.meetings || 0)} meetings</p>
+          <div class="prospecting-actions">
+            ${company.websiteUrl ? `<a class="compact secondary button-link" href="${escapeHtml(company.websiteUrl)}" target="_blank" rel="noopener">Website</a>` : ""}
+            ${company.linkedinCompanyUrl ? `<a class="compact secondary button-link" href="${escapeHtml(company.linkedinCompanyUrl)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}
+            ${options.convert ? `<button class="compact" type="button" data-convert-prospect-company="${escapeHtml(company.companyId)}">Convert to Partner Candidate</button>` : ""}
+          </div>
+          <div class="prospect-review">
+            <div class="prospecting-actions">
+              <button class="compact secondary" type="button" data-review-prospect-company="${escapeHtml(company.companyId)}" data-review-action="mark-ai-vendor">Mark AI Vendor</button>
+              <button class="compact secondary" type="button" data-review-prospect-company="${escapeHtml(company.companyId)}" data-review-action="mark-not-ai-vendor">Not AI Vendor</button>
+              <button class="compact secondary" type="button" data-review-prospect-company="${escapeHtml(company.companyId)}" data-review-action="human-verified">Human Verified</button>
+              <button class="compact secondary" type="button" data-review-prospect-company="${escapeHtml(company.companyId)}" data-review-action="needs-review">Needs Review</button>
+            </div>
+            <div class="prospect-review-grid">
+              <label>Category Override
+                <input data-review-category-input="${escapeHtml(company.companyId)}" value="${escapeHtml(company.primaryCategory || "")}" placeholder="AI Governance">
+              </label>
+              <button class="compact secondary" type="button" data-review-category-save="${escapeHtml(company.companyId)}">Save Category</button>
+              <label>Score Override
+                <input data-review-score-input="${escapeHtml(company.companyId)}" type="number" min="0" max="100" value="${escapeHtml(company.partnerScoreOverride || "")}" placeholder="${escapeHtml(company.partnerScore || 0)}">
+              </label>
+              <button class="compact secondary" type="button" data-review-score-save="${escapeHtml(company.companyId)}">Save Score</button>
+            </div>
+          </div>
+          <form class="prospecting-form" data-sponsor-evidence-form="${escapeHtml(company.companyId)}">
+            <input type="hidden" name="companyId" value="${escapeHtml(company.companyId)}">
+            <label>Sponsored Events
+              <input name="sponsoredEvents" value="${escapeHtml((company.sponsoredEvents || []).join(", "))}" placeholder="RSA, Gartner, Ai4">
+            </label>
+            <label>Sponsor Fit
+              <select name="sponsorshipFit">
+                ${["", "High Interest", "Medium Interest", "Low Interest", "Needs Review"].map((value) => `<option value="${escapeHtml(value)}" ${value === (company.sponsorshipFit || "") ? "selected" : ""}>${escapeHtml(value || "Unknown")}</option>`).join("")}
+              </select>
+            </label>
+            <label>Spend Clue
+              <input name="sponsorshipEstimatedSpend" value="${escapeHtml(company.sponsorshipEstimatedSpend || "")}" placeholder="Gold sponsor, booth, $25k listed">
+            </label>
+            <label>Themes / Values
+              <input name="sponsorshipThemes" value="${escapeHtml((company.sponsorshipThemes || []).join(", "))}" placeholder="AI governance, security, CIO audience">
+            </label>
+            <label class="span-full">Evidence URLs
+              <textarea name="sponsorEvidenceUrls" placeholder="Sponsor page, prospectus, agenda, press release">${escapeHtml((company.sponsorEvidenceUrls || []).join("\\n"))}</textarea>
+            </label>
+            <label class="span-full">Sponsor Notes
+              <textarea name="sponsorshipNotes" placeholder="What they sponsored, who they sponsored with, and why this signals interest.">${escapeHtml(company.sponsorshipNotes || "")}</textarea>
+            </label>
+            <button type="submit">Save Sponsor Evidence</button>
+          </form>
+        </article>
+      `;
+    }
+
+    function renderProspectingCompanyForm() {
+      return `
+        <form class="prospecting-form" data-prospect-company-form>
+          <label>Company Name<input name="companyName" required placeholder="Acme AI"></label>
+          <label>Canonical Domain<input name="canonicalDomain" placeholder="acme.ai"></label>
+          <label>Website<input name="websiteUrl" placeholder="https://acme.ai"></label>
+          <label>Company LinkedIn<input name="linkedinCompanyUrl" placeholder="https://linkedin.com/company/acme-ai"></label>
+          <label>Primary Category<input name="primaryCategory" placeholder="AI Governance"></label>
+          <label>Categories<input name="categories" placeholder="AI Security, AI Governance"></label>
+          <label>Employee Range<input name="employeeRange" placeholder="201-1000"></label>
+          <label>Funding Stage<input name="fundingStage" placeholder="Series B"></label>
+          <label>AI Relevance<input name="aiRelevanceScore" type="number" min="0" max="100" value="80"></label>
+          <label>Enterprise Focus<input name="enterpriseFocus" type="number" min="0" max="100" value="75"></label>
+          <label>Target Roles<input name="targetExecutiveRoles" placeholder="CIO, CISO, Chief AI Officer"></label>
+          <label>Discovery Sources<input name="discoverySources" placeholder="G2, Web Discovery"></label>
+          <label class="span-full">Why This Company<textarea name="classificationReason" placeholder="Fit explanation Miller can trust."></textarea></label>
+          <button type="submit">Save Company</button>
+        </form>
+      `;
+    }
+
+    function renderProspectingPersonForm(selectedCompanyId = "") {
+      return `
+        <form class="prospecting-form" data-prospect-person-form>
+          <label>Company<select name="companyId" required>${prospectCompanyOptions(selectedCompanyId)}</select></label>
+          <label>Full Name<input name="fullName" required placeholder="Jane Smith"></label>
+          <label>Title<input name="title" placeholder="VP Strategic Partnerships"></label>
+          <label>Seniority<input name="seniority" placeholder="Executive"></label>
+          <label>Department<input name="department" placeholder="Partnerships"></label>
+          <label>Persona<input name="persona" placeholder="Partnerships / Ecosystem"></label>
+          <label>LinkedIn URL<input name="linkedinUrl" placeholder="https://linkedin.com/in/..."></label>
+          <label>Priority Score<input name="priorityScore" type="number" min="0" max="100" value="70"></label>
+          <label>Source<input name="source" placeholder="Company website"></label>
+          <label>Source URL<input name="sourceUrl" placeholder="https://..."></label>
+          <label class="span-full">Notes<textarea name="notes" placeholder="Why this person matters for partner outreach."></textarea></label>
+          <button type="submit">Save Person</button>
+        </form>
+      `;
+    }
+
+    function renderDiscoverySourceForm() {
+      return `
+        <form class="prospecting-form" data-prospect-discovery-form>
+          <label>Source Name
+            <input name="sourceName" placeholder="Conference sponsor list" value="Web Discovery">
+          </label>
+          <label>Source Type
+            <select name="sourceType">
+              <option value="Public Web">Public Web</option>
+              <option value="Conference Sponsor List">Conference Sponsor List</option>
+              <option value="Conference Sponsorship Prospectus">Conference Sponsorship Prospectus</option>
+              <option value="VC Portfolio">VC Portfolio</option>
+              <option value="AI Directory">AI Directory</option>
+              <option value="Marketplace">Marketplace</option>
+              <option value="Funding / News">Funding / News</option>
+              <option value="Hiring Platform / Job Board">Hiring Platform / Job Board</option>
+            </select>
+          </label>
+          <label class="span-2">Public Source URL
+            <input name="sourceUrl" type="url" placeholder="https://example.com/sponsors" required>
+          </label>
+          <label>Max Companies
+            <input name="limit" type="number" min="1" max="80" value="20">
+          </label>
+          <button type="submit">Run Discovery</button>
+        </form>
+      `;
+    }
+
+    function renderBulkImportForm() {
+      return `
+        <form class="prospecting-form" data-prospect-import-form>
+          <label>Import Source
+            <input name="sourceName" placeholder="Product Hunt AI list" value="Bulk Import">
+          </label>
+          <label>Source URL
+            <input name="sourceUrl" type="url" placeholder="Optional source URL">
+          </label>
+          <label class="span-full">Companies CSV
+            <textarea name="importText" placeholder="companyName,canonicalDomain,websiteUrl,linkedinCompanyUrl,primaryCategory,categories&#10;Acme AI,acme.ai,https://acme.ai,,AI Governance,&quot;AI Governance, AI Security&quot;"></textarea>
+          </label>
+          <button type="submit">Import Companies</button>
+        </form>
+      `;
+    }
+
+    function hiringSignalLinks(query = "", location = "") {
+      const search = query || "artificial intelligence machine learning generative AI";
+      const where = location || "United States";
+      const encodedSearch = encodeURIComponent(search);
+      const encodedWhere = encodeURIComponent(where);
+      const webQuery = `(${["site:indeed.com/jobs", "site:dice.com/jobs", "site:monster.com/jobs"].join(" OR ")}) ${search} ${where} company`;
+      return [
+        ["Indeed", `https://www.indeed.com/jobs?q=${encodedSearch}&l=${encodedWhere}`],
+        ["Dice", `https://www.dice.com/jobs?q=${encodedSearch}&location=${encodedWhere}`],
+        ["Monster", `https://www.monster.com/jobs/search?q=${encodedSearch}&where=${encodedWhere}`],
+        ["Web Query", `https://www.google.com/search?q=${encodeURIComponent(webQuery)}`]
+      ].map(([label, url]) => ({ label, url, webQuery }));
+    }
+
+    function renderHiringSignalPanel() {
+      const defaultQuery = "AI governance OR generative AI OR machine learning OR AI security";
+      const defaultLocation = "United States";
+      return `
+        <div class="queue-card">
+          <h3>Hiring Signals</h3>
+          <p>Use job-market searches to find companies hiring for AI work, then add the companies through import or manual entry.</p>
+          <form class="prospecting-form" data-hiring-signal-form>
+            <label>Search Terms
+              <input name="hiringQuery" value="${escapeHtml(defaultQuery)}">
+            </label>
+            <label>Location
+              <input name="hiringLocation" value="${escapeHtml(defaultLocation)}">
+            </label>
+            <div class="prospecting-actions span-full">
+              ${hiringSignalLinks(defaultQuery, defaultLocation).map((link) => `<button class="compact secondary" type="button" data-open-hiring-signal="${escapeHtml(link.label)}">${escapeHtml(link.label)}</button>`).join("")}
+              <button class="compact secondary" type="button" data-copy-hiring-signal-query>Copy Web Query</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function conferenceSponsorLinks(query = "", year = "") {
+      const topic = query || "AI conference sponsors exhibitors sponsorship prospectus";
+      const activeYear = year || new Date().getFullYear();
+      const baseQuery = `${topic} ${activeYear}`;
+      return [
+        ["Sponsor Pages", `https://www.google.com/search?q=${encodeURIComponent(`${baseQuery} sponsors exhibitors`)}`],
+        ["Prospectuses", `https://www.google.com/search?q=${encodeURIComponent(`${baseQuery} sponsorship prospectus pdf`)}`],
+        ["Pricing Clues", `https://www.google.com/search?q=${encodeURIComponent(`${baseQuery} sponsorship levels price OR pricing OR package`)}`],
+        ["Companies", `https://www.google.com/search?q=${encodeURIComponent(`${baseQuery} sponsor company AI technology`)}`]
+      ].map(([label, url]) => ({ label, url, query: baseQuery }));
+    }
+
+    function renderConferenceSponsorPlaybook() {
+      const defaultQuery = "AI governance summit OR enterprise AI conference";
+      const defaultYear = String(new Date().getFullYear());
+      return `
+        <div class="queue-card">
+          <h3>Conference Sponsor Playbook</h3>
+          <p>Find companies already paying to sponsor AI, data, security, and enterprise technology events, then save the source page or import selected companies.</p>
+          <form class="prospecting-form" data-conference-sponsor-form>
+            <label>Event / Market Search
+              <input name="sponsorQuery" value="${escapeHtml(defaultQuery)}">
+            </label>
+            <label>Year
+              <input name="sponsorYear" value="${escapeHtml(defaultYear)}">
+            </label>
+            <div class="prospecting-actions span-full">
+              ${conferenceSponsorLinks(defaultQuery, defaultYear).map((link) => `<button class="compact secondary" type="button" data-open-conference-sponsor="${escapeHtml(link.label)}">${escapeHtml(link.label)}</button>`).join("")}
+              <button class="compact secondary" type="button" data-copy-conference-sponsor-query>Copy Query</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function renderDiscoverySources() {
+      const sources = prospectingState?.sources || [];
+      if (!sources.length) return '<p>No discovery sources have been run yet.</p>';
+      const performanceBySource = new Map((prospectingState?.dashboard?.sourcePerformance || []).map((row) => [row.source, row]));
+      return `
+        <div class="prospecting-grid">
+          ${sources.slice(0, 8).map((source) => {
+            const performance = performanceBySource.get(source.sourceName) || {};
+            return `
+            <div class="queue-card">
+              <h3>${escapeHtml(source.sourceName || "Discovery source")}</h3>
+              <div class="crm-compact-pills">
+                <span class="pill">${escapeHtml(source.sourceType || "Public Web")}</span>
+                <span class="pill">${escapeHtml(source.lastRunStatus || source.status || "active")}</span>
+                <span class="pill">${escapeHtml(source.discoveredCount || 0)} discovered</span>
+                <span class="pill">${escapeHtml(performance.qualified || 0)} qualified</span>
+                <span class="pill">${escapeHtml(performance.ready || 0)} ready</span>
+                <span class="pill">${escapeHtml(performance.responses || 0)} responses</span>
+                <span class="pill">Avg ${escapeHtml(performance.avgScore || 0)}</span>
+              </div>
+              ${source.sourceUrl ? `<p><a href="${escapeHtml(source.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(source.sourceUrl)}</a></p>` : ""}
+              ${source.lastRunAt ? `<p>Last run: ${escapeHtml(formatDate(source.lastRunAt))}</p>` : ""}
+              ${source.lastRunError ? `<p>${escapeHtml(source.lastRunError)}</p>` : ""}
+              <div class="prospecting-actions">
+                <button class="compact secondary" type="button" data-rerun-prospect-source="${escapeHtml(source.sourceId)}">Run Source</button>
+              </div>
+            </div>
+          `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function renderScoringConfigForm() {
+      const weights = prospectingState?.scoreConfig?.weights || prospectingState?.scoreWeights || {};
+      return `
+        <form class="prospecting-form" data-score-config-form>
+          ${Object.entries(prospectScoreWeightLabels).map(([key, label]) => `
+            <label>${escapeHtml(label)}
+              <input name="${escapeHtml(key)}" type="number" min="0" max="100" value="${escapeHtml(weights[key] ?? 0)}">
+            </label>
+          `).join("")}
+          <button type="submit">Save Scoring Weights</button>
+        </form>
+      `;
+    }
+
+    function renderDiscoveryQueueMetrics() {
+      const queue = prospectingState?.queue || {};
+      const items = [
+        ["Active Sources", queue.sourcesActive],
+        ["Source Failures", queue.sourcesFailed],
+        ["Discovered", queue.discovered],
+        ["Needs Analysis", queue.needsAnalysis],
+        ["Failed", queue.failed],
+        ["Ready", queue.readyForOutreach],
+        ["Needs Review", queue.needsReview]
+      ];
+      return `<div class="prospecting-grid">${items.map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || 0)}</strong></div>`).join("")}</div>`;
+    }
+
+    function renderProspectingTabs() {
+      prospectingTabs.innerHTML = Object.entries(prospectingViews).map(([view, [label]]) =>
+        `<button class="compact secondary ${activeView === view ? "active" : ""}" type="button" data-view="${escapeHtml(view)}">${escapeHtml(label)}</button>`
+      ).join("");
+    }
+
+    function renderVendorUniverse() {
+      const companies = prospectCompanies();
+      prospectingContent.innerHTML = `
+        <div class="prospecting-grid">
+          <div class="metric"><span>Companies Discovered</span><strong>${prospectingState?.dashboard?.companiesDiscovered || 0}</strong></div>
+          <div class="metric"><span>Qualified AI Vendors</span><strong>${prospectingState?.dashboard?.qualifiedAiVendors || 0}</strong></div>
+          <div class="metric"><span>People Identified</span><strong>${prospectingState?.dashboard?.peopleIdentified || 0}</strong></div>
+        </div>
+        ${renderProspectingCompanyForm()}
+        <div class="prospecting-grid">${companies.map((company) => prospectCompanyCard(company)).join("") || '<p>No vendor companies have been added yet.</p>'}</div>
+      `;
+    }
+
+    function renderPartnerTargets() {
+      const targets = prospectCompanies().filter((company) => company.partnerScore >= 60);
+      prospectingContent.innerHTML = `
+        <div class="prospecting-grid">
+          ${targets.map((company) => prospectCompanyCard(company, { convert: true })).join("") || '<p>No partner targets are qualified yet.</p>'}
+        </div>
+      `;
+    }
+
+    function renderResearchQueue() {
+      const companies = prospectCompanies()
+        .filter((company) => company.partnerScore >= 60 || company.peopleSearchStatus !== "Not Started")
+        .sort((a, b) => (a.peopleCount - b.peopleCount) || (b.partnerScore - a.partnerScore));
+      const queue = prospectingState?.queue || {};
+      prospectingContent.innerHTML = `
+        <div class="prospecting-grid">
+          <div class="metric"><span>Need People Search</span><strong>${escapeHtml(queue.needsPeopleSearch || 0)}</strong></div>
+          <div class="metric"><span>Search Prepared</span><strong>${escapeHtml(queue.peopleSearchPrepared || 0)}</strong></div>
+          <div class="metric"><span>Lead Lists Built</span><strong>${escapeHtml(queue.manualLeadListsBuilt || 0)}</strong></div>
+        </div>
+        <div class="prospect-list">
+          ${companies.map((company) => {
+            const roles = peopleSearchRoles(company);
+            const query = peopleSearchQuery(company);
+            const links = peopleSearchLinks(company);
+            return `
+              <article class="prospect-card">
+                <div class="prospect-row">
+                  <div>
+                    <h3>${escapeHtml(company.companyName || company.canonicalDomain || "Unnamed company")}</h3>
+                    <p>${escapeHtml([company.primaryCategory, `Score ${company.partnerScore || 0}`, `${company.peopleCount || 0} people saved`].filter(Boolean).join(" | "))}</p>
+                  </div>
+                  <span class="prospect-score">${escapeHtml(company.partnerScore || 0)}</span>
+                </div>
+                <div class="crm-compact-pills">
+                  <span class="pill">${escapeHtml(company.peopleSearchStatus || "Not Started")}</span>
+                  <span class="pill">${escapeHtml(company.partnerPriority || "Database Only")}</span>
+                  ${company.manualLeadListName ? `<span class="pill">${escapeHtml(company.manualLeadListName)}</span>` : ""}
+                </div>
+                <div class="crm-compact-pills">${prospectPills(roles, "No target roles")}</div>
+                <p class="search-query">${escapeHtml(query)}</p>
+                <div class="prospecting-actions">
+                  ${links.map((link) => `<a class="compact secondary button-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>`).join("")}
+                  <button class="compact secondary" type="button" data-copy-people-search-query="${escapeHtml(query)}">Copy Query</button>
+                  ${company.websiteUrl ? `<a class="compact secondary button-link" href="${escapeHtml(company.websiteUrl)}" target="_blank" rel="noopener">Website</a>` : ""}
+                </div>
+                <form class="prospecting-form" data-people-search-form="${escapeHtml(company.companyId)}">
+                  <input type="hidden" name="companyId" value="${escapeHtml(company.companyId)}">
+                  <label>Status
+                    <select name="peopleSearchStatus">${peopleSearchStatusOptions(company.peopleSearchStatus || "Not Started")}</select>
+                  </label>
+                  <label>Target Roles
+                    <input name="peopleSearchRoles" value="${escapeHtml(roles.join(", "))}">
+                  </label>
+                  <label>Lead List Name
+                    <input name="manualLeadListName" value="${escapeHtml(company.manualLeadListName || "")}" placeholder="Q3 AI partners - batch 1">
+                  </label>
+                  <label>Lead List URL
+                    <input name="manualLeadListUrl" value="${escapeHtml(company.manualLeadListUrl || "")}" placeholder="Paste saved list URL">
+                  </label>
+                  <label class="span-full">Research Notes
+                    <textarea name="peopleSearchNotes" placeholder="Who searched, what filters worked, what still needs review.">${escapeHtml(company.peopleSearchNotes || "")}</textarea>
+                  </label>
+                  <input type="hidden" name="peopleSearchQuery" value="${escapeHtml(query)}">
+                  <button type="submit">Save Research State</button>
+                </form>
+              </article>
+            `;
+          }).join("") || '<p>No qualified companies need people research yet.</p>'}
+        </div>
+      `;
+    }
+
+    function renderProspectPeople() {
+      const people = prospectPeople();
+      const companyById = new Map(prospectCompanies().map((company) => [company.companyId, company]));
+      prospectingContent.innerHTML = `
+        ${renderProspectingPersonForm()}
+        <div class="prospect-list">
+          ${people.map((person) => {
+            const company = companyById.get(person.companyId) || {};
+            return `
+              <div class="prospect-row">
+                <div>
+                  <strong>${escapeHtml(person.fullName || "Unnamed person")}</strong>
+                  <p>${escapeHtml([person.title, company.companyName].filter(Boolean).join(" | "))}</p>
+                  <div class="crm-compact-pills">
+                    <span class="pill">${escapeHtml(person.persona || person.department || "Unassigned persona")}</span>
+                    <span class="pill">${escapeHtml(person.outreachStatus || "Not Contacted")}</span>
+                    <span class="pill">Priority ${escapeHtml(person.priorityScore || 0)}</span>
+                  </div>
+                </div>
+                <div class="linkedin-actions">
+                  ${person.linkedinUrl ? `<a class="compact secondary button-link" href="${escapeHtml(person.linkedinUrl)}" target="_blank" rel="noopener">Open LinkedIn</a>` : ""}
+                </div>
+              </div>
+            `;
+          }).join("") || '<p>No people have been added yet.</p>'}
+        </div>
+      `;
+    }
+
+    function personOutreachCard(person = {}) {
+      const actions = ["Connection Sent", "Already Connected", "Message Sent", "Responded", "Meeting Scheduled", "Not Relevant", "Skip"];
+      return `
+        <div class="prospect-card">
+          <h3>${escapeHtml(person.fullName || "Unnamed person")}</h3>
+          <p>${escapeHtml([person.title, person.persona || person.department].filter(Boolean).join(" | "))}</p>
+          <div class="crm-compact-pills">
+            <span class="pill">${escapeHtml(person.outreachStatus || "Not Contacted")}</span>
+            <span class="pill">Priority ${escapeHtml(person.priorityScore || 0)}</span>
+          </div>
+          <div class="linkedin-actions">
+            ${person.linkedinUrl ? `<a class="compact secondary button-link" href="${escapeHtml(person.linkedinUrl)}" target="_blank" rel="noopener">Open LinkedIn</a>` : ""}
+            ${actions.map((action) => `<button class="compact secondary" type="button" data-prospect-person-action="${escapeHtml(action)}" data-prospect-person-key="${escapeHtml(person.key)}">${escapeHtml(action)}</button>`).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderOutreachQueue() {
+      const company = prospectingState?.nextCompany;
+      const people = prospectingState?.nextPeople || [];
+      if (!company) {
+        prospectingContent.innerHTML = '<p>No ranked unworked partner prospect is ready. Add companies and people, or review the target filters.</p>';
+        return;
+      }
+      prospectingContent.innerHTML = `
+        <article class="next-prospect-card">
+          <p class="eyebrow">Next Partner Prospect</p>
+          <div class="prospect-row">
+            <div>
+              <h3>${escapeHtml(company.companyName)}</h3>
+              <p>Partner Score: ${escapeHtml(company.partnerScore)} | Priority: ${escapeHtml(company.partnerPriority)} | Category: ${escapeHtml(company.primaryCategory || "Unassigned")}</p>
+              <p>Employees: ${escapeHtml(company.employeeRange || company.employeeCount || "Unknown")}</p>
+            </div>
+            <span class="prospect-score">${escapeHtml(company.partnerScore)}</span>
+          </div>
+          <div>
+            <p class="eyebrow">Why This Company</p>
+            <p>${escapeHtml(company.classificationReason || company.description || "No rationale recorded.")}</p>
+          </div>
+          <div class="prospecting-grid">${people.map(personOutreachCard).join("") || '<p>No people are attached to this company yet.</p>'}</div>
+        </article>
+      `;
+    }
+
+    function renderProspectingPipeline() {
+      const stages = ["Vendor Universe", "Partner Target", "In Outreach", "Partner Candidate", "Research Partner", "Summit Partner", "Strategic Partner"];
+      prospectingContent.innerHTML = `
+        <div class="prospecting-grid">
+          ${stages.map((stage) => {
+            const rows = prospectCompanies().filter((company) => (company.partnerStatus || "Vendor Universe") === stage);
+            return `
+              <div class="queue-card">
+                <h3>${escapeHtml(stage)}</h3>
+                <strong>${rows.length}</strong>
+                ${rows.slice(0, 6).map((company) => `<p>${escapeHtml(company.companyName)} | ${escapeHtml(company.partnerScore)}</p>`).join("") || '<p>No companies.</p>'}
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function renderDiscoveryQueue() {
+      prospectingContent.innerHTML = `
+        ${renderDiscoveryQueueMetrics()}
+        ${renderConferenceSponsorPlaybook()}
+        ${renderHiringSignalPanel()}
+        ${renderDiscoverySourceForm()}
+        ${renderBulkImportForm()}
+        <div class="prospecting-actions prospecting-section-actions">
+          <button class="secondary" type="button" data-run-all-prospect-sources>Run All Active Sources</button>
+          <button class="secondary" type="button" data-batch-analyze-prospects>Analyze Next 10 Websites</button>
+        </div>
+        <div>
+          <p class="eyebrow">Discovery Sources</p>
+          ${renderDiscoverySources()}
+        </div>
+        <div class="prospecting-grid">
+          ${prospectCompanies().map((company) => `
+            <div class="queue-card">
+              <h3>${escapeHtml(company.companyName)}</h3>
+              <div class="crm-compact-pills">
+                <span class="pill">${escapeHtml(company.processingStage || "DISCOVERED")}</span>
+                <span class="pill ${company.processingError ? "warn" : ""}">${escapeHtml(company.processingStatus || "DISCOVERED")}</span>
+                <span class="pill">Retries ${escapeHtml(company.retryCount || 0)}</span>
+              </div>
+              ${company.processingError ? `<p>${escapeHtml(company.processingError)}</p><button class="compact secondary" type="button" data-retry-prospect-company="${escapeHtml(company.companyId)}">Retry</button>` : '<p>No processing error recorded.</p>'}
+              <p>${escapeHtml((company.discoverySources || []).join(" | ") || "Manual")}</p>
+              <div class="prospecting-actions">
+                ${company.websiteUrl ? `<a class="compact secondary button-link" href="${escapeHtml(company.websiteUrl)}" target="_blank" rel="noopener">Website</a>` : ""}
+                <button class="compact secondary" type="button" data-analyze-prospect-company="${escapeHtml(company.companyId)}">Analyze Website</button>
+              </div>
+            </div>
+          `).join("") || '<p>No discovery queue records yet.</p>'}
+        </div>
+      `;
+    }
+
+    function renderProspectingDashboard() {
+      const dashboard = prospectingState?.dashboard || {};
+      const metricsList = [
+        ["Companies Discovered", dashboard.companiesDiscovered],
+        ["Qualified AI Vendors", dashboard.qualifiedAiVendors],
+        ["Immediate Targets", dashboard.immediateTargets],
+        ["Tier A Targets", dashboard.tierATargets],
+        ["People Identified", dashboard.peopleIdentified],
+        ["Need People Search", dashboard.companiesNeedingPeopleSearch],
+        ["Search Prepared", dashboard.peopleSearchPrepared],
+        ["Lead Lists Built", dashboard.manualLeadListsBuilt],
+        ["Sponsor Evidence", dashboard.companiesWithSponsorEvidence],
+        ["Companies Contacted", dashboard.companiesContacted],
+        ["Connection Requests", dashboard.connectionRequests],
+        ["Connections Accepted", dashboard.connectionsAccepted],
+        ["Messages Sent", dashboard.messagesSent],
+        ["Responses", dashboard.responses],
+        ["Meetings", dashboard.meetings],
+        ["Partner Candidates", dashboard.partnerCandidates],
+        ["Research Partners", dashboard.researchPartners],
+        ["Summit Partners", dashboard.summitPartners],
+        ["Strategic Partners", dashboard.strategicPartners]
+      ];
+      const rates = dashboard.conversionRates || {};
+      prospectingContent.innerHTML = `
+        <div class="prospecting-grid">
+          ${metricsList.map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || 0)}</strong></div>`).join("")}
+        </div>
+        <div class="prospecting-grid">
+          <div class="queue-card"><h3>Companies Contacted to Response</h3><strong>${escapeHtml(rates.contactedToResponse || 0)}%</strong></div>
+          <div class="queue-card"><h3>Response to Meeting</h3><strong>${escapeHtml(rates.responseToMeeting || 0)}%</strong></div>
+          <div class="queue-card"><h3>Meeting to Partner Candidate</h3><strong>${escapeHtml(rates.meetingToPartnerCandidate || 0)}%</strong></div>
+          <div class="queue-card"><h3>Candidate to Paid Partner</h3><strong>${escapeHtml(rates.candidateToPaidPartner || 0)}%</strong></div>
+        </div>
+        <div>
+          <p class="eyebrow">Scoring Configuration</p>
+          ${renderScoringConfigForm()}
+        </div>
+        <table class="source-table">
+          <thead><tr><th>Source</th><th>Companies</th><th>Qualified</th><th>Ready</th><th>Contacted</th><th>Responses</th><th>Meetings</th><th>Partners</th><th>Avg Score</th></tr></thead>
+          <tbody>
+            ${(dashboard.sourcePerformance || []).map((row) => `<tr><td>${escapeHtml(row.source)}</td><td>${escapeHtml(row.companies)}</td><td>${escapeHtml(row.qualified)}</td><td>${escapeHtml(row.ready)}</td><td>${escapeHtml(row.contacted)}</td><td>${escapeHtml(row.responses)}</td><td>${escapeHtml(row.meetings)}</td><td>${escapeHtml(row.partners)}</td><td>${escapeHtml(row.avgScore)}</td></tr>`).join("") || '<tr><td colspan="9">No source performance data yet.</td></tr>'}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderProspecting() {
+      if (!isProspectingView()) return;
+      const [title, subtitle] = prospectingViews[activeView] || prospectingViews["vendor-universe"];
+      prospectingTitle.textContent = title;
+      prospectingSubtitle.textContent = subtitle;
+      renderProspectingTabs();
+      if (!prospectingState) {
+        prospectingContent.innerHTML = '<p>Loading partner prospecting...</p>';
+        return;
+      }
+      if (activeView === "vendor-universe") renderVendorUniverse();
+      if (activeView === "partner-targets") renderPartnerTargets();
+      if (activeView === "research-queue") renderResearchQueue();
+      if (activeView === "prospect-people") renderProspectPeople();
+      if (activeView === "outreach-queue") renderOutreachQueue();
+      if (activeView === "prospecting-pipeline") renderProspectingPipeline();
+      if (activeView === "discovery-queue") renderDiscoveryQueue();
+      if (activeView === "prospecting-dashboard") renderProspectingDashboard();
+    }
+
     function renderMetrics() {
       const summary = state.summary || {};
       const label = activeLabel();
+      if (isProspectingView()) {
+        const dashboard = prospectingState?.dashboard || {};
+        metrics.innerHTML = `
+          <div class="metric"><span>Companies discovered</span><strong>${dashboard.companiesDiscovered || 0}</strong></div>
+          <div class="metric"><span>Qualified AI vendors</span><strong>${dashboard.qualifiedAiVendors || 0}</strong></div>
+          <div class="metric"><span>Immediate targets</span><strong>${dashboard.immediateTargets || 0}</strong></div>
+          <div class="metric"><span>Meetings</span><strong>${dashboard.meetings || 0}</strong></div>
+        `;
+        return;
+      }
       if (state.type === "contacts") {
         metrics.innerHTML = `
           <div class="metric"><span>Total contacts</span><strong>${summary.total || 0}</strong></div>
@@ -2916,6 +3814,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function render() {
       syncViewPanels();
       renderMetrics();
+      if (isProspectingView()) {
+        renderProspecting();
+        return;
+      }
       renderEventOptions();
       renderRecordFilterOptions();
       renderRegistrationInvites();
@@ -2949,6 +3851,38 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         registrationDebugContent.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
         showErrorNotice(error);
       }
+    }
+
+    async function loadPartnerProspecting() {
+      setNotice("Loading partner prospecting...");
+      render();
+      try {
+        prospectingState = await fetch(`${api}?prospecting=1`).then(readJson);
+        setNotice(`${prospectingState.dashboard?.companiesDiscovered || 0} partner prospect companies loaded.`, "ok");
+        render();
+      } catch (error) {
+        prospectingContent.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+        showErrorNotice(error);
+      }
+    }
+
+    async function postPartnerProspecting(payload, successMessage = "Partner prospecting saved.") {
+      setNotice("Saving partner prospecting...");
+      try {
+        prospectingState = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(readJson);
+        render();
+        setNotice(successMessage, "ok");
+      } catch (error) {
+        showErrorNotice(error, "Partner prospecting request failed.");
+      }
+    }
+
+    function prospectingFormPayload(form) {
+      return Object.fromEntries(new FormData(form).entries());
     }
 
     async function saveRegistrant(key, changes) {
@@ -3521,8 +4455,207 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     refreshButton.addEventListener("click", loadCrm);
     refreshRegistrationDebug.addEventListener("click", loadRegistrationDebug);
+    refreshProspectingButton.addEventListener("click", loadPartnerProspecting);
     downloadButton.addEventListener("click", () => {
       window.location.href = `${api}?type=${encodeURIComponent(recordsTypeForView())}&download=csv`;
+    });
+
+    prospectingTabs.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-view]");
+      if (!button) return;
+      setActiveView(button.dataset.view);
+    });
+
+    prospectingContent.addEventListener("submit", async (event) => {
+      const companyForm = event.target.closest("[data-prospect-company-form]");
+      const personForm = event.target.closest("[data-prospect-person-form]");
+      const discoveryForm = event.target.closest("[data-prospect-discovery-form]");
+      const importForm = event.target.closest("[data-prospect-import-form]");
+      const scoreConfigForm = event.target.closest("[data-score-config-form]");
+      const peopleSearchForm = event.target.closest("[data-people-search-form]");
+      const sponsorEvidenceForm = event.target.closest("[data-sponsor-evidence-form]");
+      if (!companyForm && !personForm && !discoveryForm && !importForm && !scoreConfigForm && !peopleSearchForm && !sponsorEvidenceForm) return;
+      event.preventDefault();
+      if (companyForm) {
+        await postPartnerProspecting({
+          action: "save-partner-prospect-company",
+          ...prospectingFormPayload(companyForm)
+        }, "Partner prospect company saved.");
+        companyForm.reset();
+        return;
+      }
+      if (discoveryForm) {
+        await postPartnerProspecting({
+          action: "run-partner-prospect-discovery",
+          ...prospectingFormPayload(discoveryForm)
+        }, "Discovery source processed.");
+        discoveryForm.reset();
+        return;
+      }
+      if (importForm) {
+        await postPartnerProspecting({
+          action: "import-partner-prospect-companies",
+          ...prospectingFormPayload(importForm)
+        }, "Companies imported into Vendor Universe.");
+        importForm.reset();
+        return;
+      }
+      if (scoreConfigForm) {
+        await postPartnerProspecting({
+          action: "save-partner-score-config",
+          ...prospectingFormPayload(scoreConfigForm)
+        }, "Partner scoring weights saved.");
+        return;
+      }
+      if (peopleSearchForm) {
+        await postPartnerProspecting({
+          action: "save-partner-people-search-mission",
+          ...prospectingFormPayload(peopleSearchForm)
+        }, "Research state saved.");
+        return;
+      }
+      if (sponsorEvidenceForm) {
+        await postPartnerProspecting({
+          action: "save-partner-prospect-company",
+          ...prospectingFormPayload(sponsorEvidenceForm)
+        }, "Sponsor evidence saved.");
+        return;
+      }
+      await postPartnerProspecting({
+        action: "save-partner-prospect-person",
+        ...prospectingFormPayload(personForm)
+      }, "Partner prospect person saved.");
+      personForm.reset();
+    });
+
+    prospectingContent.addEventListener("click", async (event) => {
+      const actionButton = event.target.closest("[data-prospect-person-action]");
+      const retryButton = event.target.closest("[data-retry-prospect-company]");
+      const convertButton = event.target.closest("[data-convert-prospect-company]");
+      const analyzeButton = event.target.closest("[data-analyze-prospect-company]");
+      const batchAnalyzeButton = event.target.closest("[data-batch-analyze-prospects]");
+      const rerunSourceButton = event.target.closest("[data-rerun-prospect-source]");
+      const runAllSourcesButton = event.target.closest("[data-run-all-prospect-sources]");
+      const reviewButton = event.target.closest("[data-review-prospect-company]");
+      const categorySaveButton = event.target.closest("[data-review-category-save]");
+      const scoreSaveButton = event.target.closest("[data-review-score-save]");
+      const copyPeopleSearchButton = event.target.closest("[data-copy-people-search-query]");
+      const hiringSignalButton = event.target.closest("[data-open-hiring-signal]");
+      const copyHiringSignalButton = event.target.closest("[data-copy-hiring-signal-query]");
+      const conferenceSponsorButton = event.target.closest("[data-open-conference-sponsor]");
+      const copyConferenceSponsorButton = event.target.closest("[data-copy-conference-sponsor-query]");
+      if (actionButton) {
+        await postPartnerProspecting({
+          action: "record-partner-prospect-outreach",
+          personKey: actionButton.dataset.prospectPersonKey,
+          outreachAction: actionButton.dataset.prospectPersonAction
+        }, `${actionButton.dataset.prospectPersonAction} recorded.`);
+        return;
+      }
+      if (retryButton) {
+        await postPartnerProspecting({
+          action: "retry-partner-prospect-stage",
+          companyId: retryButton.dataset.retryProspectCompany
+        }, "Discovery stage queued for retry.");
+        return;
+      }
+      if (analyzeButton) {
+        await postPartnerProspecting({
+          action: "analyze-partner-prospect-website",
+          companyId: analyzeButton.dataset.analyzeProspectCompany
+        }, "Website analysis saved.");
+        return;
+      }
+      if (batchAnalyzeButton) {
+        await postPartnerProspecting({
+          action: "batch-analyze-partner-prospect-websites",
+          limit: 10
+        }, "Batch website analysis complete.");
+        return;
+      }
+      if (rerunSourceButton) {
+        await postPartnerProspecting({
+          action: "rerun-partner-prospect-source",
+          sourceId: rerunSourceButton.dataset.rerunProspectSource,
+          limit: 20
+        }, "Discovery source rerun complete.");
+        return;
+      }
+      if (runAllSourcesButton) {
+        await postPartnerProspecting({
+          action: "run-all-partner-prospect-sources",
+          limitPerSource: 20,
+          maxSources: 8
+        }, "Active discovery sources processed.");
+        return;
+      }
+      if (reviewButton) {
+        await postPartnerProspecting({
+          action: "review-partner-prospect-company",
+          companyId: reviewButton.dataset.reviewProspectCompany,
+          reviewAction: reviewButton.dataset.reviewAction
+        }, "Partner prospect review saved.");
+        return;
+      }
+      if (categorySaveButton) {
+        const companyId = categorySaveButton.dataset.reviewCategorySave;
+        const input = prospectingContent.querySelector(`[data-review-category-input="${CSS.escape(companyId)}"]`);
+        await postPartnerProspecting({
+          action: "review-partner-prospect-company",
+          companyId,
+          reviewAction: "override-category",
+          primaryCategory: input?.value || ""
+        }, "Partner prospect category saved.");
+        return;
+      }
+      if (scoreSaveButton) {
+        const companyId = scoreSaveButton.dataset.reviewScoreSave;
+        const input = prospectingContent.querySelector(`[data-review-score-input="${CSS.escape(companyId)}"]`);
+        await postPartnerProspecting({
+          action: "review-partner-prospect-company",
+          companyId,
+          reviewAction: "override-score",
+          partnerScoreOverride: input?.value || ""
+        }, "Partner prospect score saved.");
+        return;
+      }
+      if (copyPeopleSearchButton) {
+        const copied = await copyText(copyPeopleSearchButton.dataset.copyPeopleSearchQuery || "");
+        setNotice(copied ? "People search query copied." : "People search query is ready to copy.", copied ? "ok" : "");
+        return;
+      }
+      if (hiringSignalButton || copyHiringSignalButton) {
+        const form = event.target.closest("[data-hiring-signal-form]");
+        const values = form ? prospectingFormPayload(form) : {};
+        const links = hiringSignalLinks(values.hiringQuery, values.hiringLocation);
+        if (copyHiringSignalButton) {
+          const copied = await copyText(links[3]?.webQuery || "");
+          setNotice(copied ? "Hiring signal query copied." : "Hiring signal query is ready to copy.", copied ? "ok" : "");
+          return;
+        }
+        const link = links.find((item) => item.label === hiringSignalButton.dataset.openHiringSignal);
+        if (link?.url) window.open(link.url, "_blank", "noopener");
+        return;
+      }
+      if (conferenceSponsorButton || copyConferenceSponsorButton) {
+        const form = event.target.closest("[data-conference-sponsor-form]");
+        const values = form ? prospectingFormPayload(form) : {};
+        const links = conferenceSponsorLinks(values.sponsorQuery, values.sponsorYear);
+        if (copyConferenceSponsorButton) {
+          const copied = await copyText(links[0]?.query || "");
+          setNotice(copied ? "Sponsor playbook query copied." : "Sponsor playbook query is ready to copy.", copied ? "ok" : "");
+          return;
+        }
+        const link = links.find((item) => item.label === conferenceSponsorButton.dataset.openConferenceSponsor);
+        if (link?.url) window.open(link.url, "_blank", "noopener");
+        return;
+      }
+      if (convertButton) {
+        await postPartnerProspecting({
+          action: "convert-partner-prospect",
+          companyId: convertButton.dataset.convertProspectCompany
+        }, "Prospect converted to Partner Candidate.");
+      }
     });
 
     registrationInviteSearchForm.addEventListener("submit", (event) => {
