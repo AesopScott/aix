@@ -1794,6 +1794,7 @@ The following decisions should not be made by one owner alone:
     const assignmentStoragePrefix = "mojo-event-assignment:";
     const customItemsStorageKey = "mojo-event-custom-items";
     const deletedItemIdsStorageKey = "mojo-event-deleted-item-ids";
+    const pendingSharedSyncStorageKey = "mojo-event-pending-shared-sync";
     const customInboxPhase = "Setup Tracker Inbox";
     const customInboxSubsection = "Quick Adds";
     const sharedStateEndpoint = "/api/setup-state";
@@ -1801,6 +1802,7 @@ The following decisions should not be made by one owner alone:
     const noDueDateFilterValue = "__NO_DUE_DATE__";
     let lastSharedUpdatedAt = "";
     let sharedSyncTimer = null;
+    let sharedSyncInFlight = false;
     const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status", "notes"];
     const defaultFieldKeys = {
       owner: "defaultOwner",
@@ -2226,6 +2228,159 @@ The following decisions should not be made by one owner alone:
       allItems.forEach(cacheAssignment);
     }
 
+    function emptyPendingSharedSync() {
+      return {
+        assignments: {},
+        customItems: {},
+        deletedItemIds: [],
+        replaceAll: null,
+        clearAssignments: false
+      };
+    }
+
+    function normalizePendingSharedSync(value = {}) {
+      const pending = emptyPendingSharedSync();
+      if (value && typeof value === "object") {
+        if (value.assignments && typeof value.assignments === "object" && !Array.isArray(value.assignments)) {
+          Object.entries(value.assignments).forEach(([id, entry]) => {
+            if (!id || !entry || typeof entry !== "object") return;
+            const fields = Array.isArray(entry.fields)
+              ? entry.fields.filter((field) => assignmentFields.includes(field))
+              : assignmentFields;
+            pending.assignments[id] = {
+              fields: fields.length ? [...new Set(fields)] : assignmentFields,
+              assignment: entry.assignment || {}
+            };
+          });
+        }
+
+        if (value.customItems && typeof value.customItems === "object" && !Array.isArray(value.customItems)) {
+          Object.entries(value.customItems).forEach(([id, item]) => {
+            if (id && item && typeof item === "object") pending.customItems[id] = item;
+          });
+        }
+
+        pending.deletedItemIds = Array.isArray(value.deletedItemIds)
+          ? [...new Set(value.deletedItemIds.map((id) => String(id || "").trim()).filter(Boolean))]
+          : [];
+
+        if (value.replaceAll && typeof value.replaceAll === "object") {
+          pending.replaceAll = value.replaceAll;
+        }
+
+        pending.clearAssignments = value.clearAssignments === true;
+      }
+      return pending;
+    }
+
+    function readPendingSharedSync() {
+      const saved = localStorage.getItem(pendingSharedSyncStorageKey);
+      if (!saved) return emptyPendingSharedSync();
+      try {
+        return normalizePendingSharedSync(JSON.parse(saved));
+      } catch {
+        localStorage.removeItem(pendingSharedSyncStorageKey);
+        return emptyPendingSharedSync();
+      }
+    }
+
+    function pendingSharedSyncCount(pending = readPendingSharedSync()) {
+      return Object.keys(pending.assignments).length
+        + Object.keys(pending.customItems).length
+        + pending.deletedItemIds.length
+        + (pending.replaceAll ? 1 : 0)
+        + (pending.clearAssignments ? 1 : 0);
+    }
+
+    function writePendingSharedSync(pending) {
+      const normalized = normalizePendingSharedSync(pending);
+      if (pendingSharedSyncCount(normalized) === 0) {
+        localStorage.removeItem(pendingSharedSyncStorageKey);
+        return;
+      }
+      localStorage.setItem(pendingSharedSyncStorageKey, JSON.stringify(normalized));
+    }
+
+    function sameJson(a, b) {
+      return JSON.stringify(a) === JSON.stringify(b);
+    }
+
+    function removeFlushedPendingSharedSync(flushed) {
+      const current = readPendingSharedSync();
+
+      if (flushed.clearAssignments && current.clearAssignments) {
+        current.clearAssignments = false;
+      }
+
+      if (flushed.replaceAll && current.replaceAll && sameJson(current.replaceAll, flushed.replaceAll)) {
+        current.replaceAll = null;
+      }
+
+      Object.entries(flushed.customItems).forEach(([id, item]) => {
+        if (current.customItems[id] && sameJson(current.customItems[id], item)) {
+          delete current.customItems[id];
+        }
+      });
+
+      current.deletedItemIds = current.deletedItemIds.filter((id) => !flushed.deletedItemIds.includes(id));
+
+      Object.entries(flushed.assignments).forEach(([id, entry]) => {
+        if (current.assignments[id] && sameJson(current.assignments[id], entry)) {
+          delete current.assignments[id];
+        }
+      });
+
+      writePendingSharedSync(current);
+    }
+
+    function queueSharedAssignment(item, fields = assignmentFields) {
+      const pending = readPendingSharedSync();
+      pending.clearAssignments = false;
+      pending.assignments[item.id] = {
+        fields: Array.isArray(fields) && fields.length ? [...new Set(fields)] : assignmentFields,
+        assignment: currentAssignment(item)
+      };
+      writePendingSharedSync(pending);
+    }
+
+    function queueAllSharedAssignments() {
+      const pending = readPendingSharedSync();
+      pending.replaceAll = {
+        assignments: assignmentSnapshot(),
+        customItems: customItems.map(storedCustomItem),
+        deletedItemIds: [...deletedItemIds]
+      };
+      pending.assignments = {};
+      pending.customItems = {};
+      pending.deletedItemIds = [];
+      pending.clearAssignments = false;
+      writePendingSharedSync(pending);
+    }
+
+    function queueSharedCustomItem(item) {
+      const pending = readPendingSharedSync();
+      const stored = storedCustomItem(item);
+      pending.customItems[stored.id] = stored;
+      pending.deletedItemIds = pending.deletedItemIds.filter((id) => id !== stored.id);
+      writePendingSharedSync(pending);
+    }
+
+    function queueSharedDeletedItem(item) {
+      const pending = readPendingSharedSync();
+      delete pending.assignments[item.id];
+      delete pending.customItems[item.id];
+      if (!pending.deletedItemIds.includes(item.id)) pending.deletedItemIds.push(item.id);
+      writePendingSharedSync(pending);
+    }
+
+    function queueClearSharedAssignments() {
+      const pending = readPendingSharedSync();
+      pending.assignments = {};
+      pending.replaceAll = null;
+      pending.clearAssignments = true;
+      writePendingSharedSync(pending);
+    }
+
     function loadCachedAssignments() {
       const assignments = localAssignments();
       allItems.forEach((item) => {
@@ -2273,98 +2428,104 @@ The following decisions should not be made by one owner alone:
       return response.json();
     }
 
-    async function saveSharedAssignment(item, fields = assignmentFields) {
+    async function requestSharedState(options = {}) {
+      const response = await fetch(sharedStateEndpoint, options);
+      if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
+      return response.json();
+    }
+
+    async function flushPendingSharedSync({ quiet = false } = {}) {
+      const pending = readPendingSharedSync();
+      const count = pendingSharedSyncCount(pending);
+      if (count === 0) return true;
+      if (sharedSyncInFlight) return false;
+
+      sharedSyncInFlight = true;
       try {
-        setSyncState("warn", "Saving shared change...");
-        const response = await fetch(sharedStateEndpoint, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ id: item.id, fields, assignment: currentAssignment(item) })
-        });
-        if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
-        const state = await response.json();
-        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
-        setSyncState("ok", "Shared sync live. Change saved.");
+        if (!quiet) setSyncState("warn", `Saving ${count} pending shared change${count === 1 ? "" : "s"}...`);
+        let state = null;
+
+        if (pending.clearAssignments) {
+          state = await requestSharedState({ method: "DELETE" });
+        }
+
+        if (pending.replaceAll) {
+          state = await requestSharedState({
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(pending.replaceAll)
+          });
+        }
+
+        for (const item of Object.values(pending.customItems)) {
+          state = await requestSharedState({
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ customItem: item })
+          });
+        }
+
+        for (const id of pending.deletedItemIds) {
+          state = await requestSharedState({
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ id, action: "delete-item" })
+          });
+        }
+
+        for (const [id, entry] of Object.entries(pending.assignments)) {
+          state = await requestSharedState({
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ id, fields: entry.fields, assignment: entry.assignment })
+          });
+        }
+
+        removeFlushedPendingSharedSync(pending);
+        lastSharedUpdatedAt = state?.updatedAt || lastSharedUpdatedAt;
+        setSyncState("ok", count === 1 ? "Shared sync live. Pending local change saved." : "Shared sync live. Pending local changes saved.");
+        return true;
       } catch (error) {
         setSyncState("error", describeSharedError(error));
         console.warn(error);
+        return false;
+      } finally {
+        sharedSyncInFlight = false;
       }
+    }
+
+    async function saveSharedAssignment(item, fields = assignmentFields) {
+      queueSharedAssignment(item, fields);
+      await flushPendingSharedSync();
     }
 
     async function saveAllSharedAssignments() {
-      try {
-        setSyncState("warn", "Saving all shared changes...");
-        const response = await fetch(sharedStateEndpoint, {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            assignments: assignmentSnapshot(),
-            customItems: customItems.map(storedCustomItem),
-            deletedItemIds: [...deletedItemIds]
-          })
-        });
-        if (!response.ok) throw new Error(`Shared state save failed: ${response.status}`);
-        const state = await response.json();
-        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
-        setSyncState("ok", "Shared sync live. All changes saved.");
-      } catch (error) {
-        setSyncState("error", describeSharedError(error));
-        console.warn(error);
-      }
+      queueAllSharedAssignments();
+      await flushPendingSharedSync();
     }
 
     async function saveSharedCustomItem(item) {
-      try {
-        setSyncState("warn", "Saving quick-add item...");
-        const response = await fetch(sharedStateEndpoint, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ customItem: storedCustomItem(item) })
-        });
-        if (!response.ok) throw new Error(`Shared custom item save failed: ${response.status}`);
-        const state = await response.json();
-        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
-        setSyncState("ok", "Shared sync live. Quick-add item saved.");
-      } catch (error) {
-        setSyncState("error", describeSharedError(error));
-        console.warn(error);
-      }
+      queueSharedCustomItem(item);
+      await flushPendingSharedSync();
     }
 
     async function saveSharedDeletedItem(item) {
-      try {
-        setSyncState("warn", "Deleting shared item...");
-        const response = await fetch(sharedStateEndpoint, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ id: item.id, action: "delete-item" })
-        });
-        if (!response.ok) throw new Error(`Shared item delete failed: ${response.status}`);
-        const state = await response.json();
-        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
-        setSyncState("ok", "Shared sync live. Item deleted.");
-      } catch (error) {
-        setSyncState("error", describeSharedError(error));
-        console.warn(error);
-      }
+      queueSharedDeletedItem(item);
+      await flushPendingSharedSync();
     }
 
     async function clearSharedAssignments() {
-      try {
-        setSyncState("warn", "Resetting shared state...");
-        const response = await fetch(sharedStateEndpoint, { method: "DELETE" });
-        if (!response.ok) throw new Error(`Shared state reset failed: ${response.status}`);
-        const state = await response.json();
-        lastSharedUpdatedAt = state.updatedAt || lastSharedUpdatedAt;
-        setSyncState("ok", "Shared sync live. Shared state reset.");
-      } catch (error) {
-        setSyncState("error", describeSharedError(error));
-        console.warn(error);
-      }
+      queueClearSharedAssignments();
+      await flushPendingSharedSync();
     }
 
     async function loadSharedAssignments({ render = false, migrateLocalIfEmpty = false } = {}) {
       try {
+        if (pendingSharedSyncCount() > 0) {
+          const flushed = await flushPendingSharedSync({ quiet: true });
+          if (!flushed) return;
+        }
+
         const state = await fetchSharedState();
         setSyncState("ok", "Shared sync live. Updates refresh every 5 seconds.");
         const sharedCustomItems = Array.isArray(state.customItems) ? state.customItems : [];
