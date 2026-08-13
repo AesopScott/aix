@@ -289,6 +289,47 @@
       color: var(--ok);
     }
 
+    .download-mfa {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: rgba(5, 8, 20, 0.78);
+      backdrop-filter: blur(10px);
+    }
+
+    .download-mfa[hidden] {
+      display: none;
+    }
+
+    .download-mfa-panel {
+      width: min(100%, 420px);
+      padding: 1.25rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(27, 35, 51, 0.96), rgba(10, 15, 30, 0.96)),
+        var(--slate);
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.52);
+    }
+
+    .download-mfa-panel form {
+      margin-top: 1rem;
+    }
+
+    .download-mfa-message {
+      margin-top: 0.5rem;
+      color: var(--muted-blue);
+    }
+
+    .download-mfa-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+    }
+
     .table-wrap {
       overflow: auto;
     }
@@ -596,6 +637,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     </div>
   </main>
 
+  <div class="download-mfa" id="downloadMfaDialog" role="dialog" aria-modal="true" aria-labelledby="downloadMfaTitle" hidden>
+    <div class="download-mfa-panel">
+      <h2 id="downloadMfaTitle">Verify Download</h2>
+      <p class="download-mfa-message" id="downloadMfaMessage"></p>
+      <form id="downloadMfaForm">
+        <label>
+          Code
+          <input id="downloadMfaCode" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
+        </label>
+        <div class="download-mfa-actions">
+          <button type="submit">Verify</button>
+          <button type="button" class="secondary" id="downloadMfaCancel">Cancel</button>
+        </div>
+      </form>
+      <div id="downloadMfaNotice" class="notice" hidden></div>
+    </div>
+  </div>
+
   <script>
     const api = "/api/storage";
     const multipartUploadThreshold = 64 * 1024 * 1024;
@@ -619,7 +678,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const backfillSubmittersButton = document.querySelector("#backfillSubmittersButton");
     const receiptButtons = document.querySelectorAll("[data-receipts]");
     const privateOptions = document.querySelectorAll('option[value="private"], option[value="private/"]');
+    const downloadMfaDialog = document.querySelector("#downloadMfaDialog");
+    const downloadMfaForm = document.querySelector("#downloadMfaForm");
+    const downloadMfaCode = document.querySelector("#downloadMfaCode");
+    const downloadMfaMessage = document.querySelector("#downloadMfaMessage");
+    const downloadMfaNotice = document.querySelector("#downloadMfaNotice");
+    const downloadMfaCancel = document.querySelector("#downloadMfaCancel");
     const state = { isAdmin: false, statuses: {} };
+    const downloadMfaState = { key: "", challengeId: "", downloadUrl: "" };
     let searchTimer;
 
     function formatBytes(size) {
@@ -678,6 +744,102 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!response.ok) throw new Error(data.error || "Storage request failed.");
       return data;
     }
+
+    function apiModeUrl(mode) {
+      const url = new URL(api, window.location.origin);
+      url.searchParams.set("mode", mode);
+      return url;
+    }
+
+    function downloadUrlForKey(key) {
+      const url = new URL(api, window.location.origin);
+      url.searchParams.set("key", key);
+      return url.toString();
+    }
+
+    function openDownloadMfa(data, key, downloadUrl) {
+      downloadMfaState.key = key;
+      downloadMfaState.challengeId = data.challengeId || "";
+      downloadMfaState.downloadUrl = downloadUrl;
+      downloadMfaCode.value = "";
+      downloadMfaMessage.textContent = `Code sent to ${data.email || "your email"}.`;
+      downloadMfaNotice.hidden = true;
+      downloadMfaDialog.hidden = false;
+      window.setTimeout(() => downloadMfaCode.focus(), 0);
+    }
+
+    function closeDownloadMfa() {
+      downloadMfaDialog.hidden = true;
+      downloadMfaState.key = "";
+      downloadMfaState.challengeId = "";
+      downloadMfaState.downloadUrl = "";
+      downloadMfaForm.reset();
+      downloadMfaNotice.hidden = true;
+    }
+
+    async function beginDownload(key) {
+      const downloadUrl = downloadUrlForKey(key);
+      setNotice(listNotice, "Sending download code...");
+      const data = await fetch(apiModeUrl("download-mfa-start"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ key })
+      }).then(readJson);
+
+      if (data.alreadyVerified) {
+        window.location.href = downloadUrl;
+        return;
+      }
+
+      openDownloadMfa(data, key, downloadUrl);
+      setNotice(listNotice, "Check your email for the download code.", "ok");
+    }
+
+    downloadMfaForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const code = downloadMfaCode.value.replace(/\D/g, "").slice(0, 6);
+      if (code.length !== 6) {
+        downloadMfaNotice.hidden = false;
+        setNotice(downloadMfaNotice, "Enter the 6-digit code.", "error");
+        downloadMfaCode.focus();
+        return;
+      }
+
+      downloadMfaForm.querySelector('button[type="submit"]').disabled = true;
+      downloadMfaNotice.hidden = false;
+      setNotice(downloadMfaNotice, "Verifying...");
+
+      try {
+        await fetch(apiModeUrl("download-mfa-verify"), {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            challengeId: downloadMfaState.challengeId,
+            code
+          })
+        }).then(readJson);
+        const downloadUrl = downloadMfaState.downloadUrl;
+        closeDownloadMfa();
+        window.location.href = downloadUrl;
+      } catch (error) {
+        setNotice(downloadMfaNotice, error.message, "error");
+        downloadMfaCode.select();
+      } finally {
+        downloadMfaForm.querySelector('button[type="submit"]').disabled = false;
+      }
+    });
+
+    downloadMfaCancel.addEventListener("click", closeDownloadMfa);
+
+    downloadMfaDialog.addEventListener("click", (event) => {
+      if (event.target === downloadMfaDialog) closeDownloadMfa();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !downloadMfaDialog.hidden) closeDownloadMfa();
+    });
 
     function metadataFormData(source, file) {
       const metadata = new FormData();
@@ -1055,17 +1217,29 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     fileRows.addEventListener("click", async (event) => {
-      const downloadKey = event.target.dataset.download;
-      const renameKey = event.target.dataset.rename;
-      const deleteKey = event.target.dataset.delete;
+      const actionButton = event.target.closest("button");
+      if (!actionButton || !fileRows.contains(actionButton)) return;
+
+      const downloadKey = actionButton.dataset.download;
+      const renameKey = actionButton.dataset.rename;
+      const deleteKey = actionButton.dataset.delete;
 
       if (downloadKey) {
-        window.location.href = `${api}?key=${downloadKey}`;
+        try {
+          await beginDownload(decodeURIComponent(downloadKey));
+        } catch (error) {
+          if (/sign in/i.test(error.message)) {
+            setAuthNotice(listNotice, error.message);
+          } else {
+            setNotice(listNotice, error.message, "error");
+          }
+        }
+        return;
       }
 
       if (renameKey) {
         const key = decodeURIComponent(renameKey);
-        const currentName = event.target.dataset.name || "";
+        const currentName = actionButton.dataset.name || "";
         const nextName = window.prompt("Rename file", currentName);
         if (nextName === null) return;
         const cleanName = nextName.trim();

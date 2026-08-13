@@ -1,6 +1,6 @@
 # Website Access Control
 
-Updated: 2026-07-31
+Updated: 2026-08-13
 
 The AIX site uses Mojo app-session authentication for access administration at `/access/`.
 
@@ -22,6 +22,7 @@ Current state:
 - `/forums/` and `/api/forums` are protected forum surfaces. They default to the `Admin`, `Mojo team`, and `Guests and members` groups with strict group enforcement.
 - `Guests and members` is a dynamic access group for forums: signed-in Mojo Auth users qualify when their email exists in `crm:contact:{email}` or in member, guest, or partner registration records. CRM remains the source of truth for broad forum participation.
 - Forum administration uses the owner/admin Mojo Auth roles plus emails in the `Admin` access group. Forum admins can pin, close, reopen, delete, and restore threads.
+- Storage downloads have native step-up MFA on `/api/storage` only. The `/files/` shell, file listing, uploads, folder creation, renames, status changes, and deletes use the normal Mojo Auth session; clicking Download emails a 6-digit Microsoft Graph code to the signed-in account, and a verified code sets a 15-minute HttpOnly download cookie.
 
 Operational note:
 - Owner/admin users should create additional accounts from `/access/` after the first owner signs in.

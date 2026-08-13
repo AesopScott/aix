@@ -1,4 +1,5 @@
 import { canManageAccess } from "../_auth.js";
+import { sendMicrosoftGraphMail } from "../_mail.js";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -50,6 +51,14 @@ const allowedStatuses = new Set(Object.keys(fileStatuses));
 const DEFAULT_STATUS = "draft";
 const FOLDER_MARKER_NAME = ".folder";
 const MULTIPART_PART_SIZE = 16 * 1024 * 1024;
+const DOWNLOAD_MFA_CHALLENGE_PREFIX = "storage-download-mfa:challenge:";
+const DOWNLOAD_MFA_SESSION_PREFIX = "storage-download-mfa:session:";
+const DOWNLOAD_MFA_COOKIE = "mojo_storage_download_mfa";
+const DOWNLOAD_MFA_CODE_TTL_SECONDS = 10 * 60;
+const DOWNLOAD_MFA_SESSION_TTL_SECONDS = 15 * 60;
+const DOWNLOAD_MFA_MAX_ATTEMPTS = 5;
+
+const encoder = new TextEncoder();
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -59,6 +68,64 @@ function json(data, init = {}) {
       ...(init.headers || {})
     }
   });
+}
+
+function parseCookies(value) {
+  return Object.fromEntries(
+    String(value || "")
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const separator = part.indexOf("=");
+        if (separator === -1) return [part, ""];
+        try {
+          return [part.slice(0, separator), decodeURIComponent(part.slice(separator + 1))];
+        } catch {
+          return [part.slice(0, separator), ""];
+        }
+      })
+  );
+}
+
+function randomBase64Url(byteLength = 32) {
+  const bytes = new Uint8Array(byteLength);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+async function sha256Base64Url(value) {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(String(value || "")));
+  let binary = "";
+  new Uint8Array(digest).forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function randomDownloadMfaCode() {
+  const bytes = new Uint32Array(1);
+  crypto.getRandomValues(bytes);
+  return String(bytes[0] % 1000000).padStart(6, "0");
+}
+
+function downloadMfaStore(env) {
+  return env.MOJO_SUMMITS_SETUP_STATE || null;
+}
+
+function downloadMfaCookie(token, request) {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${DOWNLOAD_MFA_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/api/storage; Max-Age=${DOWNLOAD_MFA_SESSION_TTL_SECONDS}; SameSite=Lax${secure}`;
 }
 
 function requireStorageAccess(data = {}) {
@@ -571,11 +638,172 @@ async function listObjects(request, env, access) {
   });
 }
 
+function downloadMfaRequiredResponse() {
+  return json(
+    {
+      error: "Verify by email before downloading files.",
+      mfaRequired: true
+    },
+    { status: 403 }
+  );
+}
+
+function validChallengeId(value) {
+  return /^[a-zA-Z0-9._-]{8,120}$/.test(String(value || ""));
+}
+
+async function downloadMfaCodeHash(challengeId, email, code) {
+  return sha256Base64Url(`${challengeId}:${String(email || "").toLowerCase()}:${String(code || "")}`);
+}
+
+async function hasDownloadMfa(request, env, access) {
+  const store = downloadMfaStore(env);
+  if (!store) return false;
+
+  const token = parseCookies(request.headers.get("cookie"))[DOWNLOAD_MFA_COOKIE];
+  if (!token) return false;
+
+  const tokenHash = await sha256Base64Url(token);
+  const session = await store.get(`${DOWNLOAD_MFA_SESSION_PREFIX}${tokenHash}`, "json").catch(() => null);
+  if (!session || session.email !== access.email) return false;
+  if (new Date(session.expiresAt || 0).getTime() <= Date.now()) return false;
+  return true;
+}
+
+async function startDownloadMfa(request, env, access, payload = {}) {
+  const store = downloadMfaStore(env);
+  if (!store) return json({ error: "Storage download MFA storage is not configured." }, { status: 500 });
+
+  const key = safeKey(payload?.key);
+  if (!key) return json({ error: "Expected a file key." }, { status: 400 });
+  if (isPrivateKey(key) && !isAdminAccess(access)) return privateAccessError();
+
+  const object = await env.MOJO_SUMMITS_STORAGE.head(key);
+  if (!object) return json({ error: "File not found." }, { status: 404 });
+  if (await hasDownloadMfa(request, env, access)) {
+    return json({
+      ok: true,
+      alreadyVerified: true,
+      expiresInSeconds: DOWNLOAD_MFA_SESSION_TTL_SECONDS
+    });
+  }
+
+  const challengeId = crypto.randomUUID();
+  const code = randomDownloadMfaCode();
+  const now = Date.now();
+  const expiresAt = new Date(now + DOWNLOAD_MFA_CODE_TTL_SECONDS * 1000).toISOString();
+  const fileName = safeOriginalName(object.customMetadata?.originalName || displayNameFromKey(key));
+  const challenge = {
+    id: challengeId,
+    email: access.email,
+    key,
+    codeHash: await downloadMfaCodeHash(challengeId, access.email, code),
+    attempts: 0,
+    createdAt: new Date(now).toISOString(),
+    expiresAt
+  };
+
+  await store.put(`${DOWNLOAD_MFA_CHALLENGE_PREFIX}${challengeId}`, JSON.stringify(challenge), {
+    expirationTtl: DOWNLOAD_MFA_CODE_TTL_SECONDS
+  });
+
+  try {
+    await sendMicrosoftGraphMail(env, {
+      to: access.email,
+      subject: "Mojo storage download code",
+      text: [
+        `Your Mojo AI Summits storage download code is ${code}.`,
+        "",
+        `File: ${fileName}`,
+        `This code expires in ${Math.round(DOWNLOAD_MFA_CODE_TTL_SECONDS / 60)} minutes.`,
+        "",
+        "If you did not request this download, ignore this message."
+      ].join("\n")
+    });
+  } catch (error) {
+    await store.delete(`${DOWNLOAD_MFA_CHALLENGE_PREFIX}${challengeId}`).catch(() => null);
+    return json({ error: error?.message || "Download code could not be sent." }, { status: 500 });
+  }
+
+  return json({
+    ok: true,
+    challengeId,
+    email: access.email,
+    expiresInSeconds: DOWNLOAD_MFA_CODE_TTL_SECONDS
+  });
+}
+
+async function verifyDownloadMfa(request, env, access, payload = {}) {
+  const store = downloadMfaStore(env);
+  if (!store) return json({ error: "Storage download MFA storage is not configured." }, { status: 500 });
+
+  const challengeId = String(payload?.challengeId || "").trim();
+  const code = String(payload?.code || "").replace(/\D/g, "").slice(0, 6);
+  if (!validChallengeId(challengeId) || code.length !== 6) {
+    return json({ error: "Enter the 6-digit download code." }, { status: 400 });
+  }
+
+  const key = `${DOWNLOAD_MFA_CHALLENGE_PREFIX}${challengeId}`;
+  const challenge = await store.get(key, "json").catch(() => null);
+  if (!challenge || challenge.email !== access.email) {
+    return json({ error: "Download code is invalid or expired." }, { status: 400 });
+  }
+
+  if (new Date(challenge.expiresAt || 0).getTime() <= Date.now()) {
+    await store.delete(key).catch(() => null);
+    return json({ error: "Download code has expired." }, { status: 400 });
+  }
+
+  if (Number(challenge.attempts || 0) >= DOWNLOAD_MFA_MAX_ATTEMPTS) {
+    await store.delete(key).catch(() => null);
+    return json({ error: "Too many code attempts. Request a new code." }, { status: 429 });
+  }
+
+  const expectedHash = await downloadMfaCodeHash(challengeId, access.email, code);
+  if (expectedHash !== challenge.codeHash) {
+    const attempts = Number(challenge.attempts || 0) + 1;
+    const remainingTtl = Math.max(
+      1,
+      Math.ceil((new Date(challenge.expiresAt).getTime() - Date.now()) / 1000)
+    );
+    await store.put(key, JSON.stringify({ ...challenge, attempts }), { expirationTtl: remainingTtl });
+    return json({ error: "Download code is incorrect." }, { status: 400 });
+  }
+
+  await store.delete(key).catch(() => null);
+
+  const token = `${crypto.randomUUID()}.${randomBase64Url(32)}`;
+  const tokenHash = await sha256Base64Url(token);
+  const now = Date.now();
+  const session = {
+    email: access.email,
+    challengeId,
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + DOWNLOAD_MFA_SESSION_TTL_SECONDS * 1000).toISOString()
+  };
+  await store.put(`${DOWNLOAD_MFA_SESSION_PREFIX}${tokenHash}`, JSON.stringify(session), {
+    expirationTtl: DOWNLOAD_MFA_SESSION_TTL_SECONDS
+  });
+
+  return json(
+    {
+      ok: true,
+      expiresInSeconds: DOWNLOAD_MFA_SESSION_TTL_SECONDS
+    },
+    {
+      headers: {
+        "set-cookie": downloadMfaCookie(token, request)
+      }
+    }
+  );
+}
+
 async function downloadObject(request, env, access) {
   const url = new URL(request.url);
   const key = safeKey(url.searchParams.get("key"));
   if (!key) return json({ error: "Expected a file key." }, { status: 400 });
   if (isPrivateKey(key) && !isAdminAccess(access)) return privateAccessError();
+  if (!(await hasDownloadMfa(request, env, access))) return downloadMfaRequiredResponse();
 
   const object = await env.MOJO_SUMMITS_STORAGE.get(key);
   if (!object) return json({ error: "File not found." }, { status: 404 });
@@ -693,6 +921,14 @@ export async function onRequestPost({ request, env, data }) {
   if (bucketError) return bucketError;
 
   const url = new URL(request.url);
+  if (url.searchParams.get("mode") === "download-mfa-start") {
+    const payload = await request.json().catch(() => null);
+    return startDownloadMfa(request, env, access, payload);
+  }
+  if (url.searchParams.get("mode") === "download-mfa-verify") {
+    const payload = await request.json().catch(() => null);
+    return verifyDownloadMfa(request, env, access, payload);
+  }
   if (url.searchParams.get("mode") === "multipart-part") {
     return uploadMultipartPart(request, env, access);
   }
