@@ -20,6 +20,7 @@ const allowedStatuses = new Set([
   "excluded",
   "reviewed"
 ]);
+const anticipatedStatuses = new Set(["planned", "receipt-needed", "receipt-backed", "cancelled"]);
 const taxCategories = new Set([
   "Unassigned",
   "Advertising and marketing",
@@ -286,7 +287,8 @@ function emptyLedger() {
     version: 1,
     updatedAt: null,
     lastReviewAt: null,
-    receipts: {}
+    receipts: {},
+    anticipatedSpending: {}
   };
 }
 
@@ -303,6 +305,10 @@ async function readLedger(env) {
     receipts:
       data.receipts && typeof data.receipts === "object" && !Array.isArray(data.receipts)
         ? data.receipts
+        : {},
+    anticipatedSpending:
+      data.anticipatedSpending && typeof data.anticipatedSpending === "object" && !Array.isArray(data.anticipatedSpending)
+        ? data.anticipatedSpending
         : {}
   };
 }
@@ -312,7 +318,8 @@ async function writeLedger(env, ledger) {
     ...ledger,
     version: 1,
     updatedAt: new Date().toISOString(),
-    receipts: ledger.receipts || {}
+    receipts: ledger.receipts || {},
+    anticipatedSpending: ledger.anticipatedSpending || {}
   };
 
   await env.MOJO_SUMMITS_STORAGE.put(LEDGER_KEY, JSON.stringify(next, null, 2), {
@@ -467,13 +474,59 @@ function cleanBoolean(value) {
   return value === true || value === "true" || value === "on" || value === 1 || value === "1";
 }
 
+function cleanOwner(value, fallback = "unassigned") {
+  const owner = String(value || "").toLowerCase();
+  return receiptOwners.has(owner) ? owner : fallback;
+}
+
+function cleanEvent(value, fallback = "") {
+  const event = cleanText(value, fallback);
+  return receiptEvents.has(event) ? event : fallback;
+}
+
+function cleanDate(value, fallback = "") {
+  const date = cleanText(value, fallback).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "";
+}
+
+function normalizeAnticipatedSpend(record = {}) {
+  const id = cleanText(record.id) || crypto.randomUUID();
+  const status = anticipatedStatuses.has(record.status) ? record.status : "receipt-needed";
+  const category = taxCategories.has(record.category) ? record.category : "Unassigned";
+  return {
+    id,
+    owner: cleanOwner(record.owner),
+    event: cleanEvent(record.event),
+    expectedDate: cleanDate(record.expectedDate),
+    description: cleanText(record.description || "Anticipated spend"),
+    category,
+    amount: cleanAmount(record.amount),
+    status,
+    notes: cleanText(record.notes),
+    receiptKey: cleanText(record.receiptKey),
+    createdAt: cleanText(record.createdAt),
+    createdBy: cleanText(record.createdBy),
+    updatedAt: cleanText(record.updatedAt),
+    updatedBy: cleanText(record.updatedBy)
+  };
+}
+
+function activeAnticipatedRows(ledger) {
+  return Object.values(ledger.anticipatedSpending || {})
+    .map(normalizeAnticipatedSpend)
+    .filter((row) => row.status !== "cancelled");
+}
+
 function summarize(ledger) {
   const rows = Object.values(ledger.receipts || {});
   const activeRows = rows.filter((row) => row.status !== "excluded" && !row.excluded);
   const totalExpenses = activeRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const anticipatedRows = activeAnticipatedRows(ledger);
+  const anticipatedTotal = anticipatedRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
   const unpricedCount = activeRows.filter((row) => !(Number(row.amount) > 0)).length;
   const needsReview = activeRows.filter((row) => row.status === "needs-review").length;
   const byOwner = {};
+  const anticipatedByOwner = {};
   const byCategory = {};
   const byTaxCategory = {};
 
@@ -486,10 +539,46 @@ function summarize(ledger) {
       (byTaxCategory[row.taxCategory || "Unassigned"] || 0) + amount;
   }
 
+  for (const row of anticipatedRows) {
+    const owner = row.owner || "unassigned";
+    const anticipated = Number(row.amount) || 0;
+    const existing = anticipatedByOwner[owner] || {
+      anticipated: 0,
+      actual: byOwner[owner] || 0,
+      variance: 0,
+      count: 0,
+      receiptNeededCount: 0
+    };
+    existing.anticipated += anticipated;
+    existing.count += 1;
+    if (row.status === "planned" || row.status === "receipt-needed") existing.receiptNeededCount += 1;
+    existing.variance = Number((existing.anticipated - existing.actual).toFixed(2));
+    anticipatedByOwner[owner] = existing;
+  }
+
+  for (const [owner, actual] of Object.entries(byOwner)) {
+    if (!anticipatedByOwner[owner]) {
+      anticipatedByOwner[owner] = {
+        anticipated: 0,
+        actual,
+        variance: Number((0 - actual).toFixed(2)),
+        count: 0,
+        receiptNeededCount: 0
+      };
+    } else {
+      anticipatedByOwner[owner].actual = actual;
+      anticipatedByOwner[owner].variance = Number((anticipatedByOwner[owner].anticipated - actual).toFixed(2));
+    }
+  }
+
   return {
     revenue: 0,
     expenses: Number(totalExpenses.toFixed(2)),
     net: Number((0 - totalExpenses).toFixed(2)),
+    anticipatedExpenses: Number(anticipatedTotal.toFixed(2)),
+    anticipatedVariance: Number((anticipatedTotal - totalExpenses).toFixed(2)),
+    anticipatedCount: anticipatedRows.length,
+    anticipatedReceiptNeededCount: anticipatedRows.filter((row) => row.status === "planned" || row.status === "receipt-needed").length,
     receiptCount: rows.length,
     activeReceiptCount: activeRows.length,
     unpricedCount,
@@ -500,6 +589,7 @@ function summarize(ledger) {
     needsReimbursementCount: activeRows.filter((row) => row.needsReimbursement).length,
     reimbursedCount: activeRows.filter((row) => row.reimbursed || row.status === "reimbursed").length,
     byOwner,
+    anticipatedByOwner,
     byCategory,
     byTaxCategory
   };
@@ -513,13 +603,24 @@ function sortedRows(ledger) {
   });
 }
 
+function sortedAnticipatedRows(ledger) {
+  return Object.values(ledger.anticipatedSpending || {})
+    .map(normalizeAnticipatedSpend)
+    .sort((a, b) => {
+      const aDate = a.expectedDate || a.updatedAt || a.createdAt || "";
+      const bDate = b.expectedDate || b.updatedAt || b.createdAt || "";
+      return bDate.localeCompare(aDate) || a.owner.localeCompare(b.owner) || a.description.localeCompare(b.description);
+    });
+}
+
 function budgetPayload(ledger, extra = {}) {
   return {
     ...extra,
     ledgerUpdatedAt: ledger.updatedAt,
     lastReviewAt: ledger.lastReviewAt,
     summary: summarize(ledger),
-    rows: sortedRows(ledger)
+    rows: sortedRows(ledger),
+    anticipatedRows: sortedAnticipatedRows(ledger)
   };
 }
 
@@ -562,7 +663,47 @@ async function updateReceipt(request, env, access) {
   };
 
   const next = await writeLedger(env, ledger);
-  return json({ ok: true, ledger: next, summary: summarize(next), rows: sortedRows(next) });
+  return json(budgetPayload(next, { ok: true, ledger: next }));
+}
+
+async function updateAnticipatedSpend(request, env, access) {
+  const payload = await request.json().catch(() => null);
+  if (!payload || typeof payload !== "object") {
+    return json({ error: "Expected anticipated spending details." }, { status: 400 });
+  }
+
+  const ledger = await syncLedger(env, { extract: false });
+  ledger.anticipatedSpending = ledger.anticipatedSpending || {};
+  const id = cleanText(payload.id) || crypto.randomUUID();
+
+  if (payload.delete === true || payload.action === "delete") {
+    if (!ledger.anticipatedSpending[id]) {
+      return json({ error: "Anticipated spending row was not found." }, { status: 404 });
+    }
+    delete ledger.anticipatedSpending[id];
+    const next = await writeLedger(env, ledger);
+    return json(budgetPayload(next, { ok: true }));
+  }
+
+  const existing = ledger.anticipatedSpending[id] || {};
+  const now = new Date().toISOString();
+  const nextRow = normalizeAnticipatedSpend({
+    ...existing,
+    ...payload,
+    id,
+    createdAt: existing.createdAt || now,
+    createdBy: existing.createdBy || access.email,
+    updatedAt: now,
+    updatedBy: access.email
+  });
+
+  if (!(Number(nextRow.amount) > 0)) {
+    return json({ error: "Enter an anticipated amount greater than zero." }, { status: 400 });
+  }
+
+  ledger.anticipatedSpending[id] = nextRow;
+  const next = await writeLedger(env, ledger);
+  return json(budgetPayload(next, { ok: true }));
 }
 
 async function createReview(env, access) {
@@ -668,6 +809,7 @@ export async function onRequestPost({ request, env, data }) {
   const url = new URL(request.url);
   if (url.searchParams.get("action") === "review") return createReview(env, access);
   if (url.searchParams.get("action") === "refresh") return refreshReceiptList(env);
+  if (url.searchParams.get("action") === "anticipated") return updateAnticipatedSpend(request, env, access);
 
   return updateReceipt(request, env, access);
 }
