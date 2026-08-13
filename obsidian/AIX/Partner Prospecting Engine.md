@@ -16,7 +16,7 @@ The Mojo CRM now has a Phase A Partner Prospecting foundation for LinkedIn-first
 
 ## Workflow
 
-The CRM Partner Prospecting area includes Vendor Universe, Partner Targets, Research Queue, People, Outreach Queue, Partner Pipeline, Discovery Queue, and Dashboard views.
+The CRM Partner Prospecting area includes Vendor Universe, Partner Targets, Research Queue, People, Outreach Queue, Partner Pipeline, Discovery Queue, Dashboard, and Walkthroughs views.
 
 Miller's queue is LinkedIn-first. The CRM provides platform links, prepared search text, and manual action controls only. It does not scrape, send connection requests, or send messages.
 
@@ -94,6 +94,10 @@ Each prospect company can store:
 
 Sponsor evidence is intentionally CRM-style notes and evidence. Spend should be treated as a clue from public sponsor tiers, prospectus pages, booth packages, or visible sponsorship level, not as verified financial data unless a source explicitly states the amount.
 
+## Walkthroughs
+
+The Partner Prospecting navigation now includes a bottom Walkthroughs button. The view provides operating walkthroughs for Vendor Universe buildout, review/scoring, sponsor evidence, hiring signals, people research, people records, manual outreach tracking, Partner Candidate conversion, and dashboard health.
+
 ## Hiring Signal Sources
 
 Hiring platforms can be useful for discovering AI-active companies because job postings often reveal active AI, machine learning, data, governance, security, and platform investments.
@@ -124,3 +128,4 @@ Verified with:
 - Local `GET /crm/` check with Research Queue controls present.
 - Local `GET /crm/` check with Hiring Signals and `Hiring Platform / Job Board` source type present.
 - Local `GET /crm/` check with Conference Sponsor Playbook, sponsor evidence forms, and `Conference Sponsorship Prospectus` source type present.
+- Local `GET /crm/` check with Walkthroughs button and walkthrough content present.

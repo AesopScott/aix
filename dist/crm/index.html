@@ -1238,6 +1238,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button type="button" data-view="prospecting-pipeline">Partner Pipeline</button>
           <button type="button" data-view="discovery-queue">Discovery Queue</button>
           <button type="button" data-view="prospecting-dashboard">Dashboard</button>
+          <button type="button" data-view="prospecting-walkthroughs">Walkthroughs</button>
         </div>
         <button type="button" data-view="registration-debug">Registration Debug</button>
       </aside>
@@ -1649,7 +1650,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       "outreach-queue": ["Outreach Queue", "The next company and people Miller should work."],
       "prospecting-pipeline": ["Partner Pipeline", "Prospects flowing toward Partner Candidate and paid partner stages."],
       "discovery-queue": ["Discovery Queue", "Processing status, failures, and retry controls."],
-      "prospecting-dashboard": ["Dashboard", "Funnel health and discovery source performance."]
+      "prospecting-dashboard": ["Dashboard", "Funnel health and discovery source performance."],
+      "prospecting-walkthroughs": ["Walkthroughs", "Step-by-step operating flows for partner prospecting."]
     };
     const prospectingViewSet = new Set(Object.keys(prospectingViews));
     let activeView = "contacts";
@@ -3316,6 +3318,114 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       `;
     }
 
+    function renderProspectingWalkthroughs() {
+      const walkthroughs = [
+        {
+          title: "Build Vendor Universe",
+          steps: [
+            "Open Discovery Queue.",
+            "Run a public source URL, use a hiring signal search, use the conference sponsor playbook, or paste companies into the import form.",
+            "Run Analyze Website for each useful company, or use Analyze Next 10 Websites.",
+            "Review each company card and keep only credible AI or AI-enabled companies moving forward."
+          ],
+          result: "Companies land in Vendor Universe with source history, category signals, AI relevance, and processing status."
+        },
+        {
+          title: "Review And Score Companies",
+          steps: [
+            "Open Vendor Universe or Partner Targets.",
+            "Use Mark AI Vendor, Not AI Vendor, Human Verified, Needs Review, category override, or score override.",
+            "Use Dashboard scoring weights when the whole scoring model needs tuning.",
+            "Keep manual score overrides for specific companies that need human judgment."
+          ],
+          result: "The company gets review metadata, score/priority updates, and cleaner target ranking."
+        },
+        {
+          title: "Find Companies From Sponsor Evidence",
+          steps: [
+            "Open Discovery Queue.",
+            "Use Conference Sponsor Playbook to search sponsor pages, prospectuses, pricing clues, and sponsor-company lists.",
+            "Add selected companies by source URL, import, or manual company entry.",
+            "Save sponsored events, evidence URLs, spend clues, themes, and notes on the company card."
+          ],
+          result: "Sponsor interest becomes structured CRM evidence instead of loose notes."
+        },
+        {
+          title: "Find Companies From Hiring Signals",
+          steps: [
+            "Open Discovery Queue.",
+            "Use Hiring Signals for Indeed, Dice, Monster, or the web-query fallback.",
+            "Look for companies hiring into AI, data, security, governance, or platform work.",
+            "Import or manually save only the companies worth reviewing."
+          ],
+          result: "Hiring activity becomes a company discovery signal without job-board ingestion."
+        },
+        {
+          title: "Prepare People Research",
+          steps: [
+            "Open Research Queue.",
+            "Open the people-search or Sales Navigator search link for a qualified company.",
+            "Build the manual lead list in the external tool.",
+            "Save status, target roles, lead-list name, lead-list URL, and notes back in CRM."
+          ],
+          result: "The team keeps person work manual while the CRM tracks which companies are ready for outreach."
+        },
+        {
+          title: "Add People Records",
+          steps: [
+            "Open People.",
+            "Select the prospect company.",
+            "Save name, title, role/persona, source, source URL, and profile URL when available.",
+            "Use notes for why the person matters."
+          ],
+          result: "People attach to the company and make the prospect eligible for outreach tracking."
+        },
+        {
+          title: "Track Manual Outreach",
+          steps: [
+            "Open Outreach Queue.",
+            "Open the saved profile link manually.",
+            "After the human action happens, click Connection Sent, Already Connected, Message Sent, Responded, Meeting Scheduled, Not Relevant, or Skip.",
+            "Do not use the CRM to send or operate external platforms."
+          ],
+          result: "Outreach timestamps roll up to company performance and dashboard conversion rates."
+        },
+        {
+          title: "Convert Partner Candidates",
+          steps: [
+            "Open Partner Targets.",
+            "Review score, category, evidence, people, and sponsor fit.",
+            "Click Convert to Partner Candidate when the company should enter the existing partner CRM.",
+            "Continue partner management in the normal partner records."
+          ],
+          result: "Only safe company/contact basics move into the partner model; prospecting intelligence stays internal."
+        },
+        {
+          title: "Read Dashboard Health",
+          steps: [
+            "Open Dashboard.",
+            "Review discovered companies, AI vendors, people identified, lead lists, sponsor evidence, meetings, and partner stages.",
+            "Use source performance to see which sources produce qualified, ready, contacted, responding, and meeting-ready companies.",
+            "Tune scoring weights only when the ranked list consistently feels wrong."
+          ],
+          result: "The dashboard shows whether discovery sources are producing real partner opportunities."
+        }
+      ];
+      prospectingContent.innerHTML = `
+        <div class="prospecting-grid">
+          ${walkthroughs.map((walkthrough) => `
+            <article class="queue-card">
+              <h3>${escapeHtml(walkthrough.title)}</h3>
+              <ol>
+                ${walkthrough.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+              </ol>
+              <p><strong>Outcome:</strong> ${escapeHtml(walkthrough.result)}</p>
+            </article>
+          `).join("")}
+        </div>
+      `;
+    }
+
     function renderProspecting() {
       if (!isProspectingView()) return;
       const [title, subtitle] = prospectingViews[activeView] || prospectingViews["vendor-universe"];
@@ -3334,6 +3444,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (activeView === "prospecting-pipeline") renderProspectingPipeline();
       if (activeView === "discovery-queue") renderDiscoveryQueue();
       if (activeView === "prospecting-dashboard") renderProspectingDashboard();
+      if (activeView === "prospecting-walkthroughs") renderProspectingWalkthroughs();
     }
 
     function renderMetrics() {
