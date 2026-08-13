@@ -448,8 +448,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         .replace(/'/g, "&#039;");
     }
 
+    function accessLoginUrl() {
+      const url = new URL("/access/", window.location.href);
+      url.searchParams.set("next", `${window.location.pathname}${window.location.search}${window.location.hash}`);
+      return url.toString();
+    }
+
+    function redirectToAccessLogin() {
+      setNotice("Opening Mojo access sign in...");
+      window.location.assign(accessLoginUrl());
+    }
+
     async function readJson(response) {
       const data = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        redirectToAccessLogin();
+        throw new Error(data.error || "Opening Mojo access sign in.");
+      }
       if (!response.ok) throw new Error(data.error || "Budget request failed.");
       return data;
     }
