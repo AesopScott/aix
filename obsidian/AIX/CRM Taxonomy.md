@@ -26,3 +26,20 @@ Current code touchpoints:
 
 When adding or renaming events, update `taxonomy.md` first, then update the CRM/event code paths that still duplicate those values.
 
+## Guest Invite Matrix
+
+Updated: 2026-08-13
+
+The CRM now has a `Guest Matrix` mockup under the Guest pipeline in `dist/crm/index.html`.
+
+The matrix groups guest/member invite links by event and surfaces:
+
+- LinkedIn connection status: whether Mojo/Angel is connected, requested, not connected, declined, or unreachable.
+- Registration request status: whether the registration request has not been sent, drafted, sent, reminder sent, bounced, or declined.
+- Registration status: whether the guest is not registered, opened, started, registered, waitlisted, or declined.
+- Event-level rollups for invited, LinkedIn connected, registration requests sent, registered, and registration requests needed.
+
+Current implementation is a frontend mockup: matrix status edits persist only in browser `localStorage` under `mojoGuestMatrixMockup:v1`. Production persistence still needs backend fields or a CRM activity model for LinkedIn connection state, registration request state, and registration completion state.
+
+When the CRM API is unavailable from a local `file://`, `localhost`, or `127.0.0.1` preview, the CRM falls back to a sample Guest Matrix dataset so the interface can be reviewed without authentication.
+
