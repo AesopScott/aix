@@ -49,6 +49,7 @@ const fileStatuses = {
 const allowedStatuses = new Set(Object.keys(fileStatuses));
 const DEFAULT_STATUS = "draft";
 const FOLDER_MARKER_NAME = ".folder";
+const MULTIPART_PART_SIZE = 16 * 1024 * 1024;
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -260,6 +261,70 @@ function recordSearchText(record) {
   ].join(" ").toLowerCase();
 }
 
+function buildUploadPlan(form, access, fileName, fileType = "") {
+  if (!fileName) {
+    return {
+      response: json({ error: "Choose a file to upload." }, { status: 400 })
+    };
+  }
+
+  const area = allowedFolders.has(String(form.get("area") || ""))
+    ? String(form.get("area"))
+    : "private";
+  if (area === "private" && !isAdminAccess(access)) {
+    return { response: privateAccessError() };
+  }
+
+  const rawReceiptOwner = String(form.get("receiptOwner") || "").toLowerCase();
+  const receiptOwner = receiptOwners.has(rawReceiptOwner) ? rawReceiptOwner : "";
+  const rawReceiptEvent = String(form.get("receiptEvent") || "global").toLowerCase();
+  const receiptEventKey = Object.prototype.hasOwnProperty.call(receiptEvents, rawReceiptEvent)
+    ? rawReceiptEvent
+    : "";
+  const receiptEvent = receiptEventKey ? receiptEvents[receiptEventKey] : "";
+  const receiptDescription = String(form.get("receiptDescription") || "").trim().slice(0, 500);
+  if (area === "receipts" && !receiptDescription) {
+    return {
+      response: json({ error: "Enter a receipt description." }, { status: 400 })
+    };
+  }
+
+  const rawStatus = String(form.get("status") || "").toLowerCase();
+  const status = allowedStatuses.has(rawStatus) ? rawStatus : DEFAULT_STATUS;
+  const folder = safeFolderPath(form.get("folder"));
+  const event = area === "receipts"
+    ? receiptOwner || "unassigned"
+    : folder || safeFolderPath(form.get("event")) || "company";
+  const trackedEvent = area === "receipts" ? receiptEvent : event;
+  const originalName = safeSegment(fileName, "file");
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const id = crypto.randomUUID().slice(0, 8);
+  const key = `${area}/${event}/${stamp}-${id}-${originalName}`;
+  const submitter = submitterForAccess(access);
+
+  return {
+    key,
+    name: safeOriginalName(fileName),
+    status,
+    httpMetadata: {
+      contentType: fileType || "application/octet-stream"
+    },
+    customMetadata: {
+      uploadedBy: access.email,
+      submittedBy: submitter,
+      submitter,
+      originalName: safeOriginalName(fileName),
+      area,
+      event: trackedEvent,
+      receiptOwner,
+      receiptEvent,
+      receiptEventKey,
+      receiptDescription,
+      status
+    }
+  };
+}
+
 async function listFolders(request, env, access) {
   const url = new URL(request.url);
   const rawPrefix = safeKey(url.searchParams.get("prefix") || "");
@@ -296,6 +361,91 @@ async function createFolder(request, env, access, form) {
   });
 
   return json({ ok: true, area, folder: folderPath });
+}
+
+async function createMultipartUpload(request, env, access, form) {
+  if (typeof env.MOJO_SUMMITS_STORAGE.createMultipartUpload !== "function") {
+    return json({ error: "R2 multipart uploads are not available in this runtime." }, { status: 500 });
+  }
+
+  const fileName = String(form.get("fileName") || "").trim();
+  const plan = buildUploadPlan(
+    form,
+    access,
+    fileName,
+    String(form.get("fileType") || "")
+  );
+  if (plan.response) return plan.response;
+
+  const multipartUpload = await env.MOJO_SUMMITS_STORAGE.createMultipartUpload(plan.key, {
+    httpMetadata: plan.httpMetadata,
+    customMetadata: plan.customMetadata
+  });
+
+  return json({
+    ok: true,
+    key: multipartUpload.key,
+    uploadId: multipartUpload.uploadId,
+    name: plan.name,
+    status: plan.status,
+    partSize: MULTIPART_PART_SIZE
+  });
+}
+
+function multipartParams(request, access) {
+  const url = new URL(request.url);
+  const key = safeKey(url.searchParams.get("key"));
+  const uploadId = String(url.searchParams.get("uploadId") || "").trim();
+  if (!key) return { response: json({ error: "Expected a file key." }, { status: 400 }) };
+  if (isPrivateKey(key) && !isAdminAccess(access)) return { response: privateAccessError() };
+  if (!uploadId) return { response: json({ error: "Expected a multipart upload id." }, { status: 400 }) };
+  return { key, uploadId, url };
+}
+
+async function uploadMultipartPart(request, env, access) {
+  const params = multipartParams(request, access);
+  if (params.response) return params.response;
+
+  const partNumber = Number(params.url.searchParams.get("partNumber"));
+  if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000) {
+    return json({ error: "Expected a valid multipart part number." }, { status: 400 });
+  }
+  if (!request.body) return json({ error: "Expected a multipart part body." }, { status: 400 });
+
+  const multipartUpload = env.MOJO_SUMMITS_STORAGE.resumeMultipartUpload(params.key, params.uploadId);
+  const uploadedPart = await multipartUpload.uploadPart(partNumber, request.body);
+  return json(uploadedPart);
+}
+
+async function completeMultipartUpload(request, env, access) {
+  const params = multipartParams(request, access);
+  if (params.response) return params.response;
+
+  const payload = await request.json().catch(() => null);
+  const parts = Array.isArray(payload?.parts)
+    ? payload.parts
+        .map((part) => ({
+          partNumber: Number(part.partNumber),
+          etag: String(part.etag || "")
+        }))
+        .filter((part) => Number.isInteger(part.partNumber) && part.partNumber > 0 && part.etag)
+        .sort((a, b) => a.partNumber - b.partNumber)
+    : [];
+
+  if (!parts.length) return json({ error: "Expected uploaded multipart parts." }, { status: 400 });
+
+  const multipartUpload = env.MOJO_SUMMITS_STORAGE.resumeMultipartUpload(params.key, params.uploadId);
+  const object = await multipartUpload.complete(parts);
+  return json({ ok: true, key: params.key, etag: object.httpEtag || object.etag || "" });
+}
+
+async function abortMultipartUpload(request, env, access) {
+  const params = multipartParams(request, access);
+  if (params.response) return params.response;
+
+  const multipartUpload = env.MOJO_SUMMITS_STORAGE.resumeMultipartUpload(params.key, params.uploadId);
+  await multipartUpload.abort();
+  return json({ ok: true, key: params.key });
 }
 
 async function backfillSubmitters(request, env, access, form) {
@@ -542,10 +692,22 @@ export async function onRequestPost({ request, env, data }) {
   const bucketError = requireBucket(env);
   if (bucketError) return bucketError;
 
+  const url = new URL(request.url);
+  if (url.searchParams.get("mode") === "multipart-part") {
+    return uploadMultipartPart(request, env, access);
+  }
+  if (url.searchParams.get("mode") === "multipart-complete") {
+    return completeMultipartUpload(request, env, access);
+  }
+  if (url.searchParams.get("mode") === "multipart-abort") {
+    return abortMultipartUpload(request, env, access);
+  }
+
   const form = await request.formData().catch(() => null);
   if (!form) return json({ error: "Expected form data." }, { status: 400 });
 
   if (form.get("mode") === "folder") return createFolder(request, env, access, form);
+  if (form.get("mode") === "multipart-create") return createMultipartUpload(request, env, access, form);
   if (form.get("mode") === "backfill-submitters") return backfillSubmitters(request, env, access, form);
 
   const file = form.get("file");
@@ -554,55 +716,15 @@ export async function onRequestPost({ request, env, data }) {
     return json({ error: "Choose a file to upload." }, { status: 400 });
   }
 
-  const area = allowedFolders.has(String(form.get("area") || ""))
-    ? String(form.get("area"))
-    : "private";
-  if (area === "private" && !isAdminAccess(access)) return privateAccessError();
+  const plan = buildUploadPlan(form, access, file.name, file.type || "");
+  if (plan.response) return plan.response;
 
-  const rawReceiptOwner = String(form.get("receiptOwner") || "").toLowerCase();
-  const receiptOwner = receiptOwners.has(rawReceiptOwner) ? rawReceiptOwner : "";
-  const rawReceiptEvent = String(form.get("receiptEvent") || "global").toLowerCase();
-  const receiptEventKey = Object.prototype.hasOwnProperty.call(receiptEvents, rawReceiptEvent)
-    ? rawReceiptEvent
-    : "";
-  const receiptEvent = receiptEventKey ? receiptEvents[receiptEventKey] : "";
-  const receiptDescription = String(form.get("receiptDescription") || "").trim().slice(0, 500);
-  if (area === "receipts" && !receiptDescription) {
-    return json({ error: "Enter a receipt description." }, { status: 400 });
-  }
-  const rawStatus = String(form.get("status") || "").toLowerCase();
-  const status = allowedStatuses.has(rawStatus) ? rawStatus : DEFAULT_STATUS;
-  const folder = safeFolderPath(form.get("folder"));
-  const event = area === "receipts"
-    ? receiptOwner || "unassigned"
-    : folder || safeFolderPath(form.get("event")) || "company";
-  const trackedEvent = area === "receipts" ? receiptEvent : event;
-  const originalName = safeSegment(file.name, "file");
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const id = crypto.randomUUID().slice(0, 8);
-  const key = `${area}/${event}/${stamp}-${id}-${originalName}`;
-  const submitter = submitterForAccess(access);
-
-  await env.MOJO_SUMMITS_STORAGE.put(key, file.stream(), {
-    httpMetadata: {
-      contentType: file.type || "application/octet-stream"
-    },
-    customMetadata: {
-      uploadedBy: access.email,
-      submittedBy: submitter,
-      submitter,
-      originalName: file.name,
-      area,
-      event: trackedEvent,
-      receiptOwner,
-      receiptEvent,
-      receiptEventKey,
-      receiptDescription,
-      status
-    }
+  await env.MOJO_SUMMITS_STORAGE.put(plan.key, file.stream(), {
+    httpMetadata: plan.httpMetadata,
+    customMetadata: plan.customMetadata
   });
 
-  return json({ ok: true, key, name: file.name, status });
+  return json({ ok: true, key: plan.key, name: plan.name, status: plan.status });
 }
 
 export async function onRequestDelete({ request, env, data }) {

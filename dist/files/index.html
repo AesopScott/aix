@@ -598,6 +598,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
   <script>
     const api = "/api/storage";
+    const multipartUploadThreshold = 64 * 1024 * 1024;
+    const fallbackMultipartThreshold = 16 * 1024 * 1024;
+    const fallbackMultipartErrorPattern = /failed to fetch|networkerror|load failed/i;
     const uploadForm = document.querySelector("#uploadForm");
     const uploadNotice = document.querySelector("#uploadNotice");
     const areaSelect = uploadForm.querySelector('select[name="area"]');
@@ -674,6 +677,108 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Storage request failed.");
       return data;
+    }
+
+    function metadataFormData(source, file) {
+      const metadata = new FormData();
+      for (const [key, value] of source.entries()) {
+        if (key !== "file") metadata.append(key, value);
+      }
+      metadata.set("mode", "multipart-create");
+      metadata.set("fileName", file.name);
+      metadata.set("fileType", file.type || "application/octet-stream");
+      metadata.set("fileSize", String(file.size));
+      return metadata;
+    }
+
+    function multipartUrl(mode, params = {}) {
+      const url = new URL(api, window.location.origin);
+      url.searchParams.set("mode", mode);
+      Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.set(key, value);
+      });
+      return url;
+    }
+
+    function uploadProgressMessage(file, uploadedBytes) {
+      const percent = Math.min(100, Math.round((uploadedBytes / file.size) * 100));
+      return `Uploading ${file.name}... ${percent}%`;
+    }
+
+    async function abortMultipartUpload(session) {
+      if (!session?.key || !session?.uploadId) return;
+      await fetch(multipartUrl("multipart-abort", {
+        key: session.key,
+        uploadId: session.uploadId
+      }), { method: "POST" }).catch(() => null);
+    }
+
+    async function uploadMultipartFile(formData, file) {
+      const session = await fetch(api, {
+        method: "POST",
+        body: metadataFormData(formData, file)
+      }).then(readJson);
+
+      const partSize = Number(session.partSize || 0) || (16 * 1024 * 1024);
+      const parts = [];
+      let uploadedBytes = 0;
+
+      try {
+        for (let offset = 0, partNumber = 1; offset < file.size; offset += partSize, partNumber += 1) {
+          const chunk = file.slice(offset, Math.min(offset + partSize, file.size));
+          const part = await fetch(multipartUrl("multipart-part", {
+            key: session.key,
+            uploadId: session.uploadId,
+            partNumber: String(partNumber)
+          }), {
+            method: "POST",
+            headers: { "content-type": "application/octet-stream" },
+            body: chunk
+          }).then(readJson);
+
+          parts.push(part);
+          uploadedBytes += chunk.size;
+          setNotice(uploadNotice, uploadProgressMessage(file, uploadedBytes));
+        }
+
+        const completed = await fetch(multipartUrl("multipart-complete", {
+          key: session.key,
+          uploadId: session.uploadId
+        }), {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ parts })
+        }).then(readJson);
+
+        return { ...session, ...completed };
+      } catch (error) {
+        await abortMultipartUpload(session);
+        throw error;
+      }
+    }
+
+    async function uploadFile(formData, file) {
+      if (file.size >= multipartUploadThreshold) {
+        return uploadMultipartFile(formData, file);
+      }
+
+      try {
+        const response = await fetch(api, {
+          method: "POST",
+          body: formData
+        });
+        if (response.status === 413 && file.size >= fallbackMultipartThreshold) {
+          setNotice(uploadNotice, "Retrying with chunked upload...");
+          return uploadMultipartFile(formData, file);
+        }
+        return readJson(response);
+      } catch (error) {
+        if (file.size >= fallbackMultipartThreshold && fallbackMultipartErrorPattern.test(error.message || "")) {
+          setNotice(uploadNotice, "Retrying with chunked upload...");
+          return uploadMultipartFile(formData, file);
+        }
+        throw error;
+      }
     }
 
     function userCanManageAccess(user) {
@@ -903,10 +1008,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       setNotice(uploadNotice, "Uploading file...");
 
       try {
-        const data = await fetch(api, {
-          method: "POST",
-          body: formData
-        }).then(readJson);
+        const data = await uploadFile(formData, file);
         uploadForm.reset();
         setNotice(uploadNotice, `Uploaded ${data.name || displayName(data)}.`, "ok");
         await loadFiles();
