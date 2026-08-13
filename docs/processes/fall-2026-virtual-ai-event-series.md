@@ -38,6 +38,21 @@ All sessions run from 1:00 PM to 2:30 PM Central.
 11. AI Workforce Readiness and Change Leadership
 12. AI Executive Operating Agenda for 2027
 
+## Cohort Mapping
+
+- AI Executive Readiness: Business Enablement
+- AI Data Readiness and Knowledge Strategy: Integration
+- AI Use Cases That Survive Finance: Operations and Finance
+- AI Agents, Automation, and Human Handoffs: Innovation
+- AI Integration and Workflow: Integration
+- AI Vendor Strategy and Platform Decisions: Technology Strategy
+- AI Security, Governance, and Trust: Security and Risk
+- AI Workforce, Talent, and Change Adoption: Business Enablement
+- AI Operating Model for 2027: Operations and Finance
+- AI Budgeting and Investment Priorities: Operations and Finance
+- AI Workforce Readiness and Change Leadership: Business Enablement
+- AI Executive Operating Agenda for 2027: Operations and Finance
+
 ## Repeatable Scaffold
 
 Each virtual event should have:

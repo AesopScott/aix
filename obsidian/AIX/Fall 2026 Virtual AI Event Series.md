@@ -38,7 +38,7 @@ Each virtual event now has two show windows: 10:00 AM to 11:30 AM Central and 1:
 
 ## Draft Cohort Mapping
 
-- AI Executive Readiness: Technology Strategy
+- AI Executive Readiness: Business Enablement
 - AI Data Readiness and Knowledge Strategy: Integration
 - AI Use Cases That Survive Finance: Operations and Finance
 - AI Agents, Automation, and Human Handoffs: Innovation
@@ -49,9 +49,9 @@ Each virtual event now has two show windows: 10:00 AM to 11:30 AM Central and 1:
 - AI Operating Model for 2027: Operations and Finance
 - AI Budgeting and Investment Priorities: Operations and Finance
 - AI Workforce Readiness and Change Leadership: Business Enablement
-- AI Executive Operating Agenda for 2027: Technology Strategy
+- AI Executive Operating Agenda for 2027: Operations and Finance
 
-These mappings are a first-pass classification against the six home-page cohorts: Business Enablement, Innovation, Integration, Security and Risk, Operations and Finance, and Technology Strategy. Scott should review and adjust before the mapping becomes canonical.
+These mappings are reviewed against the six home-page cohorts: Business Enablement, Innovation, Integration, Security and Risk, Operations and Finance, and Technology Strategy. Scott is leaving AI Workforce, Talent, and Change Adoption as Business Enablement for now, even though Operations and Finance remains a possible future reclassification.
 
 ## Implementation Notes
 
