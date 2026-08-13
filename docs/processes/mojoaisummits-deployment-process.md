@@ -25,6 +25,8 @@ The production site is deployed from:
 
 The GitHub Action is triggered on pushes to `main` when those paths change. It can also be started manually with workflow dispatch.
 
+Setup checklist entries are not deployed from Git. The `/setup/` page shell lives in `dist/setup/index.html`, but its shared checklist state is stored in the `MOJO_SUMMITS_SETUP_STATE` KV namespace under `master-event-execution-checklist`. The page writes each edit to browser `localStorage` first, queues failed shared writes in `localStorage`, retries pending writes on the 5-second sync loop, and only pulls fresh shared state after pending local writes have flushed. Local Wrangler preview uses local Miniflare KV state; production persistence happens when the live `https://mojoaisummits.com/api/setup-state` endpoint or an explicit remote KV sync writes to the production namespace.
+
 ## Required GitHub Secrets
 
 The repository must have these GitHub Actions secrets:
