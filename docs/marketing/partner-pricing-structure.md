@@ -72,6 +72,8 @@ Each Executive slot must be subscribed individually. One subscribed Executive sl
 | Tier 2<br>(Summit Partner) | Summit attendance subscription | $5,000 total | Per quarter | Unlimited Mojo virtual event attendance plus Mojo summit attendance |
 | Tier 3<br>(Strategic Partner) | Full Mojo event subscription | $10,000 total | Per quarter, annual subscription | Unlimited virtual event attendance, summit attendance, and eligible Mojo events above and beyond Tier 1 and Tier 2 |
 
+Featured Partner virtual event sponsorship: Tier 1 virtual-event partners may sponsor a particular approved Mojo virtual event at a Featured Partner rate of $3,000 per virtual event. This rate is separate from the quarterly Executive-slot attendance subscription.
+
 ## Payment Terms
 
 Partner subscriptions are annual contracts. The purchase price may be paid quarterly during the annual contract term.
@@ -155,6 +157,7 @@ Unlimited Mojo virtual event attendance for the Executive attendee using your su
 - Participation in approved online executive sessions
 - Access to recurring Mojo virtual programming
 - Mojo relationship tracking for participation through the Executive slot
+- Featured Partner virtual event sponsorship is available at $3,000 per approved virtual event and is priced separately from the Executive-slot attendance subscription
 - Eligibility to purchase Tier 2 Summit Partner access
 
 ### Details
