@@ -57,6 +57,7 @@ const REGISTRATION_INVITE_PREFIXES = {
   guest: "crm:guest-invite-code:"
 };
 const PARTNER_INVITE_PREFIX = "crm:partner-invite-code:";
+const GUEST_MATRIX_PROSPECT_PREFIX = "crm:guest-matrix-prospect:";
 const REGISTRATION_DEBUG_PREFIX = "crm:registration-debug:";
 const PHONE_VERIFICATION_DEBUG_PREFIX = "crm:phone-verification-debug:";
 const R2_REGISTRATION_PREFIX = "crm/registrations";
@@ -170,6 +171,8 @@ const allowedTopicTracks = new Set([
   "workforce-adoption",
   "operating-model"
 ]);
+const allowedGuestMatrixLinkedInStatuses = new Set(["unknown", "not-connected", "connection-requested", "connected", "declined", "unreachable"]);
+const allowedGuestMatrixRegistrationRequestStatuses = new Set(["not-sent", "drafted", "sent", "reminder-sent", "bounced", "declined"]);
 const maxFieldLength = 2000;
 const guestInviteEmailCc = ["angel@mojoaisummits.com", "scott@mojoaisummits.com"];
 const EMAIL_LOG_PREFIX = "crm:email-log:";
@@ -1257,6 +1260,11 @@ function cleanEventShowId(value, fallback = "both") {
   if (["afternoon", "pm", "1", "1pm", "13:00", "1:00"].includes(normalized)) return "afternoon";
   if (["both", "all", "both-shows"].includes(normalized)) return "both";
   return fallback;
+}
+
+function cleanGuestMatrixOption(value, allowed, fallback = "") {
+  const normalized = cleanString(value, 80).toLowerCase().replace(/[\s_]+/g, "-");
+  return allowed.has(normalized) ? normalized : fallback;
 }
 
 function eventShowLabel(showId) {
@@ -3376,6 +3384,179 @@ async function registrationInviteCodes(env) {
   return enrichInviteUsage(env, invites, ["member", "guest"]);
 }
 
+function normalizeGuestMatrixProspect(key, record = {}) {
+  const rawGuestName = cleanString(
+    record?.intendedGuestName || record?.invitedName || record?.guestName || record?.name,
+    240
+  );
+  const rawGuestEmail = cleanString(
+    record?.intendedGuestEmail || record?.invitedEmail || record?.guestEmail || record?.email,
+    240
+  ).toLowerCase();
+  const intendedGuestEmail = isEmail(rawGuestEmail)
+    ? rawGuestEmail
+    : isEmail(rawGuestName)
+      ? rawGuestName.toLowerCase()
+      : "";
+  const intendedGuestName = isEmail(rawGuestName) ? "" : rawGuestName;
+  const guestRegistrationType = cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole || "guest");
+  const rawShowId = cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, "both");
+  const eventShowId = guestRegistrationType === "featured-guest" && rawShowId === "both" ? "morning" : rawShowId;
+  return {
+    key,
+    id: cleanString(record?.id, 200) || key,
+    type: "guest-matrix-prospect",
+    matrixOnly: true,
+    status: cleanString(record?.status, 80) || "tracking",
+    eventId: cleanString(record?.eventId || `${record?.eventSlug || record?.eventName || "event"}:${eventShowId}`, 200),
+    eventSlug: cleanString(record?.eventSlug, 200),
+    eventName: cleanString(record?.eventName, 240),
+    eventDate: cleanString(record?.eventDate, 120),
+    eventTime: cleanString(record?.eventTime || eventShowTime(eventShowId), 120),
+    eventShowId,
+    eventShowLabel: cleanString(record?.eventShowLabel, 120) || eventShowLabel(eventShowId),
+    eventShowTime: cleanString(record?.eventShowTime || record?.eventTime, 120) || eventShowTime(eventShowId),
+    intendedGuestName,
+    intendedGuestEmail,
+    invitedEmail: intendedGuestEmail,
+    invitedName: intendedGuestName,
+    guestEmail: intendedGuestEmail,
+    guestName: intendedGuestName,
+    guestRegistrationType,
+    registrationRole: guestRegistrationType,
+    invitedBy: cleanString(record?.invitedBy || record?.inviter || record?.invitedByName || record?.createdBy, 180),
+    linkedinConnectionStatus: cleanGuestMatrixOption(record?.linkedinConnectionStatus || record?.linkedInConnectionStatus || record?.connectionStatus, allowedGuestMatrixLinkedInStatuses, "unknown"),
+    registrationRequestStatus: cleanGuestMatrixOption(record?.registrationRequestStatus || record?.inviteStage || record?.inviteStatus, allowedGuestMatrixRegistrationRequestStatuses, "not-sent"),
+    createdAt: cleanString(record?.createdAt),
+    createdBy: cleanString(record?.createdBy),
+    updatedAt: cleanString(record?.updatedAt),
+    updatedBy: cleanString(record?.updatedBy)
+  };
+}
+
+async function guestMatrixProspects(env) {
+  const keys = await listKeys(env, GUEST_MATRIX_PROSPECT_PREFIX);
+  const rows = await Promise.all(
+    keys.map(async (key) => {
+      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      return record ? normalizeGuestMatrixProspect(key, record) : null;
+    })
+  );
+  return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+async function createGuestMatrixProspect(env, payload = {}, actor = "") {
+  const eventSlug = cleanString(payload.eventSlug, 200);
+  const eventName = cleanString(payload.eventName, 240);
+  if (!eventSlug && !eventName) throw new Error("Select an event before adding a tracked person.");
+
+  const rawGuestName = cleanString(payload.intendedGuestName || payload.invitedName || payload.guestName || payload.name, 240);
+  const rawGuestEmail = cleanString(payload.intendedGuestEmail || payload.invitedEmail || payload.guestEmail || payload.email, 240).toLowerCase();
+  const intendedGuestEmail = isEmail(rawGuestEmail)
+    ? rawGuestEmail
+    : isEmail(rawGuestName)
+      ? rawGuestName.toLowerCase()
+      : "";
+  const intendedGuestName = isEmail(rawGuestName) ? "" : rawGuestName;
+  if (!intendedGuestName && !intendedGuestEmail) throw new Error("Enter a name or email before adding a tracked person.");
+
+  const guestRegistrationType = cleanGuestRegistrationType(payload.guestRegistrationType || payload.registrationRole || payload.type);
+  const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
+  const eventShowId = guestRegistrationType === "featured-guest" && rawShowId === "both" ? "morning" : rawShowId;
+  const eventTime = eventShowTime(eventShowId);
+  const createdAt = new Date().toISOString();
+  const id = crypto.randomUUID?.() || `${Date.now()}-${randomInviteCode()}`;
+  const record = {
+    id,
+    type: "guest-matrix-prospect",
+    matrixOnly: true,
+    status: "tracking",
+    eventId: cleanString(payload.eventId || `${eventSlug || eventName}:${eventShowId}`, 200),
+    eventSlug,
+    eventName,
+    eventDate: cleanString(payload.eventDate, 120),
+    eventTime,
+    eventShowId,
+    eventShowLabel: eventShowLabel(eventShowId),
+    eventShowTime: eventTime,
+    intendedGuestName,
+    intendedGuestEmail,
+    invitedEmail: intendedGuestEmail,
+    guestEmail: intendedGuestEmail,
+    invitedName: intendedGuestName,
+    guestName: intendedGuestName,
+    guestRegistrationType,
+    registrationRole: guestRegistrationType,
+    invitedBy: cleanString(payload.invitedBy || payload.inviter || payload.invitedByName || actor, 180),
+    linkedinConnectionStatus: cleanGuestMatrixOption(payload.linkedinConnectionStatus || payload.connectionStatus, allowedGuestMatrixLinkedInStatuses, "unknown"),
+    registrationRequestStatus: cleanGuestMatrixOption(payload.registrationRequestStatus || payload.inviteStage || payload.inviteStatus, allowedGuestMatrixRegistrationRequestStatuses, "not-sent"),
+    createdAt,
+    createdBy: actor,
+    updatedAt: createdAt,
+    updatedBy: actor
+  };
+  const key = `${GUEST_MATRIX_PROSPECT_PREFIX}${createdAt}:${id}`;
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  return normalizeGuestMatrixProspect(key, record);
+}
+
+async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
+  const key = cleanString(payload.key, 500);
+  if (!key || !key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)) throw new Error("Tracked person was not found.");
+  const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+  if (!existing) throw new Error("Tracked person was not found.");
+  const field = cleanString(payload.field, 80);
+  const next = { ...existing };
+  if (field === "linkedinConnection") {
+    next.linkedinConnectionStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
+  } else if (field === "registrationRequest") {
+    next.registrationRequestStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixRegistrationRequestStatuses, existing.registrationRequestStatus || "not-sent");
+  } else {
+    throw new Error("Unsupported tracked person field.");
+  }
+  next.updatedAt = new Date().toISOString();
+  next.updatedBy = actor;
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+  return normalizeGuestMatrixProspect(key, next);
+}
+
+async function deleteGuestMatrixProspect(env, payload = {}) {
+  const key = cleanString(payload.key, 500);
+  if (!key || !key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)) throw new Error("Tracked person was not found.");
+  const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+  if (!existing) throw new Error("Tracked person was not found.");
+  await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+  return normalizeGuestMatrixProspect(key, existing);
+}
+
+async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
+  const changes = Array.isArray(payload.changes) ? payload.changes : [];
+  const now = new Date().toISOString();
+  let updatedCount = 0;
+  for (const change of changes) {
+    const key = cleanString(change?.key, 500);
+    if (!key) continue;
+    const allowedPrefix = key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) ||
+      key.startsWith(REGISTRATION_INVITE_PREFIXES.guest) ||
+      key.startsWith(REGISTRATION_INVITE_PREFIXES.member);
+    if (!allowedPrefix) continue;
+    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    if (!existing) continue;
+    const next = { ...existing };
+    if (Object.prototype.hasOwnProperty.call(change, "linkedinConnection")) {
+      next.linkedinConnectionStatus = cleanGuestMatrixOption(change.linkedinConnection, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "registrationRequest")) {
+      next.registrationRequestStatus = cleanGuestMatrixOption(change.registrationRequest, allowedGuestMatrixRegistrationRequestStatuses, existing.registrationRequestStatus || "not-sent");
+    }
+    next.updatedAt = now;
+    next.updatedBy = actor;
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+    updatedCount += 1;
+  }
+  return { updatedCount };
+}
+
 function eventTime(value) {
   if (!value) return Number.POSITIVE_INFINITY;
   const exactDate = new Date(`${value}T12:00:00`).getTime();
@@ -4136,6 +4317,7 @@ async function uploadContactPhoto(request, env, form, actor = "") {
     photoKey,
     partnerInviteCodes: await partnerInviteCodes(env),
     registrationInviteCodes: await registrationInviteCodes(env),
+    guestMatrixProspects: await guestMatrixProspects(env),
     upcomingEvents: await upcomingEvents(env)
   }, { status: 201 });
 }
@@ -4673,6 +4855,7 @@ export async function onRequestGet({ request, env, data }) {
     rows,
     partnerInviteCodes: await partnerInviteCodes(env),
     registrationInviteCodes: await registrationInviteCodes(env),
+    guestMatrixProspects: await guestMatrixProspects(env),
     upcomingEvents: await upcomingEvents(env)
   });
 }
@@ -5024,6 +5207,7 @@ export async function onRequestPost({ request, env, data }) {
         record: result.record,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
@@ -5045,6 +5229,7 @@ export async function onRequestPost({ request, env, data }) {
         record: result.record,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
@@ -5130,10 +5315,72 @@ export async function onRequestPost({ request, env, data }) {
         emailSent,
         emailCc,
         emailMessageId,
-        registrationInviteCodes: [invite]
+        registrationInviteCodes: [invite],
+        guestMatrixProspects: await guestMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
       return json({ error: error.message || "Registration invite code could not be created." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "create-guest-matrix-prospect") {
+    try {
+      const prospect = await createGuestMatrixProspect(env, payload, access.email);
+      return json({
+        ok: true,
+        prospect,
+        guestMatrixProspects: [prospect],
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      }, { status: 201 });
+    } catch (error) {
+      const status = /select an event|name or email/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Tracked person could not be added." }, { status });
+    }
+  }
+
+  if (payload?.action === "save-guest-matrix-statuses") {
+    try {
+      const result = await saveGuestMatrixStatuses(env, payload, access.email);
+      return json({
+        ok: true,
+        ...result,
+        guestMatrixProspects: await guestMatrixProspects(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Guest Matrix changes could not be saved." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "update-guest-matrix-prospect") {
+    try {
+      const prospect = await updateGuestMatrixProspect(env, payload, access.email);
+      return json({
+        ok: true,
+        prospect,
+        guestMatrixProspects: [prospect]
+      });
+    } catch (error) {
+      const status = /not found/i.test(error.message || "") ? 404 : 400;
+      return json({ error: error.message || "Tracked person could not be updated." }, { status });
+    }
+  }
+
+  if (payload?.action === "delete-guest-matrix-prospect") {
+    try {
+      const deleted = await deleteGuestMatrixProspect(env, payload);
+      return json({
+        ok: true,
+        deleted,
+        guestMatrixProspects: await guestMatrixProspects(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Tracked person could not be deleted." }, { status: 404 });
     }
   }
 
@@ -5144,6 +5391,7 @@ export async function onRequestPost({ request, env, data }) {
         ok: true,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -5219,6 +5467,7 @@ export async function onRequestPost({ request, env, data }) {
         records,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
@@ -5240,6 +5489,7 @@ export async function onRequestPost({ request, env, data }) {
         deleted,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -5260,6 +5510,7 @@ export async function onRequestPost({ request, env, data }) {
         deleted,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -5279,6 +5530,7 @@ export async function onRequestPost({ request, env, data }) {
         rows,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -5299,6 +5551,7 @@ export async function onRequestPost({ request, env, data }) {
         rows,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -5318,6 +5571,7 @@ export async function onRequestPost({ request, env, data }) {
         rows,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -5393,6 +5647,7 @@ export async function onRequestPost({ request, env, data }) {
     rows: nextRows,
     partnerInviteCodes: await partnerInviteCodes(env),
     registrationInviteCodes: await registrationInviteCodes(env),
+    guestMatrixProspects: await guestMatrixProspects(env),
     upcomingEvents: await upcomingEvents(env)
   });
 }
