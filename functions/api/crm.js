@@ -1367,15 +1367,19 @@ function normalizeContactRecord(key, record = {}) {
     return left.localeCompare(right);
   });
   const latestEvent = sortedEvents[0] || {};
-  const email = cleanString(record.email || key.replace(/^crm:contact:/, "")).toLowerCase();
+  const keyIdentity = cleanString(key.replace(/^crm:contact:/, ""));
+  const recordEmail = cleanString(record.email).toLowerCase();
+  const keyEmail = keyIdentity.toLowerCase();
+  const email = isEmail(recordEmail) ? recordEmail : isEmail(keyEmail) ? keyEmail : "";
+  const id = email || cleanString(record.id) || keyIdentity || key;
   const contactStatus = contactStatusFromRegistration(latestEvent.registrationType || record.registrationType || record.source);
-  const fullName = cleanString(record.name) || email;
+  const fullName = cleanString(record.name || record.intendedGuestName || record.invitedName || record.guestName) || email || "Name not recorded";
   const fallbackName = splitName(fullName);
   const publicationUseName = record.publicationUseName === true || sortedEvents.some((event) => event?.publicationUseName === true);
   const publicationUseCompany = record.publicationUseCompany === true || sortedEvents.some((event) => event?.publicationUseCompany === true);
   return {
     key,
-    id: email,
+    id,
     createdAt: cleanString(record.createdAt),
     updatedAt: cleanString(record.updatedAt),
     name: fullName,
@@ -1667,23 +1671,128 @@ function contactFromRegistrant(row = {}, type = "") {
   });
 }
 
+function contactKeyForInviteRecord(row = {}, source = "guest-invite") {
+  const email = cleanString(row.email || row.intendedGuestEmail || row.invitedEmail || row.guestEmail || row.usedByEmail || row.usedBy).toLowerCase();
+  if (isEmail(email)) return `${registrantTypes.contacts.crmPrefix}${email}`;
+  const id = cleanString(row.id || row.code || row.inviteCode || row.key || crypto.randomUUID(), 240);
+  return `${registrantTypes.contacts.crmPrefix}pending:${safeFileSegment(source, "guest")}:${safeFileSegment(id, "person")}`;
+}
+
+function contactFromInviteRecord(row = {}, source = "guest-invite") {
+  const key = contactKeyForInviteRecord(row, source);
+  const email = cleanString(row.intendedGuestEmail || row.invitedEmail || row.guestEmail || row.usedByEmail || row.usedBy).toLowerCase();
+  const cleanEmail = isEmail(email) ? email : "";
+  const name = cleanString(row.intendedGuestName || row.invitedName || row.guestName || row.usedByName) || cleanEmail || "Name not recorded";
+  const eventShowId = cleanEventShowId(row.eventShowId || row.showId || row.eventShow, "");
+  const eventId = cleanString(row.eventId || `${row.eventSlug || row.eventName || source}:${eventShowId || row.code || row.id || ""}`, 200);
+  const registrationRole = cleanGuestRegistrationType(row.guestRegistrationType || row.registrationRole || row.type);
+  const lifecycleStage = row.matrixOnly || row.type === "guest-matrix-prospect" ? "prospect" : "invited";
+  return normalizeContactRecord(key, {
+    id: cleanEmail || cleanString(row.id || row.code || row.inviteCode || row.key),
+    email: cleanEmail,
+    name,
+    company: cleanString(row.company || row.organization || row.partnerCompany),
+    title: cleanString(row.title),
+    invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
+    source,
+    invitationSource: source,
+    lifecycleStage,
+    createdAt: cleanString(row.createdAt),
+    updatedAt: cleanString(row.updatedAt || row.createdAt),
+    events: [{
+      id: cleanString(row.key || row.id || row.code || eventId),
+      eventId,
+      eventSlug: cleanString(row.eventSlug),
+      eventName: cleanString(row.eventName || row.usedFor) || eventId || "Guest Matrix",
+      eventDate: cleanString(row.eventDate || row.usedForDate),
+      eventTime: cleanString(row.eventTime),
+      eventShowId,
+      eventShowLabel: cleanString(row.eventShowLabel || row.usedForShow) || (eventShowId ? eventShowLabel(eventShowId) : ""),
+      eventShowTime: cleanString(row.eventShowTime || row.usedForTime || row.eventTime),
+      intendedGuestName: name,
+      invitedName: name,
+      invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
+      guestRegistrationType: registrationRole,
+      registrationRole,
+      inviteCode: cleanString(row.code || row.inviteCode),
+      registrationId: cleanString(row.registrationId),
+      registrationType: source,
+      role: roleLabelForRow({ ...row, guestRegistrationType: registrationRole }, row.type === "member" ? "member" : "guest"),
+      registrationStatus: row.usedAt || row.usedBy || row.usedByEmail ? "confirmed" : "invited",
+      status: row.usedAt || row.usedBy || row.usedByEmail ? "confirmed" : "invited",
+      registeredAt: cleanString(row.usedAt),
+      attended: false,
+      attendanceStatus: "not_recorded"
+    }]
+  });
+}
+
+function mergeContactEventList(existingEvents = [], nextEvent = {}) {
+  const events = Array.isArray(existingEvents) ? [...existingEvents] : [];
+  const index = events.findIndex((event) => contactEventMatches(event, nextEvent));
+  if (index >= 0) {
+    events[index] = {
+      ...events[index],
+      ...nextEvent
+    };
+    return events;
+  }
+  return [nextEvent, ...events];
+}
+
+async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invite", actor = "") {
+  const contact = contactFromInviteRecord(row, source);
+  if (!contact?.key) return {};
+  const existing = await readRawRecord(env, contact.key);
+  const now = new Date().toISOString();
+  const nextEvent = contact.events?.[0] || {};
+  await env.MOJO_SUMMITS_SETUP_STATE.put(contact.key, JSON.stringify({
+    ...(existing || {}),
+    id: contact.id,
+    email: contact.email,
+    name: cleanString(existing?.name) && cleanString(existing?.name) !== "Name not recorded" ? cleanString(existing.name) : contact.name,
+    company: cleanString(existing?.company) || contact.company,
+    title: cleanString(existing?.title) || contact.title,
+    invitedBy: cleanString(contact.invitedBy) || cleanString(existing?.invitedBy, 180),
+    source: cleanString(existing?.source) || contact.source,
+    invitationSource: cleanString(existing?.invitationSource) || contact.invitationSource || contact.source,
+    lifecycleStage: cleanAllowed(existing?.lifecycleStage, allowedLifecycleStages, "") || contact.lifecycleStage,
+    createdAt: cleanString(existing?.createdAt) || contact.createdAt || now,
+    updatedAt: now,
+    updatedBy: actor || "crm",
+    events: mergeContactEventList(existing?.events, nextEvent)
+  }));
+  return {
+    contactKey: contact.key,
+    contactId: contact.id,
+    email: contact.email
+  };
+}
+
 async function derivedContactRows(env) {
-  const rows = (await Promise.all(["member", "guest", "partner"].map(async (type) => {
+  const registrationRows = (await Promise.all(["member", "guest", "partner"].map(async (type) => {
     const records = await registrants(env, type);
     return records.map((row) => contactFromRegistrant(row, type));
   }))).flat().filter(Boolean);
 
-  return rows;
+  const inviteRows = (await registrationInviteCodes(env))
+    .map((row) => contactFromInviteRecord(row, `${row.type || "guest"}-invite`))
+    .filter(Boolean);
+  const matrixRows = (await guestMatrixProspects(env))
+    .map((row) => contactFromInviteRecord(row, "guest-matrix-prospect"))
+    .filter(Boolean);
+
+  return [...registrationRows, ...inviteRows, ...matrixRows];
 }
 
 function mergeContactRows(storedRows, derivedRows) {
   const byEmail = new Map();
   for (const row of [...derivedRows, ...storedRows]) {
-    const email = cleanString(row.email).toLowerCase();
-    if (!email) continue;
-    const previous = byEmail.get(email);
+    const identity = cleanString(row.email).toLowerCase() || cleanString(row.id || row.key).toLowerCase();
+    if (!identity) continue;
+    const previous = byEmail.get(identity);
     if (!previous) {
-      byEmail.set(email, row);
+      byEmail.set(identity, row);
       continue;
     }
     const eventMap = new Map();
@@ -1695,7 +1804,7 @@ function mergeContactRows(storedRows, derivedRows) {
         ...event
       });
     }
-    byEmail.set(email, normalizeContactRecord(`crm:contact:${email}`, {
+    byEmail.set(identity, normalizeContactRecord(row.key || previous.key || `crm:contact:${identity}`, {
       ...previous,
       ...row,
       name: cleanString(row.name) || cleanString(previous.name) || email,
@@ -3497,7 +3606,9 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "") {
   };
   const key = `${GUEST_MATRIX_PROSPECT_PREFIX}${createdAt}:${id}`;
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
-  return normalizeGuestMatrixProspect(key, record);
+  const prospect = normalizeGuestMatrixProspect(key, record);
+  await upsertContactFromInviteRecord(env, prospect, "guest-matrix-prospect", actor);
+  return prospect;
 }
 
 async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
@@ -3668,7 +3779,9 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
 
   const key = `${REGISTRATION_INVITE_PREFIXES[type]}${code}`;
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
-  return normalizeInviteCode(key, record);
+  const invite = normalizeInviteCode(key, record);
+  await upsertContactFromInviteRecord(env, invite, `${type}-invite`, actor);
+  return invite;
 }
 
 async function createPartnerInviteCode(env, payload = {}, actor = "") {
