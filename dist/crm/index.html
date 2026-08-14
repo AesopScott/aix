@@ -915,15 +915,23 @@
       font-weight: 800;
     }
 
+    .guest-matrix-add-form,
     .guest-matrix-controls {
       display: grid;
-      grid-template-columns: minmax(12rem, 0.8fr) minmax(12rem, 0.8fr) minmax(16rem, 1fr) repeat(2, minmax(7rem, auto));
       gap: 0.75rem;
       align-items: end;
       padding: 0.85rem;
       border: 1px solid rgba(0, 230, 255, 0.18);
       border-radius: 6px;
       background: rgba(10, 15, 30, 0.44);
+    }
+
+    .guest-matrix-add-form {
+      grid-template-columns: minmax(13rem, 1fr) minmax(11rem, 0.75fr) minmax(10rem, 0.7fr) minmax(12rem, 0.8fr) minmax(13rem, 0.9fr) minmax(11rem, 0.75fr) auto;
+    }
+
+    .guest-matrix-controls {
+      grid-template-columns: minmax(12rem, 0.8fr) minmax(12rem, 0.8fr) minmax(16rem, 1fr) repeat(3, minmax(7rem, auto));
     }
 
     .guest-matrix-summary {
@@ -1375,7 +1383,7 @@
     .debug-row strong { color: var(--white); }
 
     @media (max-width: 980px) {
-      header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-controls, .guest-matrix-summary { grid-template-columns: 1fr; }
+      header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-add-form, .guest-matrix-controls, .guest-matrix-summary { grid-template-columns: 1fr; }
       .partner-add-contact-form .span-2 { grid-column: auto; }
       .invite-qr { width: 100%; justify-items: start; }
       .side-nav { position: static; }
@@ -1611,8 +1619,44 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div>
         <p class="eyebrow">Guest invite matrix</p>
         <h2>Event-by-event guest engagement</h2>
-        <p>Review every invite by event, LinkedIn connection, registration request, and registration completion.</p>
+        <p>Review tracked guests by event, LinkedIn connection, registration request, and registration completion.</p>
       </div>
+      <form class="guest-matrix-add-form" id="guestMatrixAddForm">
+        <label>
+          Event
+          <select id="guestMatrixAddEvent" name="eventSlug" required>
+            <option value="">Loading events...</option>
+          </select>
+        </label>
+        <label>
+          Show time
+          <select id="guestMatrixAddShow" name="eventShowId">
+            <option value="both">Both shows</option>
+            <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
+            <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
+          </select>
+        </label>
+        <label>
+          Role
+          <select id="guestMatrixAddType" name="guestRegistrationType">
+            <option value="guest">Guest</option>
+            <option value="featured-guest">Featured Guest</option>
+          </select>
+        </label>
+        <label>
+          Name
+          <input id="guestMatrixAddName" name="intendedGuestName" type="text" placeholder="Guest name">
+        </label>
+        <label>
+          Email
+          <input id="guestMatrixAddEmail" name="intendedGuestEmail" type="email" placeholder="guest@example.com">
+        </label>
+        <label>
+          Owner
+          <input id="guestMatrixAddOwner" name="invitedBy" type="text" placeholder="Owner">
+        </label>
+        <button type="submit" id="guestMatrixAddSubmit">Track Person</button>
+      </form>
       <form class="guest-matrix-controls" id="guestMatrixFilters">
         <label>
           Event
@@ -1637,6 +1681,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <input id="guestMatrixSearch" type="search" placeholder="name, email, company, event, code">
         </label>
         <button class="secondary" type="button" id="guestMatrixClear">Clear</button>
+        <button class="secondary" type="button" id="guestMatrixSave" disabled>Save Changes</button>
         <button class="secondary" type="button" id="guestMatrixRefresh">Refresh</button>
       </form>
       <div class="guest-matrix-summary" id="guestMatrixSummary"></div>
@@ -1866,11 +1911,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const registrationInviteSearchSummary = document.querySelector("#registrationInviteSearchSummary");
     const registrationInviteList = document.querySelector("#registrationInviteList");
     const registrationInviteResult = document.querySelector("#registrationInviteResult");
+    const guestMatrixAddForm = document.querySelector("#guestMatrixAddForm");
+    const guestMatrixAddEvent = document.querySelector("#guestMatrixAddEvent");
+    const guestMatrixAddShow = document.querySelector("#guestMatrixAddShow");
+    const guestMatrixAddType = document.querySelector("#guestMatrixAddType");
+    const guestMatrixAddSubmit = document.querySelector("#guestMatrixAddSubmit");
     const guestMatrixFilters = document.querySelector("#guestMatrixFilters");
     const guestMatrixEventFilter = document.querySelector("#guestMatrixEventFilter");
     const guestMatrixStatusFilter = document.querySelector("#guestMatrixStatusFilter");
     const guestMatrixSearch = document.querySelector("#guestMatrixSearch");
     const guestMatrixClear = document.querySelector("#guestMatrixClear");
+    const guestMatrixSave = document.querySelector("#guestMatrixSave");
     const guestMatrixRefresh = document.querySelector("#guestMatrixRefresh");
     const guestMatrixSummary = document.querySelector("#guestMatrixSummary");
     const guestMatrixSearchSummary = document.querySelector("#guestMatrixSearchSummary");
@@ -1940,6 +1991,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     let activeProspectingEditCompanyId = "";
     const partnerCompaniesPerPage = 10;
     let guestMatrixDrafts = loadGuestMatrixDrafts();
+    let guestMatrixPendingChanges = {};
     let prospectingRunStatus = null;
     let state = {
       type: "contacts",
@@ -1948,6 +2000,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       summary: {},
       partnerInviteCodes: [],
       registrationInviteCodes: [],
+      guestMatrixProspects: [],
       upcomingEvents: []
     };
     let registrationDebug = null;
@@ -2895,6 +2948,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }));
       });
 
+      (state.guestMatrixProspects || []).forEach((candidate) => {
+        const candidateKey = guestMatrixPersonKey(guestMatrixPersonEmail(candidate), guestMatrixPersonName(candidate));
+        if (candidateKey !== personKey) return;
+        addEntry(guestMatrixEventEntry({
+          status: "Tracking",
+          eventName: firstCleanValue(candidate.eventName, candidate.eventSlug),
+          eventDate: candidate.eventDate,
+          eventShow: firstCleanValue(candidate.eventShowLabel, eventShowText(candidate))
+        }));
+      });
+
       (state.rows || []).forEach((contact) => {
         const contactKey = guestMatrixPersonKey(contact.email, contact.name);
         if (contactKey !== personKey) return;
@@ -2944,9 +3008,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const eventKey = guestMatrixEventKey(invite);
       const eventName = guestMatrixEventLabel(invite);
       const futureEvents = guestMatrixFutureEventsForPerson(invite);
+      const matrixOnly = invite.matrixOnly === true || invite.type === "guest-matrix-prospect";
       return {
         id,
         invite,
+        matrixOnly,
         eventKey,
         eventName,
         eventMeta: guestMatrixEventMeta(invite),
@@ -2954,8 +3020,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         email,
         invitedBy: firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy, "Not recorded"),
         role: guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type),
-        code: firstCleanValue(invite.code, invite.inviteCode),
-        url: registrationInviteUrl(invite),
+        code: matrixOnly ? "" : firstCleanValue(invite.code, invite.inviteCode),
+        url: matrixOnly ? "" : registrationInviteUrl(invite),
         linkedinConnection,
         registrationRequest,
         registrationStatus,
@@ -2979,8 +3045,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixRows() {
-      return (state.registrationInviteCodes || [])
+      const inviteRows = (state.registrationInviteCodes || []).map(guestMatrixRowForInvite);
+      const invitePersonEvents = new Set(inviteRows.map((row) => `${row.eventKey}|${guestMatrixPersonKey(row.email, row.name)}`));
+      const prospectRows = (state.guestMatrixProspects || [])
         .map(guestMatrixRowForInvite)
+        .filter((row) => !invitePersonEvents.has(`${row.eventKey}|${guestMatrixPersonKey(row.email, row.name)}`));
+      return [...prospectRows, ...inviteRows]
         .sort((a, b) => `${a.eventName} ${a.name}`.localeCompare(`${b.eventName} ${b.name}`));
     }
 
@@ -3025,7 +3095,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!guestMatrixSummary) return;
       const stats = [
         ["Event groups", new Set(rows.map((row) => row.eventKey)).size],
-        ["Named invites", rows.filter((row) => row.name !== "Name not recorded").length],
+        ["Tracked people", rows.filter((row) => row.name !== "Name not recorded").length],
         ["LinkedIn connected", rows.filter((row) => row.linkedinConnection === "connected").length],
         ["Requests sent", rows.filter((row) => ["sent", "reminder-sent"].includes(row.registrationRequest)).length],
         ["Registered", rows.filter((row) => row.registered).length]
@@ -3045,16 +3115,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const filtered = filteredGuestMatrixRows(rows);
       if (guestMatrixSearchSummary) {
         guestMatrixSearchSummary.textContent = rows.length
-          ? `Showing ${filtered.length} of ${rows.length} guest and member invite records grouped by event. LinkedIn and request edits save only in this browser; registration status comes from CRM records.`
+          ? `Showing ${filtered.length} of ${rows.length} guest and member tracking records grouped by event. Registration status comes from CRM records.`
           : "";
       }
       if (!guestMatrixList) return;
       if (!rows.length) {
-        guestMatrixList.innerHTML = "<p>No guest or member invite records exist yet.</p>";
+        guestMatrixList.innerHTML = "<p>No guest or member tracking records exist yet.</p>";
         return;
       }
       if (!filtered.length) {
-        guestMatrixList.innerHTML = "<p>No guest invite records match the current matrix filters.</p>";
+        guestMatrixList.innerHTML = "<p>No guest tracking records match the current matrix filters.</p>";
         return;
       }
       const groups = new Map();
@@ -3076,7 +3146,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 ${first.eventMeta ? `<span>${escapeHtml(first.eventMeta)}</span>` : ""}
               </div>
               <div class="guest-matrix-pills">
-                <span class="pill">${groupRows.length} invited</span>
+                <span class="pill">${groupRows.length} tracked</span>
                 <span class="pill good">${linkedInConnected} LinkedIn connected</span>
                 <span class="pill good">${requestsSent} requests sent</span>
                 <span class="pill good">${registered} registered</span>
@@ -3106,17 +3176,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                             <strong>${escapeHtml(row.name)}</strong>
                             ${row.email ? `<span>${escapeHtml(row.email)}</span>` : '<span>No email recorded</span>'}
                           </div>
-                          ${row.invite.key ? `<button class="icon-button" type="button" title="Delete invite record" aria-label="Delete invite record for ${escapeHtml(row.name)}" data-delete-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}">${trashIconMarkup()}</button>` : ""}
+                          ${row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Remove tracked person" aria-label="Remove tracked person ${escapeHtml(row.name)}" data-delete-guest-matrix-prospect-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-prospect-label="${escapeHtml(row.name || row.email || row.invite.key)}">${trashIconMarkup()}</button>` : ""}
+                          ${!row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Delete invite record" aria-label="Delete invite record for ${escapeHtml(row.name)}" data-delete-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}">${trashIconMarkup()}</button>` : ""}
                         </div>
                       </td>
                       <td><span class="pill">${escapeHtml(row.role)}</span></td>
                       <td>
-                        <select class="matrix-select" data-guest-matrix-field="linkedinConnection" data-guest-matrix-id="${escapeHtml(row.id)}" aria-label="LinkedIn connection status for ${escapeHtml(row.name)}">
+                        <select class="matrix-select" data-guest-matrix-field="linkedinConnection" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="LinkedIn connection status for ${escapeHtml(row.name)}">
                           ${matrixOptionList(guestMatrixLinkedInConnectionOptions, row.linkedinConnection)}
                         </select>
                       </td>
                       <td>
-                        <select class="matrix-select" data-guest-matrix-field="registrationRequest" data-guest-matrix-id="${escapeHtml(row.id)}" aria-label="Registration request status for ${escapeHtml(row.name)}">
+                        <select class="matrix-select" data-guest-matrix-field="registrationRequest" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Registration request status for ${escapeHtml(row.name)}">
                           ${matrixOptionList(guestMatrixRegistrationRequestOptions, row.registrationRequest)}
                         </select>
                       </td>
@@ -3129,8 +3200,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       <td>${guestMatrixFutureEventsMarkup(row.futureEvents)}</td>
                       <td>${escapeHtml(row.invitedBy)}</td>
                       <td>
-                        <code>${escapeHtml(row.code || "No code")}</code>
-                        <div class="matrix-muted">${escapeHtml(row.url)}</div>
+                        ${row.matrixOnly ? '<span class="pill warn">No invite link yet</span>' : `<code>${escapeHtml(row.code || "No code")}</code>`}
+                        <div class="matrix-muted">${escapeHtml(row.url || "Tracked before invite")}</div>
                       </td>
                     </tr>
                   `).join("")}
@@ -3165,6 +3236,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const markup = eventOptionMarkup();
       registrationInviteEvent.innerHTML = markup;
       partnerInviteEvent.innerHTML = markup;
+      if (guestMatrixAddEvent) guestMatrixAddEvent.innerHTML = markup;
     }
 
     function optionMarkup(value, label, selectedValue) {
@@ -3207,7 +3279,29 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function updateRegistrationInviteSubmit() {
       const role = guestRegistrationTypeLabel(registrationInviteType.value || "guest");
+      const currentShow = registrationInviteShow?.value || "both";
+      const featuredGuest = registrationInviteType.value === "featured-guest";
+      registrationInviteShow.innerHTML = [
+        featuredGuest ? "" : '<option value="both">Both shows</option>',
+        '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
+        '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
+      ].join("");
+      registrationInviteShow.value = featuredGuest && currentShow === "both" ? "morning" : currentShow;
+      if (!registrationInviteShow.value) registrationInviteShow.value = "morning";
       registrationInviteSubmit.textContent = `Generate ${role} Link`;
+    }
+
+    function updateGuestMatrixAddShowOptions() {
+      if (!guestMatrixAddShow || !guestMatrixAddType) return;
+      const currentShow = guestMatrixAddShow.value || "both";
+      const featuredGuest = guestMatrixAddType.value === "featured-guest";
+      guestMatrixAddShow.innerHTML = [
+        featuredGuest ? "" : '<option value="both">Both shows</option>',
+        '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
+        '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
+      ].join("");
+      guestMatrixAddShow.value = featuredGuest && currentShow === "both" ? "morning" : currentShow;
+      if (!guestMatrixAddShow.value) guestMatrixAddShow.value = "morning";
     }
 
     function mergeInviteList(existingInvites, newInvites) {
@@ -4963,8 +5057,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         summary: { total: 0 },
         partnerInviteCodes: [],
         registrationInviteCodes: guestMatrixDemoInvites,
+        guestMatrixProspects: [],
         upcomingEvents: fallbackMojoEvents
       };
+      guestMatrixPendingChanges = {};
+      updateGuestMatrixSaveButton();
       render();
       setNotice(`CRM API is not available from this local page, so Guest Matrix is showing demo data. ${error?.message || ""}`.trim(), "ok");
     }
@@ -4975,6 +5072,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const type = isRecordsView() ? recordsTypeForView() : (typeFilter.value || "contacts");
         typeFilter.value = type;
         state = await fetch(`${api}?type=${encodeURIComponent(type)}`).then(readJson);
+        guestMatrixPendingChanges = {};
+        updateGuestMatrixSaveButton();
         typeFilter.value = state.type || type;
         const noun = state.type === "contacts" ? "contact" : "registrant";
         setNotice(`${state.summary.total || 0} ${activeLabel()} ${noun}${state.summary.total === 1 ? "" : "s"} loaded.`, "ok");
@@ -5426,12 +5525,163 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }).then(readJson);
         state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
         renderRegistrationInvites();
         renderGuestMatrix();
         renderPartnerInvites();
         setNotice("Registration link deleted.", "ok");
       } catch (error) {
         showErrorNotice(error);
+      }
+    }
+
+    function updateGuestMatrixSaveButton() {
+      if (!guestMatrixSave) return;
+      const count = Object.keys(guestMatrixPendingChanges || {}).length;
+      guestMatrixSave.disabled = count === 0;
+      guestMatrixSave.textContent = count ? `Save Changes (${count})` : "Save Changes";
+    }
+
+    function queueGuestMatrixChange(select) {
+      const id = select.dataset.guestMatrixId;
+      const field = select.dataset.guestMatrixField;
+      if (!id || !field) return;
+      guestMatrixDrafts[id] = {
+        ...(guestMatrixDrafts[id] || {}),
+        [field]: select.value
+      };
+      guestMatrixPendingChanges[id] = {
+        ...(guestMatrixPendingChanges[id] || {}),
+        id,
+        key: select.dataset.guestMatrixKey || "",
+        kind: select.dataset.guestMatrixKind || "invite",
+        [field]: select.value
+      };
+      saveGuestMatrixDrafts();
+      updateGuestMatrixSaveButton();
+    }
+
+    async function saveGuestMatrixChanges() {
+      const changes = Object.values(guestMatrixPendingChanges || {});
+      if (!changes.length) return;
+      setNotice("Saving Guest Matrix changes...");
+      if (guestMatrixSave) {
+        guestMatrixSave.disabled = true;
+        guestMatrixSave.textContent = "Saving...";
+      }
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "save-guest-matrix-statuses",
+            changes
+          })
+        }).then(readJson);
+        state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
+        guestMatrixPendingChanges = {};
+        renderGuestMatrix();
+        updateGuestMatrixSaveButton();
+        setNotice(`Guest Matrix changes saved for ${data.updatedCount || changes.length} record${(data.updatedCount || changes.length) === 1 ? "" : "s"}.`, "ok");
+      } catch (error) {
+        showErrorNotice(error, "Guest Matrix changes could not be saved.");
+        updateGuestMatrixSaveButton();
+      }
+    }
+
+    function buildGuestMatrixProspectPayload() {
+      const formData = new FormData(guestMatrixAddForm);
+      const selected = guestMatrixAddEvent.selectedOptions[0];
+      const guestRegistrationType = formData.get("guestRegistrationType") || "guest";
+      const selectedShowId = eventShowId(formData.get("eventShowId") || guestMatrixAddShow?.value || "both");
+      const showId = guestRegistrationType === "featured-guest" && selectedShowId === "both" ? "morning" : selectedShowId;
+      return {
+        action: "create-guest-matrix-prospect",
+        guestRegistrationType,
+        eventSlug: formData.get("eventSlug") || "",
+        eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
+        eventDate: selected?.dataset.eventDate || "",
+        eventShowId: showId,
+        eventShowLabel: eventShowLabel(showId),
+        eventShowTime: eventShowTime(showId),
+        eventTime: eventShowTime(showId),
+        intendedGuestName: formData.get("intendedGuestName") || "",
+        intendedGuestEmail: formData.get("intendedGuestEmail") || "",
+        invitedBy: formData.get("invitedBy") || ""
+      };
+    }
+
+    async function submitGuestMatrixProspect(event) {
+      event.preventDefault();
+      const submitButton = guestMatrixAddSubmit || guestMatrixAddForm.querySelector('button[type="submit"]');
+      const payload = buildGuestMatrixProspectPayload();
+      if (!payload.eventSlug) {
+        setNotice("Select an event before adding a tracked person.", "error");
+        return;
+      }
+      if (!String(payload.intendedGuestName || "").trim() && !String(payload.intendedGuestEmail || "").trim()) {
+        setNotice("Enter a name or email before adding a tracked person.", "error");
+        return;
+      }
+      setNotice("Adding tracked person...");
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Adding...";
+      }
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(readJson);
+        state.guestMatrixProspects = mergeInviteList(state.guestMatrixProspects, data.guestMatrixProspects || (data.prospect ? [data.prospect] : []));
+        state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
+        const keepEvent = guestMatrixAddEvent.value;
+        const keepOwner = guestMatrixAddForm.querySelector('[name="invitedBy"]')?.value || "";
+        guestMatrixAddForm.reset();
+        guestMatrixAddEvent.value = keepEvent;
+        const ownerInput = guestMatrixAddForm.querySelector('[name="invitedBy"]');
+        if (ownerInput) ownerInput.value = keepOwner;
+        updateGuestMatrixAddShowOptions();
+        renderGuestMatrix();
+        setNotice(`Tracking ${data.prospect?.intendedGuestName || data.prospect?.intendedGuestEmail || payload.intendedGuestName || "person"} before invite.`, "ok");
+      } catch (error) {
+        showErrorNotice(error, "Tracked person could not be added.");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = "Track Person";
+        }
+      }
+    }
+
+    async function deleteGuestMatrixProspect(key, label) {
+      if (!key) return;
+      const person = label || "this tracked person";
+      if (!window.confirm(`Remove ${person} from the Guest Matrix? This removes the pre-invite tracking record and cannot be undone.`)) return;
+      setNotice("Removing tracked person...");
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "delete-guest-matrix-prospect",
+            key
+          })
+        }).then(readJson);
+        state.guestMatrixProspects = data.guestMatrixProspects || [];
+        state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
+        delete guestMatrixDrafts[key];
+        delete guestMatrixPendingChanges[key];
+        saveGuestMatrixDrafts();
+        updateGuestMatrixSaveButton();
+        renderGuestMatrix();
+        setNotice(`Tracked person removed: ${data.deleted?.intendedGuestName || data.deleted?.intendedGuestEmail || person}`, "ok");
+      } catch (error) {
+        showErrorNotice(error, "Tracked person could not be removed.");
       }
     }
 
@@ -6033,26 +6283,31 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     guestMatrixRefresh.addEventListener("click", loadCrm);
+    guestMatrixSave?.addEventListener("click", saveGuestMatrixChanges);
+
+    guestMatrixAddForm?.addEventListener("submit", submitGuestMatrixProspect);
+    guestMatrixAddType?.addEventListener("change", updateGuestMatrixAddShowOptions);
+    updateGuestMatrixAddShowOptions();
 
     guestMatrixList.addEventListener("change", (event) => {
       const select = event.target.closest("[data-guest-matrix-field]");
       if (!select) return;
-      const id = select.dataset.guestMatrixId;
-      const field = select.dataset.guestMatrixField;
-      if (!id || !field) return;
-      guestMatrixDrafts[id] = {
-        ...(guestMatrixDrafts[id] || {}),
-        [field]: select.value
-      };
-      saveGuestMatrixDrafts();
+      queueGuestMatrixChange(select);
       renderGuestMatrix();
-      setNotice("Guest matrix mock status saved in this browser.", "ok");
+      setNotice("Guest Matrix change staged. Click Save Changes to persist it.", "ok");
     });
 
     guestMatrixList.addEventListener("click", async (event) => {
+      const prospectButton = event.target.closest("[data-delete-guest-matrix-prospect-key]");
+      if (prospectButton) {
+        await deleteGuestMatrixProspect(
+          prospectButton.dataset.deleteGuestMatrixProspectKey,
+          prospectButton.dataset.deleteGuestMatrixProspectLabel
+        );
+        return;
+      }
       const button = event.target.closest("[data-delete-guest-matrix-invite-key]");
-      if (!button) return;
-      await deleteInviteLink(button.dataset.deleteGuestMatrixInviteKey, button.dataset.deleteGuestMatrixInviteType || "guest");
+      if (button) await deleteInviteLink(button.dataset.deleteGuestMatrixInviteKey, button.dataset.deleteGuestMatrixInviteType || "guest");
     });
 
     function manualPartnerContactRows() {
@@ -6181,11 +6436,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function buildRegistrationInvitePayload(sendEmail) {
       const formData = new FormData(registrationInviteForm);
       const selected = registrationInviteEvent.selectedOptions[0];
-      const showId = eventShowId(formData.get("eventShowId") || registrationInviteShow?.value || "both");
+      const guestRegistrationType = formData.get("type") || "guest";
+      const selectedShowId = eventShowId(formData.get("eventShowId") || registrationInviteShow?.value || "both");
+      const showId = guestRegistrationType === "featured-guest" && selectedShowId === "both" ? "morning" : selectedShowId;
       return {
         action: "create-registration-invite",
         type: "guest",
-        guestRegistrationType: formData.get("type") || "guest",
+        guestRegistrationType,
         eventSlug: formData.get("eventSlug") || "",
         intendedGuestName: formData.get("intendedGuestName") || "",
         intendedGuestEmail: formData.get("intendedGuestEmail") || "",
@@ -6223,6 +6480,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           body: JSON.stringify(payload)
         }).then(readJson);
         state.registrationInviteCodes = mergeInviteList(state.registrationInviteCodes, data.registrationInviteCodes || (data.invite ? [data.invite] : []));
+        state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         renderEventOptions();
         renderRegistrationInvites();
