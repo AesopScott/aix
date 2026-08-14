@@ -5066,7 +5066,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const targetNewCompanies = 50;
       const perStepNewCap = 10;
       prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
-      const sourceQueue = (prospectingState?.starterSources || []).filter((source) => source.sourceId);
+      const sourceQueue = (prospectingState?.starterSources || [])
+        .filter((source) => source.sourceId)
+        .sort((a, b) => {
+          const aLastRun = a.lastRunAt ? Date.parse(a.lastRunAt) || 0 : 0;
+          const bLastRun = b.lastRunAt ? Date.parse(b.lastRunAt) || 0 : 0;
+          if (aLastRun !== bLastRun) return aLastRun - bLastRun;
+          return Number(a.runOrder || 0) - Number(b.runOrder || 0);
+        });
       const starterSourceCount = sourceQueue.length || 620;
       const maxSteps = starterSourceCount;
       const startingCompanyCount = Number(prospectingState?.dashboard?.companiesDiscovered || prospectCompanies().length || 0);
