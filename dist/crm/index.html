@@ -918,25 +918,38 @@
     .guest-matrix-add-form,
     .guest-matrix-controls {
       display: grid;
+      width: 100%;
+      max-width: 100%;
       gap: 0.75rem;
       align-items: end;
       padding: 0.85rem;
       border: 1px solid rgba(0, 230, 255, 0.18);
       border-radius: 6px;
       background: rgba(10, 15, 30, 0.44);
+      overflow: hidden;
     }
 
     .guest-matrix-add-form {
-      grid-template-columns: minmax(13rem, 1fr) minmax(11rem, 0.75fr) minmax(10rem, 0.7fr) minmax(12rem, 0.8fr) minmax(13rem, 0.9fr) minmax(11rem, 0.75fr) auto;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
     }
 
     .guest-matrix-controls {
-      grid-template-columns: minmax(12rem, 0.8fr) minmax(12rem, 0.8fr) minmax(16rem, 1fr) repeat(3, minmax(7rem, auto));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    }
+
+    .guest-matrix-add-form button,
+    .guest-matrix-controls button {
+      width: auto;
+      min-width: 0;
+      min-height: 3.25rem;
+      white-space: normal;
     }
 
     .guest-matrix-summary {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      width: 100%;
+      max-width: 100%;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
       gap: 0.75rem;
     }
 
@@ -965,10 +978,12 @@
 
     .guest-matrix-list {
       display: grid;
+      min-width: 0;
       gap: 0.85rem;
     }
 
     .guest-matrix-event {
+      min-width: 0;
       border: 1px solid rgba(0, 230, 255, 0.16);
       border-radius: 6px;
       overflow: hidden;
@@ -1005,7 +1020,7 @@
     }
 
     .guest-matrix-table table {
-      min-width: 1320px;
+      min-width: 1180px;
     }
 
     .guest-matrix-table th,
