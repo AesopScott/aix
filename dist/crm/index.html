@@ -785,6 +785,12 @@
       background: rgba(255, 99, 123, 0.18);
     }
 
+    .icon-button svg {
+      width: 1rem;
+      height: 1rem;
+      pointer-events: none;
+    }
+
     .member-access-cell {
       display: grid;
       gap: 0.55rem;
@@ -1004,6 +1010,14 @@
       display: grid;
       gap: 0.2rem;
       min-width: 13rem;
+    }
+
+    .matrix-person-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.6rem;
+      align-items: start;
+      min-width: 16rem;
     }
 
     .matrix-person span,
@@ -2651,6 +2665,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return `${prefix}-${code}-qr.png`;
     }
 
+    function trashIconMarkup() {
+      return `
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"></path>
+          <path d="M8 6V4h8v2"></path>
+          <path d="M19 6l-1 14H6L5 6"></path>
+          <path d="M10 11v5"></path>
+          <path d="M14 11v5"></path>
+        </svg>
+      `;
+    }
+
     function inviteStatusText(invite) {
       return invite.status === "used" ? "Registered" : statusLabel(invite.status);
     }
@@ -2962,9 +2988,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                   ${groupRows.map((row) => `
                     <tr>
                       <td>
-                        <div class="matrix-person">
-                          <strong>${escapeHtml(row.name)}</strong>
-                          ${row.email ? `<span>${escapeHtml(row.email)}</span>` : '<span>No email recorded</span>'}
+                        <div class="matrix-person-row">
+                          <div class="matrix-person">
+                            <strong>${escapeHtml(row.name)}</strong>
+                            ${row.email ? `<span>${escapeHtml(row.email)}</span>` : '<span>No email recorded</span>'}
+                          </div>
+                          ${row.invite.key ? `<button class="icon-button" type="button" title="Delete invite record" aria-label="Delete invite record for ${escapeHtml(row.name)}" data-delete-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}">${trashIconMarkup()}</button>` : ""}
                         </div>
                       </td>
                       <td><span class="pill">${escapeHtml(row.role)}</span></td>
@@ -4677,8 +4706,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 <strong>${escapeHtml(row.email)}</strong><br>
                 <span>${escapeHtml(row.phone)}</span>
               </div>
-              ${state.type === "contacts" ? `<button class="icon-button" type="button" title="Delete contact" aria-label="Delete contact ${escapeHtml(row.email)}" data-delete-contact-key="${escapeHtml(row.key)}" data-delete-contact-email="${escapeHtml(row.email)}">&times;</button>` : ""}
-              ${state.type === "guest" ? `<button class="icon-button" type="button" title="Delete guest registrant" aria-label="Delete guest registrant ${escapeHtml(row.name || row.email || row.key)}" data-delete-guest-registrant-key="${escapeHtml(row.key)}" data-delete-guest-registrant-label="${escapeHtml(row.name || row.email || row.key)}">&times;</button>` : ""}
+              ${state.type === "contacts" ? `<button class="icon-button" type="button" title="Delete contact" aria-label="Delete contact ${escapeHtml(row.email)}" data-delete-contact-key="${escapeHtml(row.key)}" data-delete-contact-email="${escapeHtml(row.email)}">${trashIconMarkup()}</button>` : ""}
+              ${state.type === "guest" ? `<button class="icon-button" type="button" title="Delete guest registrant" aria-label="Delete guest registrant ${escapeHtml(row.name || row.email || row.key)}" data-delete-guest-registrant-key="${escapeHtml(row.key)}" data-delete-guest-registrant-label="${escapeHtml(row.name || row.email || row.key)}">${trashIconMarkup()}</button>` : ""}
             </div>
           </td>
           <td><div class="role-list">${eventBadges(row)}</div></td>
@@ -5906,6 +5935,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       saveGuestMatrixDrafts();
       renderGuestMatrix();
       setNotice("Guest matrix mock status saved in this browser.", "ok");
+    });
+
+    guestMatrixList.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-delete-guest-matrix-invite-key]");
+      if (!button) return;
+      await deleteInviteLink(button.dataset.deleteGuestMatrixInviteKey, button.dataset.deleteGuestMatrixInviteType || "guest");
     });
 
     function manualPartnerContactRows() {
