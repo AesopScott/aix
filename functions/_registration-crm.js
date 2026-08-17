@@ -412,7 +412,7 @@ async function readRegistrationRequest(request, type = "") {
 
 function validateRegistrationPhoto(file) {
   if (!isImageFile(file) || !cleanString(file.name)) {
-    return "Upload a rectangular picture for the event brief before submitting registration.";
+    return "Upload a picture for the event brief before submitting registration.";
   }
   const type = cleanString(file.type).toLowerCase();
   if (!allowedRegistrationPhotoTypes.has(type)) {

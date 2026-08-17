@@ -522,7 +522,7 @@
             <div class="field full">
               <label for="briefPhoto">Brief photo</label>
               <input type="file" id="briefPhoto" name="briefPhoto" accept="image/jpeg,image/png,image/webp" required>
-              <p class="file-help">Upload a rectangular picture of yourself suitable for inclusion in MOJO AI Summits briefs. JPG, PNG, or WebP, up to 6 MB.</p>
+              <p class="file-help">Upload a picture of yourself suitable for inclusion in MOJO AI Summits briefs. JPG, PNG, or WebP, up to 6 MB.</p>
             </div>
             <div class="field full">
               <label for="partnerProductTypes">Products sold</label>
@@ -760,30 +760,11 @@
     return briefPhotoInput.files && briefPhotoInput.files[0] ? briefPhotoInput.files[0] : null;
   }
 
-  function imageDimensions(file){
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      const url = URL.createObjectURL(file);
-      image.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve({ width:image.naturalWidth, height:image.naturalHeight });
-      };
-      image.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error('The brief picture could not be read. Upload a JPG, PNG, or WebP image.'));
-      };
-      image.src = url;
-    });
-  }
-
   async function validateBriefPhoto(){
     const file = selectedBriefPhoto();
-    if (!file) return 'Upload a rectangular picture for the event brief before submitting registration.';
+    if (!file) return 'Upload a picture for the event brief before submitting registration.';
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return 'Upload the brief picture as a JPG, PNG, or WebP image.';
     if (file.size > 6 * 1024 * 1024) return 'Upload a brief picture smaller than 6 MB.';
-    const dimensions = await imageDimensions(file).catch((error) => ({ error:error.message }));
-    if (dimensions.error) return dimensions.error;
-    if (dimensions.width <= dimensions.height) return 'Upload a wide rectangular brief picture, not a square or vertical image.';
     return '';
   }
 
