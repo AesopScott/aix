@@ -76,10 +76,10 @@
     .top-nav a { color: var(--cyan); text-decoration: none; font-weight: 800; }
 
     main {
-      width: 90vw;
+      width: 100%;
       max-width: none;
-      margin: 0 auto;
-      padding: 2rem 0 4rem;
+      margin: 0;
+      padding: 2rem clamp(0.5rem, 1vw, 1rem) 4rem;
     }
 
     .crm-shell {
@@ -422,7 +422,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1400px;
+      min-width: 1280px;
     }
 
     th, td {
@@ -1423,7 +1423,7 @@
     .debug-row strong { color: var(--white); }
 
     @media (max-width: 980px) {
-      main { width: calc(100vw - 1rem); }
+      main { padding: 1rem 0.5rem 3rem; }
       header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-add-form, .guest-matrix-controls, .guest-matrix-summary { grid-template-columns: 1fr; }
       .partner-add-contact-form .span-2 { grid-column: auto; }
       .invite-qr { width: 100%; justify-items: start; }
@@ -3008,6 +3008,29 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return String(value || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
     }
 
+    function guestMatrixShowKey(invite = {}) {
+      const direct = eventShowId(invite.eventShowId || invite.showId || invite.eventShow, "");
+      if (direct) return direct;
+      const text = [
+        invite.eventShowLabel,
+        invite.usedForShow,
+        invite.eventShowTime,
+        invite.usedForTime,
+        invite.eventTime
+      ].filter(Boolean).join(" ").toLowerCase();
+      const hasMorning = text.includes("morning") || text.includes("10:00") || text.includes("10am");
+      const hasAfternoon = text.includes("afternoon") || text.includes("1:00") || text.includes("1pm");
+      if (text.includes("both") || (hasMorning && hasAfternoon)) return "both";
+      if (hasMorning) return "morning";
+      if (hasAfternoon) return "afternoon";
+      return "both";
+    }
+
+    function guestMatrixActualEventKey(invite = {}) {
+      const eventId = firstCleanValue(invite.eventId).replace(/:(morning|afternoon|both)$/i, "");
+      return filterKey(firstCleanValue(invite.eventSlug, invite.usedFor, invite.eventName, eventId, "No event assigned"));
+    }
+
     function optionValueExists(options, value) {
       return options.some(([candidate]) => candidate === value);
     }
@@ -3085,7 +3108,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixEventKey(invite = {}) {
-      return filterKey(firstCleanValue(invite.eventSlug, invite.eventId, invite.usedFor, invite.eventName, "No event assigned"));
+      return [
+        guestMatrixActualEventKey(invite),
+        normalizedMatrixValue(firstCleanValue(invite.eventDate, invite.usedForDate)),
+        guestMatrixShowKey(invite)
+      ].join("|");
     }
 
     function guestMatrixEventLabel(invite = {}) {
@@ -3260,13 +3287,105 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       };
     }
 
+    function guestMatrixRowIdentity(row = {}) {
+      return `${row.eventKey}|${guestMatrixPersonKey(row.email, row.name)}`;
+    }
+
+    function guestMatrixRowIdentityKeys(row = {}) {
+      const keys = [];
+      const email = String(row.email || "").trim().toLowerCase();
+      const name = normalizedMatrixValue(row.name);
+      if (email) keys.push(`${row.eventKey}|email:${email}`);
+      if (name && name !== "name-not-recorded") keys.push(`${row.eventKey}|name:${name}`);
+      if (!keys.length) keys.push(guestMatrixRowIdentity(row));
+      return keys;
+    }
+
+    function guestMatrixStatusRank(value = "", order = []) {
+      const index = order.indexOf(value);
+      return index < 0 ? 0 : order.length - index;
+    }
+
+    function guestMatrixRowRank(row = {}) {
+      return [
+        row.registered ? 10000 : 0,
+        row.matrixOnly ? 0 : 5000,
+        guestMatrixStatusRank(row.registrationStatus, ["registered", "started", "opened", "waitlisted", "not-registered", "declined"]) * 100,
+        guestMatrixStatusRank(row.registrationRequest, ["reminder-sent", "sent", "drafted", "not-sent", "bounced", "declined"]) * 10,
+        guestMatrixStatusRank(row.linkedinConnection, ["connected", "connection-requested", "not-connected", "unknown", "declined", "unreachable"])
+      ].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
+    }
+
+    function bestMatrixValue(left = "", right = "", order = []) {
+      return guestMatrixStatusRank(right, order) > guestMatrixStatusRank(left, order) ? right : left;
+    }
+
+    function mergeGuestMatrixFutureEvents(left = [], right = []) {
+      const events = new Map();
+      [...left, ...right].forEach((event) => {
+        const key = [
+          normalizedMatrixValue(event.eventName),
+          normalizedMatrixValue(event.eventDate),
+          normalizedMatrixValue(event.eventShow)
+        ].join("|");
+        const existing = events.get(key);
+        if (!existing || event.status === "Registered") events.set(key, event);
+      });
+      return [...events.values()].sort((a, b) =>
+        guestMatrixDateTime(a.eventDate) - guestMatrixDateTime(b.eventDate) ||
+        a.eventName.localeCompare(b.eventName)
+      );
+    }
+
+    function mergeGuestMatrixDuplicateRows(left, right) {
+      const primary = guestMatrixRowRank(right) > guestMatrixRowRank(left) ? right : left;
+      const secondary = primary === right ? left : right;
+      const linkedinConnection = bestMatrixValue(primary.linkedinConnection, secondary.linkedinConnection, ["connected", "connection-requested", "not-connected", "unknown", "declined", "unreachable"]);
+      const registrationRequest = bestMatrixValue(primary.registrationRequest, secondary.registrationRequest, ["reminder-sent", "sent", "drafted", "not-sent", "bounced", "declined"]);
+      const registrationStatus = bestMatrixValue(primary.registrationStatus, secondary.registrationStatus, ["registered", "started", "opened", "waitlisted", "not-registered", "declined"]);
+      const futureEvents = mergeGuestMatrixFutureEvents(primary.futureEvents, secondary.futureEvents);
+      return {
+        ...primary,
+        linkedinConnection,
+        registrationRequest,
+        registrationStatus,
+        registered: primary.registered || secondary.registered || registrationStatus === "registered",
+        futureEvents,
+        haystack: `${primary.haystack || ""} ${secondary.haystack || ""} ${futureEvents.flatMap((event) => [event.status, event.eventName, event.eventDate, event.eventShow]).join(" ")}`.toLowerCase()
+      };
+    }
+
+    function dedupeGuestMatrixRows(rows = []) {
+      const byIdentity = new Map();
+      const selectedKeys = new Set();
+      rows.forEach((row) => {
+        const keys = guestMatrixRowIdentityKeys(row);
+        const existingKey = keys.find((key) => byIdentity.has(key));
+        const targetKey = existingKey || keys[0];
+        if (!existingKey) {
+          byIdentity.set(targetKey, row);
+          keys.forEach((key) => byIdentity.set(key, row));
+          selectedKeys.add(targetKey);
+          return;
+        }
+        const previous = byIdentity.get(existingKey);
+        const merged = mergeGuestMatrixDuplicateRows(previous, row);
+        keys.forEach((key) => byIdentity.set(key, merged));
+        [...byIdentity.entries()].forEach(([key, value]) => {
+          if (value === previous) byIdentity.set(key, merged);
+        });
+        selectedKeys.add(targetKey);
+      });
+      return [...new Set([...selectedKeys].map((key) => byIdentity.get(key)).filter(Boolean))];
+    }
+
     function guestMatrixRows() {
       const inviteRows = (state.registrationInviteCodes || []).map(guestMatrixRowForInvite);
-      const invitePersonEvents = new Set(inviteRows.map((row) => `${row.eventKey}|${guestMatrixPersonKey(row.email, row.name)}`));
+      const invitePersonEvents = new Set(inviteRows.map(guestMatrixRowIdentity));
       const prospectRows = (state.guestMatrixProspects || [])
         .map(guestMatrixRowForInvite)
-        .filter((row) => !invitePersonEvents.has(`${row.eventKey}|${guestMatrixPersonKey(row.email, row.name)}`));
-      return [...prospectRows, ...inviteRows]
+        .filter((row) => !invitePersonEvents.has(guestMatrixRowIdentity(row)));
+      return dedupeGuestMatrixRows([...prospectRows, ...inviteRows])
         .sort((a, b) => `${a.eventName} ${a.name}`.localeCompare(`${b.eventName} ${b.name}`));
     }
 
