@@ -264,6 +264,26 @@ const eventSponsorCrawlStarterSources = [
   crawlSponsorPages: true,
   crawlPageLimit: 6
 }));
+const emergingCompanyDiscoverySegment = "emerging-10-100";
+const emergingCompanyTargetEmployeeRange = "10-100";
+const emergingCompanyStarterSources = [
+  ["emerging-yc-ai", "YC AI Startups", "https://www.ycombinator.com/companies/industry/ai", "YC AI company directory; useful for emerging companies building with or around AI, often with public team-size signals."],
+  ["emerging-yc-saas", "YC SaaS Startups", "https://www.ycombinator.com/companies/industry/saas", "YC SaaS company directory; useful for emerging software vendors likely to leverage AI in product and operations."],
+  ["emerging-yc-security", "YC Security Startups", "https://www.ycombinator.com/companies/industry/security", "YC security company directory; useful for emerging cybersecurity vendors with direct CISO audience fit."],
+  ["emerging-wellfound-ai", "Wellfound AI Startups", "https://wellfound.com/startups/industry/artificial-intelligence", "Wellfound AI startup directory; useful for finding smaller hiring-stage AI-enabled companies."],
+  ["emerging-wellfound-saas", "Wellfound SaaS Startups", "https://wellfound.com/startups/industry/saas", "Wellfound SaaS startup directory; useful for smaller software companies likely experimenting with AI."],
+  ["emerging-topstartups-ai", "TopStartups AI Companies", "https://topstartups.io/?industries=Artificial+Intelligence", "TopStartups AI company directory; useful for smaller venture-backed or founder-led companies."],
+  ["emerging-built-in-ai-roundup", "Built In AI Companies Roundup", "https://builtin.com/artificial-intelligence/ai-companies-roundup", "Built In AI company roundup; useful for finding AI-enabled software, cyber, data, and productivity vendors."]
+].map(([sourceId, sourceName, sourceUrl, description]) => ({
+  sourceId,
+  sourceName,
+  sourceType: "Emerging 10-100 Source",
+  sourceUrl,
+  description,
+  category: "Emerging 10-100",
+  discoverySegment: emergingCompanyDiscoverySegment,
+  targetEmployeeRange: emergingCompanyTargetEmployeeRange
+}));
 const partnerProspectStarterSources = [
   {
     sourceId: "starter-built-in-saas-companies",
@@ -563,6 +583,34 @@ function cleanNumber(value, fallback = 0, min = 0, max = 100) {
   return Math.min(max, Math.max(min, Math.round(number)));
 }
 
+function employeeCountFromText(value = "") {
+  const text = stripHtml(value);
+  const match = text.match(/\b(\d{1,6})\s+employees?\b/i);
+  return match ? cleanNumber(match[1], 0, 1, 1000000) : 0;
+}
+
+function employeeRangeForCount(count = 0) {
+  const value = cleanNumber(count, 0, 0, 1000000);
+  if (!value) return "";
+  if (value <= 50) return "1-50";
+  if (value <= 200) return "51-200";
+  if (value <= 1000) return "201-1000";
+  if (value <= 5000) return "1001-5000";
+  if (value <= 10000) return "5001-10000";
+  return "10000-plus";
+}
+
+function employeeCountMatchesTarget(count = 0, targetRange = "") {
+  const value = cleanNumber(count, 0, 0, 1000000);
+  const raw = cleanString(targetRange, 80);
+  if (!value || !raw) return true;
+  const parts = raw.match(/\d+/g)?.map((part) => Number(part)).filter((part) => Number.isFinite(part)) || [];
+  if (!parts.length) return true;
+  const min = parts[0];
+  const max = parts[1] || parts[0];
+  return value >= min && value <= max;
+}
+
 function normalizeDomain(value = "") {
   const raw = cleanString(value, 300).toLowerCase();
   if (!raw) return "";
@@ -853,6 +901,14 @@ function mergeDiscoveryCandidates(candidateGroups = [], limit = 75) {
 function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null) {
   const sourceDomain = normalizeDomain(sourceUrl);
   const links = new Map();
+  function sourceProfileLabel(text = "") {
+    return cleanString(stripHtml(text), 300)
+      .replace(/\s+/g, " ")
+      .replace(/\s+[SWFP]\d{4}\s+Active.*$/i, "")
+      .replace(/\s+Active\s*[|-].*$/i, "")
+      .replace(/\s*[|-]\s*\d{1,6}\s+employees?.*$/i, "")
+      .trim();
+  }
   function addNamedCandidate(companyName = "", sourceProfileUrl = "", description = "", reason = "structured-list-name") {
     if (links.size >= limit) return;
     const clean = cleanString(stripHtml(companyName), 180).replace(/\s+/g, " ").replace(/\s+(?:logo|image)$/i, "").trim();
@@ -865,6 +921,7 @@ function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null
     const key = `name:${slug}`;
     if (links.has(key)) return;
     const profileUrl = normalizeUrl(sourceProfileUrl);
+    const employeeCount = employeeCountFromText(`${companyName} ${description}`);
     links.set(key, {
       companyName: companyLabelTitleCase(clean),
       canonicalDomain: "",
@@ -872,6 +929,9 @@ function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null
       sourceUrl,
       sourceProfileUrl: profileUrl,
       description: cleanString(description, 1000),
+      employeeCount: employeeCount ? String(employeeCount) : "",
+      employeeRange: employeeRangeForCount(employeeCount),
+      companySizeEvidence: employeeCount ? cleanString(description || companyName, 1000) : "",
       rawLabel: clean,
       nameSource: "structured-list-name"
     });
@@ -903,16 +963,26 @@ function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null
       return;
     }
     if (sameRootDomain(domain, sourceDomain)) {
+      const path = `${url.pathname || ""} ${href || ""}`.toLowerCase();
+      if (/\/compan(?:y|ies)\//.test(path) || /\/startups?\//.test(path)) {
+        const profileLabel = sourceProfileLabel(text);
+        if (profileLabel) addNamedCandidate(profileLabel, url.toString(), text, "source-profile-link");
+        return;
+      }
       recordDiscoveryDiagnostic(debug, "rejected", { href, domain, rawLabel: text, reason: "same-source-domain" });
       return;
     }
     const nameDecision = companyNameDecisionFromLink({ domain, text, innerHtml, attributes });
     if (!links.has(domain)) {
+      const employeeCount = employeeCountFromText(text);
       links.set(domain, {
         companyName: nameDecision.companyName,
         canonicalDomain: domain,
         websiteUrl: `${url.protocol}//${domain}/`,
         sourceUrl,
+        employeeCount: employeeCount ? String(employeeCount) : "",
+        employeeRange: employeeRangeForCount(employeeCount),
+        companySizeEvidence: employeeCount ? cleanString(text, 1000) : "",
         rawLabel: nameDecision.rawLabel || text,
         nameSource: nameDecision.nameSource
       });
@@ -1966,6 +2036,11 @@ function normalizeProspectCompany(key, record = {}, people = [], weights = defau
       : cleanNumber(record.partnerScoreOverride),
     partnerPriority: cleanString(record.partnerPriority, 80) || priorityBand(score),
     partnerStatus,
+    discoverySegment: cleanString(record.discoverySegment, 120),
+    discoverySegments: cleanArray(record.discoverySegments, 12, 120),
+    targetEmployeeRange: cleanString(record.targetEmployeeRange, 80),
+    employeeRangeStatus: cleanString(record.employeeRangeStatus, 120),
+    companySizeEvidence: cleanString(record.companySizeEvidence, 1000),
     discoverySources: cleanArray(record.discoverySources || record.sources, 20, 160),
     sourceUrls: cleanArray(record.sourceUrls, 30, 500),
     provenance: record.provenance && typeof record.provenance === "object" ? record.provenance : {},
@@ -2164,6 +2239,8 @@ function normalizeProspectSource(key, record = {}) {
     sourceUrl: normalizeUrl(record.sourceUrl || record.url),
     description: cleanString(record.description, 1000),
     category: cleanString(record.category, 160),
+    discoverySegment: cleanString(record.discoverySegment, 120),
+    targetEmployeeRange: cleanString(record.targetEmployeeRange, 80),
     status: cleanString(record.status, 80) || "active",
     lastRunAt: cleanString(record.lastRunAt, 40),
     lastRunBy: cleanString(record.lastRunBy, 180),
@@ -2171,6 +2248,7 @@ function normalizeProspectSource(key, record = {}) {
     lastRunError: cleanString(record.lastRunError, 1000),
     discoveredCount: cleanNumber(record.discoveredCount, 0, 0, 1000000),
     skippedExistingCount: cleanNumber(record.skippedExistingCount, 0, 0, 1000000),
+    taggedExistingCount: cleanNumber(record.taggedExistingCount, 0, 0, 1000000),
     createdAt: cleanString(record.createdAt),
     createdBy: cleanString(record.createdBy, 180),
     updatedAt: cleanString(record.updatedAt),
@@ -2203,6 +2281,8 @@ async function saveProspectSource(env, payload = {}, actor = "") {
     sourceUrl,
     description: cleanString(payload.description ?? existing?.description, 1000),
     category: cleanString(payload.category ?? existing?.category, 160),
+    discoverySegment: cleanString(payload.discoverySegment ?? existing?.discoverySegment, 120),
+    targetEmployeeRange: cleanString(payload.targetEmployeeRange ?? existing?.targetEmployeeRange, 80),
     status: cleanString(payload.status || existing?.status || "active", 80),
     createdAt: cleanString(existing?.createdAt) || now,
     createdBy: cleanString(existing?.createdBy) || actor || "crm",
@@ -2235,6 +2315,15 @@ async function saveProspectCompany(env, payload = {}, actor = "") {
     canonicalDomain: normalizeDomain(payload.canonicalDomain || payload.websiteUrl || previous?.canonicalDomain),
     websiteUrl: normalizeUrl(payload.websiteUrl || payload.canonicalDomain || previous?.websiteUrl),
     linkedinCompanyUrl: normalizeUrl(payload.linkedinCompanyUrl || previous?.linkedinCompanyUrl),
+    discoverySegment: cleanString(payload.discoverySegment ?? previous?.discoverySegment, 120),
+    discoverySegments: cleanArray([
+      ...(cleanArray(previous?.discoverySegments, 12, 120)),
+      ...(cleanArray(payload.discoverySegments, 12, 120)),
+      cleanString(payload.discoverySegment, 120)
+    ], 12, 120),
+    targetEmployeeRange: cleanString(payload.targetEmployeeRange ?? previous?.targetEmployeeRange, 80),
+    employeeRangeStatus: cleanString(payload.employeeRangeStatus ?? previous?.employeeRangeStatus, 120),
+    companySizeEvidence: cleanString(payload.companySizeEvidence ?? previous?.companySizeEvidence, 1000),
     sourceUrls: cleanArray(payload.sourceUrls ?? previous?.sourceUrls, 30, 500),
     discoverySources: cleanArray(payload.discoverySources ?? previous?.discoverySources, 20, 160),
     categories: cleanArray(payload.categories ?? previous?.categories, 20, 160),
@@ -2299,6 +2388,15 @@ async function saveDiscoveredProspectCompany(env, payload = {}, actor = "", conf
     canonicalDomain: normalizeDomain(payload.canonicalDomain || payload.websiteUrl || previous?.canonicalDomain),
     websiteUrl: normalizeUrl(payload.websiteUrl || payload.canonicalDomain || previous?.websiteUrl),
     linkedinCompanyUrl: normalizeUrl(payload.linkedinCompanyUrl || previous?.linkedinCompanyUrl),
+    discoverySegment: cleanString(payload.discoverySegment ?? previous?.discoverySegment, 120),
+    discoverySegments: cleanArray([
+      ...(cleanArray(previous?.discoverySegments, 12, 120)),
+      ...(cleanArray(payload.discoverySegments, 12, 120)),
+      cleanString(payload.discoverySegment, 120)
+    ], 12, 120),
+    targetEmployeeRange: cleanString(payload.targetEmployeeRange ?? previous?.targetEmployeeRange, 80),
+    employeeRangeStatus: cleanString(payload.employeeRangeStatus ?? previous?.employeeRangeStatus, 120),
+    companySizeEvidence: cleanString(payload.companySizeEvidence ?? previous?.companySizeEvidence, 1000),
     sourceUrls: cleanArray([...(cleanArray(previous?.sourceUrls, 30, 500)), ...(cleanArray(payload.sourceUrls, 30, 500))], 30, 500),
     discoverySources: cleanArray([...(cleanArray(previous?.discoverySources, 20, 160)), ...(cleanArray(payload.discoverySources, 20, 160))], 20, 160),
     categories: cleanArray(payload.categories ?? previous?.categories, 20, 160),
@@ -2626,7 +2724,9 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
     sourceUrl,
     sourceType: payload.sourceType || "Public Web",
     category: payload.category,
-    description: payload.description
+    description: payload.description,
+    discoverySegment: payload.discoverySegment,
+    targetEmployeeRange: payload.targetEmployeeRange
   }, actor);
   const limit = cleanNumber(payload.limit, 25, 1, 75);
   const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew || payload.targetRemaining || limit, limit, 1, 75);
@@ -2671,9 +2771,20 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       ? payload.seenCompanyIds
       : new Set(existingCompanies.map((company) => company.companyId).filter(Boolean));
     let skippedExisting = 0;
+    let taggedExisting = 0;
     const config = await partnerScoreConfig(env);
     const category = discoveryCategoryForSource(source);
     for (const candidate of candidates) {
+      const candidateEmployeeCount = cleanNumber(candidate.employeeCount, 0, 0, 1000000);
+      if (payload.targetEmployeeRange && candidateEmployeeCount && !employeeCountMatchesTarget(candidateEmployeeCount, payload.targetEmployeeRange)) {
+        recordDiscoveryDiagnostic(debug, "rejected", {
+          href: candidate.sourceProfileUrl || candidate.sourceUrl || candidate.websiteUrl,
+          domain: candidate.canonicalDomain,
+          rawLabel: candidate.rawLabel || candidate.companyName,
+          reason: `employee-count-outside-${payload.targetEmployeeRange}`
+        });
+        continue;
+      }
       const candidatePayload = {
         companyName: candidate.companyName,
         canonicalDomain: candidate.canonicalDomain,
@@ -2683,11 +2794,24 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       const existing = findProspectCompanyInList(existingCompanies, candidatePayload);
       if ((candidateId && seenCompanyIds.has(candidateId)) || existing) {
         skippedExisting += 1;
+        if (existing && payload.discoverySegment) {
+          await saveProspectCompany(env, {
+            ...existing,
+            discoverySegment: existing.discoverySegment || payload.discoverySegment,
+            discoverySegments: cleanArray([...(cleanArray(existing.discoverySegments, 12, 120)), payload.discoverySegment], 12, 120),
+            targetEmployeeRange: existing.targetEmployeeRange || payload.targetEmployeeRange,
+            employeeRangeStatus: existing.employeeRangeStatus || payload.employeeRangeStatus || "TARGETED_NOT_VERIFIED",
+            companySizeEvidence: existing.companySizeEvidence || candidate.companySizeEvidence || payload.companySizeEvidence,
+            discoverySources: cleanArray([...(cleanArray(existing.discoverySources, 20, 160)), sourceName], 20, 160),
+            sourceUrls: cleanArray([...(cleanArray(existing.sourceUrls, 30, 500)), sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 30, 500)
+          }, actor);
+          taggedExisting += 1;
+        }
         debug.skipped.push({
           companyName: candidate.companyName,
           domain: candidate.canonicalDomain,
           url: candidate.websiteUrl,
-          reason: existing ? "already in Vendor Universe" : "duplicate in this discovery run"
+          reason: existing ? (payload.discoverySegment ? "already in Vendor Universe; tagged for segment" : "already in Vendor Universe") : "duplicate in this discovery run"
         });
         continue;
       }
@@ -2695,6 +2819,13 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
         companyName: candidate.companyName,
         canonicalDomain: candidate.canonicalDomain,
         websiteUrl: candidate.websiteUrl,
+        employeeCount: candidate.employeeCount,
+        employeeRange: candidate.employeeRange,
+        discoverySegment: payload.discoverySegment,
+        discoverySegments: cleanArray([payload.discoverySegment], 12, 120),
+        targetEmployeeRange: payload.targetEmployeeRange,
+        employeeRangeStatus: candidate.employeeCount ? "SOURCE_REPORTED" : payload.employeeRangeStatus || (payload.targetEmployeeRange ? "TARGETED_NOT_VERIFIED" : ""),
+        companySizeEvidence: candidate.companySizeEvidence || payload.companySizeEvidence || "",
         description: discoveryDescriptionForCandidate(candidate, source, candidate.sourcePageTitle || title),
         classificationReason: discoveryReasonForCandidate(candidate, source, candidate.sourcePageTitle || title),
         primaryCategory: category,
@@ -2739,6 +2870,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       lastRunError: "",
       discoveredCount: Number(source.discoveredCount || 0) + saved.length,
       skippedExistingCount: Number(source.skippedExistingCount || 0) + skippedExisting,
+      taggedExistingCount: Number(source.taggedExistingCount || 0) + taggedExisting,
       updatedAt: now,
       updatedBy: actor || "crm"
     }));
@@ -2749,7 +2881,8 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       sourceUrl,
       candidates: candidates.length,
       discovered: saved.length,
-      skippedExisting
+      skippedExisting,
+      taggedExisting
     });
     await writeProspectDebug(env, debugRunId, {
       actor,
@@ -2761,6 +2894,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       candidates: candidates.length,
       discovered: saved.length,
       skippedExisting,
+      taggedExisting,
       crawledPages: discoveryPages.map((page) => ({ url: page.url, title: page.title, role: page.role })),
       accepted: debug.accepted,
       rejected: debug.rejected,
@@ -2774,6 +2908,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       candidates: candidates.length,
       discovered: saved.length,
       skippedExisting,
+      taggedExisting,
       companies: saved,
       skipped: debug.skipped
     };
@@ -2838,6 +2973,7 @@ async function starterSourcesWithRunState(env, savedSourceRows = null) {
       lastRunError: cleanString(saved.lastRunError, 1000),
       discoveredCount: cleanNumber(saved.discoveredCount, 0, 0, 1000000),
       skippedExistingCount: cleanNumber(saved.skippedExistingCount, 0, 0, 1000000),
+      taggedExistingCount: cleanNumber(saved.taggedExistingCount, 0, 0, 1000000),
       updatedAt: cleanString(saved.updatedAt, 40)
     };
   });
@@ -2894,7 +3030,8 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
         ok: true,
         candidates: result.candidates,
         discovered: result.discovered,
-        skippedExisting: result.skippedExisting
+        skippedExisting: result.skippedExisting,
+        taggedExisting: result.taggedExisting
       });
     } catch (error) {
       results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: false, error: cleanString(error.message, 500) });
@@ -2903,6 +3040,7 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
   const discovered = results.reduce((sum, result) => sum + Number(result.discovered || 0), 0);
   const candidates = results.reduce((sum, result) => sum + Number(result.candidates || 0), 0);
   const skippedExisting = results.reduce((sum, result) => sum + Number(result.skippedExisting || 0), 0);
+  const taggedExisting = results.reduce((sum, result) => sum + Number(result.taggedExisting || 0), 0);
   await writeProspectAudit(env, "starter-sources", {
     actor,
     action: "run-starter-discovery-sources",
@@ -2911,7 +3049,8 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
     targetNewCompanies,
     candidates,
     discovered,
-    skippedExisting
+    skippedExisting,
+    taggedExisting
   });
   return {
     attempted: results.length,
@@ -2920,6 +3059,101 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
     candidates,
     discovered,
     skippedExisting,
+    taggedExisting,
+    exhausted: discovered < targetNewCompanies && results.length >= sources.length,
+    results
+  };
+}
+
+function prospectEmergingSourceById(sourceId = "") {
+  const cleaned = cleanString(sourceId, 180);
+  return emergingCompanyStarterSources.find((source) => source.sourceId === cleaned || companySlug(source.sourceName) === cleaned) || null;
+}
+
+async function emergingSourcesWithRunState(env, savedSourceRows = null) {
+  const savedSources = Array.isArray(savedSourceRows) ? savedSourceRows : await prospectSources(env);
+  const savedById = new Map(savedSources.map((source) => [source.sourceId, source]));
+  return emergingCompanyStarterSources.map((source, index) => {
+    const saved = savedById.get(source.sourceId) || {};
+    return {
+      ...source,
+      runOrder: index,
+      lastRunAt: cleanString(saved.lastRunAt, 40),
+      lastRunBy: cleanString(saved.lastRunBy, 180),
+      lastRunStatus: cleanString(saved.lastRunStatus, 80),
+      lastRunError: cleanString(saved.lastRunError, 1000),
+      discoveredCount: cleanNumber(saved.discoveredCount, 0, 0, 1000000),
+      skippedExistingCount: cleanNumber(saved.skippedExistingCount, 0, 0, 1000000),
+      taggedExistingCount: cleanNumber(saved.taggedExistingCount, 0, 0, 1000000),
+      updatedAt: cleanString(saved.updatedAt, 40)
+    };
+  });
+}
+
+async function runEmergingProspectSources(env, payload = {}, actor = "") {
+  const selectedIds = cleanArray(payload.sourceIds || payload.emergingSourceIds, 30, 180);
+  const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew, 50, 1, 200);
+  const maxSources = cleanNumber(payload.maxSources, emergingCompanyStarterSources.length, 1, emergingCompanyStarterSources.length);
+  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 50, 1, 75);
+  const emergingSources = await emergingSourcesWithRunState(env);
+  const selectedSet = new Set(selectedIds);
+  const sources = selectedIds.length
+    ? emergingSources.filter((source) => selectedSet.has(source.sourceId) || selectedSet.has(companySlug(source.sourceName)))
+    : starterSourcesForRun(emergingSources, maxSources);
+  const existingCompanies = await prospectCompanies(env);
+  const seenCompanyIds = new Set(existingCompanies.map((company) => company.companyId).filter(Boolean));
+  const results = [];
+  for (const source of sources) {
+    const remaining = targetNewCompanies - results.reduce((sum, result) => sum + Number(result.discovered || 0), 0);
+    if (remaining <= 0) break;
+    try {
+      const result = await runSourceDiscovery(env, {
+        ...source,
+        limit: limitPerSource,
+        targetRemaining: remaining,
+        discoverySegment: emergingCompanyDiscoverySegment,
+        targetEmployeeRange: emergingCompanyTargetEmployeeRange,
+        employeeRangeStatus: "TARGETED_NOT_VERIFIED",
+        companySizeEvidence: `Found through ${source.sourceName}, an Emerging 10-100 discovery source. Verify employee count before using this lane for small-company targeting.`,
+        existingCompanies,
+        seenCompanyIds
+      }, actor);
+      results.push({
+        sourceId: source.sourceId,
+        sourceName: source.sourceName,
+        ok: true,
+        candidates: result.candidates,
+        discovered: result.discovered,
+        skippedExisting: result.skippedExisting,
+        taggedExisting: result.taggedExisting
+      });
+    } catch (error) {
+      results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: false, error: cleanString(error.message, 500) });
+    }
+  }
+  const discovered = results.reduce((sum, result) => sum + Number(result.discovered || 0), 0);
+  const candidates = results.reduce((sum, result) => sum + Number(result.candidates || 0), 0);
+  const skippedExisting = results.reduce((sum, result) => sum + Number(result.skippedExisting || 0), 0);
+  const taggedExisting = results.reduce((sum, result) => sum + Number(result.taggedExisting || 0), 0);
+  await writeProspectAudit(env, "emerging-10-100-sources", {
+    actor,
+    action: "run-emerging-10-100-sources",
+    attempted: results.length,
+    succeeded: results.filter((result) => result.ok).length,
+    targetNewCompanies,
+    candidates,
+    discovered,
+    skippedExisting,
+    taggedExisting
+  });
+  return {
+    attempted: results.length,
+    succeeded: results.filter((result) => result.ok).length,
+    targetNewCompanies,
+    candidates,
+    discovered,
+    skippedExisting,
+    taggedExisting,
     exhausted: discovered < targetNewCompanies && results.length >= sources.length,
     results
   };
@@ -3252,6 +3486,7 @@ async function partnerProspectingPayload(env) {
   const people = await prospectPeople(env);
   const sources = await prospectSources(env);
   const starterSources = await starterSourcesWithRunState(env, sources);
+  const emergingSources = await emergingSourcesWithRunState(env, sources);
   const debug = await prospectDebugEntries(env);
   const nextCompany = companies.find((company) =>
     company.partnerScore >= 60 &&
@@ -3266,6 +3501,7 @@ async function partnerProspectingPayload(env) {
     dashboard: prospectDashboard(companies, people),
     queue: prospectQueueSummary(companies, sources),
     starterSources,
+    emergingSources,
     companies,
     people,
     sources,
@@ -5204,6 +5440,20 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Starter discovery sources could not be run." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "run-partner-prospect-emerging-sources") {
+    try {
+      const discoveryBatch = await runEmergingProspectSources(env, payload, access.email);
+      return json({
+        ok: true,
+        type: "partner-prospecting",
+        refreshRequired: true,
+        discoveryBatch
+      });
+    } catch (error) {
+      return json({ error: error.message || "Emerging 10-100 discovery sources could not be run." }, { status: 500 });
     }
   }
 
