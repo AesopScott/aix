@@ -145,12 +145,12 @@ const DEFAULT_UPCOMING_EVENTS = [
   {
     slug: "dallas-2027",
     title: "Dallas 2027 Summit",
-    date: "January 2027",
+    date: "Wednesday, January 20, 2027",
     format: "In person"
   }
 ];
-const allowedStatuses = new Set(["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"]);
-const allowedLifecycleStages = new Set(["prospect", "invited", "registered", "attended", "no-show", "member-candidate", "member", "partner-candidate", "partner", "inactive", "do-not-contact"]);
+const allowedStatuses = new Set(["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
+const allowedLifecycleStages = new Set(["guest", "featured-guest", "fellow", "contributing-fellow", "senior-fellow", "distinguished-fellow"]);
 const allowedRegistrationStatuses = new Set(["invited", "opened", "started", "confirmed", "declined", "canceled", "waitlisted"]);
 const allowedStrategicRoles = new Set(["attendee", "speaker", "moderator", "roundtable-leader", "research-contributor", "sponsor-representative", "partner"]);
 const allowedNextActions = new Set(["none", "call", "send-invitation", "confirm-role", "follow-up", "introduce", "schedule-call", "send-brief", "membership-outreach", "partner-outreach"]);
@@ -267,13 +267,13 @@ const eventSponsorCrawlStarterSources = [
 const emergingCompanyDiscoverySegment = "emerging-10-100";
 const emergingCompanyTargetEmployeeRange = "10-100";
 const emergingCompanyStarterSources = [
-  ["emerging-yc-ai", "YC AI Startups", "https://www.ycombinator.com/companies/industry/ai", "YC AI company directory; useful for emerging companies building with or around AI, often with public team-size signals."],
-  ["emerging-yc-saas", "YC SaaS Startups", "https://www.ycombinator.com/companies/industry/saas", "YC SaaS company directory; useful for emerging software vendors likely to leverage AI in product and operations."],
-  ["emerging-yc-security", "YC Security Startups", "https://www.ycombinator.com/companies/industry/security", "YC security company directory; useful for emerging cybersecurity vendors with direct CISO audience fit."],
-  ["emerging-wellfound-ai", "Wellfound AI Startups", "https://wellfound.com/startups/industry/artificial-intelligence", "Wellfound AI startup directory; useful for finding smaller hiring-stage AI-enabled companies."],
-  ["emerging-wellfound-saas", "Wellfound SaaS Startups", "https://wellfound.com/startups/industry/saas", "Wellfound SaaS startup directory; useful for smaller software companies likely experimenting with AI."],
-  ["emerging-topstartups-ai", "TopStartups AI Companies", "https://topstartups.io/?industries=Artificial+Intelligence", "TopStartups AI company directory; useful for smaller venture-backed or founder-led companies."],
-  ["emerging-built-in-ai-roundup", "Built In AI Companies Roundup", "https://builtin.com/artificial-intelligence/ai-companies-roundup", "Built In AI company roundup; useful for finding AI-enabled software, cyber, data, and productivity vendors."]
+  ["emerging-yc-ai", "YC AI Startups", "https://www.ycombinator.com/companies/industry/ai", "Y Combinator AI startup directory, useful for finding smaller AI-leveraging software companies before they are obvious sponsor targets."],
+  ["emerging-yc-saas", "YC SaaS Startups", "https://www.ycombinator.com/companies/industry/saas", "Y Combinator SaaS startup directory for emerging B2B software vendors likely to be in the 10-100 employee research lane."],
+  ["emerging-yc-security", "YC Security Startups", "https://www.ycombinator.com/companies/industry/security", "Y Combinator security startup directory for small cybersecurity and infrastructure vendors."],
+  ["emerging-wellfound-ai", "Wellfound AI Startups", "https://wellfound.com/startups/industry/artificial-intelligence", "Wellfound AI startup category for smaller companies hiring around AI-enabled products and operations."],
+  ["emerging-wellfound-saas", "Wellfound SaaS Startups", "https://wellfound.com/startups/industry/saas", "Wellfound SaaS startup category for emerging software vendors."],
+  ["emerging-topstartups-ai", "TopStartups AI Companies", "https://topstartups.io/?industries=Artificial+Intelligence", "Startup directory with AI industry filters and company-size context for emerging AI-enabled vendors."],
+  ["emerging-built-in-ai-roundup", "Built In AI Companies Roundup", "https://builtin.com/artificial-intelligence/ai-companies-roundup", "Built In AI company roundup used as an emerging-company seed source before size verification."]
 ].map(([sourceId, sourceName, sourceUrl, description]) => ({
   sourceId,
   sourceName,
@@ -584,9 +584,9 @@ function cleanNumber(value, fallback = 0, min = 0, max = 100) {
 }
 
 function employeeCountFromText(value = "") {
-  const text = stripHtml(value);
-  const match = text.match(/\b(\d{1,6})\s+employees?\b/i);
-  return match ? cleanNumber(match[1], 0, 1, 1000000) : 0;
+  const match = cleanString(stripHtml(value), 1200).replace(/,/g, "").match(/\b(\d{1,6})\s+employees?\b/i);
+  if (!match) return 0;
+  return cleanNumber(match[1], 0, 0, 1000000);
 }
 
 function employeeRangeForCount(count = 0) {
@@ -602,12 +602,12 @@ function employeeRangeForCount(count = 0) {
 
 function employeeCountMatchesTarget(count = 0, targetRange = "") {
   const value = cleanNumber(count, 0, 0, 1000000);
-  const raw = cleanString(targetRange, 80);
-  if (!value || !raw) return true;
-  const parts = raw.match(/\d+/g)?.map((part) => Number(part)).filter((part) => Number.isFinite(part)) || [];
-  if (!parts.length) return true;
-  const min = parts[0];
-  const max = parts[1] || parts[0];
+  const target = cleanString(targetRange, 80);
+  if (!value || !target) return true;
+  const numbers = target.match(/\d+/g)?.map((number) => Number(number)).filter(Number.isFinite) || [];
+  if (!numbers.length) return true;
+  const min = Math.min(...numbers);
+  const max = numbers.length > 1 ? Math.max(...numbers) : min;
   return value >= min && value <= max;
 }
 
@@ -905,8 +905,8 @@ function extractCompanyLinks(html = "", sourceUrl = "", limit = 40, debug = null
     return cleanString(stripHtml(text), 300)
       .replace(/\s+/g, " ")
       .replace(/\s+[SWFP]\d{4}\s+Active.*$/i, "")
-      .replace(/\s+Active\s*[|-].*$/i, "")
-      .replace(/\s*[|-]\s*\d{1,6}\s+employees?.*$/i, "")
+      .replace(/\s+Active\s*[•|-].*$/i, "")
+      .replace(/\s*[•|-]\s*\d{1,6}\s+employees?.*$/i, "")
       .trim();
   }
   function addNamedCandidate(companyName = "", sourceProfileUrl = "", description = "", reason = "structured-list-name") {
@@ -1311,10 +1311,12 @@ function cleanGuestRegistrationType(value) {
   return {
     "featured-partner": "featured-partner",
     "featured-guest": "featured-guest",
+    "featured-member": "featured-member",
     partner: "partner",
     presenter: "presenter",
     roundtable: "roundtable-leader",
     "roundtable-leader": "roundtable-leader",
+    member: "member",
     guest: "guest"
   }[cleanString(value, 80).toLowerCase()] || "guest";
 }
@@ -1322,6 +1324,39 @@ function cleanGuestRegistrationType(value) {
 function cleanOptionalRegistrationType(value) {
   const raw = cleanString(value, 80);
   return raw ? cleanGuestRegistrationType(raw) : "";
+}
+
+function cleanContactEventRole(value) {
+  const raw = cleanString(value, 120).toLowerCase();
+  if (raw.includes("featured partner")) return "featured-partner";
+  if (raw.includes("featured guest")) return "featured-guest";
+  if (raw.includes("featured member")) return "featured-member";
+  if (raw.includes("round table") || raw.includes("roundtable")) return "roundtable-leader";
+  if (raw.includes("presenter") || raw.includes("speaker")) return "presenter";
+  if (raw.includes("partner")) return "partner";
+  if (raw.includes("member")) return "member";
+  return cleanGuestRegistrationType(raw);
+}
+
+function contactEventRoleLabel(value) {
+  return {
+    "featured-partner": "Featured Partner",
+    "featured-guest": "Featured Guest",
+    "featured-member": "Featured Member",
+    partner: "Partner Guest",
+    presenter: "Presenter",
+    "roundtable-leader": "Round Table Leader",
+    member: "Member",
+    guest: "Guest"
+  }[cleanContactEventRole(value)] || "Guest";
+}
+
+function contactEventStrategicRole(value) {
+  const role = cleanContactEventRole(value);
+  if (role === "presenter") return "speaker";
+  if (role === "roundtable-leader") return "roundtable-leader";
+  if (role === "partner" || role === "featured-partner") return "partner";
+  return "attendee";
 }
 
 function cleanEventShowId(value, fallback = "both") {
@@ -1417,6 +1452,12 @@ function normalizeRecord(key, record) {
     isFeaturedMember: Boolean(record?.isFeaturedMember),
     publicationUseName: Boolean(record?.publicationUseName),
     publicationUseCompany: Boolean(record?.publicationUseCompany),
+    attended: record?.attended === true,
+    attendedCount: record?.attended === true ? 1 : 0,
+    attendanceStatus: cleanString(record?.attendanceStatus) || "not_recorded",
+    attendedAt: cleanString(record?.attendedAt),
+    attendanceUpdatedAt: cleanString(record?.attendanceUpdatedAt),
+    attendanceUpdatedBy: cleanString(record?.attendanceUpdatedBy),
     crmStatus: allowedStatuses.has(record?.crmStatus) ? record.crmStatus : "new",
     crmNotes: cleanString(record?.crmNotes),
     crmUpdatedAt: cleanString(record?.crmUpdatedAt),
@@ -1476,7 +1517,7 @@ function normalizeContactRecord(key, record = {}) {
     partnerProductTypes: cleanString(record.partnerProductTypes, 2000),
     partnerClientMessaging: cleanString(record.partnerClientMessaging, 4000),
     relationshipOwner: cleanString(record.relationshipOwner, 180),
-    lifecycleStage: cleanAllowed(record.lifecycleStage, allowedLifecycleStages, latestEvent.registrationType ? "registered" : "prospect"),
+    lifecycleStage: cleanAllowed(record.lifecycleStage, allowedLifecycleStages, "guest"),
     nextAction: cleanAllowed(record.nextAction, allowedNextActions, "none"),
     nextActionDueDate: cleanString(record.nextActionDueDate || record.dueDate, 40),
     lastContactDate: cleanString(record.lastContactDate, 40),
@@ -1517,14 +1558,15 @@ function normalizeContactRecord(key, record = {}) {
       intendedGuestName: cleanString(event?.intendedGuestName || event?.invitedName || event?.guestName),
       invitedName: cleanString(event?.invitedName || event?.intendedGuestName || event?.guestName),
       invitedBy: cleanString(event?.invitedBy || event?.inviter || event?.invitedByName, 180),
-      guestRegistrationType: cleanGuestRegistrationType(event?.guestRegistrationType || event?.registrationRole),
-      partnerRegistrationType: cleanOptionalRegistrationType(event?.partnerRegistrationType || event?.registrationRole),
-      registrationRole: cleanGuestRegistrationType(event?.registrationRole || event?.partnerRegistrationType || event?.guestRegistrationType),
+      contactEventRole: cleanContactEventRole(event?.contactEventRole || event?.registrationRole || event?.partnerRegistrationType || event?.guestRegistrationType || event?.role || event?.registrationType),
+      guestRegistrationType: cleanGuestRegistrationType(event?.guestRegistrationType || event?.registrationRole || event?.contactEventRole),
+      partnerRegistrationType: cleanOptionalRegistrationType(event?.partnerRegistrationType || event?.registrationRole || event?.contactEventRole),
+      registrationRole: cleanContactEventRole(event?.registrationRole || event?.partnerRegistrationType || event?.guestRegistrationType || event?.contactEventRole || event?.role || event?.registrationType),
       inviteCode: cleanString(event?.inviteCode),
       registrationId: cleanString(event?.registrationId),
       registrationType: cleanString(event?.registrationType),
-      role: cleanString(event?.role),
-      strategicRole: cleanAllowed(event?.strategicRole || event?.role || event?.registrationRole, allowedStrategicRoles, "attendee"),
+      role: cleanString(event?.role) || contactEventRoleLabel(event?.contactEventRole || event?.registrationRole || event?.partnerRegistrationType || event?.guestRegistrationType || event?.registrationType),
+      strategicRole: cleanAllowed(event?.strategicRole || contactEventStrategicRole(event?.contactEventRole || event?.registrationRole || event?.partnerRegistrationType || event?.guestRegistrationType || event?.role || event?.registrationType), allowedStrategicRoles, "attendee"),
       registrationStatus: cleanAllowed(event?.registrationStatus || event?.status || event?.crmStatus, allowedRegistrationStatuses, "confirmed"),
       status: cleanAllowed(event?.status || event?.registrationStatus || event?.crmStatus, allowedRegistrationStatuses, "confirmed"),
       publicationUseName: event?.publicationUseName === true,
@@ -1663,6 +1705,8 @@ function roleLabelForRow(row = {}, type = "") {
   if (role === "presenter" || row.isPresenter) return "Presenter";
   if (role === "roundtable-leader" || row.isRoundtableLeader) return "Round Table Leader";
   if (role === "featured-guest" || row.isFeaturedGuest) return "Featured Guest";
+  if (role === "featured-member" || row.isFeaturedMember) return "Featured Member";
+  if (role === "member") return "Member";
   return "Guest";
 }
 
@@ -1735,8 +1779,11 @@ function contactFromRegistrant(row = {}, type = "") {
       publicationUseName: row.publicationUseName === true,
       publicationUseCompany: row.publicationUseCompany === true,
       registeredAt: cleanString(row.createdAt),
-      attended: false,
-      attendanceStatus: "not_recorded"
+      attended: row.attended === true,
+      attendanceStatus: cleanString(row.attendanceStatus) || (row.attended === true ? "attended" : "not_recorded"),
+      attendedAt: cleanString(row.attendedAt),
+      attendanceUpdatedAt: cleanString(row.attendanceUpdatedAt),
+      attendanceUpdatedBy: cleanString(row.attendanceUpdatedBy)
     }]
   });
 }
@@ -2037,9 +2084,9 @@ function normalizeProspectCompany(key, record = {}, people = [], weights = defau
     partnerPriority: cleanString(record.partnerPriority, 80) || priorityBand(score),
     partnerStatus,
     discoverySegment: cleanString(record.discoverySegment, 120),
-    discoverySegments: cleanArray(record.discoverySegments, 12, 120),
+    discoverySegments: cleanArray(record.discoverySegments || record.discoverySegment, 12, 120),
     targetEmployeeRange: cleanString(record.targetEmployeeRange, 80),
-    employeeRangeStatus: cleanString(record.employeeRangeStatus, 120),
+    employeeRangeStatus: cleanString(record.employeeRangeStatus, 80),
     companySizeEvidence: cleanString(record.companySizeEvidence, 1000),
     discoverySources: cleanArray(record.discoverySources || record.sources, 20, 160),
     sourceUrls: cleanArray(record.sourceUrls, 30, 500),
@@ -2220,6 +2267,7 @@ async function prospectDebugEntries(env, limit = 12) {
       discovered: cleanNumber(record.discovered, 0, 0, 10000),
       candidates: cleanNumber(record.candidates, 0, 0, 10000),
       skippedExisting: cleanNumber(record.skippedExisting, 0, 0, 10000),
+      taggedExisting: cleanNumber(record.taggedExisting, 0, 0, 10000),
       accepted: Array.isArray(record.accepted) ? record.accepted.slice(0, 20) : [],
       rejected: Array.isArray(record.rejected) ? record.rejected.slice(0, 20) : [],
       skipped: Array.isArray(record.skipped) ? record.skipped.slice(0, 20) : []
@@ -2315,17 +2363,16 @@ async function saveProspectCompany(env, payload = {}, actor = "") {
     canonicalDomain: normalizeDomain(payload.canonicalDomain || payload.websiteUrl || previous?.canonicalDomain),
     websiteUrl: normalizeUrl(payload.websiteUrl || payload.canonicalDomain || previous?.websiteUrl),
     linkedinCompanyUrl: normalizeUrl(payload.linkedinCompanyUrl || previous?.linkedinCompanyUrl),
-    discoverySegment: cleanString(payload.discoverySegment ?? previous?.discoverySegment, 120),
-    discoverySegments: cleanArray([
-      ...(cleanArray(previous?.discoverySegments, 12, 120)),
-      ...(cleanArray(payload.discoverySegments, 12, 120)),
-      cleanString(payload.discoverySegment, 120)
-    ], 12, 120),
-    targetEmployeeRange: cleanString(payload.targetEmployeeRange ?? previous?.targetEmployeeRange, 80),
-    employeeRangeStatus: cleanString(payload.employeeRangeStatus ?? previous?.employeeRangeStatus, 120),
-    companySizeEvidence: cleanString(payload.companySizeEvidence ?? previous?.companySizeEvidence, 1000),
     sourceUrls: cleanArray(payload.sourceUrls ?? previous?.sourceUrls, 30, 500),
     discoverySources: cleanArray(payload.discoverySources ?? previous?.discoverySources, 20, 160),
+    discoverySegment: cleanString(payload.discoverySegment ?? previous?.discoverySegment, 120),
+    discoverySegments: cleanArray([
+      ...(cleanArray(previous?.discoverySegments || previous?.discoverySegment, 12, 120)),
+      ...(cleanArray(payload.discoverySegments || payload.discoverySegment, 12, 120))
+    ], 12, 120),
+    targetEmployeeRange: cleanString(payload.targetEmployeeRange ?? previous?.targetEmployeeRange, 80),
+    employeeRangeStatus: cleanString(payload.employeeRangeStatus ?? previous?.employeeRangeStatus, 80),
+    companySizeEvidence: cleanString(payload.companySizeEvidence ?? previous?.companySizeEvidence, 1000),
     categories: cleanArray(payload.categories ?? previous?.categories, 20, 160),
     products: cleanArray(payload.products ?? previous?.products, 30, 180),
     targetIndustries: cleanArray(payload.targetIndustries ?? previous?.targetIndustries, 24, 160),
@@ -2388,17 +2435,16 @@ async function saveDiscoveredProspectCompany(env, payload = {}, actor = "", conf
     canonicalDomain: normalizeDomain(payload.canonicalDomain || payload.websiteUrl || previous?.canonicalDomain),
     websiteUrl: normalizeUrl(payload.websiteUrl || payload.canonicalDomain || previous?.websiteUrl),
     linkedinCompanyUrl: normalizeUrl(payload.linkedinCompanyUrl || previous?.linkedinCompanyUrl),
-    discoverySegment: cleanString(payload.discoverySegment ?? previous?.discoverySegment, 120),
-    discoverySegments: cleanArray([
-      ...(cleanArray(previous?.discoverySegments, 12, 120)),
-      ...(cleanArray(payload.discoverySegments, 12, 120)),
-      cleanString(payload.discoverySegment, 120)
-    ], 12, 120),
-    targetEmployeeRange: cleanString(payload.targetEmployeeRange ?? previous?.targetEmployeeRange, 80),
-    employeeRangeStatus: cleanString(payload.employeeRangeStatus ?? previous?.employeeRangeStatus, 120),
-    companySizeEvidence: cleanString(payload.companySizeEvidence ?? previous?.companySizeEvidence, 1000),
     sourceUrls: cleanArray([...(cleanArray(previous?.sourceUrls, 30, 500)), ...(cleanArray(payload.sourceUrls, 30, 500))], 30, 500),
     discoverySources: cleanArray([...(cleanArray(previous?.discoverySources, 20, 160)), ...(cleanArray(payload.discoverySources, 20, 160))], 20, 160),
+    discoverySegment: cleanString(payload.discoverySegment ?? previous?.discoverySegment, 120),
+    discoverySegments: cleanArray([
+      ...(cleanArray(previous?.discoverySegments || previous?.discoverySegment, 12, 120)),
+      ...(cleanArray(payload.discoverySegments || payload.discoverySegment, 12, 120))
+    ], 12, 120),
+    targetEmployeeRange: cleanString(payload.targetEmployeeRange ?? previous?.targetEmployeeRange, 80),
+    employeeRangeStatus: cleanString(payload.employeeRangeStatus ?? previous?.employeeRangeStatus, 80),
+    companySizeEvidence: cleanString(payload.companySizeEvidence ?? previous?.companySizeEvidence, 1000),
     categories: cleanArray(payload.categories ?? previous?.categories, 20, 160),
     targetExecutiveRoles: cleanArray(payload.targetExecutiveRoles ?? previous?.targetExecutiveRoles ?? payload.targetBuyers, 24, 160),
     aiVendor: payload.aiVendor === undefined ? previous?.aiVendor !== false : payload.aiVendor !== false,
@@ -2724,9 +2770,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
     sourceUrl,
     sourceType: payload.sourceType || "Public Web",
     category: payload.category,
-    description: payload.description,
-    discoverySegment: payload.discoverySegment,
-    targetEmployeeRange: payload.targetEmployeeRange
+    description: payload.description
   }, actor);
   const limit = cleanNumber(payload.limit, 25, 1, 75);
   const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew || payload.targetRemaining || limit, limit, 1, 75);
@@ -2779,8 +2823,8 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       if (payload.targetEmployeeRange && candidateEmployeeCount && !employeeCountMatchesTarget(candidateEmployeeCount, payload.targetEmployeeRange)) {
         recordDiscoveryDiagnostic(debug, "rejected", {
           href: candidate.sourceProfileUrl || candidate.sourceUrl || candidate.websiteUrl,
-          domain: candidate.canonicalDomain,
           rawLabel: candidate.rawLabel || candidate.companyName,
+          companyName: candidate.companyName,
           reason: `employee-count-outside-${payload.targetEmployeeRange}`
         });
         continue;
@@ -2794,16 +2838,19 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       const existing = findProspectCompanyInList(existingCompanies, candidatePayload);
       if ((candidateId && seenCompanyIds.has(candidateId)) || existing) {
         skippedExisting += 1;
-        if (existing && payload.discoverySegment) {
+        if (existing && cleanString(payload.discoverySegment, 120)) {
           await saveProspectCompany(env, {
-            ...existing,
-            discoverySegment: existing.discoverySegment || payload.discoverySegment,
-            discoverySegments: cleanArray([...(cleanArray(existing.discoverySegments, 12, 120)), payload.discoverySegment], 12, 120),
-            targetEmployeeRange: existing.targetEmployeeRange || payload.targetEmployeeRange,
-            employeeRangeStatus: existing.employeeRangeStatus || payload.employeeRangeStatus || "TARGETED_NOT_VERIFIED",
-            companySizeEvidence: existing.companySizeEvidence || candidate.companySizeEvidence || payload.companySizeEvidence,
-            discoverySources: cleanArray([...(cleanArray(existing.discoverySources, 20, 160)), sourceName], 20, 160),
-            sourceUrls: cleanArray([...(cleanArray(existing.sourceUrls, 30, 500)), sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 30, 500)
+            companyId: existing.companyId,
+            companyName: existing.companyName || candidate.companyName,
+            canonicalDomain: existing.canonicalDomain || candidate.canonicalDomain,
+            websiteUrl: existing.websiteUrl || candidate.websiteUrl,
+            discoverySegment: payload.discoverySegment,
+            discoverySegments: cleanArray([...(existing.discoverySegments || []), payload.discoverySegment], 12, 120),
+            targetEmployeeRange: payload.targetEmployeeRange,
+            employeeRangeStatus: payload.employeeRangeStatus || "TARGETED_NOT_VERIFIED",
+            companySizeEvidence: payload.companySizeEvidence || `Found through ${sourceName}, which is being used for the ${payload.targetEmployeeRange || "10-100"} employee discovery lane; verify actual employee count before outreach prioritization.`,
+            discoverySources: cleanArray([...(existing.discoverySources || []), sourceName], 20, 160),
+            sourceUrls: cleanArray([...(existing.sourceUrls || []), sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 30, 500)
           }, actor);
           taggedExisting += 1;
         }
@@ -2811,7 +2858,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
           companyName: candidate.companyName,
           domain: candidate.canonicalDomain,
           url: candidate.websiteUrl,
-          reason: existing ? (payload.discoverySegment ? "already in Vendor Universe; tagged for segment" : "already in Vendor Universe") : "duplicate in this discovery run"
+          reason: existing ? "already in Vendor Universe" : "duplicate in this discovery run"
         });
         continue;
       }
@@ -2821,11 +2868,6 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
         websiteUrl: candidate.websiteUrl,
         employeeCount: candidate.employeeCount,
         employeeRange: candidate.employeeRange,
-        discoverySegment: payload.discoverySegment,
-        discoverySegments: cleanArray([payload.discoverySegment], 12, 120),
-        targetEmployeeRange: payload.targetEmployeeRange,
-        employeeRangeStatus: candidate.employeeCount ? "SOURCE_REPORTED" : payload.employeeRangeStatus || (payload.targetEmployeeRange ? "TARGETED_NOT_VERIFIED" : ""),
-        companySizeEvidence: candidate.companySizeEvidence || payload.companySizeEvidence || "",
         description: discoveryDescriptionForCandidate(candidate, source, candidate.sourcePageTitle || title),
         classificationReason: discoveryReasonForCandidate(candidate, source, candidate.sourcePageTitle || title),
         primaryCategory: category,
@@ -2838,6 +2880,11 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
         sponsorshipNotes: /sponsor|conference|summit|expo|exhibitor|partner/i.test(`${source.sourceType} ${source.category} ${source.sourceName}`)
           ? `Found on ${sourceName}${candidate.sourceUrl && candidate.sourceUrl !== sourceUrl ? ` via ${candidate.sourceUrl}` : ""}; verify sponsorship level and spend manually.`
           : "",
+        discoverySegment: payload.discoverySegment,
+        discoverySegments: cleanArray([payload.discoverySegment], 12, 120),
+        targetEmployeeRange: payload.targetEmployeeRange,
+        employeeRangeStatus: candidate.employeeCount ? "SOURCE_REPORTED" : payload.employeeRangeStatus || (payload.targetEmployeeRange ? "TARGETED_NOT_VERIFIED" : ""),
+        companySizeEvidence: candidate.companySizeEvidence || payload.companySizeEvidence || (payload.targetEmployeeRange ? `Found through ${sourceName}, which is being used for the ${payload.targetEmployeeRange} employee discovery lane; verify actual employee count before outreach prioritization.` : ""),
         discoverySources: [sourceName],
         sourceUrls: cleanArray([sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 30, 500),
         processingStage: "DOMAIN NORMALIZATION",
@@ -2942,6 +2989,11 @@ function prospectStarterSourceById(sourceId = "") {
   return partnerProspectStarterSources.find((source) => source.sourceId === cleaned || companySlug(source.sourceName) === cleaned) || null;
 }
 
+function prospectEmergingSourceById(sourceId = "") {
+  const cleaned = cleanString(sourceId, 180);
+  return emergingCompanyStarterSources.find((source) => source.sourceId === cleaned || companySlug(source.sourceName) === cleaned) || null;
+}
+
 function prospectCompanyMatchesPayload(company = {}, payload = {}) {
   const requestedKey = cleanString(payload.key || payload.companyKey, 500);
   const requestedId = cleanString(payload.companyId, 180);
@@ -2963,6 +3015,26 @@ async function starterSourcesWithRunState(env, savedSourceRows = null) {
   const savedSources = Array.isArray(savedSourceRows) ? savedSourceRows : await prospectSources(env);
   const savedById = new Map(savedSources.map((source) => [source.sourceId, source]));
   return partnerProspectStarterSources.map((source, index) => {
+    const saved = savedById.get(source.sourceId) || {};
+    return {
+      ...source,
+      runOrder: index,
+      lastRunAt: cleanString(saved.lastRunAt, 40),
+      lastRunBy: cleanString(saved.lastRunBy, 180),
+      lastRunStatus: cleanString(saved.lastRunStatus, 80),
+      lastRunError: cleanString(saved.lastRunError, 1000),
+      discoveredCount: cleanNumber(saved.discoveredCount, 0, 0, 1000000),
+      skippedExistingCount: cleanNumber(saved.skippedExistingCount, 0, 0, 1000000),
+      taggedExistingCount: cleanNumber(saved.taggedExistingCount, 0, 0, 1000000),
+      updatedAt: cleanString(saved.updatedAt, 40)
+    };
+  });
+}
+
+async function emergingSourcesWithRunState(env, savedSourceRows = null) {
+  const savedSources = Array.isArray(savedSourceRows) ? savedSourceRows : await prospectSources(env);
+  const savedById = new Map(savedSources.map((source) => [source.sourceId, source]));
+  return emergingCompanyStarterSources.map((source, index) => {
     const saved = savedById.get(source.sourceId) || {};
     return {
       ...source,
@@ -3030,8 +3102,7 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
         ok: true,
         candidates: result.candidates,
         discovered: result.discovered,
-        skippedExisting: result.skippedExisting,
-        taggedExisting: result.taggedExisting
+        skippedExisting: result.skippedExisting
       });
     } catch (error) {
       results.push({ sourceId: source.sourceId, sourceName: source.sourceName, ok: false, error: cleanString(error.message, 500) });
@@ -3040,7 +3111,6 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
   const discovered = results.reduce((sum, result) => sum + Number(result.discovered || 0), 0);
   const candidates = results.reduce((sum, result) => sum + Number(result.candidates || 0), 0);
   const skippedExisting = results.reduce((sum, result) => sum + Number(result.skippedExisting || 0), 0);
-  const taggedExisting = results.reduce((sum, result) => sum + Number(result.taggedExisting || 0), 0);
   await writeProspectAudit(env, "starter-sources", {
     actor,
     action: "run-starter-discovery-sources",
@@ -3049,8 +3119,7 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
     targetNewCompanies,
     candidates,
     discovered,
-    skippedExisting,
-    taggedExisting
+    skippedExisting
   });
   return {
     attempted: results.length,
@@ -3059,35 +3128,9 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
     candidates,
     discovered,
     skippedExisting,
-    taggedExisting,
     exhausted: discovered < targetNewCompanies && results.length >= sources.length,
     results
   };
-}
-
-function prospectEmergingSourceById(sourceId = "") {
-  const cleaned = cleanString(sourceId, 180);
-  return emergingCompanyStarterSources.find((source) => source.sourceId === cleaned || companySlug(source.sourceName) === cleaned) || null;
-}
-
-async function emergingSourcesWithRunState(env, savedSourceRows = null) {
-  const savedSources = Array.isArray(savedSourceRows) ? savedSourceRows : await prospectSources(env);
-  const savedById = new Map(savedSources.map((source) => [source.sourceId, source]));
-  return emergingCompanyStarterSources.map((source, index) => {
-    const saved = savedById.get(source.sourceId) || {};
-    return {
-      ...source,
-      runOrder: index,
-      lastRunAt: cleanString(saved.lastRunAt, 40),
-      lastRunBy: cleanString(saved.lastRunBy, 180),
-      lastRunStatus: cleanString(saved.lastRunStatus, 80),
-      lastRunError: cleanString(saved.lastRunError, 1000),
-      discoveredCount: cleanNumber(saved.discoveredCount, 0, 0, 1000000),
-      skippedExistingCount: cleanNumber(saved.skippedExistingCount, 0, 0, 1000000),
-      taggedExistingCount: cleanNumber(saved.taggedExistingCount, 0, 0, 1000000),
-      updatedAt: cleanString(saved.updatedAt, 40)
-    };
-  });
 }
 
 async function runEmergingProspectSources(env, payload = {}, actor = "") {
@@ -3111,10 +3154,11 @@ async function runEmergingProspectSources(env, payload = {}, actor = "") {
         ...source,
         limit: limitPerSource,
         targetRemaining: remaining,
+        targetNewCompanies: remaining,
         discoverySegment: emergingCompanyDiscoverySegment,
         targetEmployeeRange: emergingCompanyTargetEmployeeRange,
         employeeRangeStatus: "TARGETED_NOT_VERIFIED",
-        companySizeEvidence: `Found through ${source.sourceName}, an Emerging 10-100 discovery source. Verify employee count before using this lane for small-company targeting.`,
+        companySizeEvidence: `Found through ${source.sourceName}, an Emerging 10-100 discovery source; verify actual employee count before outreach prioritization.`,
         existingCompanies,
         seenCompanyIds
       }, actor);
@@ -4559,7 +4603,7 @@ async function updateContact(env, payload = {}, actor = "") {
     invitationSource: cleanString(payload.invitationSource ?? existing?.invitationSource, 180),
     invitedBy: cleanString(payload.invitedBy ?? payload.inviter ?? payload.invitedByName ?? existing?.invitedBy, 180),
     relationshipOwner: cleanString(payload.relationshipOwner ?? existing?.relationshipOwner, 180),
-    lifecycleStage: cleanAllowed(payload.lifecycleStage ?? existing?.lifecycleStage, allowedLifecycleStages, "prospect"),
+    lifecycleStage: cleanAllowed(payload.lifecycleStage ?? existing?.lifecycleStage, allowedLifecycleStages, "guest"),
     nextAction: cleanAllowed(payload.nextAction ?? existing?.nextAction, allowedNextActions, "none"),
     nextActionDueDate: cleanString(payload.nextActionDueDate ?? payload.dueDate ?? existing?.nextActionDueDate, 40),
     lastContactDate: cleanString(payload.lastContactDate ?? existing?.lastContactDate, 40),
@@ -4842,6 +4886,37 @@ async function syncRegistrationAttendance(env, email, targetEvent, attended, act
   }
 }
 
+async function syncContactEventAttendance(env, email, targetEvent, attended, actor = "", now = "") {
+  const normalizedEmail = cleanString(email).toLowerCase();
+  if (!isEmail(normalizedEmail)) return;
+  const key = `${registrantTypes.contacts.crmPrefix}${normalizedEmail}`;
+  const existing = await readRawRecord(env, key);
+  if (!existing || !Array.isArray(existing.events)) return;
+
+  let matched = false;
+  const nextEvents = existing.events.map((event) => {
+    if (!contactEventMatches(event, targetEvent)) return event;
+    matched = true;
+    return {
+      ...event,
+      attended,
+      attendanceStatus: attended ? "attended" : "not_attended",
+      attendedAt: attended ? (cleanString(event.attendedAt) || now) : "",
+      attendanceUpdatedAt: now,
+      attendanceUpdatedBy: actor || "crm"
+    };
+  });
+  if (!matched) return;
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+    ...existing,
+    events: nextEvents,
+    updatedAt: now,
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor || "crm"
+  }));
+}
+
 async function updateContactEventAttendance(env, payload = {}, actor = "") {
   const requestedKey = cleanString(payload.key || payload.contactKey);
   const email = cleanString(
@@ -4904,6 +4979,155 @@ async function updateContactEventAttendance(env, payload = {}, actor = "") {
   }));
 
   await syncRegistrationAttendance(env, email, targetEvent, attended, actor, now);
+}
+
+async function updateRegistrantEventAttendance(env, payload = {}, actor = "") {
+  const type = cleanType(payload.type);
+  if (type === "contacts") throw new Error("Use Guest Registration to update event attendance.");
+  const key = cleanString(payload.key);
+  if (!key) throw new Error("Registration key is required before updating attendance.");
+
+  const rows = await registrants(env, type);
+  const row = rows.find((entry) => entry.key === key || entry.id === key);
+  if (!row) throw new Error(`${registrantTypes[type].label} registrant was not found.`);
+
+  const { key: crmKey, row: crmRow } = await ensureCrmRecord(env, row, type);
+  const targetEvent = {
+    id: cleanString(payload.eventKey || payload.id || row.id),
+    eventId: cleanString(payload.eventId || row.eventId),
+    eventSlug: cleanString(payload.eventSlug || row.eventSlug),
+    eventName: cleanString(payload.eventName || row.eventName),
+    eventDate: cleanString(payload.eventDate || row.eventDate),
+    eventTime: cleanString(payload.eventTime || row.eventTime),
+    eventShowId: cleanEventShowId(payload.eventShowId || row.eventShowId || row.showId || row.eventShow, ""),
+    eventShowLabel: cleanString(payload.eventShowLabel || row.eventShowLabel),
+    eventShowTime: cleanString(payload.eventShowTime || row.eventShowTime || row.eventTime),
+    inviteCode: cleanString(payload.inviteCode || row.inviteCode),
+    registrationId: cleanString(payload.registrationId || row.id),
+    registeredAt: cleanString(payload.registeredAt || row.createdAt)
+  };
+  if (!contactEventIdentity(targetEvent)) throw new Error("Event is required before updating attendance.");
+
+  const attended = payload.attended === true;
+  const now = new Date().toISOString();
+  const next = {
+    ...crmRow,
+    key: undefined,
+    crmType: registrantTypes[type].crmType,
+    attended,
+    attendanceStatus: attended ? "attended" : "not_attended",
+    attendedAt: attended ? (cleanString(crmRow.attendedAt) || now) : "",
+    attendanceUpdatedAt: now,
+    attendanceUpdatedBy: actor || "crm",
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor || "crm"
+  };
+
+  await env.MOJO_SUMMITS_SETUP_STATE.put(crmKey, JSON.stringify(next));
+  await syncContactEventAttendance(env, cleanString(next.email || row.email).toLowerCase(), targetEvent, attended, actor, now);
+}
+
+function contactStorageTarget(payload = {}) {
+  const requestedKey = cleanString(payload.key || payload.contactKey);
+  const requestedEmail = cleanString(
+    payload.email ||
+      (requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
+        ? requestedKey.replace(registrantTypes.contacts.crmPrefix, "")
+        : requestedKey)
+  ).toLowerCase();
+
+  if (isEmail(requestedEmail)) {
+    return {
+      key: `${registrantTypes.contacts.crmPrefix}${requestedEmail}`,
+      email: requestedEmail,
+      identity: requestedEmail
+    };
+  }
+
+  if (requestedKey.startsWith(registrantTypes.contacts.crmPrefix)) {
+    const identity = cleanString(requestedKey.replace(registrantTypes.contacts.crmPrefix, ""));
+    return {
+      key: requestedKey,
+      email: "",
+      identity
+    };
+  }
+
+  throw new Error("Contact key or email is required before updating role.");
+}
+
+function contactRecordIdFromIdentity(identity = "") {
+  const normalized = cleanString(identity);
+  if (!normalized.startsWith("pending:")) return normalized;
+  const pendingId = normalized.split(":").slice(2).join(":");
+  return pendingId || normalized;
+}
+
+async function updateContactEventRole(env, payload = {}, actor = "") {
+  const targetContact = contactStorageTarget(payload);
+  const existing = await readRawRecord(env, targetContact.key);
+  const targetEvent = {
+    id: cleanString(payload.eventKey || payload.id),
+    eventId: cleanString(payload.eventId),
+    eventSlug: cleanString(payload.eventSlug),
+    eventName: cleanString(payload.eventName),
+    eventDate: cleanString(payload.eventDate),
+    eventTime: cleanString(payload.eventTime),
+    eventShowId: cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, ""),
+    eventShowLabel: cleanString(payload.eventShowLabel),
+    eventShowTime: cleanString(payload.eventShowTime),
+    inviteCode: cleanString(payload.inviteCode),
+    registrationId: cleanString(payload.registrationId),
+    registeredAt: cleanString(payload.registeredAt)
+  };
+  if (!contactEventIdentity(targetEvent)) throw new Error("Event is required before updating role.");
+
+  const contactEventRole = cleanContactEventRole(payload.role || payload.contactEventRole || payload.registrationRole);
+  const roleUpdate = {
+    contactEventRole,
+    registrationRole: contactEventRole,
+    guestRegistrationType: cleanGuestRegistrationType(contactEventRole),
+    partnerRegistrationType: contactEventRole.includes("partner") ? contactEventRole : cleanOptionalRegistrationType(existing?.partnerRegistrationType),
+    role: contactEventRoleLabel(contactEventRole),
+    strategicRole: contactEventStrategicRole(contactEventRole)
+  };
+  const now = new Date().toISOString();
+  const events = Array.isArray(existing?.events) && existing.events.length ? existing.events : [targetEvent];
+  let matched = false;
+  const nextEvents = events.map((event) => {
+    if (!contactEventMatches(event, targetEvent)) return event;
+    matched = true;
+    return {
+      ...event,
+      ...targetEvent,
+      ...roleUpdate,
+      roleUpdatedAt: now,
+      roleUpdatedBy: actor || "crm"
+    };
+  });
+
+  if (!matched) {
+    nextEvents.unshift({
+      ...targetEvent,
+      ...roleUpdate,
+      roleUpdatedAt: now,
+      roleUpdatedBy: actor || "crm"
+    });
+  }
+
+  const existingName = cleanString(existing?.name);
+  await env.MOJO_SUMMITS_SETUP_STATE.put(targetContact.key, JSON.stringify({
+    ...(existing || {}),
+    id: cleanString(existing?.id) || targetContact.email || contactRecordIdFromIdentity(targetContact.identity) || targetContact.key,
+    email: targetContact.email || cleanString(existing?.email).toLowerCase(),
+    name: existingName && existingName !== "Name not recorded" ? existingName : targetContact.email || "",
+    source: cleanString(existing?.source) || "crm-contact-overlay",
+    createdAt: cleanString(existing?.createdAt) || now,
+    events: nextEvents,
+    updatedAt: now,
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor || "crm"
+  }));
 }
 
 function companySlug(value) {
@@ -5939,6 +6163,47 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Attendance could not be updated." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "update-registrant-event-attendance") {
+    try {
+      const type = cleanType(payload.type);
+      await updateRegistrantEventAttendance(env, payload, access.email);
+      const rows = await registrants(env, type);
+      return json({
+        ok: true,
+        type,
+        label: registrantTypes[type].label,
+        summary: summarize(rows),
+        rows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Event attendance could not be updated." }, { status: 500 });
+    }
+  }
+
+  if (payload?.action === "update-contact-event-role") {
+    try {
+      await updateContactEventRole(env, payload, access.email);
+      const rows = await contacts(env);
+      return json({
+        ok: true,
+        type: "contacts",
+        label: registrantTypes.contacts.label,
+        summary: summarizeContacts(rows),
+        rows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Contact event role could not be updated." }, { status: 500 });
     }
   }
 
