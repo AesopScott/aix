@@ -7,7 +7,6 @@ const jsonHeaders = {
 
 const maxFieldLength = 2000;
 const acceptedPhoneStatuses = new Set(["verified"]);
-const blockedEmailDomains = new Set(["gmail.com", "googlemail.com"]);
 const registrationObjectPrefix = "crm/registrations";
 const registrationPhotoObjectPrefix = "crm/registration-photos";
 const inviteUsageObjectPrefix = "crm/invite-usage";
@@ -368,11 +367,6 @@ function mergeContactEvents(existingEvents, type, registration, now) {
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function isBlockedEmail(email) {
-  const domain = email.toLowerCase().split("@").pop();
-  return blockedEmailDomains.has(domain);
 }
 
 function cleanPayload(payload, type = "") {
@@ -820,9 +814,8 @@ function validateRegistration(registration, type = "") {
   if (!registration.company) return "Company is required.";
   if (!registration.title) return "Title is required.";
   if (!registration.industry) return "Industry is required.";
-  if (!registration.email) return "Company email is required.";
+  if (!registration.email) return "Email is required.";
   if (!isValidEmail(registration.email)) return "Enter a valid email address.";
-  if (isBlockedEmail(registration.email)) return "Gmail and Googlemail addresses are not accepted.";
   if (type === "partner" && !registration.partnerProductTypes) return "Describe the types of products your company sells.";
   if (type === "partner" && !registration.partnerClientMessaging) return "Describe your typical client messaging.";
   if (!registration.phone) return "Phone number is required.";

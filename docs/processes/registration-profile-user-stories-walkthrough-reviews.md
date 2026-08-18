@@ -17,8 +17,8 @@ Review UI note: each walkthrough review check renders with `Complete` and `Updat
 
 ## Shared Review Standards
 
-- All registration forms require name, company, title, industry where present, company email, phone, phone verification status, and a six-digit invite code except partner candidate requests.
-- Gmail and Googlemail addresses are rejected for guest, member, and partner registration.
+- All registration forms require name, company, title, industry where present, email, phone, phone verification status, and a six-digit invite code except partner candidate requests.
+- Gmail and Googlemail addresses are accepted for guest, member, and partner registration.
 - Successful guest, member, and partner registrations create registration records, canonical CRM contacts, event history entries, and company rollups.
 - Invite links should show event context, used status, `Used by`, and `Used for` wherever the reviewing UI lists them.
 - Preview modes must never submit live data.
@@ -35,7 +35,7 @@ As an invited executive guest, I want to open a Mojo guest registration link and
 1. A Mojo team member or accepted member creates a guest invite link.
 2. The guest opens `/guest/?invite=######`.
 3. The page validates the code with `/api/guest-invite-codes/:code`.
-4. The guest enters full name, company, title, industry, company email, mobile phone, and publication-use choices.
+4. The guest enters full name, company, title, industry, email, mobile phone, and publication-use choices.
 5. The guest records phone confirmation. While SMS is not fully configured, guest registration normalizes unverified/code-sent states to `pending_sms_setup`.
 6. The guest submits to `/api/guest-registration`.
 7. The system stores the registration, marks stored invite usage, upserts the CRM contact, and ties the contact event history to the invite event when metadata exists.
@@ -45,7 +45,7 @@ As an invited executive guest, I want to open a Mojo guest registration link and
 
 - Direct `/guest/` visit can display the page, but submit requires a valid six-digit invite.
 - Invalid, expired, revoked, used, or wrong-type invite codes show a blocking error.
-- Gmail and Googlemail addresses are rejected before and during submit.
+- Gmail and Googlemail addresses are accepted before and during submit.
 - Event metadata from stored invite codes appears in CRM contacts and event registrant lists.
 - Used invite rows show the registrant under `Used by` and the assigned event under `Used for`.
 
@@ -61,7 +61,7 @@ As an invited prospective member, I want to unlock member registration with my s
 2. The prospective member opens `/member-registration/?invite=######` or enters the code into the gate.
 3. The page validates the code with `/api/member-invite-codes/:code`.
 4. The page unlocks the member details form after code validation.
-5. The prospective member enters name, company, title, industry, company email, mobile phone, and publication-use choices.
+5. The prospective member enters name, company, title, industry, email, mobile phone, and publication-use choices.
 6. The prospective member starts phone verification. If SMS is not fully configured, the expected submit-ready state is `pending_sms_setup`; if SMS is configured, the code must be confirmed as `verified`.
 7. The form submits to `/api/member-registration`.
 8. The system stores the registration, upserts the CRM contact, records event history, and marks the invite as used when it was a stored code.
@@ -133,7 +133,7 @@ As an invited partner contact, I want to open a private partner registration lin
 2. The partner contact opens `/partner-registration/?invite=######`.
 3. The page validates the code with `/api/partner-invite-codes/:code`.
 4. The private form unlocks and displays invite/event context.
-5. The partner enters name, company, title, industry, company email, mobile phone, and publication-use choices.
+5. The partner enters name, company, title, industry, email, mobile phone, and publication-use choices.
 6. The partner records phone confirmation as `verified` or `pending_sms_setup`.
 7. The form submits to `/api/partner-registration`.
 8. The system stores the registration, marks invite usage, upserts the canonical contact, and connects the contact to a company-level partner profile key.
@@ -143,7 +143,7 @@ As an invited partner contact, I want to open a private partner registration lin
 - Direct `/partner-registration/` shows the private-link gate and does not reveal the form.
 - Partner invite codes are strict: a stored active partner code is required.
 - `/partner-registration/?preview=4321` unlocks the form for review but blocks live submission.
-- Gmail and Googlemail addresses are rejected.
+- Gmail and Googlemail addresses are accepted.
 - The partner company, contact email, partner tier, and selected event from the invite are preserved on the registration record.
 
 ## 6. Partner Profile Access
@@ -243,7 +243,7 @@ As an accepted member who created a member nomination link, I want to send the g
 ## Cross-Workflow Open Questions
 
 - Should member-created guest and member links require event selection, matching CRM-created links?
-- Should partner candidate requests reject personal email domains, matching partner registration?
+- Should partner candidate requests apply any email-domain policy now that registration accepts Gmail and Googlemail addresses?
 - Should the member profile include an explicit send workflow, or is copy-and-send externally the intended product behavior?
 - Should guest registration require phone verification before submit once SMS is fully configured, matching member and partner behavior?
 - Which CRM implementation is authoritative on the production apex route `/crm/`?
@@ -251,7 +251,7 @@ As an accepted member who created a member nomination link, I want to send the g
 ## Suggested QA Pass
 
 1. Create one staff guest invite, one staff member invite, and one staff partner invite tied to a known event.
-2. Complete each registration with a unique company email.
+2. Complete each registration with a unique email address.
 3. Confirm CRM invite history, contacts, company rollups, and event registrant rosters.
 4. Accept the member and partner registrants, generate passwords, and confirm private profile access.
 5. From the accepted member profile, create a guest show link and a member nomination link.
