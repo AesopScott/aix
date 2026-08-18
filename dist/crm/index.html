@@ -76,8 +76,8 @@
     .top-nav a { color: var(--cyan); text-decoration: none; font-weight: 800; }
 
     main {
-      width: min(1500px, calc(100vw - 2rem));
-      max-width: 100%;
+      width: 90vw;
+      max-width: none;
       margin: 0 auto;
       padding: 2rem 0 4rem;
     }
@@ -512,6 +512,31 @@
       height: 1rem;
       padding: 0;
       accent-color: var(--cyan);
+    }
+
+    .event-controls {
+      display: grid;
+      gap: 0.45rem;
+      justify-items: end;
+    }
+
+    .event-role-control {
+      display: grid;
+      gap: 0.2rem;
+      min-width: 10.5rem;
+      color: var(--muted-blue);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .event-role-control select {
+      width: 100%;
+      min-width: 0;
+      padding: 0.48rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
     }
 
     .inline-select {
@@ -1398,6 +1423,7 @@
     .debug-row strong { color: var(--white); }
 
     @media (max-width: 980px) {
+      main { width: calc(100vw - 1rem); }
       header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-add-form, .guest-matrix-controls, .guest-matrix-summary { grid-template-columns: 1fr; }
       .partner-add-contact-form .span-2 { grid-column: auto; }
       .invite-qr { width: 100%; justify-items: start; }
@@ -1449,7 +1475,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button type="button" data-view="guest-invite-links">Guest Invites</button>
           <button type="button" data-view="guest-matrix">Guest Matrix</button>
           <button type="button" data-view="create-guest-invite-links">Create Guest Invite Links</button>
-          <button type="button" data-view="guest">Guest Registrants</button>
+          <button type="button" data-view="guest">Guest Registration</button>
           <button type="button" data-view="member">Members</button>
         </div>
         <div class="side-nav-group partner-pipeline" aria-label="Partner pipeline">
@@ -1503,8 +1529,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <option value="prospect">Prospect</option>
           <option value="invited">Invited</option>
           <option value="registered">Registered</option>
+          <option value="alternate">Alternate</option>
           <option value="attended">Attended</option>
-          <option value="no-show">No-Show</option>
+          <option value="no-show">No Show</option>
           <option value="member-candidate">Member Candidate</option>
           <option value="member">Member</option>
           <option value="partner-candidate">Partner Candidate</option>
@@ -2000,6 +2027,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["waitlisted", "Waitlisted"],
       ["declined", "Declined"]
     ];
+    const guestRegistrationLifecycleOptions = [
+      ["contacted", "Contacted"],
+      ["confirmed", "Confirmed"],
+      ["declined", "Declined"],
+      ["bad-fit", "Bad Fit"],
+      ["invited", "Invited"],
+      ["registered", "Registered"],
+      ["alternate", "Alternate"],
+      ["attended", "Attended"],
+      ["no-show", "No Show"]
+    ];
+    const guestRegistrationLifecycleValues = guestRegistrationLifecycleOptions.map(([value]) => value);
     let activeView = "contacts";
     let registrationInviteStatusFilter = "all";
     let partnerCompanyPage = 1;
@@ -2035,7 +2074,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       { slug: "ai-budgeting-and-investment-priorities", title: "AI Budgeting and Investment Priorities", date: "Friday, December 4, 2026", format: "Virtual" },
       { slug: "ai-workforce-readiness-and-change-leadership", title: "AI Workforce Readiness and Change Leadership", date: "Friday, December 18, 2026", format: "Virtual" },
       { slug: "ai-executive-operating-agenda-for-2027", title: "AI Executive Operating Agenda for 2027", date: "Friday, January 8, 2027", format: "Virtual" },
-      { slug: "dallas-2027", title: "Dallas 2027 Summit", date: "January 2027", format: "In person" }
+      { slug: "dallas-2027", title: "Dallas 2027 Summit", date: "Wednesday, January 20, 2027", format: "In person" }
     ];
     const guestMatrixDemoInvites = [
       {
@@ -2129,17 +2168,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     ];
     const lifecycleStageOptions = [
-      ["prospect", "Prospect"],
-      ["invited", "Invited"],
-      ["registered", "Registered"],
-      ["attended", "Attended"],
-      ["no-show", "No-Show"],
-      ["member-candidate", "Member Candidate"],
-      ["member", "Member"],
-      ["partner-candidate", "Partner Candidate"],
-      ["partner", "Partner"],
-      ["inactive", "Inactive"],
-      ["do-not-contact", "Do Not Contact"]
+      ["guest", "Guest"],
+      ["featured-guest", "Featured Guest"],
+      ["fellow", "Fellow"],
+      ["contributing-fellow", "Contributing Fellow"],
+      ["senior-fellow", "Senior Fellow"],
+      ["distinguished-fellow", "Distinguished Fellow"]
     ];
     const executiveFunctionOptions = [
       ["", "Unassigned"],
@@ -2320,7 +2354,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function statusLabel(value) {
-      return String(value || "new").replace(/-/g, " ");
+      return {
+        "bad-fit": "Bad Fit",
+        "no-show": "No Show",
+        "do-not-contact": "Do Not Contact",
+        "featured-guest": "Featured Guest",
+        "contributing-fellow": "Contributing Fellow",
+        "senior-fellow": "Senior Fellow",
+        "distinguished-fellow": "Distinguished Fellow"
+      }[String(value || "").toLowerCase()] || titleCaseLabel(value || "new");
     }
 
     function optionList(options, current = "") {
@@ -2353,6 +2395,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (role === "presenter") return "Presenter";
       if (role === "roundtable-leader" || role === "roundtable") return "Round Table Leader";
       if (role === "partner") return "Partner Guest";
+      if (role === "featured-member") return "Featured Member";
       if (role === "member") return "Member";
       return "Guest";
     }
@@ -2389,8 +2432,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return [label, time].filter(Boolean).join(" | ");
     }
 
+    function actualEventBase(event = {}) {
+      const eventId = String(event.eventId || "").trim();
+      return event.eventName || event.eventSlug || (/[a-z]/i.test(eventId) ? eventId : "");
+    }
+
     function eventDisplayLabel(event = {}) {
-      const label = event.eventName || event.inviteCode || event.eventSlug || event.eventId || "Registration";
+      const base = actualEventBase(event);
+      const label = event.eventName || titleCaseLabel(base);
+      if (!base) return "";
       const show = eventShowText(event);
       return show ? `${label} | ${show}` : label;
     }
@@ -2404,6 +2454,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function roleLabelFromEvent(event = {}) {
+      const contactEventRole = String(event.contactEventRole || event.registrationRole || event.partnerRegistrationType || event.guestRegistrationType || "").toLowerCase();
+      if (contactEventRole && contactEventRole !== "guest") return guestRegistrationTypeLabel(contactEventRole);
       const strategicRole = String(event.strategicRole || "").toLowerCase();
       if (strategicRole === "speaker") return "Speaker";
       if (strategicRole === "moderator") return "Moderator";
@@ -2426,6 +2478,56 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (role.includes("partner")) return "Partner Guest";
       if (role.includes("member")) return "Member";
       return titleCaseLabel(event.registrationType || "Guest");
+    }
+
+    const contactEventRoleOptions = [
+      ["guest", "Guest"],
+      ["featured-guest", "Featured Guest"],
+      ["presenter", "Presenter"],
+      ["roundtable-leader", "Round Table Leader"],
+      ["member", "Member"],
+      ["featured-member", "Featured Member"],
+      ["partner", "Partner Guest"],
+      ["featured-partner", "Featured Partner"]
+    ];
+
+    function contactEventRoleValue(event = {}) {
+      const raw = String(event.contactEventRole || event.registrationRole || event.partnerRegistrationType || event.guestRegistrationType || event.role || event.registrationType || "").toLowerCase();
+      if (raw.includes("featured partner")) return "featured-partner";
+      if (raw.includes("featured guest")) return "featured-guest";
+      if (raw.includes("featured member")) return "featured-member";
+      if (raw.includes("round table") || raw.includes("roundtable")) return "roundtable-leader";
+      if (raw.includes("presenter") || raw.includes("speaker")) return "presenter";
+      if (raw.includes("partner")) return "partner";
+      if (raw.includes("member")) return "member";
+      return contactEventRoleOptions.some(([value]) => value === raw) ? raw : "guest";
+    }
+
+    function contactEventRoleSelect(row = {}, event = {}, eventKey = "") {
+      const selected = contactEventRoleValue(event);
+      return `
+        <label class="event-role-control">
+          <span>Role</span>
+          <select
+            data-contact-event-role="${escapeHtml(row.key)}"
+            data-contact-event-role-email="${escapeHtml(row.email)}"
+            data-contact-event-role-event-key="${escapeHtml(eventKey)}"
+            data-contact-event-role-event-id="${escapeHtml(event.eventId || "")}"
+            data-contact-event-role-event-slug="${escapeHtml(event.eventSlug || "")}"
+            data-contact-event-role-event-name="${escapeHtml(event.eventName || "")}"
+            data-contact-event-role-event-date="${escapeHtml(event.eventDate || "")}"
+            data-contact-event-role-event-time="${escapeHtml(event.eventTime || "")}"
+            data-contact-event-role-event-show-id="${escapeHtml(event.eventShowId || "")}"
+            data-contact-event-role-event-show-label="${escapeHtml(event.eventShowLabel || "")}"
+            data-contact-event-role-event-show-time="${escapeHtml(event.eventShowTime || "")}"
+            data-contact-event-role-invite-code="${escapeHtml(event.inviteCode || "")}"
+            data-contact-event-role-registration-id="${escapeHtml(event.registrationId || "")}"
+            data-contact-event-role-registered-at="${escapeHtml(event.registeredAt || "")}"
+          >
+            ${optionList(contactEventRoleOptions, selected)}
+          </select>
+        </label>
+      `;
     }
 
     function renderActivityList(row = {}) {
@@ -2463,6 +2565,49 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return filterKey(eventAttendanceKey(event));
     }
 
+    function actualEventKey(event = {}) {
+      const show = eventShowId(event.eventShowId || event.showId || event.eventShow, "");
+      const base = actualEventBase(event);
+      if (!base) return "";
+      return filterKey([
+        base,
+        event.eventDate || "",
+        show
+      ].join("|"));
+    }
+
+    function eventStatusValue(event = {}) {
+      return String(event.registrationStatus || event.status || event.crmStatus || "confirmed").toLowerCase();
+    }
+
+    function mergeEventStatus(left = "", right = "") {
+      const priority = ["confirmed", "registered", "attended", "started", "opened", "invited", "waitlisted", "declined", "canceled", "not_registered"];
+      const leftIndex = priority.indexOf(String(left || "").toLowerCase());
+      const rightIndex = priority.indexOf(String(right || "").toLowerCase());
+      if (leftIndex === -1) return right || left;
+      if (rightIndex === -1) return left || right;
+      return rightIndex < leftIndex ? right : left;
+    }
+
+    function uniqueActualEvents(events = []) {
+      const byEvent = new Map();
+      for (const event of events) {
+        const key = actualEventKey(event) || eventAttendanceKey(event);
+        if (!key) continue;
+        const existing = byEvent.get(key) || {};
+        const nextStatus = mergeEventStatus(eventStatusValue(existing), eventStatusValue(event));
+        byEvent.set(key, {
+          ...existing,
+          ...event,
+          attended: existing.attended === true || event.attended === true,
+          attendanceStatus: event.attendanceStatus || existing.attendanceStatus || "not_recorded",
+          registrationStatus: nextStatus,
+          status: nextStatus
+        });
+      }
+      return [...byEvent.values()];
+    }
+
     function rowEvents(row = {}) {
       if (state.type === "contacts") return Array.isArray(row.events) ? row.events : [];
       return [{
@@ -2479,6 +2624,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         registeredAt: row.createdAt,
         role: roleBadges(row)
       }];
+    }
+
+    function registrantEvent(row = {}) {
+      return {
+        id: row.id || row.key,
+        eventId: row.eventId,
+        eventSlug: row.eventSlug,
+        eventName: row.eventName,
+        eventDate: row.eventDate,
+        eventTime: row.eventTime,
+        eventShowId: row.eventShowId,
+        eventShowLabel: row.eventShowLabel,
+        eventShowTime: row.eventShowTime,
+        inviteCode: row.inviteCode,
+        registrationId: row.id,
+        registeredAt: row.createdAt,
+        crmStatus: row.crmStatus,
+        status: row.crmStatus,
+        registrationStatus: row.crmStatus,
+        attended: row.attended === true,
+        attendanceStatus: row.attendanceStatus || "not_recorded"
+      };
     }
 
     function contactHasRole(row, role) {
@@ -2507,7 +2674,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function rowHasEvent(row, eventValue) {
       if (eventValue === "all") return true;
-      return rowEvents(row).some((event) => eventFilterKey(event) === eventValue);
+      return rowEvents(row).some((event) => actualEventKey(event) === eventValue);
     }
 
     function passesNumberThreshold(value, operator, thresholdValue) {
@@ -2530,10 +2697,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const events = row.events || [];
       if (state.type === "contacts") {
         if (!events.length) return '<span class="pill warn">No event</span>';
-        return `<div class="event-attendance-list">${events.map((event) => {
+        return `<div class="event-attendance-list">${uniqueActualEvents(events).map((event) => {
           const label = event.eventName || event.inviteCode || "Registration";
           const show = eventShowText(event);
-          const eventKey = eventAttendanceKey(event);
           return `
             <div class="event-attendance-item">
               <div>
@@ -2542,30 +2708,55 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 ${show ? `<span class="event-attendance-date">${escapeHtml(show)}</span>` : ""}
                 <span class="event-attendance-date">${escapeHtml(labelForOption([["invited", "Invited"], ["opened", "Invitation Opened"], ["started", "Registration Started"], ["confirmed", "Confirmed"], ["declined", "Declined"], ["canceled", "Canceled"], ["waitlisted", "Waitlisted"]], event.registrationStatus || event.status || "confirmed"))}</span>
               </div>
-              <label class="attendance-toggle">
-                <input
-                  type="checkbox"
-                  data-attendance-contact-key="${escapeHtml(row.key)}"
-                  data-attendance-email="${escapeHtml(row.email)}"
-                  data-attendance-event-key="${escapeHtml(eventKey)}"
-                  data-attendance-event-id="${escapeHtml(event.eventId || "")}"
-                  data-attendance-event-slug="${escapeHtml(event.eventSlug || "")}"
-                  data-attendance-event-name="${escapeHtml(event.eventName || "")}"
-                  data-attendance-event-date="${escapeHtml(event.eventDate || "")}"
-                  data-attendance-event-time="${escapeHtml(event.eventTime || "")}"
-                  data-attendance-event-show-id="${escapeHtml(event.eventShowId || "")}"
-                  data-attendance-event-show-label="${escapeHtml(event.eventShowLabel || "")}"
-                  data-attendance-event-show-time="${escapeHtml(event.eventShowTime || "")}"
-                  data-attendance-invite-code="${escapeHtml(event.inviteCode || "")}"
-                  data-attendance-registration-id="${escapeHtml(event.registrationId || "")}"
-                  data-attendance-registered-at="${escapeHtml(event.registeredAt || "")}"
-                  ${event.attended ? "checked" : ""}
-                >
-                <span>Attended</span>
-              </label>
+              ${event.attended ? '<span class="pill good">Attended</span>' : ""}
             </div>
           `;
         }).join("")}</div>`;
+      }
+      if (state.type === "guest") {
+        const event = registrantEvent(row);
+        const label = event.eventName || event.inviteCode || "Registration";
+        const show = eventShowText(event);
+        return `
+          <div class="event-attendance-list">
+            <div class="event-attendance-item">
+              <div>
+                <span class="event-attendance-name">${escapeHtml(label)}</span>
+                ${event.eventDate ? `<span class="event-attendance-date">${escapeHtml(event.eventDate)}</span>` : ""}
+                ${show ? `<span class="event-attendance-date">${escapeHtml(show)}</span>` : ""}
+              </div>
+              <div class="event-controls">
+                <label class="event-role-control">
+                  <span>Status</span>
+                  <select data-guest-event-status-key="${escapeHtml(row.key)}">
+                    ${guestCrmStatusOptions(row.crmStatus)}
+                  </select>
+                </label>
+                <label class="attendance-toggle">
+                  <input
+                    type="checkbox"
+                    data-registrant-attendance-key="${escapeHtml(row.key)}"
+                    data-registrant-attendance-type="${escapeHtml(state.type)}"
+                    data-registrant-attendance-event-key="${escapeHtml(eventAttendanceKey(event))}"
+                    data-registrant-attendance-event-id="${escapeHtml(event.eventId || "")}"
+                    data-registrant-attendance-event-slug="${escapeHtml(event.eventSlug || "")}"
+                    data-registrant-attendance-event-name="${escapeHtml(event.eventName || "")}"
+                    data-registrant-attendance-event-date="${escapeHtml(event.eventDate || "")}"
+                    data-registrant-attendance-event-time="${escapeHtml(event.eventTime || "")}"
+                    data-registrant-attendance-event-show-id="${escapeHtml(event.eventShowId || "")}"
+                    data-registrant-attendance-event-show-label="${escapeHtml(event.eventShowLabel || "")}"
+                    data-registrant-attendance-event-show-time="${escapeHtml(event.eventShowTime || "")}"
+                    data-registrant-attendance-invite-code="${escapeHtml(event.inviteCode || "")}"
+                    data-registrant-attendance-registration-id="${escapeHtml(event.registrationId || "")}"
+                    data-registrant-attendance-registered-at="${escapeHtml(event.registeredAt || "")}"
+                    ${row.attended ? "checked" : ""}
+                  >
+                  <span>Attended</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        `;
       }
       if (row.manualPartner) return '<span class="pill">Manual outreach</span>';
       const show = eventShowText(row);
@@ -2574,7 +2765,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function roleBadges(row) {
       if (state.type === "contacts") {
-        const events = row.events || [];
+        const events = uniqueActualEvents(row.events || []);
         if (!events.length) return '<span class="pill warn">No role</span>';
         return events.map((event) => {
           return `<span class="pill">${escapeHtml(roleLabelFromEvent(event))}</span>`;
@@ -2629,6 +2820,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function memberAccessCell(row) {
+      if (state.type === "guest") {
+        return `<span class="pill ${row.attended ? "good" : "warn"}">${row.attended ? "Attended" : "Not attended"}</span>`;
+      }
       return `<span class="pill">${Number(row.attendedCount || 0)} attended</span>`;
     }
 
@@ -2649,16 +2843,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         .join("");
     }
 
-    function crmStatusOptions(current = "new") {
-      const selected = current || "new";
-      return ["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"]
+    function crmStatusOptions(current = "new", statuses = ["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"]) {
+      const selected = statuses.includes(current) ? current : "new";
+      return statuses
         .map((status) => `<option value="${status}" ${selected === status ? "selected" : ""}>${statusLabel(status)}</option>`)
         .join("");
     }
 
+    function guestCrmStatusOptions(current = "new") {
+      const selected = guestRegistrationLifecycleValues.includes(current) ? current : "contacted";
+      return optionList(guestRegistrationLifecycleOptions, selected);
+    }
+
     function activeLabel() {
       if (isProspectingView()) return prospectingViews[activeView]?.[0] || "Partner Prospecting";
-      if (activeView === "guest") return "Guest";
+      if (activeView === "guest") return "Guest Registration";
       if (activeView === "guest-matrix") return "Guest Matrix";
       if (activeView === "partners-company") return "Partners by Company";
       return state.label || (state.type === "contacts" ? "Contacts" : state.type === "partner" ? "Partner" : "Member");
@@ -3265,13 +3464,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const selectedCompany = companyFilter.value || "all";
       const events = new Map();
       const companies = new Map();
+      for (const option of statusFilter.options) {
+        const hideForGuest = state.type === "guest" && option.value !== "all" && !guestRegistrationLifecycleValues.includes(option.value);
+        option.hidden = hideForGuest;
+        option.disabled = hideForGuest;
+        if (hideForGuest && statusFilter.value === option.value) statusFilter.value = "all";
+      }
 
       for (const row of state.rows || []) {
         const company = String(row.company || "").trim();
         if (company) companies.set(filterKey(company), company);
 
         for (const event of rowEvents(row)) {
-          const key = eventFilterKey(event);
+          const key = actualEventKey(event);
           const label = eventDisplayLabel(event);
           if (key && label) events.set(key, label);
         }
@@ -3619,12 +3824,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const emergingDiscoverySegment = "emerging-10-100";
 
     function employeeRangeBounds(value = "") {
-      const raw = cleanString(value).toLowerCase();
-      if (!raw) return null;
-      const numbers = raw.match(/\d+/g)?.map((item) => Number(item)).filter((item) => Number.isFinite(item)) || [];
+      const normalized = String(value || "").toLowerCase().replace(/,/g, "");
+      if (!normalized) return null;
+      if (/10000\+|10000-plus/.test(normalized)) return [10000, Infinity];
+      const numbers = normalized.match(/\d+/g)?.map((number) => Number(number)).filter(Number.isFinite) || [];
       if (!numbers.length) return null;
-      if (/plus|\+/.test(raw)) return [numbers[0], Number.POSITIVE_INFINITY];
-      return [numbers[0], numbers[1] || numbers[0]];
+      if (/\+|plus/.test(normalized)) return [numbers[0], Infinity];
+      if (numbers.length === 1) return [numbers[0], numbers[0]];
+      return [Math.min(numbers[0], numbers[1]), Math.max(numbers[0], numbers[1])];
     }
 
     function employeeRangeOverlaps(value = "", min = 10, max = 100) {
@@ -3634,15 +3841,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function isEmergingCompany(company = {}) {
-      const segments = [
-        company.discoverySegment,
-        ...(Array.isArray(company.discoverySegments) ? company.discoverySegments : [])
-      ].map((item) => cleanString(item).toLowerCase());
-      const employeeCount = Number(company.employeeCount || 0);
-      return segments.includes(emergingDiscoverySegment) ||
-        cleanString(company.targetEmployeeRange) === "10-100" ||
-        employeeRangeOverlaps(company.employeeRange, 10, 100) ||
-        (Number.isFinite(employeeCount) && employeeCount >= 10 && employeeCount <= 100);
+      const segments = Array.isArray(company.discoverySegments) ? company.discoverySegments : [];
+      return company.discoverySegment === emergingDiscoverySegment ||
+        segments.includes(emergingDiscoverySegment) ||
+        company.targetEmployeeRange === "10-100" ||
+        employeeRangeOverlaps(company.employeeRange || company.employeeCount, 10, 100);
     }
 
     function emergingCompanies() {
@@ -4044,9 +4247,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const discovery = data.discovery;
       if (discovery) {
         const skipped = Number(discovery.skippedExisting || 0);
-        const tagged = Number(discovery.taggedExisting || 0);
         const candidates = Number(discovery.candidates || discovery.discovered || 0);
-        return `${discovery.sourceName || "Discovery source"} finished: ${candidates} candidates checked, ${discovery.discovered || 0} new compan${Number(discovery.discovered || 0) === 1 ? "y" : "ies"} saved${skipped ? `, ${skipped} already known` : ""}${tagged ? `, ${tagged} tagged existing` : ""}.`;
+        return `${discovery.sourceName || "Discovery source"} finished: ${candidates} candidates checked, ${discovery.discovered || 0} new compan${Number(discovery.discovered || 0) === 1 ? "y" : "ies"} saved${skipped ? `, ${skipped} already known` : ""}.`;
       }
       const batch = data.discoveryBatch;
       if (batch) {
@@ -4057,7 +4259,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const target = Number(batch.targetNewCompanies || 0);
         const targetText = target ? ` toward ${target} new` : "";
         const exhaustedText = batch.exhausted ? ", large source pool exhausted before target" : "";
-        return `${batch.succeeded || 0} source${Number(batch.succeeded || 0) === 1 ? "" : "s"} finished${targetText}: ${candidates} candidates checked, ${batch.discovered || 0} new saved${skipped ? `, ${skipped} already known` : ""}${tagged ? `, ${tagged} tagged existing` : ""}${failed ? `, ${failed} source${failed === 1 ? "" : "s"} failed` : ""}${exhaustedText}.`;
+        return `${batch.succeeded || 0} source${Number(batch.succeeded || 0) === 1 ? "" : "s"} finished${targetText}: ${candidates} candidates checked, ${batch.discovered || 0} new saved${tagged ? `, ${tagged} existing tagged` : ""}${skipped ? `, ${skipped} already known` : ""}${failed ? `, ${failed} source${failed === 1 ? "" : "s"} failed` : ""}${exhaustedText}.`;
       }
       return "Discovery source finished.";
     }
@@ -4226,27 +4428,30 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ? allCompanies.find((company) => company.companyId === activeProspectingCompanyId)
         : null;
       const companies = selectedCompany ? [selectedCompany] : allCompanies;
-      const verified = allCompanies.filter((company) =>
-        company.employeeRangeStatus === "SOURCE_REPORTED" ||
-        (Number(company.employeeCount || 0) >= 10 && Number(company.employeeCount || 0) <= 100)
-      ).length;
-      const needsVerification = allCompanies.filter((company) => company.employeeRangeStatus === "TARGETED_NOT_VERIFIED").length;
+      const verifiedSize = allCompanies.filter((company) => employeeRangeOverlaps(company.employeeRange || company.employeeCount, 10, 100)).length;
+      const needsVerification = allCompanies.filter((company) => company.employeeRangeStatus === "TARGETED_NOT_VERIFIED" || !employeeRangeOverlaps(company.employeeRange || company.employeeCount, 10, 100)).length;
       prospectingContent.innerHTML = `
         <div class="prospecting-grid">
-          <div class="metric"><span>${selectedCompany ? "Selected Company" : "Emerging Companies"}</span><strong>${escapeHtml(selectedCompany ? 1 : allCompanies.length)}</strong></div>
-          <div class="metric"><span>Verified 10-100</span><strong>${escapeHtml(selectedCompany ? (selectedCompany.employeeRangeStatus === "SOURCE_REPORTED" ? 1 : 0) : verified)}</strong></div>
-          <div class="metric"><span>Needs Size Check</span><strong>${escapeHtml(selectedCompany ? (selectedCompany.employeeRangeStatus === "TARGETED_NOT_VERIFIED" ? 1 : 0) : needsVerification)}</strong></div>
+          <div class="metric"><span>${selectedCompany ? "Selected Company" : "Emerging Companies"}</span><strong>${selectedCompany ? 1 : allCompanies.length}</strong></div>
+          <div class="metric"><span>Verified 10-100</span><strong>${selectedCompany ? (employeeRangeOverlaps(selectedCompany.employeeRange || selectedCompany.employeeCount, 10, 100) ? 1 : 0) : verifiedSize}</strong></div>
+          <div class="metric warn"><span>Needs Size Check</span><strong>${selectedCompany ? (selectedCompany.employeeRangeStatus === "TARGETED_NOT_VERIFIED" ? 1 : 0) : needsVerification}</strong></div>
         </div>
         <div class="source-run-status">
-          <strong>${selectedCompany ? escapeHtml(selectedCompany.companyName || "Selected company") : "Find smaller AI-enabled vendors"}</strong>
-          <span>${selectedCompany ? "Emerging 10-100 is filtered to this company." : "Runs built-in startup and smaller-company sources, saves new companies, and tags existing matches into this lane."}</span>
+          <strong>Emerging 10-100 discovery</strong>
+          <span>This lane uses startup-oriented public sources and tags results as target 10-100 until employee count is verified.</span>
           <div class="prospecting-actions">
-            ${selectedCompany ? '<button class="compact secondary" type="button" data-clear-prospect-company-filter>Show All Emerging Companies</button>' : '<button class="secondary" type="button" data-run-emerging-prospect-sources>Find 50 Emerging 10-100 Companies</button>'}
+            <button class="secondary" type="button" data-run-emerging-prospect-sources>Find 50 Emerging 10-100 Companies</button>
+            ${selectedCompany ? '<button class="compact secondary" type="button" data-clear-prospect-company-filter>Show All Emerging</button>' : ""}
           </div>
         </div>
         ${renderProspectingRunStatus()}
-        ${renderProspectingCompanyForm()}
-        <div class="prospecting-grid">${companies.map((company) => prospectCompanyCard(company)).join("") || '<p>No Emerging 10-100 companies have been found yet.</p>'}</div>
+        ${selectedCompany ? `
+          <div class="source-run-status">
+            <strong>${escapeHtml(selectedCompany.companyName || "Selected company")}</strong>
+            <span>Emerging 10-100 is filtered to this company.</span>
+          </div>
+        ` : ""}
+        <div class="prospecting-grid">${companies.map((company) => prospectCompanyCard(company)).join("") || '<p>No Emerging 10-100 companies yet. Run the emerging discovery button to seed this result set.</p>'}</div>
       `;
     }
 
@@ -4971,7 +5176,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       partnerPagination.hidden = true;
-      registrantsTitle.textContent = state.type === "contacts" ? "Contacts" : `${label} Registrants`;
+      registrantsTitle.textContent = state.type === "contacts" || state.type === "guest" ? label : `${label} Registrants`;
       if (!rows.length) {
         rowsElement.innerHTML = `<tr><td colspan="8">No ${label.toLowerCase()} match the current filters.</td></tr>`;
         return;
@@ -4997,7 +5202,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 <span>${escapeHtml(row.phone)}</span>
               </div>
               ${state.type === "contacts" ? `<button class="icon-button" type="button" title="Delete contact" aria-label="Delete contact ${escapeHtml(row.email)}" data-delete-contact-key="${escapeHtml(row.key)}" data-delete-contact-email="${escapeHtml(row.email)}">${trashIconMarkup()}</button>` : ""}
-              ${state.type === "guest" ? `<button class="icon-button" type="button" title="Delete guest registrant" aria-label="Delete guest registrant ${escapeHtml(row.name || row.email || row.key)}" data-delete-guest-registrant-key="${escapeHtml(row.key)}" data-delete-guest-registrant-label="${escapeHtml(row.name || row.email || row.key)}">${trashIconMarkup()}</button>` : ""}
+              ${state.type === "guest" ? `<button class="icon-button" type="button" title="Delete guest registration" aria-label="Delete guest registration ${escapeHtml(row.name || row.email || row.key)}" data-delete-guest-registrant-key="${escapeHtml(row.key)}" data-delete-guest-registrant-label="${escapeHtml(row.name || row.email || row.key)}">${trashIconMarkup()}</button>` : ""}
             </div>
           </td>
           <td><div class="role-list">${eventBadges(row)}</div></td>
@@ -5005,9 +5210,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <td><div class="role-list">${publicationBadges(row)}</div></td>
           <td>
             ${state.type === "contacts" ? `<select class="inline-select" data-contact-field="lifecycleStage" data-contact-key="${escapeHtml(row.key)}">
-              ${optionList(lifecycleStageOptions, row.lifecycleStage || "prospect")}
-            </select>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
-              ${crmStatusOptions(row.crmStatus)}
+              ${optionList(lifecycleStageOptions, row.lifecycleStage || "guest")}
+            </select>` : state.type === "guest" ? `<span class="pill">${escapeHtml(statusLabel(row.crmStatus || "new"))}</span>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
+              ${state.type === "guest" ? guestCrmStatusOptions(row.crmStatus) : crmStatusOptions(row.crmStatus)}
             </select>`}
           </td>
           <td>${memberAccessCell(row)}</td>
@@ -5263,7 +5468,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const maxSteps = starterSourceCount;
       const startingCompanyCount = Number(prospectingState?.dashboard?.companiesDiscovered || prospectCompanies().length || 0);
       let confirmedNewCompanies = 0;
-      const totals = { attempted: 0, succeeded: 0, candidates: 0, discovered: 0, skippedExisting: 0, taggedExisting: 0, failed: 0 };
+      const totals = { attempted: 0, succeeded: 0, candidates: 0, discovered: 0, skippedExisting: 0, failed: 0 };
       if (button) {
         button.disabled = true;
         button.textContent = "Finding companies...";
@@ -5296,7 +5501,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           totals.candidates += Number(batch.candidates || 0);
           totals.discovered += Number(batch.discovered || 0);
           totals.skippedExisting += Number(batch.skippedExisting || 0);
-          totals.taggedExisting += Number(batch.taggedExisting || 0);
           totals.failed += Math.max(0, Number(batch.attempted || 0) - Number(batch.succeeded || 0));
           await new Promise((resolve) => setTimeout(resolve, 700));
           prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
@@ -5304,7 +5508,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           confirmedNewCompanies = Math.max(0, currentCompanyCount - startingCompanyCount);
           prospectingRunStatus = {
             title: "Finding 50 new companies",
-            message: `${result.sourceName || source?.sourceName || "Starter source"} checked. ${confirmedNewCompanies} confirmed in Vendor Universe, ${totals.discovered} API-reported saves, ${totals.skippedExisting} already known, ${totals.taggedExisting} tagged existing, ${totals.candidates} candidates checked.`
+            message: `${result.sourceName || source?.sourceName || "Starter source"} checked. ${confirmedNewCompanies} confirmed in Vendor Universe, ${totals.discovered} API-reported saves, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked.`
           };
           render();
           if (!Number(batch.attempted || 0)) break;
@@ -5315,7 +5519,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const exhausted = confirmedNewCompanies < targetNewCompanies;
         prospectingRunStatus = {
           title: exhausted ? "Starter discovery finished" : "50 new companies found",
-          message: `${totals.succeeded} source${totals.succeeded === 1 ? "" : "s"} finished. ${confirmedNewCompanies} confirmed in Vendor Universe, ${totals.discovered} API-reported saves, ${totals.skippedExisting} already known, ${totals.taggedExisting} tagged existing, ${totals.candidates} candidates checked${totals.failed ? `, ${totals.failed} failed` : ""}${exhausted ? ", large source pool exhausted before 50 new companies were visible" : ""}.`
+          message: `${totals.succeeded} source${totals.succeeded === 1 ? "" : "s"} finished. ${confirmedNewCompanies} confirmed in Vendor Universe, ${totals.discovered} API-reported saves, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked${totals.failed ? `, ${totals.failed} failed` : ""}${exhausted ? ", large source pool exhausted before 50 new companies were visible" : ""}.`
         };
         render();
         setNotice(prospectingRunStatus.message, "ok");
@@ -5336,7 +5540,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     async function runEmergingDiscoveryToTarget(button) {
       const originalLabel = button?.textContent || "";
-      const targetNewCompanies = 50;
+      const targetCompanies = 50;
       const perStepNewCap = 10;
       prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
       const sourceQueue = (prospectingState?.emergingSources || [])
@@ -5357,12 +5561,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         button.textContent = "Finding emerging companies...";
       }
       try {
-        for (let step = 0; step < maxSteps && confirmedEmergingCompanies < targetNewCompanies; step += 1) {
+        for (let step = 0; step < maxSteps && confirmedEmergingCompanies < targetCompanies; step += 1) {
           const source = sourceQueue[step];
-          const remaining = targetNewCompanies - confirmedEmergingCompanies;
+          const remaining = targetCompanies - confirmedEmergingCompanies;
           prospectingRunStatus = {
-            title: "Finding 50 Emerging 10-100 companies",
-            message: `Checking ${source?.sourceName || `source ${step + 1}`} (${step + 1} of ${sourceCount}). ${confirmedEmergingCompanies} confirmed in Emerging 10-100. Continuing until 50 new are visible.`
+            title: "Finding Emerging 10-100 companies",
+            message: `Checking ${source?.sourceName || `source ${step + 1}`} (${step + 1} of ${sourceCount}). ${confirmedEmergingCompanies} confirmed in Emerging 10-100. Continuing until 50 are visible.`
           };
           render();
           setNotice(prospectingRunStatus.message, "ok");
@@ -5390,28 +5594,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
           confirmedEmergingCompanies = Math.max(0, emergingCompanies().length - startingEmergingCount);
           prospectingRunStatus = {
-            title: "Finding 50 Emerging 10-100 companies",
-            message: `${result.sourceName || source?.sourceName || "Emerging source"} checked. ${confirmedEmergingCompanies} confirmed in Emerging 10-100, ${totals.discovered} API-reported saves, ${totals.skippedExisting} already known, ${totals.taggedExisting} tagged existing, ${totals.candidates} candidates checked.`
+            title: "Finding Emerging 10-100 companies",
+            message: `${result.sourceName || source?.sourceName || "Emerging source"} checked. ${confirmedEmergingCompanies} newly visible in Emerging 10-100, ${totals.discovered} new saved, ${totals.taggedExisting} existing tagged, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked.`
           };
           render();
           if (!Number(batch.attempted || 0)) break;
         }
         prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
         confirmedEmergingCompanies = Math.max(0, emergingCompanies().length - startingEmergingCount);
-        const exhausted = confirmedEmergingCompanies < targetNewCompanies;
+        const exhausted = confirmedEmergingCompanies < targetCompanies;
         prospectingRunStatus = {
-          title: exhausted ? "Emerging 10-100 discovery finished" : "50 Emerging 10-100 companies found",
-          message: `${totals.succeeded} source${totals.succeeded === 1 ? "" : "s"} finished. ${confirmedEmergingCompanies} confirmed in Emerging 10-100, ${totals.discovered} API-reported saves, ${totals.skippedExisting} already known, ${totals.taggedExisting} tagged existing, ${totals.candidates} candidates checked${totals.failed ? `, ${totals.failed} failed` : ""}${exhausted ? ", emerging source pool exhausted before 50 new companies were visible" : ""}.`
+          title: exhausted ? "Emerging discovery finished" : "50 Emerging 10-100 companies found",
+          message: `${totals.succeeded} source${totals.succeeded === 1 ? "" : "s"} finished. ${confirmedEmergingCompanies} newly visible in Emerging 10-100, ${totals.discovered} new saved, ${totals.taggedExisting} existing tagged, ${totals.skippedExisting} already known, ${totals.candidates} candidates checked${totals.failed ? `, ${totals.failed} failed` : ""}${exhausted ? ", emerging source pool exhausted before 50 were visible" : ""}.`
         };
         render();
         setNotice(prospectingRunStatus.message, "ok");
       } catch (error) {
         prospectingRunStatus = {
-          title: "Emerging 10-100 discovery failed",
-          message: error.message || "Emerging 10-100 discovery could not finish."
+          title: "Emerging discovery failed",
+          message: error.message || "Emerging discovery could not finish."
         };
         render();
-        showErrorNotice(error, "Emerging 10-100 discovery could not finish.");
+        showErrorNotice(error, "Emerging discovery could not finish.");
       } finally {
         if (button?.isConnected) {
           button.disabled = false;
@@ -5454,7 +5658,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               invitationSource: changes.invitationSource ?? existing.invitationSource ?? "",
               invitedBy: changes.invitedBy ?? existing.invitedBy ?? "",
               relationshipOwner: changes.relationshipOwner ?? existing.relationshipOwner ?? "",
-              lifecycleStage: changes.lifecycleStage ?? existing.lifecycleStage ?? "prospect",
+              lifecycleStage: changes.lifecycleStage ?? existing.lifecycleStage ?? "guest",
               lastContactDate: changes.lastContactDate ?? existing.lastContactDate ?? "",
               nextAction: changes.nextAction ?? existing.nextAction ?? "none",
               nextActionDueDate: changes.nextActionDueDate ?? existing.nextActionDueDate ?? "",
@@ -5715,6 +5919,86 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    async function saveRegistrantAttendance(input) {
+      const key = input.dataset.registrantAttendanceKey;
+      const existing = state.rows.find((row) => row.key === key);
+      if (!existing) return;
+
+      input.disabled = true;
+      setNotice("Saving event attendance...");
+      try {
+        state = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "update-registrant-event-attendance",
+            type: input.dataset.registrantAttendanceType || state.type || "guest",
+            key,
+            attended: input.checked,
+            eventKey: input.dataset.registrantAttendanceEventKey || "",
+            eventId: input.dataset.registrantAttendanceEventId || "",
+            eventSlug: input.dataset.registrantAttendanceEventSlug || "",
+            eventName: input.dataset.registrantAttendanceEventName || "",
+            eventDate: input.dataset.registrantAttendanceEventDate || "",
+            eventTime: input.dataset.registrantAttendanceEventTime || "",
+            eventShowId: input.dataset.registrantAttendanceEventShowId || "",
+            eventShowLabel: input.dataset.registrantAttendanceEventShowLabel || "",
+            eventShowTime: input.dataset.registrantAttendanceEventShowTime || "",
+            inviteCode: input.dataset.registrantAttendanceInviteCode || "",
+            registrationId: input.dataset.registrantAttendanceRegistrationId || "",
+            registeredAt: input.dataset.registrantAttendanceRegisteredAt || ""
+          })
+        }).then(readJson);
+        setNotice(`Attendance ${input.checked ? "marked" : "cleared"} for ${existing.name || existing.email}.`, "ok");
+        render();
+      } catch (error) {
+        input.checked = !input.checked;
+        input.disabled = false;
+        showErrorNotice(error, "Event attendance could not be saved.");
+      }
+    }
+
+    async function saveContactEventRole(select) {
+      const key = select.dataset.contactEventRole;
+      const existing = state.rows.find((row) => row.key === key);
+      if (!existing) return;
+
+      const previousValue = select.dataset.previousValue || contactEventRoleValue(existing.events?.find((event) => eventAttendanceKey(event) === select.dataset.contactEventRoleEventKey) || {});
+      select.dataset.previousValue = select.value;
+      select.disabled = true;
+      setNotice("Saving contact event role...");
+      try {
+        state = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "update-contact-event-role",
+            key,
+            email: select.dataset.contactEventRoleEmail || existing.email,
+            role: select.value,
+            eventKey: select.dataset.contactEventRoleEventKey || "",
+            eventId: select.dataset.contactEventRoleEventId || "",
+            eventSlug: select.dataset.contactEventRoleEventSlug || "",
+            eventName: select.dataset.contactEventRoleEventName || "",
+            eventDate: select.dataset.contactEventRoleEventDate || "",
+            eventTime: select.dataset.contactEventRoleEventTime || "",
+            eventShowId: select.dataset.contactEventRoleEventShowId || "",
+            eventShowLabel: select.dataset.contactEventRoleEventShowLabel || "",
+            eventShowTime: select.dataset.contactEventRoleEventShowTime || "",
+            inviteCode: select.dataset.contactEventRoleInviteCode || "",
+            registrationId: select.dataset.contactEventRoleRegistrationId || "",
+            registeredAt: select.dataset.contactEventRoleRegisteredAt || ""
+          })
+        }).then(readJson);
+        setNotice(`Role saved for ${existing.name || existing.email}.`, "ok");
+        render();
+      } catch (error) {
+        select.value = previousValue;
+        select.disabled = false;
+        showErrorNotice(error, "Contact event role could not be saved.");
+      }
+    }
+
     function updateGuestMatrixSaveButton() {
       if (!guestMatrixSave) return;
       const count = Object.keys(guestMatrixPendingChanges || {}).length;
@@ -5855,9 +6139,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         delete guestMatrixDrafts[key];
-        delete guestMatrixPendingChanges[key];
         saveGuestMatrixDrafts();
-        updateGuestMatrixSaveButton();
         renderGuestMatrix();
         setNotice(`Tracked person removed: ${data.deleted?.intendedGuestName || data.deleted?.intendedGuestEmail || person}`, "ok");
       } catch (error) {
@@ -5922,9 +6204,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     async function deleteGuestRegistrant(key, label) {
       if (!key) return;
-      const person = label || "this guest registrant";
-      if (!window.confirm(`Delete ${person} from Guest Registrants? This removes the stored guest registration and its matching contact event.`)) return;
-      setNotice("Deleting guest registrant...");
+      const person = label || "this guest registration";
+      if (!window.confirm(`Delete ${person} from Guest Registration? This removes the stored guest registration and its matching contact event.`)) return;
+      setNotice("Deleting guest registration...");
       try {
         const data = await fetch(api, {
           method: "POST",
@@ -6002,6 +6284,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const attendanceKey = event.target.dataset.attendanceContactKey;
       if (attendanceKey) {
         saveContactAttendance(event.target);
+        return;
+      }
+
+      const contactEventRoleKey = event.target.dataset.contactEventRole;
+      if (contactEventRoleKey) {
+        saveContactEventRole(event.target);
+        return;
+      }
+
+      const registrantAttendanceKey = event.target.dataset.registrantAttendanceKey;
+      if (registrantAttendanceKey) {
+        saveRegistrantAttendance(event.target);
+        return;
+      }
+
+      const guestEventStatusKey = event.target.dataset.guestEventStatusKey;
+      if (guestEventStatusKey) {
+        const existing = state.rows.find((row) => row.key === guestEventStatusKey);
+        saveRegistrant(guestEventStatusKey, {
+          crmStatus: event.target.value,
+          crmNotes: existing?.crmNotes || ""
+        });
         return;
       }
 
@@ -6130,7 +6434,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
       if (!companyButton) return;
       activeProspectingCompanyId = companyButton.dataset.filterProspectCompany || "";
-      setActiveView(activeView === "emerging-10-100" ? "emerging-10-100" : "vendor-universe", { keepCompanyFilter: true });
+      setActiveView("vendor-universe", { keepCompanyFilter: true });
     });
 
     clearFiltersButton.addEventListener("click", () => {
@@ -6281,7 +6585,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (editCompanyButton) {
         activeProspectingEditCompanyId = editCompanyButton.dataset.editProspectCompany || "";
         activeProspectingCompanyId = activeProspectingEditCompanyId;
-        if (activeView !== "emerging-10-100") activeView = "vendor-universe";
+        activeView = "vendor-universe";
         render();
         prospectingContent.querySelector("[data-prospect-company-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
@@ -6289,7 +6593,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (editCompanyCard && !event.target.closest("button, a, input, select, textarea, summary, details, label")) {
         activeProspectingEditCompanyId = editCompanyCard.dataset.editProspectCard || "";
         activeProspectingCompanyId = activeProspectingEditCompanyId;
-        if (activeView !== "emerging-10-100") activeView = "vendor-universe";
+        activeView = "vendor-universe";
         render();
         prospectingContent.querySelector("[data-prospect-company-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
@@ -6665,7 +6969,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           body: JSON.stringify(payload)
         }).then(readJson);
         state.registrationInviteCodes = mergeInviteList(state.registrationInviteCodes, data.registrationInviteCodes || (data.invite ? [data.invite] : []));
-        state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         renderEventOptions();
         renderRegistrationInvites();
