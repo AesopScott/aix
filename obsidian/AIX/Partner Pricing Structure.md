@@ -1,7 +1,7 @@
 # Partner Pricing Structure
 
 Created: 2026-08-01
-Updated: 2026-08-14
+Updated: 2026-08-18
 
 ## Summary
 
@@ -11,14 +11,14 @@ Created the static HTML partner-facing page at `/partner-pricing/` from the same
 
 The pricing model is now per Executive slot and stackable by tier. One subscription buys one Executive slot, which can be assigned to one approved director-level-or-above Executive attendee at a time according to substitution rules.
 
-- Tier 1 Research Partner: $1,000 per quarter per Executive slot for unlimited Mojo virtual event attendance.
+- Tier 1 Research Partner: $1,500 per quarter per Executive slot for unlimited Mojo virtual event attendance.
 - Tier 2 Summit Partner: $5,000 total per quarter per Executive slot for virtual event access plus summit attendance; requires Tier 1.
 - Tier 3 Strategic Partner: $10,000 total per quarter per Executive slot, under an annual subscription, for unlimited eligible Mojo events above and beyond Tier 1 and Tier 2 event categories; requires Tier 1 and Tier 2.
 - Featured Partner virtual event sponsorship: $1,500 per approved virtual event, priced separately from the quarterly Executive-slot attendance subscription.
 
 ## Annualized Per-Slot Pricing
 
-- Tier 1: $4,000/year.
+- Tier 1: $6,000/year.
 - Tier 2: $20,000/year.
 - Tier 3: $40,000/year.
 
@@ -36,7 +36,7 @@ There is a 10% discount for paying the annual subscription in full at the start 
 
 - Partner Candidates pay Candidate pricing until approved as Partners.
 - Candidate status means the organization is not yet an approved Partner, so Partner discounts do not apply until approval.
-- Brand-new Partner Candidates may qualify for Have a Taste, a first-quarter introduction using standard Partner subscription pricing. If the organization does not become an approved Partner before the next quarter, pricing moves to the regular Candidate pricing structure.
+- Tier 1 Partner Candidate pricing is $2,500 per quarter while the organization remains in Candidate status.
 - SMB program vendors with less than a $1M market cap pay 50% of the applicable Partner subscription price.
 - First Executive slot: standard subscription price.
 - Second Executive slot: 15% discount on that slot's subscription fee.

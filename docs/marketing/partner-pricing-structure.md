@@ -38,29 +38,11 @@ Partner Candidate means your organization is not yet an approved Partner. Candid
 
 | Candidate Access Level | Candidate Price | Billing Basis | Access |
 | --- | ---: | --- | --- |
-| Tier 1<br>(Research Partner) | $1,300 per quarter | Per quarter | Unlimited Mojo virtual event attendance |
+| Tier 1<br>(Research Partner) | $2,500 per quarter | Per quarter | Unlimited Mojo virtual event attendance |
 | Tier 2<br>(Summit Partner) | $6,500 per quarter | Per quarter | Unlimited Mojo virtual event attendance plus summit attendance |
 | Tier 3<br>(Strategic Partner) | $13,000 per quarter | Per quarter, annual subscription | Unlimited virtual event attendance, summit attendance, and eligible Mojo events above and beyond Tier 1 and Tier 2 |
 
 Candidate pricing is applied to each subscribed Executive slot while your organization remains in Candidate status. Partner discounts do not apply during the Candidate period.
-
-## Have a Taste Program
-
-Have a Taste is a first-quarter introduction for brand-new Partner Candidates.
-
-If your organization is new to Mojo AI Summits, you may qualify to use standard Partner subscription pricing for your first quarter as a Partner Candidate.
-
-The program is designed to let your team experience the quality of the room, the executive contribution model, and Mojo relationship intelligence during an introductory quarter. If your organization does not become an approved Partner before the next quarter begins, pricing moves to the regular Candidate pricing structure.
-
-| Access Level | Have a Taste First-Quarter Price | Applies To | Access |
-| --- | ---: | --- | --- |
-| Tier 1<br>(Research Partner) | $1,000 | First Candidate quarter only | One Executive slot with Tier 1 access for one quarter |
-| Tier 2<br>(Summit Partner) | $5,000 | First Candidate quarter only | One Executive slot with Tier 2 access for one quarter |
-| Tier 3<br>(Strategic Partner) | $10,000 | First Candidate quarter only | One Executive slot with Tier 3 access for one quarter |
-
-Have a Taste does not create Partner approval or permanent Partner pricing by itself. After the first quarter, continued participation moves to Candidate pricing unless your organization is approved as a Partner.
-
-Each Have a Taste slot is still one Executive slot. The Executive attendee using the slot must be director level or above.
 
 ## Subscription Ladder
 
@@ -68,7 +50,7 @@ Each Executive slot must be subscribed individually. One subscribed Executive sl
 
 | Partner Page Tier | Subscription Function | Price Per Executive Slot | Billing Basis | Access |
 | --- | --- | ---: | --- | --- |
-| Tier 1<br>(Research Partner) | Virtual event subscription | $1,000 | Per quarter | Unlimited Mojo virtual event attendance |
+| Tier 1<br>(Research Partner) | Virtual event subscription | $1,500 | Per quarter | Unlimited Mojo virtual event attendance |
 | Tier 2<br>(Summit Partner) | Summit attendance subscription | $5,000 total | Per quarter | Unlimited Mojo virtual event attendance plus Mojo summit attendance |
 | Tier 3<br>(Strategic Partner) | Full Mojo event subscription | $10,000 total | Per quarter, annual subscription | Unlimited virtual event attendance, summit attendance, and eligible Mojo events above and beyond Tier 1 and Tier 2 |
 
@@ -116,9 +98,9 @@ These examples include the slot-count discount: first Executive slot at standard
 
 | Executive Slots | Tier 1 Annualized | Tier 2 Annualized | Tier 3 Annualized |
 | ---: | ---: | ---: | ---: |
-| 1 | $4,000 | $20,000 | $40,000 |
-| 2 | $7,400 | $37,000 | $74,000 |
-| 3 | $10,200 | $51,000 | $102,000 |
+| 1 | $6,000 | $20,000 | $40,000 |
+| 2 | $11,100 | $37,000 | $74,000 |
+| 3 | $15,300 | $51,000 | $102,000 |
 
 ## Member Status Discount Examples
 
@@ -135,7 +117,7 @@ Qualified SMB vendors pay 50% of the applicable Partner subscription price for e
 
 | Access Level | Standard Quarterly Cost | SMB Quarterly Cost | What It Covers |
 | --- | ---: | ---: | --- |
-| Tier 1 | $1,000 | $500 | Unlimited virtual event attendance |
+| Tier 1 | $1,500 | $750 | Unlimited virtual event attendance |
 | Tier 2 | $5,000 | $2,500 | Unlimited virtual event attendance plus summit attendance |
 | Tier 3 | $10,000 | $5,000 | Unlimited virtual event attendance, summit attendance, and eligible Mojo events beyond Tier 1 and Tier 2 |
 
@@ -145,7 +127,7 @@ If your organization is both a Partner Candidate and an SMB-qualified vendor, yo
 
 ### Price
 
-$1,000 per quarter per Executive slot.
+$1,500 per quarter per Executive slot.
 
 ### Access
 
@@ -220,8 +202,8 @@ Tier 3 is the broadest Executive slot subscription and is shown as a total stack
 
 You subscribe one Executive slot to Tier 1.
 
-- Quarterly cost: $1,000
-- Annualized cost: $4,000
+- Quarterly cost: $1,500
+- Annualized cost: $6,000
 - Access: unlimited Mojo virtual events
 
 ### Example 2: Virtual + Summit Executive
@@ -247,7 +229,6 @@ Your partner agreement will specify:
 - Partner company name
 - Partner or Partner Candidate status
 - SMB program eligibility, when applicable
-- Have a Taste eligibility and introductory quarter, when applicable
 - Number of Executive slots
 - Approved Executive attendee assignment for each slot
 - Confirmation that each approved Executive attendee is director level or above
@@ -268,4 +249,4 @@ Your partner agreement will specify:
 
 ## Summary
 
-> Mojo AI Summits uses a per-Executive slot subscription model. Each subscription buys one Executive slot, which may be assigned to one approved director-level-or-above Executive attendee at a time according to the agreement. Tier 1 Research Partner access is $1,000 per quarter for unlimited virtual event attendance. Tier 2 Summit Partner access is $5,000 per quarter for virtual event access plus summit attendance. Tier 3 Strategic Partner access is $10,000 per quarter under an annual subscription for virtual events, summit attendance, and eligible Mojo events above and beyond Tier 1 and Tier 2. Partner Candidate means your organization is not yet an approved Partner, so Partner discounts do not apply until approval. Brand-new Partner Candidates may qualify for Have a Taste, a first-quarter introduction using standard Partner subscription pricing. If your organization does not become an approved Partner before the next quarter, pricing moves to the regular Candidate pricing structure. Tiers must be purchased in order, and additional Executive slots receive attendance-fee discounts.
+> Mojo AI Summits uses a per-Executive slot subscription model. Each subscription buys one Executive slot, which may be assigned to one approved director-level-or-above Executive attendee at a time according to the agreement. Tier 1 Research Partner access is $1,500 per quarter for unlimited virtual event attendance. Tier 2 Summit Partner access is $5,000 per quarter for virtual event access plus summit attendance. Tier 3 Strategic Partner access is $10,000 per quarter under an annual subscription for virtual events, summit attendance, and eligible Mojo events above and beyond Tier 1 and Tier 2. Partner Candidate means your organization is not yet an approved Partner, so Partner discounts do not apply until approval. Tiers must be purchased in order, and additional Executive slots receive attendance-fee discounts.
