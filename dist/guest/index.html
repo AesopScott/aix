@@ -427,7 +427,7 @@
         <p>Use your invitation details to register for MOJO AI Summits. We reserve these seats for leaders, presenters, and round table hosts joining the private AI leadership conversations.</p>
         <div class="status-list" aria-label="Registration requirements">
           <div class="status-item"><span class="status-mark"></span><span>Invite code required</span></div>
-          <div class="status-item"><span class="status-mark"></span><span>Company email required</span></div>
+          <div class="status-item"><span class="status-mark"></span><span>Email required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Phone confirmation recorded</span></div>
         </div>
       </section>
@@ -497,8 +497,8 @@
               </select>
             </div>
             <div class="field">
-              <label for="email">Company email</label>
-              <input type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required>
             </div>
             <div class="field full">
               <label for="eventShowId">Show time</label>
@@ -508,7 +508,7 @@
                 <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
               </select>
             </div>
-            <p class="email-privacy-note">We do not share email addresses with sponsors or any other organizations. Personal email address domains may not be used, such as Gmail.</p>
+            <p class="email-privacy-note">We do not share email addresses with sponsors or any other organizations.</p>
             <div class="field full">
               <label for="briefPhoto">Brief photo</label>
               <input type="file" id="briefPhoto" name="briefPhoto" accept="image/jpeg,image/png,image/webp" required>
@@ -535,7 +535,6 @@
           </div>
           <input type="hidden" id="phoneVerificationStatus" name="phoneVerificationStatus" value="unverified">
           <p class="message error" id="formError"></p>
-          <p class="fine-print">Personal Gmail and Googlemail addresses are not accepted for guest registration.</p>
           <div class="media-release-notice" role="note">
             <strong>Recording and publication release</strong>
             By submitting this registration, accepting this invitation, or attending a MOJO AI Summits event, you acknowledge and agree that MOJO AI Summits may record the session and may edit, reproduce, publish, distribute, display, and otherwise use your appearance, image, likeness, name, voice, statements, words, questions, comments, company affiliation, title, submitted photo, and event participation in event recordings, clips, recaps, transcripts, briefs, reports, articles, social posts, marketing materials, and other MOJO AI Summits publications and promotional materials, in any media, without additional approval or compensation. This release is a condition of registration, invitation acceptance, and event attendance.
@@ -608,11 +607,6 @@
     element.className = 'message';
   }
 
-  function isBlockedEmail(email){
-    const domain = String(email || '').trim().toLowerCase().split('@').pop();
-    return domain === 'gmail.com' || domain === 'googlemail.com';
-  }
-
   function isValidEmail(email){
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim().toLowerCase());
   }
@@ -681,11 +675,7 @@
   }
 
   emailInput.addEventListener('input', () => {
-    if (isBlockedEmail(emailInput.value)) {
-      setMessage(formError, 'Please use a company email address. Gmail and Googlemail addresses are not accepted.', 'error');
-    } else {
-      clearMessage(formError);
-    }
+    clearMessage(formError);
   });
 
   phoneInput.addEventListener('input', () => {
@@ -803,11 +793,6 @@
 
     if (!/^\d{6}$/.test(String(payload.inviteCode || '').trim())) {
       setMessage(formError, 'Enter a valid six-digit invite code.', 'error');
-      return;
-    }
-    if (isBlockedEmail(payload.email)) {
-      setMessage(formError, 'Please use a company email address. Gmail and Googlemail addresses are not accepted.', 'error');
-      emailInput.focus();
       return;
     }
     if (!payload.phone) {

@@ -614,8 +614,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <span class="pill">All workflows</span>
         </div>
         <ul>
-          <li>Registration forms require name, company, title, company email, phone, phone verification status, and the appropriate invite context.</li>
-          <li>Guest, member, and partner registration reject Gmail and Googlemail addresses.</li>
+          <li>Registration forms require name, company, title, email, phone, phone verification status, and the appropriate invite context.</li>
+          <li>Guest, member, and partner registration accept Gmail and Googlemail addresses.</li>
           <li>Successful registrations create registration records, canonical CRM contacts, event history entries, and company rollups.</li>
           <li>Preview modes must never submit live data.</li>
           <li>Temporary passwords, invite tokens, and handoff credentials must stay out of docs, notes, chat, commits, and logs.</li>
@@ -628,7 +628,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         </div>
         <ul>
           <li>Should member-created guest and member links require event selection, matching CRM-created links?</li>
-          <li>Should partner candidate requests reject personal email domains, matching partner registration?</li>
+          <li>Should partner candidate requests apply any email-domain policy now that registration accepts Gmail and Googlemail addresses?</li>
           <li>Should the member profile include an explicit send workflow, or is copy-and-send externally the intended behavior?</li>
           <li>Should guest registration require phone verification before submit once SMS is fully configured?</li>
           <li>Which CRM implementation is authoritative on the production apex route?</li>
@@ -644,7 +644,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         </div>
         <ol>
           <li>Create one staff guest invite, one staff member invite, and one staff partner invite tied to a known event.</li>
-          <li>Complete each registration with a unique company email.</li>
+          <li>Complete each registration with a unique email address.</li>
           <li>Confirm CRM invite history, contacts, company rollups, and event registrant rosters.</li>
           <li>Accept the member and partner registrants, generate passwords, and confirm private profile access.</li>
           <li>From the accepted member profile, create a guest show link and a member nomination link.</li>
@@ -666,7 +666,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           "A Mojo team member or accepted member creates a guest invite link.",
           "The guest opens /guest/?invite=######.",
           "The page validates the code with /api/guest-invite-codes/:code.",
-          "The guest enters full name, company, title, industry, company email, mobile phone, and publication-use choices.",
+          "The guest enters full name, company, title, industry, email, mobile phone, and publication-use choices.",
           "The guest records phone confirmation. While SMS is not fully configured, guest registration normalizes unverified or code-sent states to pending_sms_setup.",
           "The guest submits to /api/guest-registration.",
           "The system stores the registration, marks stored invite usage, upserts the CRM contact, and ties contact event history to the invite event when metadata exists.",
@@ -675,7 +675,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         checks: [
           "Direct /guest/ visits can display the page, but submit requires a valid six-digit invite.",
           "Invalid, expired, revoked, used, or wrong-type invite codes show a blocking error.",
-          "Gmail and Googlemail addresses are rejected before and during submit.",
+          "Gmail and Googlemail addresses are accepted before and during submit.",
           "Event metadata from stored invite codes appears in CRM contacts and event registrant lists.",
           "Used invite rows show the registrant under Used by and the assigned event under Used for."
         ]
@@ -690,7 +690,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           "The prospective member opens /member-registration/?invite=###### or enters the code into the gate.",
           "The page validates the code with /api/member-invite-codes/:code.",
           "The page unlocks the member details form after code validation.",
-          "The prospective member enters name, company, title, industry, company email, mobile phone, and publication-use choices.",
+          "The prospective member enters name, company, title, industry, email, mobile phone, and publication-use choices.",
           "The prospective member starts phone verification. If SMS is not fully configured, the expected submit-ready state is pending_sms_setup; if SMS is configured, the code must be confirmed as verified.",
           "The form submits to /api/member-registration.",
           "The system stores the registration, upserts the CRM contact, records event history, and marks the invite as used when it was a stored code."
@@ -756,7 +756,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           "The partner contact opens /partner-registration/?invite=######.",
           "The page validates the code with /api/partner-invite-codes/:code.",
           "The private form unlocks and displays invite or event context.",
-          "The partner enters name, company, title, industry, company email, mobile phone, and publication-use choices.",
+          "The partner enters name, company, title, industry, email, mobile phone, and publication-use choices.",
           "The partner records phone confirmation as verified or pending_sms_setup.",
           "The form submits to /api/partner-registration.",
           "The system stores the registration, marks invite usage, upserts the canonical contact, and connects the contact to a company-level partner profile key."
@@ -765,7 +765,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           "Direct /partner-registration/ visits show the private-link gate and do not reveal the form.",
           "Partner invite codes are strict: a stored active partner code is required.",
           "/partner-registration/?preview=4321 unlocks the form for review but blocks live submission.",
-          "Gmail and Googlemail addresses are rejected.",
+          "Gmail and Googlemail addresses are accepted.",
           "Partner company, contact email, partner tier, and selected event from the invite are preserved on the registration record."
         ]
       },
