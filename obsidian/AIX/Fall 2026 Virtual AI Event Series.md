@@ -62,6 +62,7 @@ These mappings are reviewed against the six home-page cohorts: Business Enableme
 - Home-page navigation should label this area as `Councils` and target `#councils`; do not show a separate top-nav `Virtual` link. Retain a hidden `#events` alias only for backward-compatible old links.
 - Added internal `/setup/` checklist scaffold for virtual-event strategy, platform setup, speaker readiness, audience promotion, live delivery, and follow-up
 - Added durable process note: `docs/processes/fall-2026-virtual-ai-event-series.md`
+- 2026-08-18: `/api/virtual-events/[event-slug]` now reads event-matched member, guest, and partner registration rows from both `MOJO_SUMMITS_SETUP_STATE` KV and Cloudflare R2 `crm/registrations/{type}/` or `crm-overflow/registrations/{type}/`. Featured guest cards on public landing pages update from registrations when the invite/event metadata matches and the registrant role is featured, presenter, speaker, or roundtable leader. Public name and company still depend on the registrant's explicit publication-use opt-ins.
 
 ## Next Decisions
 
