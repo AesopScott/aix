@@ -1924,7 +1924,7 @@ function mergeContactRows(storedRows, derivedRows) {
     byEmail.set(identity, normalizeContactRecord(row.key || previous.key || `crm:contact:${identity}`, {
       ...previous,
       ...row,
-      name: cleanString(row.name) || cleanString(previous.name) || email,
+      name: cleanString(row.name) || cleanString(previous.name) || identity,
       firstName: cleanString(row.firstName) || cleanString(previous.firstName),
       lastName: cleanString(row.lastName) || cleanString(previous.lastName),
       company: cleanString(row.company) || cleanString(previous.company),
@@ -3709,6 +3709,8 @@ function normalizeInviteCode(key, record) {
     guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
     partnerRegistrationType: cleanOptionalRegistrationType(record?.partnerRegistrationType || record?.registrationRole),
     registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.partnerRegistrationType || record?.guestRegistrationType),
+    linkedinConnectionStatus: cleanGuestMatrixOption(record?.linkedinConnectionStatus || record?.linkedInConnectionStatus || record?.connectionStatus, allowedGuestMatrixLinkedInStatuses, "unknown"),
+    registrationRequestStatus: cleanGuestMatrixOption(record?.registrationRequestStatus || record?.inviteStage || record?.inviteStatus, allowedGuestMatrixRegistrationRequestStatuses, "not-sent"),
     partnerCompany: cleanString(record?.partnerCompany),
     partnerContactEmail: cleanString(record?.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record?.partnerTier),
@@ -6018,6 +6020,17 @@ export async function onRequestPost({ request, env, data }) {
           actor: access.email,
           messageId: result.messageId
         });
+        const reminderSentAt = new Date().toISOString();
+        const existingInvite = await env.MOJO_SUMMITS_SETUP_STATE.get(invite.key, "json").catch(() => null);
+        if (existingInvite) {
+          await env.MOJO_SUMMITS_SETUP_STATE.put(invite.key, JSON.stringify({
+            ...existingInvite,
+            registrationRequestStatus: "reminder-sent",
+            reminderSentAt,
+            updatedAt: reminderSentAt,
+            updatedBy: access.email
+          }));
+        }
       } catch (error) {
         await logGuestRegistrationEmail(env, {
           type: "guest-registration-reminder",
@@ -6034,7 +6047,13 @@ export async function onRequestPost({ request, env, data }) {
         });
         throw error;
       }
-      return json({ ok: true, ...result });
+      return json({
+        ok: true,
+        ...result,
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
     } catch (error) {
       return json({ error: error.message || "Reminder email could not be sent." }, { status: 502 });
     }

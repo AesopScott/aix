@@ -419,6 +419,30 @@
       overflow-y: hidden;
     }
 
+    .table-scroll-proxy {
+      position: fixed;
+      left: 1rem;
+      bottom: 0.35rem;
+      width: calc(100vw - 2rem);
+      height: 18px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      z-index: 70;
+      display: none;
+      border: 1px solid rgba(0, 230, 255, 0.25);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.94);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .table-scroll-proxy.visible {
+      display: block;
+    }
+
+    .table-scroll-proxy-inner {
+      height: 1px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -1091,6 +1115,13 @@
       font-size: 0.82rem;
     }
 
+    .guest-matrix-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.45rem;
+    }
+
     .pill.good {
       color: var(--good);
       border-color: rgba(106, 240, 182, 0.42);
@@ -1424,6 +1455,7 @@
 
     @media (max-width: 980px) {
       main { padding: 1rem 0.5rem 3rem; }
+      .table-scroll-proxy { left: 0.5rem; width: calc(100vw - 1rem); }
       header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-add-form, .guest-matrix-controls, .guest-matrix-summary { grid-template-columns: 1fr; }
       .partner-add-contact-form .span-2 { grid-column: auto; }
       .invite-qr { width: 100%; justify-items: start; }
@@ -1915,6 +1947,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     </div>
   </main>
 
+  <div class="table-scroll-proxy" id="tableScrollProxy" aria-hidden="true">
+    <div class="table-scroll-proxy-inner" id="tableScrollProxyInner"></div>
+  </div>
+
   <script>
     const api = "/api/crm";
     const navButtons = [...document.querySelectorAll("[data-view]")];
@@ -1922,6 +1958,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const rowsElement = document.querySelector("#rows");
     const notice = document.querySelector("#notice");
     const metrics = document.querySelector("#metrics");
+    const tableScrollProxy = document.querySelector("#tableScrollProxy");
+    const tableScrollProxyInner = document.querySelector("#tableScrollProxyInner");
     const typeFilter = document.querySelector("#typeFilter");
     const statusFilter = document.querySelector("#statusFilter");
     const eventFilter = document.querySelector("#eventFilter");
@@ -2061,6 +2099,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     };
     let registrationDebug = null;
     let prospectingState = null;
+    let activeTableWrap = null;
+    let tableProxySyncing = false;
     const fallbackMojoEvents = [
       { slug: "ai-executive-readiness", title: "AI Executive Readiness", date: "Friday, September 4, 2026", format: "Virtual" },
       { slug: "ai-data-readiness-and-knowledge-strategy", title: "AI Data Readiness and Knowledge Strategy", date: "Friday, September 18, 2026", format: "Virtual" },
@@ -2898,6 +2938,48 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       });
     }
 
+    function tableWrapFromEventTarget(target) {
+      if (!target) return null;
+      if (target.classList?.contains("table-wrap")) return target;
+      return target.closest?.(".table-wrap") || null;
+    }
+
+    function tableWrapNeedsProxy(wrap) {
+      return wrap && wrap.scrollWidth > wrap.clientWidth + 2;
+    }
+
+    function visibleTableWraps() {
+      return [...document.querySelectorAll(".table-wrap")].filter((wrap) => {
+        const rect = wrap.getBoundingClientRect();
+        return rect.width > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+      });
+    }
+
+    function pickActiveTableWrap() {
+      if (tableWrapNeedsProxy(activeTableWrap) && activeTableWrap.isConnected) return activeTableWrap;
+      return visibleTableWraps().find(tableWrapNeedsProxy) || null;
+    }
+
+    function syncTableScrollProxy() {
+      if (!tableScrollProxy || !tableScrollProxyInner) return;
+      const wrap = pickActiveTableWrap();
+      activeTableWrap = wrap;
+      if (!wrap) {
+        tableScrollProxy.classList.remove("visible");
+        return;
+      }
+      const rect = wrap.getBoundingClientRect();
+      const left = Math.max(8, rect.left);
+      const right = Math.min(window.innerWidth - 8, rect.right);
+      tableScrollProxy.style.left = `${left}px`;
+      tableScrollProxy.style.width = `${Math.max(120, right - left)}px`;
+      tableScrollProxyInner.style.width = `${wrap.scrollWidth}px`;
+      tableProxySyncing = true;
+      tableScrollProxy.scrollLeft = wrap.scrollLeft;
+      tableProxySyncing = false;
+      tableScrollProxy.classList.add("visible");
+    }
+
     function setActiveView(view, options = {}) {
       activeView = view || "contacts";
       if (!options.keepCompanyFilter) {
@@ -3453,13 +3535,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           ? `Showing ${filtered.length} of ${rows.length} guest and member tracking records grouped by event. Registration status comes from CRM records.`
           : "";
       }
-      if (!guestMatrixList) return;
+      if (!guestMatrixList) {
+        requestAnimationFrame(syncTableScrollProxy);
+        return;
+      }
       if (!rows.length) {
         guestMatrixList.innerHTML = "<p>No guest or member tracking records exist yet.</p>";
+        requestAnimationFrame(syncTableScrollProxy);
         return;
       }
       if (!filtered.length) {
         guestMatrixList.innerHTML = "<p>No guest tracking records match the current matrix filters.</p>";
+        requestAnimationFrame(syncTableScrollProxy);
         return;
       }
       const groups = new Map();
@@ -3537,6 +3624,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       <td>
                         ${row.matrixOnly ? '<span class="pill warn">No invite link yet</span>' : `<code>${escapeHtml(row.code || "No code")}</code>`}
                         <div class="matrix-muted">${escapeHtml(row.url || "Tracked before invite")}</div>
+                        <div class="guest-matrix-actions">
+                          ${!row.matrixOnly && row.invite.key ? `<button class="compact secondary" type="button" data-reminder-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-reminder-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}" ${row.email ? "" : "disabled title=\"No email address on file for this invite\""}>Reminder Email</button>` : ""}
+                        </div>
                       </td>
                     </tr>
                   `).join("")}
@@ -3546,6 +3636,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           </article>
         `;
       }).join("");
+      requestAnimationFrame(syncTableScrollProxy);
     }
 
     function eventOptionMarkup() {
@@ -5292,12 +5383,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const label = activeLabel();
       if (activeView === "partners-company") {
         renderPartnerCompanyRows(rows);
+        requestAnimationFrame(syncTableScrollProxy);
         return;
       }
       partnerPagination.hidden = true;
       registrantsTitle.textContent = state.type === "contacts" || state.type === "guest" ? label : `${label} Registrants`;
       if (!rows.length) {
         rowsElement.innerHTML = `<tr><td colspan="8">No ${label.toLowerCase()} match the current filters.</td></tr>`;
+        requestAnimationFrame(syncTableScrollProxy);
         return;
       }
 
@@ -5338,6 +5431,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         </tr>
         ${state.type === "contacts" ? contactDetailsRow(row) : notesDetailsRow(row)}
       `).join("");
+      requestAnimationFrame(syncTableScrollProxy);
     }
 
     function debugStatusClass(row) {
@@ -5440,6 +5534,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       renderProspectingCompanyIndex();
       if (isProspectingView()) {
         renderProspecting();
+        requestAnimationFrame(syncTableScrollProxy);
         return;
       }
       renderEventOptions();
@@ -5448,6 +5543,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       renderGuestMatrix();
       renderPartnerInvites();
       if (isRecordsView()) renderRows();
+      requestAnimationFrame(syncTableScrollProxy);
     }
 
     function shouldUseGuestMatrixDemo(error) {
@@ -6280,6 +6376,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             origin: window.location.origin
           })
         }).then(readJson);
+        state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
+        state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
+        renderRegistrationInvites();
+        renderGuestMatrix();
         const ccText = Array.isArray(data.cc) && data.cc.length ? ` CC: ${data.cc.join(", ")}.` : "";
         setNotice(`Reminder email sent to ${data.sentTo || "the invited guest"}.${ccText}`, "ok");
       } catch (error) {
@@ -6443,18 +6544,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     rowsElement.addEventListener("click", async (event) => {
-      const key = event.target.dataset.saveKey;
-      const passwordKey = event.target.dataset.passwordKey;
-      const profilePath = event.target.dataset.profilePath;
-      const deleteContactKey = event.target.dataset.deleteContactKey;
-      const deleteGuestRegistrantKey = event.target.dataset.deleteGuestRegistrantKey;
-      const saveContactKey = event.target.dataset.saveContactKey;
-      const uploadContactPhotoKey = event.target.dataset.uploadContactPhotoKey;
-      const addActivityDraftKey = event.target.dataset.addActivityDraftKey;
-      const saveActivityKey = event.target.dataset.saveActivityKey;
-      const addContactCompany = event.target.dataset.addContactCompany;
-      const cancelContactCompany = event.target.dataset.cancelCompanyContact;
-      const saveContactCompany = event.target.dataset.saveCompanyContact;
+      const actionButton = event.target.closest("button, a");
+      const key = actionButton?.dataset.saveKey;
+      const passwordKey = actionButton?.dataset.passwordKey;
+      const profilePath = actionButton?.dataset.profilePath;
+      const deleteContactKey = actionButton?.dataset.deleteContactKey;
+      const deleteGuestRegistrantKey = actionButton?.dataset.deleteGuestRegistrantKey;
+      const saveContactKey = actionButton?.dataset.saveContactKey;
+      const uploadContactPhotoKey = actionButton?.dataset.uploadContactPhotoKey;
+      const addActivityDraftKey = actionButton?.dataset.addActivityDraftKey;
+      const saveActivityKey = actionButton?.dataset.saveActivityKey;
+      const addContactCompany = actionButton?.dataset.addContactCompany;
+      const cancelContactCompany = actionButton?.dataset.cancelCompanyContact;
+      const saveContactCompany = actionButton?.dataset.saveCompanyContact;
       if (addContactCompany) {
         activePartnerAddCompany = addContactCompany;
         renderRows();
@@ -6471,15 +6573,25 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       if (deleteGuestRegistrantKey) {
-        await deleteGuestRegistrant(deleteGuestRegistrantKey, event.target.dataset.deleteGuestRegistrantLabel || "");
+        await deleteGuestRegistrant(deleteGuestRegistrantKey, actionButton.dataset.deleteGuestRegistrantLabel || "");
         return;
       }
       if (deleteContactKey) {
-        await deleteContact(deleteContactKey, event.target.dataset.deleteContactEmail || "");
+        await deleteContact(deleteContactKey, actionButton.dataset.deleteContactEmail || "");
         return;
       }
       if (saveContactKey) {
-        await saveRegistrant(saveContactKey, contactEditChanges(saveContactKey));
+        const originalLabel = actionButton.textContent;
+        actionButton.disabled = true;
+        actionButton.textContent = "Saving...";
+        try {
+          await saveRegistrant(saveContactKey, contactEditChanges(saveContactKey));
+        } finally {
+          if (actionButton.isConnected) {
+            actionButton.disabled = false;
+            actionButton.textContent = originalLabel;
+          }
+        }
         return;
       }
       if (uploadContactPhotoKey) {
@@ -6491,7 +6603,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       if (saveActivityKey) {
-        await saveContactActivity(saveActivityKey, event.target.dataset.activityDraftId || "primary");
+        await saveContactActivity(saveActivityKey, actionButton.dataset.activityDraftId || "primary");
         return;
       }
       if (profilePath) {
@@ -6541,6 +6653,40 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     navButtons.forEach((button) => {
       button.addEventListener("click", () => setActiveView(button.dataset.view));
     });
+
+    document.addEventListener("pointerover", (event) => {
+      const wrap = tableWrapFromEventTarget(event.target);
+      if (!wrap) return;
+      activeTableWrap = wrap;
+      syncTableScrollProxy();
+    });
+
+    document.addEventListener("focusin", (event) => {
+      const wrap = tableWrapFromEventTarget(event.target);
+      if (!wrap) return;
+      activeTableWrap = wrap;
+      syncTableScrollProxy();
+    });
+
+    document.addEventListener("scroll", (event) => {
+      if (tableProxySyncing) return;
+      const wrap = tableWrapFromEventTarget(event.target);
+      if (!wrap) return;
+      activeTableWrap = wrap;
+      syncTableScrollProxy();
+    }, true);
+
+    tableScrollProxy?.addEventListener("scroll", () => {
+      if (tableProxySyncing) return;
+      const wrap = pickActiveTableWrap();
+      if (!wrap) return;
+      tableProxySyncing = true;
+      wrap.scrollLeft = tableScrollProxy.scrollLeft;
+      tableProxySyncing = false;
+    });
+
+    window.addEventListener("scroll", syncTableScrollProxy, { passive: true });
+    window.addEventListener("resize", syncTableScrollProxy);
 
     prospectingCompanyIndex.addEventListener("click", (event) => {
       const companyButton = event.target.closest("[data-filter-prospect-company]");
@@ -6906,6 +7052,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     guestMatrixList.addEventListener("click", async (event) => {
+      const reminderButton = event.target.closest("[data-reminder-guest-matrix-invite-key]");
+      if (reminderButton) {
+        await sendInviteReminder(
+          reminderButton.dataset.reminderGuestMatrixInviteKey,
+          reminderButton.dataset.reminderGuestMatrixInviteType || "guest"
+        );
+        return;
+      }
       const prospectButton = event.target.closest("[data-delete-guest-matrix-prospect-key]");
       if (prospectButton) {
         await deleteGuestMatrixProspect(
