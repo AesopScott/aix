@@ -275,6 +275,23 @@
     text-decoration:underline;
     text-underline-offset:3px;
   }
+  .media-release-notice{
+    padding:16px 18px;
+    border:1px solid rgba(0,230,255,.32);
+    background:rgba(10,15,30,.55);
+    color:var(--ink);
+    font-size:12px;
+    line-height:1.65;
+  }
+  .media-release-notice strong{
+    display:block;
+    margin-bottom:6px;
+    color:var(--white);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:10px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
   .file-help{
     margin:8px 0 0;
     color:var(--ink-dim);
@@ -554,6 +571,10 @@
           <input type="hidden" id="phoneVerificationStatus" name="phoneVerificationStatus" value="unverified">
           <p class="message error" id="formError"></p>
           <p class="fine-print">Personal Gmail and Googlemail addresses are not accepted for partner registration.</p>
+          <div class="media-release-notice" role="note">
+            <strong>Recording and publication release</strong>
+            By submitting this registration, accepting this invitation, or attending a MOJO AI Summits event, you acknowledge and agree that MOJO AI Summits may record the session and may edit, reproduce, publish, distribute, display, and otherwise use your appearance, image, likeness, name, voice, statements, words, questions, comments, company affiliation, title, submitted photo, and event participation in event recordings, clips, recaps, transcripts, briefs, reports, articles, social posts, marketing materials, and other MOJO AI Summits publications and promotional materials, in any media, without additional approval or compensation. This release is a condition of registration, invitation acceptance, and event attendance.
+          </div>
           <button type="submit" class="btn-primary" id="submitButton">Submit Partner Registration</button>
         </form>
 
