@@ -634,7 +634,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <thead>
               <tr>
                 <th>File</th>
-                <th>Event</th>
+                <th>Folder</th>
                 <th>Status</th>
                 <th>Submitter</th>
                 <th>Size</th>
@@ -751,6 +751,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9]{8}-/i,
         ""
       );
+    }
+
+    function folderName(file) {
+      if (file.folder) return file.folder;
+      const parts = String(file.key || "").split("/").filter(Boolean);
+      return parts.length > 2 ? parts.slice(1, -1).join("/") : "Top level";
     }
 
     async function readJson(response) {
@@ -1078,7 +1084,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           .map((file) => `
             <tr>
               <td class="file-key" title="${escapeHtml(file.key)}">${escapeHtml(displayName(file))}</td>
-              <td>${escapeHtml(file.receiptEvent || file.event || "Global")}</td>
+              <td>${escapeHtml(folderName(file))}</td>
               <td class="file-status-cell">
                 <select data-status="${encodeURIComponent(file.key)}">
                   ${statusOptionsHtml(file.status)}

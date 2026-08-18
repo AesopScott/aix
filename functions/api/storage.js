@@ -275,6 +275,7 @@ function objectToRecord(object) {
     key: object.key,
     name: originalName,
     area: object.customMetadata?.area || "",
+    folder: folderPathFromKey(object.key),
     event,
     receiptOwner: object.customMetadata?.receiptOwner || "",
     receiptEvent: event,
@@ -304,6 +305,12 @@ function splitKey(key) {
     directory: parts.length ? `${parts.join("/")}/` : "",
     fileName
   };
+}
+
+function folderPathFromKey(key) {
+  const parts = String(key || "").split("/").filter(Boolean);
+  if (parts.length <= 2) return "";
+  return parts.slice(1, -1).join("/");
 }
 
 function generatedNamePrefix(fileName) {
