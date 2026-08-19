@@ -4396,40 +4396,93 @@ async function removeEmailFromCompanyContacts(env, email, actor = "") {
   return deletedFromCompanies;
 }
 
+async function deleteDerivedContactSources(env, contactKey = "") {
+  const requestedKey = cleanString(contactKey, 500);
+  if (!requestedKey) return [];
+
+  const deletedSourceKeys = [];
+  const deleteMatchingSource = async (row = {}, source = "") => {
+    const derivedContact = contactFromInviteRecord(row, source);
+    if (derivedContact?.key !== requestedKey) return;
+    const sourceKey = cleanString(row.key, 500);
+    if (!sourceKey) return;
+    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(sourceKey, "json").catch(() => null);
+    if (!existing) return;
+    await env.MOJO_SUMMITS_SETUP_STATE.delete(sourceKey);
+    deletedSourceKeys.push(sourceKey);
+  };
+
+  for (const invite of await registrationInviteCodes(env)) {
+    await deleteMatchingSource(invite, `${invite.type || "guest"}-invite`);
+  }
+
+  for (const prospect of await guestMatrixProspects(env)) {
+    await deleteMatchingSource(prospect, "guest-matrix-prospect");
+  }
+
+  return [...new Set(deletedSourceKeys)];
+}
+
 async function deleteContact(env, payload = {}, actor = "") {
-  const requestedKey = cleanString(payload.key);
-  const email = cleanString(
-    payload.email ||
-      (requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
-        ? requestedKey.replace(registrantTypes.contacts.crmPrefix, "")
-        : requestedKey)
-  ).toLowerCase();
-  if (!email || !email.includes("@")) throw new Error("Contact email is required before deleting a contact.");
+  const requestedKey = cleanString(payload.key, 500);
+  const requestedEmail = cleanString(payload.email, 180).toLowerCase();
+  const keyIdentity = requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
+    ? cleanString(requestedKey.replace(registrantTypes.contacts.crmPrefix, ""), 240).toLowerCase()
+    : "";
+  const directContactKey = requestedKey.startsWith(registrantTypes.contacts.crmPrefix)
+    ? requestedKey
+    : isEmail(requestedEmail)
+      ? `${registrantTypes.contacts.crmPrefix}${requestedEmail}`
+      : "";
+  const existingContact = directContactKey
+    ? await env.MOJO_SUMMITS_SETUP_STATE.get(directContactKey, "json").catch(() => null)
+    : null;
+  const existingEmail = cleanString(existingContact?.email, 180).toLowerCase();
+  const email = isEmail(requestedEmail)
+    ? requestedEmail
+    : isEmail(existingEmail)
+      ? existingEmail
+      : isEmail(keyIdentity)
+        ? keyIdentity
+        : "";
+  if (!directContactKey && !email) throw new Error("Contact key or email is required before deleting a contact.");
 
   const deletedKeys = [];
-  const contactKey = `${registrantTypes.contacts.crmPrefix}${email}`;
-  await env.MOJO_SUMMITS_SETUP_STATE.delete(contactKey);
-  deletedKeys.push(contactKey);
+  const primaryContactKey = directContactKey || `${registrantTypes.contacts.crmPrefix}${email}`;
+  await env.MOJO_SUMMITS_SETUP_STATE.delete(primaryContactKey);
+  deletedKeys.push(primaryContactKey);
 
-  for (const type of ["guest", "member", "partner"]) {
-    const config = registrantTypes[type];
-    const keys = [...new Set([
-      ...(await listKeys(env, config.crmPrefix)),
-      ...(await listKeys(env, config.legacyPrefix))
-    ])];
-    for (const key of keys) {
-      const record = await readRawRecord(env, key);
-      if (cleanString(record?.email).toLowerCase() !== email) continue;
-      await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
-      deletedKeys.push(key);
+  if (email) {
+    const emailContactKey = `${registrantTypes.contacts.crmPrefix}${email}`;
+    if (emailContactKey !== primaryContactKey) {
+      await env.MOJO_SUMMITS_SETUP_STATE.delete(emailContactKey);
+      deletedKeys.push(emailContactKey);
     }
   }
 
-  const deletedR2Keys = await deleteR2RegistrantsForEmail(env, email);
-  const deletedFromCompanies = await removeEmailFromCompanyContacts(env, email, actor);
+  if (email) {
+    for (const type of ["guest", "member", "partner"]) {
+      const config = registrantTypes[type];
+      const keys = [...new Set([
+        ...(await listKeys(env, config.crmPrefix)),
+        ...(await listKeys(env, config.legacyPrefix))
+      ])];
+      for (const key of keys) {
+        const record = await readRawRecord(env, key);
+        if (cleanString(record?.email).toLowerCase() !== email) continue;
+        await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+        deletedKeys.push(key);
+      }
+    }
+  }
+
+  const deletedSourceKeys = directContactKey ? await deleteDerivedContactSources(env, directContactKey) : [];
+  const deletedR2Keys = email ? await deleteR2RegistrantsForEmail(env, email) : [];
+  const deletedFromCompanies = email ? await removeEmailFromCompanyContacts(env, email, actor) : [];
   return {
     email,
     deletedKeys: [...new Set(deletedKeys)],
+    deletedSourceKeys,
     deletedR2Keys,
     deletedFromCompanies
   };

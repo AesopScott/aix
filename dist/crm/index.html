@@ -895,11 +895,19 @@
     .invite-grid-actions {
       display: flex;
       gap: 0.6rem;
+      align-items: stretch;
     }
 
     .invite-grid-actions button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       width: auto;
       flex: 1;
+      min-height: 3.45rem;
+      line-height: 1.2;
+      text-align: center;
+      white-space: normal;
     }
 
     .manual-partner-grid {
@@ -1821,7 +1829,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         </label>
         <div class="invite-grid-actions">
           <button type="submit" id="registrationInviteSubmit">Generate Link</button>
-          <button type="button" id="registrationInviteSendEmail" class="secondary">Send Email</button>
+          <button type="button" id="registrationInviteSendEmail" class="secondary">Generate Link + Send Email</button>
         </div>
       </form>
       <div class="invite-result" id="registrationInviteResult" aria-live="polite"></div>
@@ -3742,6 +3750,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       registrationInviteShow.value = featuredGuest && currentShow === "both" ? "morning" : currentShow;
       if (!registrationInviteShow.value) registrationInviteShow.value = "morning";
       registrationInviteSubmit.textContent = `Generate ${role} Link`;
+      registrationInviteSendEmail.textContent = `Generate ${role} Link + Send Email`;
     }
 
     function updateGuestMatrixAddShowOptions() {
@@ -7393,7 +7402,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       await submitRegistrationInvite(buildRegistrationInvitePayload(true), {
         busyButton: registrationInviteSendEmail,
         busyText: "Sending...",
-        idleText: "Send Email"
+        idleText: registrationInviteSendEmail.textContent
       });
     });
 
