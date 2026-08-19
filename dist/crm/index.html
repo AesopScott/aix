@@ -331,6 +331,19 @@
       overflow: hidden;
     }
 
+    #contactSaveAllButton {
+      position: fixed;
+      right: 1rem;
+      bottom: 2rem;
+      width: min(18rem, calc(100vw - 2rem));
+      z-index: 75;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+    }
+
+    #contactSaveAllButton[hidden] {
+      display: none;
+    }
+
     .record-type-field { display: none; }
 
     .threshold-field {
@@ -1456,6 +1469,7 @@
     @media (max-width: 980px) {
       main { padding: 1rem 0.5rem 3rem; }
       .table-scroll-proxy { left: 0.5rem; width: calc(100vw - 1rem); }
+      #contactSaveAllButton { right: 0.5rem; bottom: 1.75rem; width: calc(100vw - 1rem); }
       header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-add-form, .guest-matrix-controls, .guest-matrix-summary { grid-template-columns: 1fr; }
       .partner-add-contact-form .span-2 { grid-column: auto; }
       .invite-qr { width: 100%; justify-items: start; }
@@ -1633,6 +1647,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <input id="searchInput" placeholder="name, company, title, industry, email">
       </label>
       <button id="clearFiltersButton" class="secondary" type="button">Clear Filters</button>
+      <button id="contactSaveAllButton" class="secondary" type="button" hidden disabled>Save Contact Changes</button>
       <button id="refreshButton" class="secondary" type="button">Refresh CRM</button>
       <button id="downloadButton" class="secondary" type="button">Download CSV</button>
     </section>
@@ -1972,6 +1987,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const phoneFilter = document.querySelector("#phoneFilter");
     const searchInput = document.querySelector("#searchInput");
     const clearFiltersButton = document.querySelector("#clearFiltersButton");
+    const contactSaveAllButton = document.querySelector("#contactSaveAllButton");
     const refreshButton = document.querySelector("#refreshButton");
     const downloadButton = document.querySelector("#downloadButton");
     const registrantsTitle = document.querySelector("#registrantsTitle");
@@ -2086,6 +2102,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const partnerCompaniesPerPage = 10;
     let guestMatrixDrafts = loadGuestMatrixDrafts();
     let guestMatrixPendingChanges = {};
+    let contactPendingChanges = {};
     let prospectingRunStatus = null;
     let state = {
       type: "contacts",
@@ -3707,6 +3724,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           .map(([value, label]) => optionMarkup(value, label, selectedCompany))
       ].join("");
       if (selectedCompany !== "all" && companyFilter.value !== selectedCompany) companyFilter.value = "all";
+      if (contactSaveAllButton) {
+        contactSaveAllButton.hidden = activeView !== "contacts" || state.type !== "contacts";
+        updateContactSaveAllButton();
+      }
     }
 
     function updateRegistrationInviteSubmit() {
@@ -5090,10 +5111,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         row.city || row.state ? [row.city, row.state].filter(Boolean).join(", ") : ""
       ].filter(Boolean);
       const tracks = (row.topicInterests || []).slice(0, 2).map((track) => labelForOption(topicTrackOptions, track));
+      if (!pieces.length && !tracks.length) return "";
       return `
         <div class="crm-compact-stack">
           <div class="crm-compact-pills">
-            ${pieces.length ? pieces.slice(0, 3).map((piece) => `<span class="pill">${escapeHtml(piece)}</span>`).join("") : '<span class="pill warn">Needs qualification</span>'}
+            ${pieces.slice(0, 3).map((piece) => `<span class="pill">${escapeHtml(piece)}</span>`).join("")}
           </div>
           ${tracks.length ? `<div class="crm-compact-meta">${escapeHtml(tracks.join(" | "))}${(row.topicInterests || []).length > 2 ? " +" : ""}</div>` : ""}
         </div>
@@ -5394,7 +5416,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
 
-      rowsElement.innerHTML = rows.map((row) => `
+      const renderedRows = state.type === "contacts" ? rows.map(contactRowWithDraft) : rows;
+      rowsElement.innerHTML = renderedRows.map((row) => `
         <tr>
           <td>
             <strong>${escapeHtml(row.name)}</strong><br>
@@ -5843,47 +5866,128 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return Object.fromEntries(new FormData(form).entries());
     }
 
+    function contactFieldInputValue(field) {
+      return field.multiple
+        ? [...field.selectedOptions].map((option) => option.value)
+        : field.value.trim();
+    }
+
+    function contactDraftCount() {
+      return Object.keys(contactPendingChanges || {}).length;
+    }
+
+    function updateContactSaveAllButton() {
+      if (!contactSaveAllButton) return;
+      const count = contactDraftCount();
+      const contactsActive = activeView === "contacts" && state.type === "contacts";
+      contactSaveAllButton.disabled = !contactsActive || count === 0;
+      contactSaveAllButton.textContent = count
+        ? `Save Contact Changes (${count})`
+        : "Save Contact Changes";
+    }
+
+    function contactRowWithDraft(row = {}) {
+      return row?.key && contactPendingChanges[row.key]
+        ? { ...row, ...contactPendingChanges[row.key] }
+        : row;
+    }
+
+    function queueContactChange(field) {
+      const key = field?.dataset?.contactKey;
+      const name = field?.dataset?.contactField;
+      if (!key || !name) return;
+      contactPendingChanges[key] = {
+        ...(contactPendingChanges[key] || {}),
+        [name]: contactFieldInputValue(field)
+      };
+      updateContactSaveAllButton();
+    }
+
+    function contactSavePayload(key, changes = {}) {
+      const existing = state.rows.find((row) => row.key === key);
+      if (!existing) return null;
+      return {
+        action: "save-contact",
+        key,
+        email: changes.email ?? existing.email ?? "",
+        firstName: changes.firstName ?? existing.firstName ?? "",
+        lastName: changes.lastName ?? existing.lastName ?? "",
+        company: changes.company ?? existing.company ?? "",
+        title: changes.title ?? existing.title ?? "",
+        phone: changes.phone ?? existing.phone ?? "",
+        photoUrl: changes.photoUrl ?? existing.photoUrl ?? "",
+        bio: changes.bio ?? existing.bio ?? "",
+        industry: changes.industry ?? existing.industry ?? "",
+        executiveFunction: changes.executiveFunction ?? existing.executiveFunction ?? "",
+        companySize: changes.companySize ?? existing.companySize ?? "",
+        organizationType: changes.organizationType ?? existing.organizationType ?? "",
+        city: changes.city ?? existing.city ?? "",
+        state: changes.state ?? existing.state ?? "",
+        timeZone: changes.timeZone ?? existing.timeZone ?? "",
+        invitationSource: changes.invitationSource ?? existing.invitationSource ?? "",
+        invitedBy: changes.invitedBy ?? existing.invitedBy ?? "",
+        relationshipOwner: changes.relationshipOwner ?? existing.relationshipOwner ?? "",
+        lifecycleStage: changes.lifecycleStage ?? existing.lifecycleStage ?? "guest",
+        lastContactDate: changes.lastContactDate ?? existing.lastContactDate ?? "",
+        nextAction: changes.nextAction ?? existing.nextAction ?? "none",
+        nextActionDueDate: changes.nextActionDueDate ?? existing.nextActionDueDate ?? "",
+        emailPermission: changes.emailPermission ?? existing.emailPermission ?? "unknown",
+        topicInterests: changes.topicInterests ?? existing.topicInterests ?? [],
+        crmNotes: changes.crmNotes ?? existing.crmNotes ?? ""
+      };
+    }
+
+    async function saveContactUpdate(key, changes, options = {}) {
+      const payload = contactSavePayload(key, changes);
+      if (!payload) return null;
+      setNotice(options.notice || "Saving contact update...");
+      const data = await fetch(api, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(readJson);
+      state = data;
+      delete contactPendingChanges[key];
+      updateContactSaveAllButton();
+      if (options.render !== false) render();
+      return data;
+    }
+
+    async function saveAllContactChanges() {
+      const entries = Object.entries(contactPendingChanges || {});
+      if (!entries.length) return;
+      const originalLabel = contactSaveAllButton.textContent;
+      contactSaveAllButton.disabled = true;
+      try {
+        let savedCount = 0;
+        for (const [key, changes] of entries) {
+          contactSaveAllButton.textContent = `Saving ${savedCount + 1} of ${entries.length}...`;
+          await saveContactUpdate(key, changes, {
+            render: false,
+            notice: `Saving contact ${savedCount + 1} of ${entries.length}...`
+          });
+          savedCount += 1;
+        }
+        render();
+        setNotice(`Saved ${savedCount} contact change${savedCount === 1 ? "" : "s"}.`, "ok");
+      } catch (error) {
+        showErrorNotice(error, "Contact changes could not be saved.");
+      } finally {
+        if (contactSaveAllButton.isConnected) {
+          contactSaveAllButton.textContent = originalLabel;
+          updateContactSaveAllButton();
+        }
+      }
+    }
+
     async function saveRegistrant(key, changes) {
       const existing = state.rows.find((row) => row.key === key);
       if (!existing) return;
       setNotice("Saving CRM update...");
       try {
         if (state.type === "contacts") {
-          state = await fetch(api, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              action: "save-contact",
-              key,
-              email: changes.email ?? existing.email ?? "",
-              firstName: changes.firstName ?? existing.firstName ?? "",
-              lastName: changes.lastName ?? existing.lastName ?? "",
-              company: changes.company ?? existing.company ?? "",
-              title: changes.title ?? existing.title ?? "",
-              phone: changes.phone ?? existing.phone ?? "",
-              photoUrl: changes.photoUrl ?? existing.photoUrl ?? "",
-              bio: changes.bio ?? existing.bio ?? "",
-              industry: changes.industry ?? existing.industry ?? "",
-              executiveFunction: changes.executiveFunction ?? existing.executiveFunction ?? "",
-              companySize: changes.companySize ?? existing.companySize ?? "",
-              organizationType: changes.organizationType ?? existing.organizationType ?? "",
-              city: changes.city ?? existing.city ?? "",
-              state: changes.state ?? existing.state ?? "",
-              timeZone: changes.timeZone ?? existing.timeZone ?? "",
-              invitationSource: changes.invitationSource ?? existing.invitationSource ?? "",
-              invitedBy: changes.invitedBy ?? existing.invitedBy ?? "",
-              relationshipOwner: changes.relationshipOwner ?? existing.relationshipOwner ?? "",
-              lifecycleStage: changes.lifecycleStage ?? existing.lifecycleStage ?? "guest",
-              lastContactDate: changes.lastContactDate ?? existing.lastContactDate ?? "",
-              nextAction: changes.nextAction ?? existing.nextAction ?? "none",
-              nextActionDueDate: changes.nextActionDueDate ?? existing.nextActionDueDate ?? "",
-              emailPermission: changes.emailPermission ?? existing.emailPermission ?? "unknown",
-              topicInterests: changes.topicInterests ?? existing.topicInterests ?? [],
-              crmNotes: changes.crmNotes ?? existing.crmNotes ?? ""
-            })
-          }).then(readJson);
+          await saveContactUpdate(key, changes);
           setNotice("Contact CRM fields saved.", "ok");
-          render();
           return;
         }
 
@@ -5951,9 +6055,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       for (const field of fields) {
         const name = field.dataset.contactField;
         if (!name) continue;
-        changes[name] = field.multiple
-          ? [...field.selectedOptions].map((option) => option.value)
-          : field.value.trim();
+        changes[name] = contactFieldInputValue(field);
       }
       return changes;
     }
@@ -6500,7 +6602,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    rowsElement.addEventListener("input", (event) => {
+      if (state.type !== "contacts") return;
+      if (!event.target.dataset.contactKey || !event.target.dataset.contactField) return;
+      queueContactChange(event.target);
+    });
+
     rowsElement.addEventListener("change", (event) => {
+      if (state.type === "contacts" && event.target.dataset.contactKey && event.target.dataset.contactField) {
+        queueContactChange(event.target);
+        return;
+      }
+
       const attendanceKey = event.target.dataset.attendanceContactKey;
       if (attendanceKey) {
         saveContactAttendance(event.target);
@@ -6718,6 +6831,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       renderRows();
       setNotice(`${activeLabel()} filters cleared.`, "ok");
     });
+
+    contactSaveAllButton?.addEventListener("click", saveAllContactChanges);
 
     partnerPagePrevious.addEventListener("click", () => {
       partnerCompanyPage = Math.max(1, partnerCompanyPage - 1);
