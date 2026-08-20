@@ -634,6 +634,28 @@ function normalizeUrl(value = "") {
   return `https://${raw}`;
 }
 
+function cleanLinkedInProfileUrl(value = "") {
+  const raw = cleanString(value, 500).replace(/\s+/g, "");
+  if (!raw) return "";
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, "")}`;
+  let url;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return "";
+  }
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (host !== "linkedin.com" && !host.endsWith(".linkedin.com")) return "";
+  const path = url.pathname.replace(/\/+$/, "");
+  if (!/^\/(in|pub)\/[^/]+/i.test(path)) return "";
+  url.protocol = "https:";
+  url.username = "";
+  url.password = "";
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
 function sameRootDomain(left = "", right = "") {
   const normalize = (value) => normalizeDomain(value).split(".").slice(-2).join(".");
   return normalize(left) && normalize(left) === normalize(right);
@@ -1498,6 +1520,7 @@ function normalizeContactRecord(key, record = {}) {
     lastName: cleanString(record.lastName || fallbackName.lastName, 120),
     company: cleanString(record.company),
     title: cleanString(record.title),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(record.linkedinProfileUrl || record.linkedInProfileUrl || record.linkedinUrl || record.linkedInUrl),
     photoUrl: cleanString(record.photoUrl || record.photoURL || record.photo, 500),
     photoKey: safeObjectKey(record.photoKey),
     bio: cleanString(record.bio || record.biography, 4000),
@@ -1557,6 +1580,7 @@ function normalizeContactRecord(key, record = {}) {
       eventShowTime: cleanString(event?.eventShowTime) || cleanString(event?.eventTime),
       intendedGuestName: cleanString(event?.intendedGuestName || event?.invitedName || event?.guestName),
       invitedName: cleanString(event?.invitedName || event?.intendedGuestName || event?.guestName),
+      linkedinProfileUrl: cleanLinkedInProfileUrl(event?.linkedinProfileUrl || event?.linkedInProfileUrl || event?.linkedinUrl || event?.linkedInUrl),
       invitedBy: cleanString(event?.invitedBy || event?.inviter || event?.invitedByName, 180),
       contactEventRole: cleanContactEventRole(event?.contactEventRole || event?.registrationRole || event?.partnerRegistrationType || event?.guestRegistrationType || event?.role || event?.registrationType),
       guestRegistrationType: cleanGuestRegistrationType(event?.guestRegistrationType || event?.registrationRole || event?.contactEventRole),
@@ -1723,6 +1747,7 @@ function contactFromRegistrant(row = {}, type = "") {
       title: cleanString(row.title),
       industry: cleanString(row.industry),
       phone: cleanString(row.phone),
+      linkedinProfileUrl: cleanLinkedInProfileUrl(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl),
       invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
       source: cleanString(row.source || "manual-partner"),
       registrationId: cleanString(row.id),
@@ -1746,6 +1771,7 @@ function contactFromRegistrant(row = {}, type = "") {
     title: cleanString(row.title),
     industry: cleanString(row.industry),
     phone: cleanString(row.phone),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl),
     invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
     ...(type === "partner" ? {
       partnerProductTypes: cleanString(row.partnerProductTypes, 2000),
@@ -1770,6 +1796,7 @@ function contactFromRegistrant(row = {}, type = "") {
       eventShowTime: cleanString(row.eventShowTime) || cleanString(row.eventTime),
       inviteCode: cleanString(row.inviteCode),
       invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
+      linkedinProfileUrl: cleanLinkedInProfileUrl(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl),
       registrationId: cleanString(row.id),
       registrationType: cleanString(type),
       guestRegistrationType: cleanGuestRegistrationType(row.guestRegistrationType || row.registrationRole),
@@ -1810,6 +1837,7 @@ function contactFromInviteRecord(row = {}, source = "guest-invite") {
     name,
     company: cleanString(row.company || row.organization || row.partnerCompany),
     title: cleanString(row.title),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl),
     invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
     source,
     invitationSource: source,
@@ -1929,6 +1957,7 @@ function mergeContactRows(storedRows, derivedRows) {
       lastName: cleanString(row.lastName) || cleanString(previous.lastName),
       company: cleanString(row.company) || cleanString(previous.company),
       title: cleanString(row.title) || cleanString(previous.title),
+      linkedinProfileUrl: cleanLinkedInProfileUrl(row.linkedinProfileUrl) || cleanLinkedInProfileUrl(previous.linkedinProfileUrl),
       photoUrl: cleanString(row.photoUrl) || cleanString(previous.photoUrl),
       photoKey: safeObjectKey(row.photoKey) || safeObjectKey(previous.photoKey),
       bio: cleanString(row.bio) || cleanString(previous.bio),
@@ -4175,15 +4204,35 @@ function inviteReminderFirstName(invite) {
   return name.split(/\s+/)[0];
 }
 
-function inviteReminderEventPhrase(eventName, eventDate) {
-  return eventDate ? `Mojo AI Summit's ${eventName} for ${eventDate}` : `Mojo AI Summit's ${eventName}`;
+function inviteReminderEventTime(invite = {}) {
+  const explicitTime =
+    cleanString(invite.eventShowTime, 120) ||
+    cleanString(invite.usedForTime, 120) ||
+    cleanString(invite.eventTime, 120);
+  if (explicitTime) return explicitTime;
+
+  const showId = cleanEventShowId(invite.eventShowId || invite.showId || invite.eventShow || invite.show, "");
+  return showId ? eventShowTime(showId) : "";
 }
 
-function inviteReminderText({ firstName, eventName, eventDate, registrationUrl }) {
+function inviteReminderEventPhrase(eventName, eventDate, eventTime = "") {
+  const date = cleanString(eventDate, 120);
+  const time = cleanString(eventTime, 120);
+  const eventDetails = date && time
+    ? ` on ${date} at ${time}`
+    : date
+      ? ` on ${date}`
+      : time
+        ? ` at ${time}`
+        : "";
+  return `Mojo AI Summit's ${eventName}${eventDetails}`;
+}
+
+function inviteReminderText({ firstName, eventName, eventDate, eventTime, registrationUrl }) {
   return [
     `Hi ${firstName},`,
     "",
-    `This is a friendly reminder to complete your registration for ${inviteReminderEventPhrase(eventName, eventDate)}.`,
+    `This is a friendly reminder to complete your registration for ${inviteReminderEventPhrase(eventName, eventDate, eventTime)}.`,
     "",
     "Your invitation includes a personal registration link created specifically for you. Please use the link below to confirm your attendance:",
     "",
@@ -4200,11 +4249,11 @@ function inviteReminderText({ firstName, eventName, eventDate, registrationUrl }
   ].join("\n");
 }
 
-function inviteReminderHtml({ firstName, eventName, eventDate, registrationUrl }) {
+function inviteReminderHtml({ firstName, eventName, eventDate, eventTime, registrationUrl }) {
   return `
     <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.6;font-size:15px">
       <p>Hi ${escapeHtml(firstName)},</p>
-      <p>This is a friendly reminder to complete your registration for ${escapeHtml(inviteReminderEventPhrase(eventName, eventDate))}.</p>
+      <p>This is a friendly reminder to complete your registration for ${escapeHtml(inviteReminderEventPhrase(eventName, eventDate, eventTime))}.</p>
       <p>Your invitation includes a personal registration link created specifically for you. Please use the link below to confirm your attendance:</p>
       <p><a href="${escapeHtml(registrationUrl)}" style="color:#1656d9">${escapeHtml(registrationUrl)}</a></p>
       <p>We look forward to having you join us. If you have any trouble registering, please reply to this email for assistance.</p>
@@ -4258,11 +4307,11 @@ async function sendResendEmail(env, { to, subject, html, text, replyTo, cc = [] 
   };
 }
 
-function inviteInvitationText({ firstName, eventName, eventDate, registrationUrl }) {
+function inviteInvitationText({ firstName, eventName, eventDate, eventTime, registrationUrl }) {
   return [
     `Hi ${firstName},`,
     "",
-    `We're pleased to invite you to join us for ${inviteReminderEventPhrase(eventName, eventDate)}.`,
+    `We're pleased to invite you to join us for ${inviteReminderEventPhrase(eventName, eventDate, eventTime)}.`,
     "",
     "Please use your personal registration link below to review the event details and confirm your attendance:",
     "",
@@ -4281,11 +4330,11 @@ function inviteInvitationText({ firstName, eventName, eventDate, registrationUrl
   ].join("\n");
 }
 
-function inviteInvitationHtml({ firstName, eventName, eventDate, registrationUrl }) {
+function inviteInvitationHtml({ firstName, eventName, eventDate, eventTime, registrationUrl }) {
   return `
     <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.6;font-size:15px">
       <p>Hi ${escapeHtml(firstName)},</p>
-      <p>We're pleased to invite you to join us for ${escapeHtml(inviteReminderEventPhrase(eventName, eventDate))}.</p>
+      <p>We're pleased to invite you to join us for ${escapeHtml(inviteReminderEventPhrase(eventName, eventDate, eventTime))}.</p>
       <p>Please use your personal registration link below to review the event details and confirm your attendance:</p>
       <p><a href="${escapeHtml(registrationUrl)}" style="color:#1656d9">${escapeHtml(registrationUrl)}</a></p>
       <p>This link is unique to you, so please do not forward or share it.</p>
@@ -4308,10 +4357,11 @@ async function sendInviteInvitationEmail(env, invite, origin = "") {
 
   const eventName = cleanString(invite.eventName, 240) || "our upcoming event";
   const eventDate = cleanString(invite.eventDate, 120);
+  const eventTime = inviteReminderEventTime(invite);
   const firstName = inviteReminderFirstName(invite);
   const registrationUrl = inviteRegistrationUrl(origin, invite);
 
-  const context = { firstName, eventName, eventDate, registrationUrl };
+  const context = { firstName, eventName, eventDate, eventTime, registrationUrl };
   const result = await sendResendEmail(env, {
     to: toEmail,
     subject: `You’re Invited: ${eventName}`,
@@ -4331,10 +4381,11 @@ async function sendInviteReminderEmail(env, payload = {}, origin = "") {
 
   const eventName = cleanString(invite.eventName, 240) || "your upcoming event";
   const eventDate = cleanString(invite.eventDate, 120);
+  const eventTime = inviteReminderEventTime(invite);
   const firstName = inviteReminderFirstName(invite);
   const registrationUrl = inviteRegistrationUrl(cleanString(payload.origin, 200) || origin, invite);
 
-  const context = { firstName, eventName, eventDate, registrationUrl };
+  const context = { firstName, eventName, eventDate, eventTime, registrationUrl };
   const result = await sendResendEmail(env, {
     to: toEmail,
     subject: `Reminder: complete your registration for ${eventName}`,
@@ -4631,6 +4682,21 @@ async function updateContact(env, payload = {}, actor = "") {
   const name = cleanString(payload.name) || [firstName, lastName].filter(Boolean).join(" ") || existingName;
   const topicInterests = cleanTopicTracks(payload.topicInterests ?? existing?.topicInterests);
   const emailPermission = cleanAllowed(payload.emailPermission ?? existing?.emailPermission, allowedEmailPermissions, "unknown");
+  const rawLinkedInProfileUrl = cleanString(
+    payload.linkedinProfileUrl ??
+      payload.linkedInProfileUrl ??
+      payload.linkedinUrl ??
+      payload.linkedInUrl ??
+      existing?.linkedinProfileUrl ??
+      existing?.linkedInProfileUrl ??
+      existing?.linkedinUrl ??
+      existing?.linkedInUrl,
+    500
+  );
+  const linkedinProfileUrl = cleanLinkedInProfileUrl(rawLinkedInProfileUrl);
+  if (rawLinkedInProfileUrl && !linkedinProfileUrl) {
+    throw new Error("Enter a valid LinkedIn profile URL.");
+  }
 
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
     ...(existing || {}),
@@ -4642,6 +4708,7 @@ async function updateContact(env, payload = {}, actor = "") {
     company: cleanString(payload.company ?? existing?.company, 240),
     title: cleanString(payload.title ?? existing?.title, 180),
     phone: cleanString(payload.phone ?? existing?.phone, 80),
+    linkedinProfileUrl,
     source: cleanString(existing?.source) || "crm-contact-overlay",
     createdAt: cleanString(existing?.createdAt) || now,
     photoUrl: cleanString(payload.photoUrl ?? payload.photoURL ?? payload.photo ?? existing?.photoUrl, 500),

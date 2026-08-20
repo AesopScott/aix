@@ -5187,6 +5187,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <label>First Name<input data-contact-field="firstName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.firstName || "")}"></label>
               <label>Last Name<input data-contact-field="lastName" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.lastName || "")}"></label>
               <label>Email<input type="email" data-contact-field="email" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.email || "")}"></label>
+              <label>LinkedIn Profile<input type="url" data-contact-field="linkedinProfileUrl" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.linkedinProfileUrl || "")}" placeholder="https://www.linkedin.com/in/..."></label>
               <label>Phone<input type="tel" data-contact-field="phone" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.phone || "")}"></label>
               <label>Company<input data-contact-field="company" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.company || "")}"></label>
               <label>Job Title<input data-contact-field="title" data-contact-key="${escapeHtml(row.key)}" value="${escapeHtml(row.title || "")}"></label>
@@ -5444,6 +5445,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <div>
                 <strong>${escapeHtml(row.email)}</strong><br>
                 <span>${escapeHtml(row.phone)}</span>
+                ${row.linkedinProfileUrl ? `<br><a href="${escapeHtml(row.linkedinProfileUrl)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}
               </div>
               ${state.type === "contacts" ? `<button class="icon-button" type="button" title="Delete contact" aria-label="Delete contact ${escapeHtml(row.email)}" data-delete-contact-key="${escapeHtml(row.key)}" data-delete-contact-email="${escapeHtml(row.email)}">${trashIconMarkup()}</button>` : ""}
               ${state.type === "guest" ? `<button class="icon-button" type="button" title="Delete guest registration" aria-label="Delete guest registration ${escapeHtml(row.name || row.email || row.key)}" data-delete-guest-registrant-key="${escapeHtml(row.key)}" data-delete-guest-registrant-label="${escapeHtml(row.name || row.email || row.key)}">${trashIconMarkup()}</button>` : ""}
@@ -5924,6 +5926,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         company: changes.company ?? existing.company ?? "",
         title: changes.title ?? existing.title ?? "",
         phone: changes.phone ?? existing.phone ?? "",
+        linkedinProfileUrl: changes.linkedinProfileUrl ?? existing.linkedinProfileUrl ?? "",
         photoUrl: changes.photoUrl ?? existing.photoUrl ?? "",
         bio: changes.bio ?? existing.bio ?? "",
         industry: changes.industry ?? existing.industry ?? "",
