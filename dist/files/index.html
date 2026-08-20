@@ -669,8 +669,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
   <script>
     const api = "/api/storage";
-    const multipartUploadThreshold = 64 * 1024 * 1024;
-    const fallbackMultipartThreshold = 16 * 1024 * 1024;
+    // Keep the selected file out of the multipart/form-data parser; only metadata uses form data.
+    const multipartUploadThreshold = 1;
+    const fallbackMultipartThreshold = 1;
     const fallbackMultipartErrorPattern = /failed to fetch|networkerror|load failed/i;
     const uploadForm = document.querySelector("#uploadForm");
     const uploadNotice = document.querySelector("#uploadNotice");
