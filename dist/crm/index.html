@@ -2983,6 +2983,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return recordViewTypes[view] || "contacts";
     }
 
+    function recordsUrlForView(view = activeView) {
+      const type = recordsTypeForView(view);
+      const url = new URL(api, window.location.origin);
+      url.searchParams.set("type", type);
+      if (view === "partner") url.searchParams.set("registrationLinks", "1");
+      return url.toString();
+    }
+
     function isRecordsView(view = activeView) {
       return Boolean(recordViewTypes[view]);
     }
@@ -5597,7 +5605,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       partnerPagination.hidden = true;
-      registrantsTitle.textContent = state.type === "contacts" || state.type === "guest" ? label : `${label} Registrants`;
+      registrantsTitle.textContent = state.type === "contacts" || state.type === "guest" || activeView === "partner" ? label : `${label} Registrants`;
       if (!rows.length) {
         rowsElement.innerHTML = `<tr><td colspan="8">No ${label.toLowerCase()} match the current filters.</td></tr>`;
         requestAnimationFrame(syncTableScrollProxy);
@@ -5790,7 +5798,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       try {
         const type = isRecordsView() ? recordsTypeForView() : (typeFilter.value || "contacts");
         typeFilter.value = type;
-        state = await fetch(`${api}?type=${encodeURIComponent(type)}`).then(readJson);
+        state = await fetch(recordsUrlForView()).then(readJson);
         state.partnerInviteCodes = state.partnerInviteCodes || [];
         state.registrationInviteCodes = state.registrationInviteCodes || [];
         state.guestMatrixProspects = state.guestMatrixProspects || [];
@@ -6186,11 +6194,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           return;
         }
 
+        if (state.type === "partner" && existing.source === "partner-invite") {
+          state = await fetch(api, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "save-partner-registration-link",
+              key,
+              crmStatus: changes.crmStatus ?? existing.crmStatus,
+              crmNotes: changes.crmNotes ?? existing.crmNotes ?? ""
+            })
+          }).then(readJson);
+          setNotice("Partner registration link lifecycle saved.", "ok");
+          render();
+          return;
+        }
+
         state = await fetch(api, {
           method: "POST",
           headers: { "content-type": "application/json" },
         body: JSON.stringify({
           type: state.type || "member",
+          registrationLinks: activeView === "partner",
           key,
           crmStatus: changes.crmStatus ?? existing.crmStatus,
           name: changes.name ?? existing.name,
@@ -7061,7 +7086,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     refreshRegistrationDebug.addEventListener("click", loadRegistrationDebug);
     refreshProspectingButton.addEventListener("click", loadPartnerProspecting);
     downloadButton.addEventListener("click", () => {
-      window.location.href = `${api}?type=${encodeURIComponent(recordsTypeForView())}&download=csv`;
+      const url = new URL(recordsUrlForView(), window.location.origin);
+      url.searchParams.set("download", "csv");
+      window.location.href = url.toString();
     });
 
     prospectingTabs.addEventListener("click", (event) => {
