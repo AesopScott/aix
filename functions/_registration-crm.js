@@ -24,6 +24,11 @@ const defaultStaffNotificationEmails = [
   "miller@mojoaisummits.com",
   "jodi@mojoaisummits.com"
 ];
+const partnerStaffNotificationEmails = [
+  "scott@mojoaisummits.com",
+  "miller@mojoaisummits.com",
+  "jodi@mojoaisummits.com"
+];
 const membershipUrl = "https://mojoaisummits.com/membership";
 const briefsUrl = "https://mojoaisummits.com/briefs";
 const virtualSeriesUrl = "https://mojoaisummits.com/virtual/";
@@ -736,13 +741,16 @@ async function sendGuestRegistrationConfirmation(env, registration = {}) {
   return { attempted: true, sent: true };
 }
 
-function staffNotificationRecipients(env = {}) {
+function staffNotificationRecipients(env = {}, type = "") {
   const configured = splitEmailList(
     env.MOJO_REGISTRATION_STAFF_EMAILS ||
       env.MOJO_REGISTRATION_NOTIFICATION_RECIPIENTS ||
       env.MOJO_REGISTRATION_NOTIFY_TO
   );
-  const emails = configured.length ? configured : defaultStaffNotificationEmails;
+  const emails = [
+    ...(configured.length ? configured : defaultStaffNotificationEmails),
+    ...(type === "partner" ? partnerStaffNotificationEmails : [])
+  ];
   return [...new Set(emails)].map((address) => ({ address }));
 }
 
@@ -815,7 +823,7 @@ function staffRegistrationNotificationHtml(type, registration = {}) {
 }
 
 async function sendStaffRegistrationNotification(env, type, registration = {}) {
-  const recipients = staffNotificationRecipients(env);
+  const recipients = staffNotificationRecipients(env, type);
   if (!recipients.length) return { attempted: false, sent: false, error: "No staff notification recipients are configured." };
 
   await sendMicrosoftGraphMail(env, {

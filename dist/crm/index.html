@@ -1562,7 +1562,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button type="button" data-view="member">Members</button>
         </div>
         <div class="side-nav-group partner-pipeline" aria-label="Partner pipeline">
-          <button type="button" data-view="partner-invite-links">Partner Invite Links</button>
+          <button type="button" data-view="partner-invite-links">Create Partner Registration Links</button>
+          <button type="button" data-view="partner-matrix">Partner Matrix</button>
+          <button type="button" data-view="partner">Partner Registration</button>
           <button type="button" data-view="manual-partners">Add Partner</button>
           <button type="button" data-view="partners-company">Partners by Company</button>
         </div>
@@ -1744,9 +1746,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     <section class="invite-panel view-section guest-pipeline-panel" id="guestMatrixPanel" data-view-panel="guest-matrix" hidden>
       <div>
-        <p class="eyebrow">Guest invite matrix</p>
-        <h2>Event-by-event guest engagement</h2>
-        <p>Review tracked guests by event, LinkedIn connection, registration request, and registration completion.</p>
+        <p class="eyebrow" id="guestMatrixEyebrow">Guest invite matrix</p>
+        <h2 id="guestMatrixTitle">Event-by-event guest engagement</h2>
+        <p id="guestMatrixDescription">Review tracked guests by event, LinkedIn connection, registration request, and registration completion.</p>
       </div>
       <form class="guest-matrix-add-form" id="guestMatrixAddForm">
         <label>
@@ -1769,6 +1771,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <option value="guest">Guest</option>
             <option value="featured-guest">Featured Guest</option>
           </select>
+        </label>
+        <label>
+          Company
+          <input id="guestMatrixAddCompany" name="company" type="text" placeholder="Company">
         </label>
         <label>
           Name
@@ -2048,11 +2054,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const registrationInviteSearchSummary = document.querySelector("#registrationInviteSearchSummary");
     const registrationInviteList = document.querySelector("#registrationInviteList");
     const registrationInviteResult = document.querySelector("#registrationInviteResult");
+    const guestMatrixPanel = document.querySelector("#guestMatrixPanel");
     const guestMatrixAddForm = document.querySelector("#guestMatrixAddForm");
     const guestMatrixAddEvent = document.querySelector("#guestMatrixAddEvent");
     const guestMatrixAddShow = document.querySelector("#guestMatrixAddShow");
     const guestMatrixAddType = document.querySelector("#guestMatrixAddType");
+    const guestMatrixAddCompany = document.querySelector("#guestMatrixAddCompany");
+    const guestMatrixAddName = document.querySelector("#guestMatrixAddName");
+    const guestMatrixAddEmail = document.querySelector("#guestMatrixAddEmail");
     const guestMatrixAddSubmit = document.querySelector("#guestMatrixAddSubmit");
+    const guestMatrixEyebrow = document.querySelector("#guestMatrixEyebrow");
+    const guestMatrixTitle = document.querySelector("#guestMatrixTitle");
+    const guestMatrixDescription = document.querySelector("#guestMatrixDescription");
     const guestMatrixFilters = document.querySelector("#guestMatrixFilters");
     const guestMatrixEventFilter = document.querySelector("#guestMatrixEventFilter");
     const guestMatrixStatusFilter = document.querySelector("#guestMatrixStatusFilter");
@@ -2065,6 +2078,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const guestMatrixList = document.querySelector("#guestMatrixList");
     const partnerInviteForm = document.querySelector("#partnerInviteForm");
     const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
+    const partnerInviteSubmit = document.querySelector("#partnerInviteSubmit");
+    const partnerInviteSendEmail = document.querySelector("#partnerInviteSendEmail");
     const partnerInviteList = document.querySelector("#partnerInviteList");
     const manualPartnerForm = document.querySelector("#manualPartnerForm");
     const manualPartnerContacts = document.querySelector("#manualPartnerContacts");
@@ -2081,6 +2096,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       contacts: "contacts",
       guest: "guest",
       member: "member",
+      partner: "partner",
       "partners-company": "partner"
     };
     const prospectingViews = {
@@ -2152,6 +2168,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       partnerInviteCodes: [],
       registrationInviteCodes: [],
       guestMatrixProspects: [],
+      partnerMatrixProspects: [],
       upcomingEvents: []
     };
     let registrationDebug = null;
@@ -2956,6 +2973,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (isProspectingView()) return prospectingViews[activeView]?.[0] || "Partner Prospecting";
       if (activeView === "guest") return "Guest Registration";
       if (activeView === "guest-matrix") return "Guest Matrix";
+      if (activeView === "partner") return "Partner Registration";
+      if (activeView === "partner-matrix") return "Partner Matrix";
       if (activeView === "partners-company") return "Partners by Company";
       return state.label || (state.type === "contacts" ? "Contacts" : state.type === "partner" ? "Partner" : "Member");
     }
@@ -2970,7 +2989,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function pipelineGroupForView(view = activeView) {
       if (["guest-invite-links", "guest-matrix", "create-guest-invite-links", "guest", "member"].includes(view)) return "guest";
-      if (["guest-partner-invite-links", "manual-partners", "partners-company"].includes(view)) return "partner";
+      if (["partner-invite-links", "partner-matrix", "partner", "manual-partners", "partners-company"].includes(view)) return "partner";
       if (isProspectingView(view)) return "prospecting";
       return "";
     }
@@ -2989,6 +3008,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const panelView = panel.dataset.viewPanel;
         panel.hidden = panelView === "records"
           ? !isRecordsView()
+          : panelView === "guest-matrix"
+            ? !["guest-matrix", "partner-matrix"].includes(activeView)
           : panelView === "partner-prospecting"
             ? !isProspectingView()
           : panelView !== activeView;
@@ -3038,12 +3059,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function setActiveView(view, options = {}) {
-      activeView = view || "contacts";
+      activeView = view === "guest-partner-invite-links" ? "partner-invite-links" : view || "contacts";
       if (!options.keepCompanyFilter) {
         activeProspectingCompanyId = "";
         activeProspectingEditCompanyId = "";
       }
-      if (activeView === "partners-company") partnerCompanyPage = 1;
+      if (activeView === "partners-company" || activeView === "partner") partnerCompanyPage = 1;
       syncViewPanels();
       if (isRecordsView()) {
         const nextType = recordsTypeForView();
@@ -3071,6 +3092,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function registrationInviteUrl(invite) {
       const path = invite.type === "member" ? "/member-registration/" : "/guest/";
       return `${window.location.origin}${path}?invite=${encodeURIComponent(invite.code || "")}`;
+    }
+
+    function matrixMode() {
+      return activeView === "partner-matrix" ? "partner" : "guest";
+    }
+
+    function isPartnerMatrix() {
+      return matrixMode() === "partner";
+    }
+
+    function matrixEntityLabel() {
+      return isPartnerMatrix() ? "partner" : "guest";
+    }
+
+    function matrixEntityLabelTitle() {
+      return isPartnerMatrix() ? "Partner" : "Guest";
     }
 
     function qrCodeUrl(value, size = 180) {
@@ -3128,7 +3165,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixRecordId(invite = {}) {
-      return String(invite.key || invite.code || invite.inviteCode || `${invite.eventSlug || invite.eventName || "event"}:${invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || invite.intendedGuestName || invite.invitedName || invite.guestName || ""}`);
+      return String(invite.key || invite.code || invite.inviteCode || `${invite.eventSlug || invite.eventName || "event"}:${invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || invite.partnerContactEmail || invite.intendedGuestName || invite.invitedName || invite.guestName || invite.partnerContactName || ""}`);
     }
 
     function guestMatrixDraft(invite = {}) {
@@ -3263,11 +3300,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixPersonName(invite = {}) {
-      return firstCleanValue(invite.intendedGuestName, invite.invitedName, invite.guestName, invite.usedByName, "Name not recorded");
+      return firstCleanValue(invite.intendedGuestName, invite.invitedName, invite.guestName, invite.partnerContactName, invite.usedByName, invite.partnerContactEmail, "Name not recorded");
     }
 
     function guestMatrixPersonEmail(invite = {}) {
-      return firstCleanValue(invite.intendedGuestEmail, invite.invitedEmail, invite.guestEmail, invite.usedByEmail, invite.usedBy);
+      return firstCleanValue(invite.intendedGuestEmail, invite.invitedEmail, invite.guestEmail, invite.partnerContactEmail, invite.usedByEmail, invite.usedBy);
     }
 
     function guestMatrixPersonKey(email = "", name = "") {
@@ -3303,6 +3340,25 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       };
     }
 
+    function matrixContactTypeMatches(contact = {}) {
+      const haystack = [
+        contact.crmType,
+        contact.source,
+        contact.invitationSource,
+        contact.registrationType,
+        contact.lifecycleStage,
+        ...(contact.events || []).flatMap((event) => [
+          event.registrationType,
+          event.registrationRole,
+          event.guestRegistrationType,
+          event.partnerRegistrationType,
+          event.role
+        ])
+      ].map((value) => String(value || "").toLowerCase()).join(" ");
+      const partnerish = haystack.includes("partner");
+      return isPartnerMatrix() ? partnerish : !partnerish;
+    }
+
     function guestMatrixFutureEventsForPerson(invite = {}) {
       const email = guestMatrixPersonEmail(invite);
       const name = guestMatrixPersonName(invite);
@@ -3319,7 +3375,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (!existing || entry.status === "Registered") entries.set(key, entry);
       };
 
-      (state.registrationInviteCodes || []).forEach((candidate) => {
+      const inviteCodes = isPartnerMatrix() ? state.partnerInviteCodes || [] : state.registrationInviteCodes || [];
+      const matrixProspects = isPartnerMatrix() ? state.partnerMatrixProspects || [] : state.guestMatrixProspects || [];
+
+      inviteCodes.forEach((candidate) => {
         const candidateKey = guestMatrixPersonKey(guestMatrixPersonEmail(candidate), guestMatrixPersonName(candidate));
         if (candidateKey !== personKey) return;
         addEntry(guestMatrixEventEntry({
@@ -3330,7 +3389,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }));
       });
 
-      (state.guestMatrixProspects || []).forEach((candidate) => {
+      matrixProspects.forEach((candidate) => {
         const candidateKey = guestMatrixPersonKey(guestMatrixPersonEmail(candidate), guestMatrixPersonName(candidate));
         if (candidateKey !== personKey) return;
         addEntry(guestMatrixEventEntry({
@@ -3342,6 +3401,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       });
 
       (state.rows || []).forEach((contact) => {
+        if (!matrixContactTypeMatches(contact)) return;
         const contactKey = guestMatrixPersonKey(contact.email, contact.name);
         if (contactKey !== personKey) return;
         (contact.events || []).forEach((event) => {
@@ -3390,7 +3450,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const eventKey = guestMatrixEventKey(invite);
       const eventName = guestMatrixEventLabel(invite);
       const futureEvents = guestMatrixFutureEventsForPerson(invite);
-      const matrixOnly = invite.matrixOnly === true || invite.type === "guest-matrix-prospect";
+      const partnerRow = isPartnerMatrix() || invite.type === "partner" || invite.type === "partner-matrix-prospect";
+      const matrixOnly = invite.matrixOnly === true || invite.type === "guest-matrix-prospect" || invite.type === "partner-matrix-prospect";
       return {
         id,
         invite,
@@ -3401,9 +3462,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         name: guestMatrixPersonName(invite),
         email,
         invitedBy: firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy, "Not recorded"),
-        role: guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type),
+        role: guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || invite.type),
         code: matrixOnly ? "" : firstCleanValue(invite.code, invite.inviteCode),
-        url: matrixOnly ? "" : registrationInviteUrl(invite),
+        url: matrixOnly ? "" : partnerRow ? partnerRegistrationUrl(invite) : registrationInviteUrl(invite),
         linkedinConnection,
         registrationRequest,
         registrationStatus,
@@ -3417,7 +3478,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy),
           firstCleanValue(invite.company, invite.organization, invite.partnerCompany),
           firstCleanValue(invite.code, invite.inviteCode),
-          guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type),
+          guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || invite.type),
           matrixOptionLabel(guestMatrixLinkedInConnectionOptions, linkedinConnection),
           matrixOptionLabel(guestMatrixRegistrationRequestOptions, registrationRequest),
           matrixOptionLabel(guestMatrixRegistrationStatusOptions, registrationStatus),
@@ -3519,9 +3580,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixRows() {
-      const inviteRows = (state.registrationInviteCodes || []).map(guestMatrixRowForInvite);
+      const sourceInvites = isPartnerMatrix()
+        ? (state.partnerInviteCodes || []).filter((invite) => invite.type === "partner" || invite.partnerContactEmail || invite.partnerRegistrationType)
+        : (state.registrationInviteCodes || []).filter((invite) => invite.type !== "partner" && !invite.partnerContactEmail);
+      const sourceProspects = isPartnerMatrix()
+        ? state.partnerMatrixProspects || []
+        : state.guestMatrixProspects || [];
+      const inviteRows = sourceInvites.map(guestMatrixRowForInvite);
       const invitePersonEvents = new Set(inviteRows.map(guestMatrixRowIdentity));
-      const prospectRows = (state.guestMatrixProspects || [])
+      const prospectRows = sourceProspects
         .map(guestMatrixRowForInvite)
         .filter((row) => !invitePersonEvents.has(guestMatrixRowIdentity(row)));
       return dedupeGuestMatrixRows([...prospectRows, ...inviteRows])
@@ -3569,7 +3636,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!guestMatrixSummary) return;
       const stats = [
         ["Event groups", new Set(rows.map((row) => row.eventKey)).size],
-        ["Tracked people", rows.filter((row) => row.name !== "Name not recorded").length],
+        [isPartnerMatrix() ? "Tracked partners" : "Tracked people", rows.filter((row) => row.name !== "Name not recorded").length],
         ["LinkedIn connected", rows.filter((row) => row.linkedinConnection === "connected").length],
         ["Requests sent", rows.filter((row) => ["sent", "reminder-sent"].includes(row.registrationRequest)).length],
         ["Registered", rows.filter((row) => row.registered).length]
@@ -3583,13 +3650,25 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function renderGuestMatrix() {
+      updateGuestMatrixAddShowOptions();
+      if (guestMatrixPanel) {
+        guestMatrixPanel.classList.toggle("guest-pipeline-panel", !isPartnerMatrix());
+        guestMatrixPanel.classList.toggle("partner-pipeline-panel", isPartnerMatrix());
+      }
+      if (guestMatrixEyebrow) guestMatrixEyebrow.textContent = isPartnerMatrix() ? "Partner invite matrix" : "Guest invite matrix";
+      if (guestMatrixTitle) guestMatrixTitle.textContent = isPartnerMatrix() ? "Event-by-event partner engagement" : "Event-by-event guest engagement";
+      if (guestMatrixDescription) {
+        guestMatrixDescription.textContent = isPartnerMatrix()
+          ? "Review tracked partners by event, LinkedIn connection, registration request, and registration completion."
+          : "Review tracked guests by event, LinkedIn connection, registration request, and registration completion.";
+      }
       const rows = guestMatrixRows();
       syncGuestMatrixEventFilter(rows);
       renderGuestMatrixSummary(rows);
       const filtered = filteredGuestMatrixRows(rows);
       if (guestMatrixSearchSummary) {
         guestMatrixSearchSummary.textContent = rows.length
-          ? `Showing ${filtered.length} of ${rows.length} guest and member tracking records grouped by event. Registration status comes from CRM records.`
+          ? `Showing ${filtered.length} of ${rows.length} ${isPartnerMatrix() ? "partner" : "guest and member"} tracking records grouped by event. Registration status comes from CRM records.`
           : "";
       }
       if (!guestMatrixList) {
@@ -3597,12 +3676,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       if (!rows.length) {
-        guestMatrixList.innerHTML = "<p>No guest or member tracking records exist yet.</p>";
+        guestMatrixList.innerHTML = `<p>No ${isPartnerMatrix() ? "partner" : "guest or member"} tracking records exist yet.</p>`;
         requestAnimationFrame(syncTableScrollProxy);
         return;
       }
       if (!filtered.length) {
-        guestMatrixList.innerHTML = "<p>No guest tracking records match the current matrix filters.</p>";
+        guestMatrixList.innerHTML = `<p>No ${isPartnerMatrix() ? "partner" : "guest"} tracking records match the current matrix filters.</p>`;
         requestAnimationFrame(syncTableScrollProxy);
         return;
       }
@@ -3636,7 +3715,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               <table>
                 <thead>
                   <tr>
-                    <th>Guest</th>
+                    <th>${isPartnerMatrix() ? "Partner" : "Guest"}</th>
                     <th>Role</th>
                     <th>LinkedIn Connection</th>
                     <th>Registration Request</th>
@@ -3655,7 +3734,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                             <strong>${escapeHtml(row.name)}</strong>
                             ${row.email ? `<span>${escapeHtml(row.email)}</span>` : '<span>No email recorded</span>'}
                           </div>
-                          ${row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Remove tracked person" aria-label="Remove tracked person ${escapeHtml(row.name)}" data-delete-guest-matrix-prospect-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-prospect-label="${escapeHtml(row.name || row.email || row.invite.key)}">${trashIconMarkup()}</button>` : ""}
+                          ${row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Remove tracked ${escapeHtml(matrixEntityLabel())}" aria-label="Remove tracked ${escapeHtml(matrixEntityLabel())} ${escapeHtml(row.name)}" data-delete-guest-matrix-prospect-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-prospect-label="${escapeHtml(row.name || row.email || row.invite.key)}">${trashIconMarkup()}</button>` : ""}
                           ${!row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Delete invite record" aria-label="Delete invite record for ${escapeHtml(row.name)}" data-delete-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}">${trashIconMarkup()}</button>` : ""}
                         </div>
                       </td>
@@ -3682,7 +3761,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                         ${row.matrixOnly ? '<span class="pill warn">No invite link yet</span>' : `<code>${escapeHtml(row.code || "No code")}</code>`}
                         <div class="matrix-muted">${escapeHtml(row.url || "Tracked before invite")}</div>
                         <div class="guest-matrix-actions">
-                          ${!row.matrixOnly && row.invite.key ? `<button class="compact secondary" type="button" data-reminder-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-reminder-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}" ${row.email ? "" : "disabled title=\"No email address on file for this invite\""}>Reminder Email</button>` : ""}
+                          ${!isPartnerMatrix() && !row.matrixOnly && row.invite.key ? `<button class="compact secondary" type="button" data-reminder-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-reminder-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}" ${row.email ? "" : "disabled title=\"No email address on file for this invite\""}>Reminder Email</button>` : ""}
                         </div>
                       </td>
                     </tr>
@@ -3788,7 +3867,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function updateGuestMatrixAddShowOptions() {
       if (!guestMatrixAddShow || !guestMatrixAddType) return;
       const currentShow = guestMatrixAddShow.value || "both";
-      const featuredGuest = guestMatrixAddType.value === "featured-guest";
+      const currentRole = guestMatrixAddType.value;
+      guestMatrixAddType.name = isPartnerMatrix() ? "partnerRegistrationType" : "guestRegistrationType";
+      guestMatrixAddType.innerHTML = isPartnerMatrix()
+        ? [
+            '<option value="partner">Partner</option>',
+            '<option value="featured-partner">Featured Partner</option>'
+          ].join("")
+        : [
+            '<option value="guest">Guest</option>',
+            '<option value="featured-guest">Featured Guest</option>'
+          ].join("");
+      if ([...guestMatrixAddType.options].some((option) => option.value === currentRole)) {
+        guestMatrixAddType.value = currentRole;
+      }
+      const featuredGuest = ["featured-guest", "featured-partner"].includes(guestMatrixAddType.value);
       guestMatrixAddShow.innerHTML = [
         featuredGuest ? "" : '<option value="both">Both shows</option>',
         '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
@@ -3796,6 +3889,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ].join("");
       guestMatrixAddShow.value = featuredGuest && currentShow === "both" ? "morning" : currentShow;
       if (!guestMatrixAddShow.value) guestMatrixAddShow.value = "morning";
+      if (guestMatrixAddName) guestMatrixAddName.placeholder = isPartnerMatrix() ? "Partner contact name" : "Guest name";
+      if (guestMatrixAddEmail) guestMatrixAddEmail.placeholder = isPartnerMatrix() ? "partner@company.com" : "guest@example.com";
+      if (guestMatrixAddCompany) guestMatrixAddCompany.closest("label").hidden = !isPartnerMatrix();
+      if (guestMatrixAddSubmit) guestMatrixAddSubmit.textContent = isPartnerMatrix() ? "Track Partner" : "Track Person";
     }
 
     function mergeInviteList(existingInvites, newInvites) {
@@ -5679,6 +5776,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         partnerInviteCodes: [],
         registrationInviteCodes: guestMatrixDemoInvites,
         guestMatrixProspects: [],
+        partnerMatrixProspects: [],
         upcomingEvents: fallbackMojoEvents
       };
       guestMatrixPendingChanges = {};
@@ -5693,6 +5791,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const type = isRecordsView() ? recordsTypeForView() : (typeFilter.value || "contacts");
         typeFilter.value = type;
         state = await fetch(`${api}?type=${encodeURIComponent(type)}`).then(readJson);
+        state.partnerInviteCodes = state.partnerInviteCodes || [];
+        state.registrationInviteCodes = state.registrationInviteCodes || [];
+        state.guestMatrixProspects = state.guestMatrixProspects || [];
+        state.partnerMatrixProspects = state.partnerMatrixProspects || [];
         guestMatrixPendingChanges = {};
         updateGuestMatrixSaveButton();
         typeFilter.value = state.type || type;
@@ -6413,7 +6515,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!guestMatrixSave) return;
       const count = Object.keys(guestMatrixPendingChanges || {}).length;
       guestMatrixSave.disabled = count === 0;
-      guestMatrixSave.textContent = count ? `Save Changes (${count})` : "Save Changes";
+      guestMatrixSave.textContent = count ? `Save ${matrixEntityLabelTitle()} Changes (${count})` : "Save Changes";
     }
 
     function queueGuestMatrixChange(select) {
@@ -6438,7 +6540,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     async function saveGuestMatrixChanges() {
       const changes = Object.values(guestMatrixPendingChanges || {});
       if (!changes.length) return;
-      setNotice("Saving Guest Matrix changes...");
+      setNotice(`Saving ${matrixEntityLabelTitle()} Matrix changes...`);
       if (guestMatrixSave) {
         guestMatrixSave.disabled = true;
         guestMatrixSave.textContent = "Saving...";
@@ -6449,17 +6551,20 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             action: "save-guest-matrix-statuses",
+            matrixType: matrixMode(),
             changes
           })
         }).then(readJson);
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
         state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
+        state.partnerMatrixProspects = data.partnerMatrixProspects || state.partnerMatrixProspects || [];
         guestMatrixPendingChanges = {};
         renderGuestMatrix();
         updateGuestMatrixSaveButton();
-        setNotice(`Guest Matrix changes saved for ${data.updatedCount || changes.length} record${(data.updatedCount || changes.length) === 1 ? "" : "s"}.`, "ok");
+        setNotice(`${matrixEntityLabelTitle()} Matrix changes saved for ${data.updatedCount || changes.length} record${(data.updatedCount || changes.length) === 1 ? "" : "s"}.`, "ok");
       } catch (error) {
-        showErrorNotice(error, "Guest Matrix changes could not be saved.");
+        showErrorNotice(error, `${matrixEntityLabelTitle()} Matrix changes could not be saved.`);
         updateGuestMatrixSaveButton();
       }
     }
@@ -6467,12 +6572,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function buildGuestMatrixProspectPayload() {
       const formData = new FormData(guestMatrixAddForm);
       const selected = guestMatrixAddEvent.selectedOptions[0];
-      const guestRegistrationType = formData.get("guestRegistrationType") || "guest";
+      const partnerMode = isPartnerMatrix();
+      const guestRegistrationType = formData.get(partnerMode ? "partnerRegistrationType" : "guestRegistrationType") || (partnerMode ? "partner" : "guest");
       const selectedShowId = eventShowId(formData.get("eventShowId") || guestMatrixAddShow?.value || "both");
-      const showId = guestRegistrationType === "featured-guest" && selectedShowId === "both" ? "morning" : selectedShowId;
+      const showId = ["featured-guest", "featured-partner"].includes(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
       return {
-        action: "create-guest-matrix-prospect",
-        guestRegistrationType,
+        action: partnerMode ? "create-partner-matrix-prospect" : "create-guest-matrix-prospect",
+        guestRegistrationType: partnerMode ? "" : guestRegistrationType,
+        partnerRegistrationType: partnerMode ? guestRegistrationType : "",
+        registrationRole: guestRegistrationType,
         eventSlug: formData.get("eventSlug") || "",
         eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
         eventDate: selected?.dataset.eventDate || "",
@@ -6480,8 +6588,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventShowLabel: eventShowLabel(showId),
         eventShowTime: eventShowTime(showId),
         eventTime: eventShowTime(showId),
+        partnerCompany: partnerMode ? formData.get("company") || "" : "",
+        company: formData.get("company") || "",
         intendedGuestName: formData.get("intendedGuestName") || "",
         intendedGuestEmail: formData.get("intendedGuestEmail") || "",
+        partnerContactName: partnerMode ? formData.get("intendedGuestName") || "" : "",
+        partnerContactEmail: partnerMode ? formData.get("intendedGuestEmail") || "" : "",
         invitedBy: formData.get("invitedBy") || ""
       };
     }
@@ -6491,14 +6603,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const submitButton = guestMatrixAddSubmit || guestMatrixAddForm.querySelector('button[type="submit"]');
       const payload = buildGuestMatrixProspectPayload();
       if (!payload.eventSlug) {
-        setNotice("Select an event before adding a tracked person.", "error");
+        setNotice(`Select an event before adding a tracked ${matrixEntityLabel()}.`, "error");
         return;
       }
       if (!String(payload.intendedGuestName || "").trim() && !String(payload.intendedGuestEmail || "").trim()) {
-        setNotice("Enter a name or email before adding a tracked person.", "error");
+        setNotice(`Enter a name or email before adding a tracked ${matrixEntityLabel()}.`, "error");
         return;
       }
-      setNotice("Adding tracked person...");
+      setNotice(`Adding tracked ${matrixEntityLabel()}...`);
       if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = "Adding...";
@@ -6509,7 +6621,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload)
         }).then(readJson);
-        state.guestMatrixProspects = mergeInviteList(state.guestMatrixProspects, data.guestMatrixProspects || (data.prospect ? [data.prospect] : []));
+        if (isPartnerMatrix()) {
+          state.partnerMatrixProspects = mergeInviteList(state.partnerMatrixProspects, data.partnerMatrixProspects || (data.prospect ? [data.prospect] : []));
+          state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
+        } else {
+          state.guestMatrixProspects = mergeInviteList(state.guestMatrixProspects, data.guestMatrixProspects || (data.prospect ? [data.prospect] : []));
+          state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        }
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         const keepEvent = guestMatrixAddEvent.value;
@@ -6520,22 +6638,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (ownerInput) ownerInput.value = keepOwner;
         updateGuestMatrixAddShowOptions();
         renderGuestMatrix();
-        setNotice(`Tracking ${data.prospect?.intendedGuestName || data.prospect?.intendedGuestEmail || payload.intendedGuestName || "person"} before invite.`, "ok");
+        setNotice(`Tracking ${data.prospect?.intendedGuestName || data.prospect?.intendedGuestEmail || payload.intendedGuestName || matrixEntityLabel()} before invite.`, "ok");
       } catch (error) {
-        showErrorNotice(error, "Tracked person could not be added.");
+        showErrorNotice(error, `Tracked ${matrixEntityLabel()} could not be added.`);
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
-          submitButton.textContent = "Track Person";
+          submitButton.textContent = isPartnerMatrix() ? "Track Partner" : "Track Person";
         }
       }
     }
 
     async function deleteGuestMatrixProspect(key, label) {
       if (!key) return;
-      const person = label || "this tracked person";
-      if (!window.confirm(`Remove ${person} from the Guest Matrix? This removes the pre-invite tracking record and cannot be undone.`)) return;
-      setNotice("Removing tracked person...");
+      const person = label || `this tracked ${matrixEntityLabel()}`;
+      if (!window.confirm(`Remove ${person} from the ${matrixEntityLabelTitle()} Matrix? This removes the pre-invite tracking record and cannot be undone.`)) return;
+      setNotice(`Removing tracked ${matrixEntityLabel()}...`);
       try {
         const data = await fetch(api, {
           method: "POST",
@@ -6546,14 +6664,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           })
         }).then(readJson);
         state.guestMatrixProspects = data.guestMatrixProspects || [];
+        state.partnerMatrixProspects = data.partnerMatrixProspects || state.partnerMatrixProspects || [];
+        state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         delete guestMatrixDrafts[key];
         saveGuestMatrixDrafts();
         renderGuestMatrix();
-        setNotice(`Tracked person removed: ${data.deleted?.intendedGuestName || data.deleted?.intendedGuestEmail || person}`, "ok");
+        setNotice(`Tracked ${matrixEntityLabel()} removed: ${data.deleted?.intendedGuestName || data.deleted?.intendedGuestEmail || person}`, "ok");
       } catch (error) {
-        showErrorNotice(error, "Tracked person could not be removed.");
+        showErrorNotice(error, `Tracked ${matrixEntityLabel()} could not be removed.`);
       }
     }
 
@@ -7263,7 +7383,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!select) return;
       queueGuestMatrixChange(select);
       renderGuestMatrix();
-      setNotice("Guest Matrix change staged. Click Save Changes to persist it.", "ok");
+      setNotice(`${matrixEntityLabelTitle()} Matrix change staged. Click Save Changes to persist it.`, "ok");
     });
 
     guestMatrixList.addEventListener("click", async (event) => {
@@ -7370,44 +7490,72 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     });
 
-    partnerInviteForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const submitButton = partnerInviteForm.querySelector('button[type="submit"]');
+    function buildPartnerInvitePayload(sendEmail) {
       const formData = new FormData(partnerInviteForm);
       const selected = partnerInviteEvent.selectedOptions[0];
-      const payload = {
+      return {
+        action: "create-partner-invite",
         ...Object.fromEntries(formData.entries()),
         eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
-        eventDate: selected?.dataset.eventDate || ""
+        eventDate: selected?.dataset.eventDate || "",
+        sendEmail: Boolean(sendEmail)
       };
+    }
+
+    async function submitPartnerInvite(payload, { busyButton, busyText, idleText } = {}) {
       if (!String(payload.eventSlug || "").trim()) {
         setNotice("Select an event before generating a partner invite.", "error");
         return;
       }
-      setNotice("Generating partner invite...");
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = "Generating...";
+      if (payload.sendEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.partnerContactEmail || "")) {
+        setNotice("Enter a valid partner email address before sending an email.", "error");
+        return;
       }
+      setNotice(payload.sendEmail ? "Generating partner invite and sending email..." : "Generating partner invite...");
+      partnerInviteSubmit.disabled = true;
+      partnerInviteSendEmail.disabled = true;
+      if (busyButton) busyButton.textContent = busyText;
       try {
         const data = await fetch(api, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...payload, action: "create-partner-invite" })
+          body: JSON.stringify(payload)
         }).then(readJson);
         state.partnerInviteCodes = mergeInviteList(state.partnerInviteCodes, data.partnerInviteCodes || (data.invite ? [data.invite] : []));
+        state.partnerMatrixProspects = data.partnerMatrixProspects || state.partnerMatrixProspects || [];
+        state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         renderPartnerInvites();
+        renderGuestMatrix();
         const url = partnerRegistrationUrl(data.invite || {});
         await copyText(url);
-        setNotice("Partner invite link generated and copied if clipboard access is available.", "ok");
+        const ccText = Array.isArray(data.emailCc) && data.emailCc.length ? ` CC: ${data.emailCc.join(", ")}.` : "";
+        setNotice(data.emailSent
+          ? `Partner invite link generated and emailed to ${data.emailSent}.${ccText}`
+          : "Partner invite link generated and copied if clipboard access is available.", "ok");
       } catch (error) {
         showErrorNotice(error);
       } finally {
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent = "Generate Invite";
-        }
+        partnerInviteSubmit.disabled = false;
+        partnerInviteSendEmail.disabled = false;
+        if (busyButton) busyButton.textContent = idleText;
       }
+    }
+
+    partnerInviteForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await submitPartnerInvite(buildPartnerInvitePayload(false), {
+        busyButton: partnerInviteSubmit,
+        busyText: "Generating...",
+        idleText: partnerInviteSubmit.textContent
+      });
+    });
+
+    partnerInviteSendEmail.addEventListener("click", async () => {
+      await submitPartnerInvite(buildPartnerInvitePayload(true), {
+        busyButton: partnerInviteSendEmail,
+        busyText: "Sending...",
+        idleText: partnerInviteSendEmail.textContent
+      });
     });
 
     function buildRegistrationInvitePayload(sendEmail) {
