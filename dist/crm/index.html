@@ -1298,6 +1298,35 @@
       gap: 0.75rem;
     }
 
+    .company-people-panel {
+      display: grid;
+      gap: 0.85rem;
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid rgba(0, 230, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.5);
+    }
+
+    .company-people-panel h3 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .company-people-list {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .company-person-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      align-items: start;
+      padding: 0.7rem 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
     .prospect-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -1533,7 +1562,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button type="button" data-view="member">Members</button>
         </div>
         <div class="side-nav-group partner-pipeline" aria-label="Partner pipeline">
-          <button type="button" data-view="guest-partner-invite-links">Guest Partner Invite Links</button>
+          <button type="button" data-view="partner-invite-links">Partner Invite Links</button>
           <button type="button" data-view="manual-partners">Add Partner</button>
           <button type="button" data-view="partners-company">Partners by Company</button>
         </div>
@@ -1835,7 +1864,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div class="invite-result" id="registrationInviteResult" aria-live="polite"></div>
     </section>
 
-    <section class="invite-panel view-section partner-pipeline-panel" id="partnerInvitePanel" data-view-panel="guest-partner-invite-links" hidden>
+    <section class="invite-panel view-section partner-pipeline-panel" id="partnerInvitePanel" data-view-panel="partner-invite-links" hidden>
       <div>
         <p class="eyebrow">Partner event invites</p>
         <h2>Create hidden partner registration links</h2>
@@ -1877,7 +1906,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <option value="Strategic Partner">Strategic Partner</option>
           </select>
         </label>
-        <button type="submit">Generate Invite</button>
+        <div class="invite-grid-actions">
+          <button type="submit" id="partnerInviteSubmit">Generate Link</button>
+          <button type="button" id="partnerInviteSendEmail" class="secondary">Generate Link + Send Email</button>
+        </div>
       </form>
       <div class="invite-list" id="partnerInviteList"></div>
     </section>
@@ -4191,6 +4223,26 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return peopleSearchStatuses.map((status) => `<option value="${escapeHtml(status)}" ${status === selected ? "selected" : ""}>${escapeHtml(status)}</option>`).join("");
     }
 
+    const prospectOutreachActions = ["Connection Sent", "Already Connected", "Message Sent", "Responded", "Meeting Scheduled", "Not Relevant", "Skip"];
+    const prospectOutreachStatuses = ["Not Contacted", "Connection Sent", "Connected", "Message Sent", "Responded", "Meeting Scheduled", "Not Relevant", "Skipped"];
+
+    function prospectOutreachStatusOptions(selected = "Not Contacted") {
+      const value = selected || "Not Contacted";
+      return prospectOutreachStatuses
+        .map((status) => `<option value="${escapeHtml(status)}" ${status === value ? "selected" : ""}>${escapeHtml(status)}</option>`)
+        .join("");
+    }
+
+    function prospectPersonStatusPills(person = {}) {
+      return `
+        <div class="crm-compact-pills">
+          <span class="pill">${escapeHtml(person.outreachStatus || "Not Contacted")}</span>
+          <span class="pill">Priority ${escapeHtml(person.priorityScore || 0)}</span>
+          ${person.connectedAt ? '<span class="pill good">Connected</span>' : person.connectionRequestedAt ? '<span class="pill warn">Connection requested</span>' : '<span class="pill neutral">Not connected</span>'}
+        </div>
+      `;
+    }
+
     function prospectCompanyCard(company = {}, options = {}) {
       const people = prospectPeopleForCompany(company.companyId);
       const why = company.classificationReason || company.description || "No classification explanation recorded yet.";
@@ -4305,12 +4357,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       `;
     }
 
-    function renderProspectingPersonForm(selectedCompanyId = "") {
+    function renderProspectingPersonForm(selectedCompanyId = "", options = {}) {
+      const hideCompanySelect = options.hideCompanySelect === true;
+      const buttonLabel = options.buttonLabel || "Save Person";
       return `
         <form class="prospecting-form" data-prospect-person-form>
-          <label>Company<select name="companyId" required>${prospectCompanyOptions(selectedCompanyId)}</select></label>
+          ${hideCompanySelect ? `<input type="hidden" name="companyId" value="${escapeHtml(selectedCompanyId)}">` : `<label>Company<select name="companyId" required>${prospectCompanyOptions(selectedCompanyId)}</select></label>`}
           <label>Full Name<input name="fullName" required placeholder="Jane Smith"></label>
           <label>Title<input name="title" placeholder="VP Strategic Partnerships"></label>
+          <label>Communication Status<select name="outreachStatus">${prospectOutreachStatusOptions()}</select></label>
           <label>Seniority<input name="seniority" placeholder="Executive"></label>
           <label>Department<input name="department" placeholder="Partnerships"></label>
           <label>Persona<input name="persona" placeholder="Partnerships / Ecosystem"></label>
@@ -4319,8 +4374,40 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <label>Source<input name="source" placeholder="Company website"></label>
           <label>Source URL<input name="sourceUrl" placeholder="https://..."></label>
           <label class="span-full">Notes<textarea name="notes" placeholder="Why this person matters for partner outreach."></textarea></label>
-          <button type="submit">Save Person</button>
+          <button type="submit">${escapeHtml(buttonLabel)}</button>
         </form>
+      `;
+    }
+
+    function renderCompanyPeopleTracker(company = {}) {
+      if (!company?.companyId) return "";
+      const people = prospectPeopleForCompany(company.companyId);
+      return `
+        <section class="company-people-panel">
+          <div class="prospect-row">
+            <div>
+              <h3>People at ${escapeHtml(company.companyName || company.canonicalDomain || "this company")}</h3>
+              <p>${escapeHtml(people.length)} saved | ${escapeHtml(company.outreach?.peopleAttempted || 0)} attempted | ${escapeHtml(company.outreach?.connectionsAccepted || 0)} connected | ${escapeHtml(company.outreach?.meetings || 0)} meetings</p>
+            </div>
+          </div>
+          ${renderProspectingPersonForm(company.companyId, { hideCompanySelect: true, buttonLabel: "Add Person to Company" })}
+          <div class="company-people-list">
+            ${people.map((person) => `
+              <div class="company-person-row">
+                <div>
+                  <strong>${escapeHtml(person.fullName || "Unnamed person")}</strong>
+                  <p>${escapeHtml([person.title, person.seniority, person.department || person.persona].filter(Boolean).join(" | "))}</p>
+                  ${prospectPersonStatusPills(person)}
+                  ${person.notes ? `<p>${escapeHtml(person.notes)}</p>` : ""}
+                </div>
+                <div class="linkedin-actions">
+                  ${person.linkedinUrl ? `<a class="compact secondary button-link" href="${escapeHtml(person.linkedinUrl)}" target="_blank" rel="noopener">Open LinkedIn</a>` : ""}
+                  ${prospectOutreachActions.map((action) => `<button class="compact secondary" type="button" data-prospect-person-action="${escapeHtml(action)}" data-prospect-person-key="${escapeHtml(person.key)}">${escapeHtml(action)}</button>`).join("")}
+                </div>
+              </div>
+            `).join("") || '<p>No individuals saved for this company yet.</p>'}
+          </div>
+        </section>
       `;
     }
 
@@ -4658,6 +4745,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           </div>
         ` : ""}
         ${renderProspectingCompanyForm()}
+        ${selectedCompany ? renderCompanyPeopleTracker(selectedCompany) : activeProspectingEditCompanyId ? renderCompanyPeopleTracker(prospectCompanies().find((company) => company.companyId === activeProspectingEditCompanyId)) : ""}
         <div class="prospecting-grid">${companies.map((company) => prospectCompanyCard(company)).join("") || '<p>No vendor companies have been added yet.</p>'}</div>
       `;
     }
@@ -4781,14 +4869,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 <div>
                   <strong>${escapeHtml(person.fullName || "Unnamed person")}</strong>
                   <p>${escapeHtml([person.title, company.companyName].filter(Boolean).join(" | "))}</p>
-                  <div class="crm-compact-pills">
-                    <span class="pill">${escapeHtml(person.persona || person.department || "Unassigned persona")}</span>
-                    <span class="pill">${escapeHtml(person.outreachStatus || "Not Contacted")}</span>
-                    <span class="pill">Priority ${escapeHtml(person.priorityScore || 0)}</span>
-                  </div>
+                  ${prospectPersonStatusPills(person)}
                 </div>
                 <div class="linkedin-actions">
                   ${person.linkedinUrl ? `<a class="compact secondary button-link" href="${escapeHtml(person.linkedinUrl)}" target="_blank" rel="noopener">Open LinkedIn</a>` : ""}
+                  ${prospectOutreachActions.slice(0, 3).map((action) => `<button class="compact secondary" type="button" data-prospect-person-action="${escapeHtml(action)}" data-prospect-person-key="${escapeHtml(person.key)}">${escapeHtml(action)}</button>`).join("")}
                 </div>
               </div>
             `;
@@ -4798,18 +4883,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function personOutreachCard(person = {}) {
-      const actions = ["Connection Sent", "Already Connected", "Message Sent", "Responded", "Meeting Scheduled", "Not Relevant", "Skip"];
       return `
         <div class="prospect-card">
           <h3>${escapeHtml(person.fullName || "Unnamed person")}</h3>
           <p>${escapeHtml([person.title, person.persona || person.department].filter(Boolean).join(" | "))}</p>
-          <div class="crm-compact-pills">
-            <span class="pill">${escapeHtml(person.outreachStatus || "Not Contacted")}</span>
-            <span class="pill">Priority ${escapeHtml(person.priorityScore || 0)}</span>
-          </div>
+          ${prospectPersonStatusPills(person)}
           <div class="linkedin-actions">
             ${person.linkedinUrl ? `<a class="compact secondary button-link" href="${escapeHtml(person.linkedinUrl)}" target="_blank" rel="noopener">Open LinkedIn</a>` : ""}
-            ${actions.map((action) => `<button class="compact secondary" type="button" data-prospect-person-action="${escapeHtml(action)}" data-prospect-person-key="${escapeHtml(person.key)}">${escapeHtml(action)}</button>`).join("")}
+            ${prospectOutreachActions.map((action) => `<button class="compact secondary" type="button" data-prospect-person-action="${escapeHtml(action)}" data-prospect-person-key="${escapeHtml(person.key)}">${escapeHtml(action)}</button>`).join("")}
           </div>
         </div>
       `;
@@ -6882,11 +6963,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (companyForm) {
         const payload = prospectingFormPayload(companyForm);
         if (payload.companyId) activeProspectingEditCompanyId = payload.companyId;
-        await postPartnerProspecting({
+        const data = await postPartnerProspecting({
           action: "save-partner-prospect-company",
           ...payload
         }, "Partner prospect company saved.");
-        if (!payload.companyId) companyForm.reset();
+        const savedCompanyId = data?.company?.companyId || payload.companyId || "";
+        if (savedCompanyId) {
+          activeProspectingCompanyId = savedCompanyId;
+          activeProspectingEditCompanyId = savedCompanyId;
+          render();
+        } else if (!payload.companyId) {
+          companyForm.reset();
+        }
         return;
       }
       if (discoveryForm) {

@@ -2667,6 +2667,25 @@ async function saveProspectPeopleSearchMission(env, payload = {}, actor = "") {
   return normalizeProspectCompany(company.key, next, await prospectPeople(env, company.companyId), config.weights);
 }
 
+function prospectOutreachPatch(action = "", existing = {}, now = new Date().toISOString()) {
+  const normalized = cleanString(action, 120);
+  const actionMap = {
+    "Connection Sent": { outreachStatus: "Connection Sent", connectionRequestedAt: now },
+    "Already Connected": { outreachStatus: "Connected", connectedAt: now },
+    Connected: { outreachStatus: "Connected", connectedAt: now },
+    "Message Sent": { outreachStatus: "Message Sent", firstMessageAt: existing.firstMessageAt || now, lastMessageAt: now },
+    Responded: { outreachStatus: "Responded", respondedAt: now },
+    "Meeting Scheduled": { outreachStatus: "Meeting Scheduled", meetingAt: now },
+    "Not Relevant": { outreachStatus: "Not Relevant", notRelevantAt: now },
+    Skip: { outreachStatus: "Skipped", skippedAt: now },
+    Skipped: { outreachStatus: "Skipped", skippedAt: now }
+  };
+  if (normalized === "Not Contacted") {
+    return cleanString(existing.outreachStatus) ? {} : { outreachStatus: "Not Contacted" };
+  }
+  return actionMap[normalized] || null;
+}
+
 async function saveProspectPerson(env, payload = {}, actor = "") {
   const companyId = cleanString(payload.companyId, 180);
   if (!companyId) throw new Error("Company is required before adding a prospect person.");
@@ -2685,9 +2704,12 @@ async function saveProspectPerson(env, payload = {}, actor = "") {
   const personId = cleanString(existing?.personId, 180) || prospectPersonId({ ...payload, fullName });
   const key = cleanString(existing?.key, 500) || `${PARTNER_PROSPECT_PERSON_PREFIX}${companyId}:${personId}`;
   const previous = existing?.key ? await readRawRecord(env, existing.key) : null;
+  const outreachPatch = prospectOutreachPatch(payload.outreachStatus, previous || {}, now);
   const record = {
     ...(previous || {}),
     ...payload,
+    outreachStatus: cleanString(previous?.outreachStatus, 120) || "Not Contacted",
+    ...outreachPatch,
     personId,
     companyId,
     fullName,
@@ -3355,16 +3377,7 @@ async function recordProspectOutreach(env, payload = {}, actor = "") {
   if (!existing) throw new Error("Prospect person was not found.");
   const now = new Date().toISOString();
   const action = cleanString(payload.outreachAction || payload.status || payload.actionName, 120);
-  const actionMap = {
-    "Connection Sent": { outreachStatus: "Connection Sent", connectionRequestedAt: now },
-    "Already Connected": { outreachStatus: "Connected", connectedAt: now },
-    "Message Sent": { outreachStatus: "Message Sent", firstMessageAt: existing.firstMessageAt || now, lastMessageAt: now },
-    "Responded": { outreachStatus: "Responded", respondedAt: now },
-    "Meeting Scheduled": { outreachStatus: "Meeting Scheduled", meetingAt: now },
-    "Not Relevant": { outreachStatus: "Not Relevant", notRelevantAt: now },
-    "Skip": { outreachStatus: "Skipped", skippedAt: now }
-  };
-  const patch = actionMap[action];
+  const patch = prospectOutreachPatch(action, existing, now);
   if (!patch) throw new Error("Unsupported outreach action.");
   const record = {
     ...existing,
