@@ -3810,6 +3810,64 @@ async function partnerInviteCodes(env) {
   return enrichInviteUsage(env, invites, ["partner"]);
 }
 
+async function partnerRegistrationLinkRows(env) {
+  const invites = await partnerInviteCodes(env);
+  const registrations = (await registrants(env, "partner"))
+    .filter((row) => row.manualPartner !== true && cleanString(row.inviteCode));
+  const registrationsByCode = new Map();
+  registrations.forEach((row) => {
+    const code = cleanCode(row.inviteCode);
+    if (code && !registrationsByCode.has(code)) registrationsByCode.set(code, row);
+  });
+
+  return invites.map((invite) => {
+    const registration = registrationsByCode.get(cleanCode(invite.code));
+    const registered = Boolean(registration || invite.usedAt || invite.usedBy || invite.usedByEmail);
+    const crmStatus = cleanAllowed(
+      registration?.crmStatus || invite.crmStatus,
+      allowedStatuses,
+      registered ? "registered" : "invited"
+    );
+    return normalizeRecord(registration?.key || invite.key, {
+      ...(registration || {}),
+      id: registration?.id || invite.registrationId || invite.code,
+      type: "partner",
+      crmType: "partner-registration-link",
+      source: registration ? cleanString(registration.source) || "partner-registration" : "partner-invite",
+      createdAt: registration?.createdAt || invite.createdAt,
+      updatedAt: registration?.updatedAt || invite.updatedAt || invite.createdAt,
+      name: registration?.name || invite.usedByName || invite.partnerContactName || invite.partnerContactEmail || "Name not recorded",
+      company: registration?.company || registration?.partnerCompany || invite.partnerCompany,
+      partnerCompany: registration?.partnerCompany || registration?.company || invite.partnerCompany,
+      title: registration?.title,
+      email: registration?.email || invite.usedByEmail || invite.partnerContactEmail,
+      phone: registration?.phone,
+      inviteCode: invite.code,
+      invitedBy: registration?.invitedBy || invite.invitedBy || invite.createdBy,
+      phoneVerificationStatus: registration?.phoneVerificationStatus || (registered ? "verified" : "unverified"),
+      eventId: registration?.eventId || invite.eventId,
+      eventSlug: registration?.eventSlug || invite.eventSlug,
+      eventName: registration?.eventName || invite.usedFor || invite.eventName,
+      eventDate: registration?.eventDate || invite.usedForDate || invite.eventDate,
+      eventTime: registration?.eventTime || invite.usedForTime || invite.eventTime,
+      eventShowId: registration?.eventShowId || invite.eventShowId,
+      eventShowLabel: registration?.eventShowLabel || invite.usedForShow || invite.eventShowLabel,
+      eventShowTime: registration?.eventShowTime || invite.usedForTime || invite.eventShowTime,
+      partnerRegistrationType: registration?.partnerRegistrationType || invite.partnerRegistrationType || invite.registrationRole,
+      registrationRole: registration?.registrationRole || invite.partnerRegistrationType || invite.registrationRole || "partner",
+      partnerTier: registration?.partnerTier || invite.partnerTier,
+      partnerProductTypes: registration?.partnerProductTypes,
+      partnerClientMessaging: registration?.partnerClientMessaging,
+      attended: registration?.attended === true,
+      attendanceStatus: registration?.attendanceStatus,
+      crmStatus,
+      crmNotes: registration?.crmNotes || invite.crmNotes,
+      crmUpdatedAt: registration?.crmUpdatedAt || invite.crmUpdatedAt,
+      crmUpdatedBy: registration?.crmUpdatedBy || invite.crmUpdatedBy
+    });
+  }).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
 async function registrationInviteCodes(env) {
   const entries = await Promise.all(
     Object.entries(REGISTRATION_INVITE_PREFIXES).map(async ([type, prefix]) => {
@@ -5534,7 +5592,12 @@ export async function onRequestGet({ request, env, data }) {
   const type = cleanType(url.searchParams.get("type"));
   const config = registrantTypes[type];
   const isContacts = type === "contacts";
-  const rows = isContacts ? await contacts(env) : await registrants(env, type);
+  const partnerRegistrationLinksOnly = type === "partner" && url.searchParams.get("registrationLinks") === "1";
+  const rows = isContacts
+    ? await contacts(env)
+    : partnerRegistrationLinksOnly
+      ? await partnerRegistrationLinkRows(env)
+      : await registrants(env, type);
 
   if (url.searchParams.get("download") === "csv") {
     const headings = isContacts
@@ -6330,6 +6393,42 @@ export async function onRequestPost({ request, env, data }) {
     }
   }
 
+  if (payload?.action === "save-partner-registration-link") {
+    try {
+      const key = cleanString(payload.key, 500);
+      if (!key || !key.startsWith(PARTNER_INVITE_PREFIX)) throw new Error("Partner registration link was not found.");
+      const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      if (!existing) throw new Error("Partner registration link was not found.");
+      const now = new Date().toISOString();
+      const next = {
+        ...existing,
+        crmStatus: cleanAllowed(payload.crmStatus ?? existing.crmStatus, allowedStatuses, existing.crmStatus || "invited"),
+        crmNotes: cleanString(payload.crmNotes ?? existing.crmNotes),
+        crmUpdatedAt: now,
+        crmUpdatedBy: access.email,
+        updatedAt: now,
+        updatedBy: access.email
+      };
+      await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+      await upsertContactFromInviteRecord(env, normalizeInviteCode(key, next), "partner-invite", access.email);
+      const rows = await partnerRegistrationLinkRows(env);
+      return json({
+        ok: true,
+        type: "partner",
+        label: registrantTypes.partner.label,
+        summary: summarize(rows),
+        rows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        partnerMatrixProspects: await partnerMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Partner registration link could not be updated." }, { status: 500 });
+    }
+  }
+
   if (payload?.action === "send-invite-reminder") {
     try {
       const origin = new URL(request.url).origin;
@@ -6627,7 +6726,9 @@ export async function onRequestPost({ request, env, data }) {
     }
   }
 
-  const nextRows = await registrants(env, type);
+  const nextRows = type === "partner" && cleanBoolean(payload?.registrationLinks)
+    ? await partnerRegistrationLinkRows(env)
+    : await registrants(env, type);
   return json({
     ok: true,
     type,
