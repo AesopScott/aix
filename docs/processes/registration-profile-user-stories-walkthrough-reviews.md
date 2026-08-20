@@ -35,7 +35,7 @@ As an invited executive guest, I want to open a Mojo guest registration link and
 1. A Mojo team member or accepted member creates a guest invite link.
 2. The guest opens `/guest/?invite=######`.
 3. The page validates the code with `/api/guest-invite-codes/:code`.
-4. The guest enters full name, company, title, industry, email, mobile phone, and publication-use choices.
+4. The guest enters full name, company, title, industry, email, LinkedIn profile URL, mobile phone, and publication-use choices.
 5. The guest records phone confirmation. While SMS is not fully configured, guest registration normalizes unverified/code-sent states to `pending_sms_setup`.
 6. The guest submits to `/api/guest-registration`.
 7. The system stores the registration, marks stored invite usage, upserts the CRM contact, and ties the contact event history to the invite event when metadata exists.
@@ -61,7 +61,7 @@ As an invited prospective member, I want to unlock member registration with my s
 2. The prospective member opens `/member-registration/?invite=######` or enters the code into the gate.
 3. The page validates the code with `/api/member-invite-codes/:code`.
 4. The page unlocks the member details form after code validation.
-5. The prospective member enters name, company, title, industry, email, mobile phone, and publication-use choices.
+5. The prospective member enters name, company, title, industry, email, LinkedIn profile URL, mobile phone, and publication-use choices.
 6. The prospective member starts phone verification. If SMS is not fully configured, the expected submit-ready state is `pending_sms_setup`; if SMS is configured, the code must be confirmed as `verified`.
 7. The form submits to `/api/member-registration`.
 8. The system stores the registration, upserts the CRM contact, records event history, and marks the invite as used when it was a stored code.
@@ -133,7 +133,7 @@ As an invited partner contact, I want to open a private partner registration lin
 2. The partner contact opens `/partner-registration/?invite=######`.
 3. The page validates the code with `/api/partner-invite-codes/:code`.
 4. The private form unlocks and displays invite/event context.
-5. The partner enters name, company, title, industry, email, mobile phone, and publication-use choices.
+5. The partner enters name, company, title, industry, email, LinkedIn profile URL, mobile phone, and publication-use choices.
 6. The partner records phone confirmation as `verified` or `pending_sms_setup`.
 7. The form submits to `/api/partner-registration`.
 8. The system stores the registration, marks invite usage, upserts the canonical contact, and connects the contact to a company-level partner profile key.

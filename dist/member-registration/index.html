@@ -408,6 +408,7 @@
         <div class="status-list" aria-label="Registration requirements">
           <div class="status-item"><span class="status-mark"></span><span>Invite code required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Email required</span></div>
+          <div class="status-item"><span class="status-mark"></span><span>LinkedIn profile required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Phone confirmation recorded</span></div>
         </div>
       </section>
@@ -497,6 +498,10 @@
               <label for="email">Email</label>
               <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required>
             </div>
+            <div class="field">
+              <label for="linkedinProfileUrl">LinkedIn profile URL</label>
+              <input type="url" id="linkedinProfileUrl" name="linkedinProfileUrl" placeholder="https://www.linkedin.com/in/your-name" autocomplete="url" required>
+            </div>
             <div class="field full">
               <label for="eventShowId">Show time</label>
               <select id="eventShowId" name="eventShowId" required>
@@ -542,6 +547,7 @@
   const inviteBadge = document.getElementById('inviteBadge');
   const fullNameInput = document.getElementById('fullName');
   const emailInput = document.getElementById('email');
+  const linkedinProfileInput = document.getElementById('linkedinProfileUrl');
   const eventShowSelect = document.getElementById('eventShowId');
   const phoneInput = document.getElementById('phone');
   const sendCodeButton = document.getElementById('sendCodeButton');
@@ -787,6 +793,7 @@
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
     payload.email = String(payload.email || '').trim();
+    payload.linkedinProfileUrl = String(payload.linkedinProfileUrl || '').trim();
     payload.phone = normalizePhone(payload.phone);
     payload.publicationUseName = formData.has('publicationUseName');
     payload.publicationUseCompany = formData.has('publicationUseCompany');
@@ -795,6 +802,11 @@
 
     if (!/^\d{6}$/.test(String(payload.inviteCode || '').trim())) {
       setMessage(formError, 'Enter a valid six-digit invite code.', 'error');
+      return;
+    }
+    if (!payload.linkedinProfileUrl) {
+      setMessage(formError, 'LinkedIn profile URL is required.', 'error');
+      linkedinProfileInput.focus();
       return;
     }
     const selectedShow = normalizeEventShow(payload.eventShowId, '');

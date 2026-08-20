@@ -428,6 +428,7 @@
         <div class="status-list" aria-label="Registration requirements">
           <div class="status-item"><span class="status-mark"></span><span>Invite code required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Email required</span></div>
+          <div class="status-item"><span class="status-mark"></span><span>LinkedIn profile required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Phone confirmation recorded</span></div>
         </div>
       </section>
@@ -500,6 +501,10 @@
               <label for="email">Email</label>
               <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required>
             </div>
+            <div class="field">
+              <label for="linkedinProfileUrl">LinkedIn profile URL</label>
+              <input type="url" id="linkedinProfileUrl" name="linkedinProfileUrl" placeholder="https://www.linkedin.com/in/your-name" autocomplete="url" required>
+            </div>
             <div class="field full">
               <label for="eventShowId">Show time</label>
               <select id="eventShowId" name="eventShowId" required>
@@ -555,6 +560,7 @@
   const inviteBadge = document.getElementById('inviteBadge');
   const fullNameInput = document.getElementById('fullName');
   const emailInput = document.getElementById('email');
+  const linkedinProfileInput = document.getElementById('linkedinProfileUrl');
   const eventShowSelect = document.getElementById('eventShowId');
   const briefPhotoInput = document.getElementById('briefPhoto');
   const phoneInput = document.getElementById('phone');
@@ -784,9 +790,11 @@
     const formData = new FormData(form);
     const payload = Object.fromEntries([...formData.entries()].filter(([, value]) => typeof value === 'string'));
     payload.email = String(payload.email || '').trim();
+    payload.linkedinProfileUrl = String(payload.linkedinProfileUrl || '').trim();
     payload.phone = normalizePhone(payload.phone);
     payload.phoneVerificationStatus = verificationStatus.value;
     formData.set('email', payload.email);
+    formData.set('linkedinProfileUrl', payload.linkedinProfileUrl);
     formData.set('phone', payload.phone);
     formData.set('phoneVerificationStatus', payload.phoneVerificationStatus);
     appendCampaignAttribution(formData);
@@ -798,6 +806,11 @@
     if (!payload.phone) {
       setMessage(formError, 'Phone number is required.', 'error');
       phoneInput.focus();
+      return;
+    }
+    if (!payload.linkedinProfileUrl) {
+      setMessage(formError, 'LinkedIn profile URL is required.', 'error');
+      linkedinProfileInput.focus();
       return;
     }
     const photoError = await validateBriefPhoto();

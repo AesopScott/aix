@@ -322,6 +322,7 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
     inviteCode: cleanString(registration.inviteCode),
     intendedGuestName: cleanString(registration.intendedGuestName || registration.invitedName || registration.guestName),
     invitedName: cleanString(registration.invitedName || registration.intendedGuestName || registration.guestName),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(registration.linkedinProfileUrl),
     guestRegistrationType: cleanGuestRegistrationType(registration.guestRegistrationType || registration.registrationRole),
     partnerRegistrationType: cleanOptionalRegistrationType(registration.partnerRegistrationType || registration.registrationRole),
     registrationRole: cleanGuestRegistrationType(registration.registrationRole || registration.partnerRegistrationType || registration.guestRegistrationType),
@@ -369,6 +370,28 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function cleanLinkedInProfileUrl(value) {
+  const raw = cleanString(value).replace(/\s+/g, "");
+  if (!raw) return "";
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, "")}`;
+  let url;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return "";
+  }
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (host !== "linkedin.com" && !host.endsWith(".linkedin.com")) return "";
+  const path = url.pathname.replace(/\/+$/, "");
+  if (!/^\/(in|pub)\/[^/]+/i.test(path)) return "";
+  url.protocol = "https:";
+  url.username = "";
+  url.password = "";
+  url.search = "";
+  url.hash = "";
+  return url.toString().slice(0, 500);
+}
+
 function cleanPayload(payload, type = "") {
   return {
     inviteCode: cleanString(payload?.inviteCode),
@@ -377,6 +400,7 @@ function cleanPayload(payload, type = "") {
     title: cleanString(payload?.title),
     industry: cleanString(payload?.industry),
     email: cleanString(payload?.email).toLowerCase(),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(payload?.linkedinProfileUrl || payload?.linkedInProfileUrl || payload?.linkedinUrl || payload?.linkedInUrl),
     phone: cleanString(payload?.phone),
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
     eventShowId: cleanEventShowId(payload?.eventShowId || payload?.showId || payload?.eventShow, ""),
@@ -736,6 +760,7 @@ function staffRegistrationRows(type, registration = {}) {
     ["Role", registrationRoles(type, registration).join(", ")],
     ["Name", registration.name],
     ["Email", registration.email],
+    ["LinkedIn profile URL", registration.linkedinProfileUrl],
     ["Phone", registration.phone],
     ["Company", registration.company || registration.partnerCompany],
     ["Title", registration.title],
@@ -816,6 +841,7 @@ function validateRegistration(registration, type = "") {
   if (!registration.industry) return "Industry is required.";
   if (!registration.email) return "Email is required.";
   if (!isValidEmail(registration.email)) return "Enter a valid email address.";
+  if (!registration.linkedinProfileUrl) return "LinkedIn profile URL is required.";
   if (type === "partner" && !registration.partnerProductTypes) return "Describe the types of products your company sells.";
   if (type === "partner" && !registration.partnerClientMessaging) return "Describe your typical client messaging.";
   if (!registration.phone) return "Phone number is required.";
@@ -1050,6 +1076,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
     companyKey,
     profileKey: type === "partner" ? partnerCompanyKey : companyKey,
     title: cleanString(registration.title),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(registration.linkedinProfileUrl),
     phone: cleanString(registration.phone),
     photoUrl: cleanString(registration.photoUrl),
     photoKey: cleanString(registration.photoKey),
