@@ -28,7 +28,7 @@ The Discovery Queue now includes built-in starter sources so operators do not ne
 
 Discovery runs now write bounded CRM debug records. The Discovery Queue exposes a Discovery Debug panel showing source URL, status, accepted link names/domains, rejected link labels/domains, and the reason a company name was chosen or rejected. Sponsor-tier labels such as `2026 premier sponsor` are treated as labels, not company names; the extractor falls back to logo alt/title text or the linked domain when labels are generic.
 
-The discovery pass fetches the HTML, extracts outbound company domains, filters common non-company/social/search domains, dedupes by canonical domain, and creates Vendor Universe records with source provenance.
+The discovery pass fetches the HTML, extracts outbound company domains, filters common non-company/social/search domains, dedupes by canonical domain, and creates Vendor Universe records with source provenance. When an already-known company is found from another source, the CRM preserves one company record and appends the new `discoverySources`, `sourceUrls`, and structured `sourceAttributions` evidence so the company can still be filtered under every source where it appeared.
 
 Each discovered company can then run website analysis. The first implementation uses transparent keyword/category signals to classify AI relevance, enterprise focus, likely category, target executive roles, partner score, and queue status. It is intentionally replaceable by a model-backed classifier later.
 
@@ -53,6 +53,8 @@ Review actions write review metadata on the prospect company record: `reviewStat
 Source performance now tracks more than discovered counts. The dashboard reports companies, qualified AI vendors, ready-for-outreach companies, contacted companies, responses, meetings, partners, and average partner score by discovery source.
 
 Discovery Source cards also surface qualified count, ready count, response count, and average score so operators can compare source quality where sources are managed.
+
+Vendor Universe includes a Discovery Source filter. It is populated from saved sources, built-in starter sources, emerging sources, legacy `discoverySources`, and structured `sourceAttributions`, so operators can view a subset such as Black Hat-sourced companies without creating duplicate company records. When a selected source is runnable, the filter exposes `Run This Source` to execute discovery only for that source and return to the same filtered source view.
 
 ## Phase C Research Queue
 

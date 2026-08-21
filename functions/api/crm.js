@@ -579,6 +579,77 @@ function cleanArray(value, maxItems = 24, maxLength = 240) {
     .slice(0, maxItems);
 }
 
+function cleanSourceAttributions(value = [], maxItems = 80) {
+  const raw = Array.isArray(value) ? value : [];
+  const rows = [];
+  const seen = new Set();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const sourceName = cleanString(item.sourceName || item.source || item.name, 160);
+    const sourceUrl = normalizeUrl(item.sourceUrl || item.url);
+    const candidateSourceUrl = normalizeUrl(item.candidateSourceUrl || item.candidateUrl);
+    const sourceProfileUrl = normalizeUrl(item.sourceProfileUrl || item.profileUrl);
+    const canonicalDomain = normalizeDomain(item.canonicalDomain || item.domain || item.websiteUrl);
+    const key = [
+      cleanString(item.sourceId, 180) || companySlug(sourceName),
+      sourceUrl,
+      candidateSourceUrl,
+      sourceProfileUrl,
+      canonicalDomain
+    ].filter(Boolean).join("|").toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      sourceId: cleanString(item.sourceId, 180),
+      sourceName,
+      sourceType: cleanString(item.sourceType, 120),
+      category: cleanString(item.category, 160),
+      evidenceType: cleanString(item.evidenceType, 80),
+      sourceUrl,
+      sourcePageTitle: cleanString(item.sourcePageTitle, 240),
+      candidateSourceUrl,
+      candidateSourcePageTitle: cleanString(item.candidateSourcePageTitle, 240),
+      sourceProfileUrl,
+      candidateName: cleanString(item.candidateName || item.companyName, 240),
+      canonicalDomain,
+      websiteUrl: normalizeUrl(item.websiteUrl || canonicalDomain),
+      discoverySegment: cleanString(item.discoverySegment, 120),
+      targetEmployeeRange: cleanString(item.targetEmployeeRange, 80),
+      valueState: cleanString(item.valueState || "SOURCE_PROVIDED", 80),
+      capturedAt: cleanString(item.capturedAt || item.discoveredAt || item.importedAt, 40)
+    });
+  }
+  return rows.slice(-maxItems);
+}
+
+function sourceLooksSponsorRelated(source = {}, payload = {}) {
+  const text = `${source.sourceType || ""} ${source.category || ""} ${source.sourceName || ""} ${source.description || ""}`.toLowerCase();
+  return sourceWantsSponsorCrawl(source, payload) || /sponsor|conference|summit|expo|exhibitor|partner/.test(text);
+}
+
+function discoverySourceAttribution({ source = {}, candidate = {}, sourceName = "", sourceUrl = "", title = "", payload = {}, now = "", category = "" } = {}) {
+  const sponsorRelated = sourceLooksSponsorRelated(source, payload);
+  return cleanSourceAttributions([{
+    sourceId: source.sourceId,
+    sourceName: sourceName || source.sourceName,
+    sourceType: source.sourceType,
+    category: category || source.category,
+    evidenceType: sponsorRelated ? "event-sponsor" : "company-discovery",
+    sourceUrl,
+    sourcePageTitle: title,
+    candidateSourceUrl: candidate.sourceUrl,
+    candidateSourcePageTitle: candidate.sourcePageTitle,
+    sourceProfileUrl: candidate.sourceProfileUrl,
+    candidateName: candidate.companyName,
+    canonicalDomain: candidate.canonicalDomain,
+    websiteUrl: candidate.websiteUrl,
+    discoverySegment: payload.discoverySegment,
+    targetEmployeeRange: payload.targetEmployeeRange,
+    valueState: "SOURCE_PROVIDED",
+    capturedAt: now
+  }], 1)[0] || null;
+}
+
 function cleanNumber(value, fallback = 0, min = 0, max = 100) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
@@ -2087,6 +2158,12 @@ function normalizeProspectCompany(key, record = {}, people = [], weights = defau
   const processingStage = cleanString(record.processingStage, 120) || (people.length ? "READY FOR OUTREACH" : "PEOPLE DISCOVERY");
   const processingStatus = cleanString(record.processingStatus, 80) || "DISCOVERED";
   const rollup = outreachRollup(people);
+  const sourceAttributions = cleanSourceAttributions(
+    record.sourceAttributions ||
+    record.discoveryAttributions ||
+    record.provenance?.sourceAttributions,
+    80
+  );
   return {
     key,
     companyId,
@@ -2128,6 +2205,8 @@ function normalizeProspectCompany(key, record = {}, people = [], weights = defau
     companySizeEvidence: cleanString(record.companySizeEvidence, 1000),
     discoverySources: cleanArray(record.discoverySources || record.sources, 20, 160),
     sourceUrls: cleanArray(record.sourceUrls, 30, 500),
+    sourceAttributions,
+    discoveryAttributions: sourceAttributions,
     provenance: record.provenance && typeof record.provenance === "object" ? record.provenance : {},
     assignedTo: cleanString(record.assignedTo || "Miller", 180),
     processingStage,
@@ -2391,6 +2470,7 @@ async function saveProspectCompany(env, payload = {}, actor = "") {
   const companyId = cleanString(existing?.companyId, 180) || prospectCompanyId(payload);
   const key = cleanString(existing?.key, 500) || `${PARTNER_PROSPECT_COMPANY_PREFIX}${companyId}`;
   const previous = existing?.key ? await readRawRecord(env, existing.key) : null;
+  const mergeDiscoverySourceFields = payload.mergeDiscoverySourceFields === true;
   const scoreChanged = payload.partnerScoreOverride !== undefined &&
     cleanString(payload.partnerScoreOverride) !== cleanString(previous?.partnerScoreOverride);
   const record = {
@@ -2401,8 +2481,18 @@ async function saveProspectCompany(env, payload = {}, actor = "") {
     canonicalDomain: normalizeDomain(payload.canonicalDomain || payload.websiteUrl || previous?.canonicalDomain),
     websiteUrl: normalizeUrl(payload.websiteUrl || payload.canonicalDomain || previous?.websiteUrl),
     linkedinCompanyUrl: normalizeUrl(payload.linkedinCompanyUrl || previous?.linkedinCompanyUrl),
-    sourceUrls: cleanArray(payload.sourceUrls ?? previous?.sourceUrls, 30, 500),
-    discoverySources: cleanArray(payload.discoverySources ?? previous?.discoverySources, 20, 160),
+    sourceUrls: mergeDiscoverySourceFields
+      ? cleanArray([...(cleanArray(previous?.sourceUrls, 30, 500)), ...(cleanArray(payload.sourceUrls, 30, 500))], 30, 500)
+      : cleanArray(payload.sourceUrls ?? previous?.sourceUrls, 30, 500),
+    discoverySources: mergeDiscoverySourceFields
+      ? cleanArray([...(cleanArray(previous?.discoverySources, 20, 160)), ...(cleanArray(payload.discoverySources, 20, 160))], 20, 160)
+      : cleanArray(payload.discoverySources ?? previous?.discoverySources, 20, 160),
+    sourceAttributions: cleanSourceAttributions([
+      ...(cleanSourceAttributions(previous?.sourceAttributions || previous?.discoveryAttributions, 80)),
+      ...(cleanSourceAttributions(payload.sourceAttributions || payload.discoveryAttributions, 80))
+    ], 80),
+    discoveryAttributions: undefined,
+    mergeDiscoverySourceFields: undefined,
     discoverySegment: cleanString(payload.discoverySegment ?? previous?.discoverySegment, 120),
     discoverySegments: cleanArray([
       ...(cleanArray(previous?.discoverySegments || previous?.discoverySegment, 12, 120)),
@@ -2415,8 +2505,12 @@ async function saveProspectCompany(env, payload = {}, actor = "") {
     products: cleanArray(payload.products ?? previous?.products, 30, 180),
     targetIndustries: cleanArray(payload.targetIndustries ?? previous?.targetIndustries, 24, 160),
     targetExecutiveRoles: cleanArray(payload.targetExecutiveRoles ?? previous?.targetExecutiveRoles ?? payload.targetBuyers, 24, 160),
-    sponsoredEvents: cleanArray(payload.sponsoredEvents ?? previous?.sponsoredEvents, 40, 240),
-    sponsorEvidenceUrls: cleanArray(payload.sponsorEvidenceUrls ?? payload.evidenceUrls ?? previous?.sponsorEvidenceUrls, 40, 500),
+    sponsoredEvents: mergeDiscoverySourceFields
+      ? cleanArray([...(cleanArray(previous?.sponsoredEvents, 40, 240)), ...(cleanArray(payload.sponsoredEvents, 40, 240))], 40, 240)
+      : cleanArray(payload.sponsoredEvents ?? previous?.sponsoredEvents, 40, 240),
+    sponsorEvidenceUrls: mergeDiscoverySourceFields
+      ? cleanArray([...(cleanArray(previous?.sponsorEvidenceUrls || previous?.evidenceUrls, 40, 500)), ...(cleanArray(payload.sponsorEvidenceUrls || payload.evidenceUrls, 40, 500))], 40, 500)
+      : cleanArray(payload.sponsorEvidenceUrls ?? payload.evidenceUrls ?? previous?.sponsorEvidenceUrls, 40, 500),
     sponsorshipFit: cleanString(payload.sponsorshipFit ?? previous?.sponsorshipFit, 120),
     sponsorshipEstimatedSpend: cleanString(payload.sponsorshipEstimatedSpend ?? payload.estimatedSponsorshipSpend ?? previous?.sponsorshipEstimatedSpend, 120),
     sponsorshipThemes: cleanArray(payload.sponsorshipThemes ?? payload.sponsorshipValues ?? previous?.sponsorshipThemes, 24, 160),
@@ -2475,6 +2569,11 @@ async function saveDiscoveredProspectCompany(env, payload = {}, actor = "", conf
     linkedinCompanyUrl: normalizeUrl(payload.linkedinCompanyUrl || previous?.linkedinCompanyUrl),
     sourceUrls: cleanArray([...(cleanArray(previous?.sourceUrls, 30, 500)), ...(cleanArray(payload.sourceUrls, 30, 500))], 30, 500),
     discoverySources: cleanArray([...(cleanArray(previous?.discoverySources, 20, 160)), ...(cleanArray(payload.discoverySources, 20, 160))], 20, 160),
+    sourceAttributions: cleanSourceAttributions([
+      ...(cleanSourceAttributions(previous?.sourceAttributions || previous?.discoveryAttributions, 80)),
+      ...(cleanSourceAttributions(payload.sourceAttributions || payload.discoveryAttributions, 80))
+    ], 80),
+    discoveryAttributions: undefined,
     discoverySegment: cleanString(payload.discoverySegment ?? previous?.discoverySegment, 120),
     discoverySegments: cleanArray([
       ...(cleanArray(previous?.discoverySegments || previous?.discoverySegment, 12, 120)),
@@ -2485,6 +2584,8 @@ async function saveDiscoveredProspectCompany(env, payload = {}, actor = "", conf
     companySizeEvidence: cleanString(payload.companySizeEvidence ?? previous?.companySizeEvidence, 1000),
     categories: cleanArray(payload.categories ?? previous?.categories, 20, 160),
     targetExecutiveRoles: cleanArray(payload.targetExecutiveRoles ?? previous?.targetExecutiveRoles ?? payload.targetBuyers, 24, 160),
+    sponsoredEvents: cleanArray([...(cleanArray(previous?.sponsoredEvents, 40, 240)), ...(cleanArray(payload.sponsoredEvents, 40, 240))], 40, 240),
+    sponsorEvidenceUrls: cleanArray([...(cleanArray(previous?.sponsorEvidenceUrls || previous?.evidenceUrls, 40, 500)), ...(cleanArray(payload.sponsorEvidenceUrls || payload.evidenceUrls, 40, 500))], 40, 500),
     aiVendor: payload.aiVendor === undefined ? previous?.aiVendor !== false : payload.aiVendor !== false,
     aiNative: payload.aiNative === true || previous?.aiNative === true,
     assignedTo: cleanString(payload.assignedTo ?? previous?.assignedTo ?? "Miller", 180),
@@ -2896,22 +2997,44 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       };
       const candidateId = prospectCompanyId(candidatePayload);
       const existing = findProspectCompanyInList(existingCompanies, candidatePayload);
+      const sourceAttribution = discoverySourceAttribution({
+        source,
+        candidate,
+        sourceName,
+        sourceUrl,
+        title: candidate.sourcePageTitle || title,
+        payload,
+        now,
+        category
+      });
+      const sponsorRelated = sourceLooksSponsorRelated(source, payload);
       if ((candidateId && seenCompanyIds.has(candidateId)) || existing) {
         skippedExisting += 1;
-        if (existing && cleanString(payload.discoverySegment, 120)) {
-          await saveProspectCompany(env, {
-            companyId: existing.companyId,
-            companyName: existing.companyName || candidate.companyName,
-            canonicalDomain: existing.canonicalDomain || candidate.canonicalDomain,
-            websiteUrl: existing.websiteUrl || candidate.websiteUrl,
-            discoverySegment: payload.discoverySegment,
-            discoverySegments: cleanArray([...(existing.discoverySegments || []), payload.discoverySegment], 12, 120),
-            targetEmployeeRange: payload.targetEmployeeRange,
-            employeeRangeStatus: payload.employeeRangeStatus || "TARGETED_NOT_VERIFIED",
-            companySizeEvidence: payload.companySizeEvidence || `Found through ${sourceName}, which is being used for the ${payload.targetEmployeeRange || "10-100"} employee discovery lane; verify actual employee count before outreach prioritization.`,
-            discoverySources: cleanArray([...(existing.discoverySources || []), sourceName], 20, 160),
-            sourceUrls: cleanArray([...(existing.sourceUrls || []), sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 30, 500)
+        const matchedExisting = existing || existingCompanies.find((company) => company.companyId === candidateId);
+        if (matchedExisting) {
+          const updatedExisting = await saveProspectCompany(env, {
+            companyId: matchedExisting.companyId,
+            companyName: matchedExisting.companyName || candidate.companyName,
+            canonicalDomain: matchedExisting.canonicalDomain || candidate.canonicalDomain,
+            websiteUrl: matchedExisting.websiteUrl || candidate.websiteUrl,
+            discoverySegment: payload.discoverySegment || matchedExisting.discoverySegment,
+            discoverySegments: cleanArray([payload.discoverySegment], 12, 120),
+            targetEmployeeRange: payload.targetEmployeeRange || matchedExisting.targetEmployeeRange,
+            employeeRangeStatus: payload.employeeRangeStatus || matchedExisting.employeeRangeStatus || (payload.targetEmployeeRange ? "TARGETED_NOT_VERIFIED" : ""),
+            companySizeEvidence: payload.companySizeEvidence || matchedExisting.companySizeEvidence || (payload.targetEmployeeRange ? `Found through ${sourceName}, which is being used for the ${payload.targetEmployeeRange} employee discovery lane; verify actual employee count before outreach prioritization.` : ""),
+            discoverySources: [sourceName],
+            sourceUrls: cleanArray([sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 30, 500),
+            sourceAttributions: sourceAttribution ? [sourceAttribution] : [],
+            sponsoredEvents: sponsorRelated ? [sourceName] : [],
+            sponsorEvidenceUrls: sponsorRelated ? cleanArray([sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 40, 500) : [],
+            sponsorshipFit: sponsorRelated ? (matchedExisting.sponsorshipFit || "Needs Review") : matchedExisting.sponsorshipFit,
+            sponsorshipNotes: sponsorRelated && !matchedExisting.sponsorshipNotes
+              ? `Found on ${sourceName}${candidate.sourceUrl && candidate.sourceUrl !== sourceUrl ? ` via ${candidate.sourceUrl}` : ""}; verify sponsorship level and spend manually.`
+              : matchedExisting.sponsorshipNotes,
+            mergeDiscoverySourceFields: true
           }, actor);
+          const index = existingCompanies.findIndex((company) => company.companyId === updatedExisting.companyId);
+          if (index >= 0) existingCompanies[index] = updatedExisting;
           taggedExisting += 1;
         }
         debug.skipped.push({
@@ -2947,6 +3070,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
         companySizeEvidence: candidate.companySizeEvidence || payload.companySizeEvidence || (payload.targetEmployeeRange ? `Found through ${sourceName}, which is being used for the ${payload.targetEmployeeRange} employee discovery lane; verify actual employee count before outreach prioritization.` : ""),
         discoverySources: [sourceName],
         sourceUrls: cleanArray([sourceUrl, candidate.sourceUrl, candidate.sourceProfileUrl], 30, 500),
+        sourceAttributions: sourceAttribution ? [sourceAttribution] : [],
         processingStage: "DOMAIN NORMALIZATION",
         processingStatus: "DISCOVERED",
         provenance: {
@@ -3277,6 +3401,18 @@ async function importProspectCompanies(env, payload = {}, actor = "") {
       ...row,
       discoverySources: cleanArray([sourceName, ...(cleanArray(row.discoverySources || row.sources))], 20, 160),
       sourceUrls: cleanArray([sourceUrl, ...(cleanArray(row.sourceUrls, 30, 500))], 30, 500),
+      sourceAttributions: cleanSourceAttributions([{
+        sourceName,
+        sourceType: "Bulk Import",
+        evidenceType: "company-import",
+        sourceUrl,
+        candidateName: row.companyName || row.company || row.name,
+        canonicalDomain: row.canonicalDomain || row.websiteUrl,
+        websiteUrl: row.websiteUrl || row.canonicalDomain,
+        valueState: "SOURCE_PROVIDED",
+        importedAt: now
+      }], 1),
+      mergeDiscoverySourceFields: true,
       processingStage: cleanString(row.processingStage) || "DUPLICATE CHECK",
       processingStatus: cleanString(row.processingStatus) || "DISCOVERED",
       provenance: {
