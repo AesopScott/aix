@@ -178,6 +178,8 @@ function cleanGuestRegistrationType(value) {
     "featured-partner": "featured-partner",
     "featured-guest": "featured-guest",
     "featured-member": "featured-member",
+    "featured-author": "featured-author",
+    "featured author": "featured-author",
     partner: "partner",
     presenter: "presenter",
     speaker: "presenter",
@@ -185,6 +187,10 @@ function cleanGuestRegistrationType(value) {
     "roundtable-leader": "roundtable-leader",
     guest: "guest"
   }[cleanString(value).toLowerCase()] || "guest";
+}
+
+function requiresSingleShowRegistrationRole(role) {
+  return ["featured-guest", "featured-author", "featured-partner"].includes(cleanGuestRegistrationType(role));
 }
 
 function cleanOptionalRegistrationType(value) {
@@ -254,11 +260,8 @@ function registrationShowError(type, registration = {}, invite = {}) {
   const inviteShow = eventShowKey(invite);
   const selectedShow = cleanEventShowId(registration.eventShowId || registration.showId || registration.eventShow, "");
   const show = inviteShow === "morning" || inviteShow === "afternoon" ? inviteShow : selectedShow;
-  if (role === "featured-guest" && show !== "morning" && show !== "afternoon") {
-    return "Choose either the morning show or afternoon show for featured guest registration.";
-  }
-  if (role === "featured-partner" && show !== "morning" && show !== "afternoon") {
-    return "Choose either the morning show or afternoon show for featured partner registration.";
+  if (requiresSingleShowRegistrationRole(role) && show !== "morning" && show !== "afternoon") {
+    return `Choose either the morning show or afternoon show for ${role.replace(/-/g, " ")} registration.`;
   }
   if (show && !["morning", "afternoon", "both"].includes(show)) {
     return "Choose a valid show time.";
@@ -291,6 +294,7 @@ function registrationRoles(type, registration = {}) {
     if (cleanBoolean(registration.isPresenter) || guestRegistrationType === "presenter") roles.push("Presenter");
     if (cleanBoolean(registration.isRoundtableLeader) || guestRegistrationType === "roundtable-leader") roles.push("Round Table Leader");
     if (cleanBoolean(registration.isFeaturedGuest) || guestRegistrationType === "featured-guest") roles.push("Featured Guest");
+    if (cleanBoolean(registration.isFeaturedAuthor) || guestRegistrationType === "featured-author") roles.push("Featured Author");
     if (!roles.length) roles.push("Guest");
   } else if (type === "partner") {
     roles.push(guestRegistrationType === "featured-partner" ? "Featured Partner" : registrationRoleLabel(type));
@@ -465,10 +469,11 @@ function requiresRegistrationPhoto(registration = {}, invite = {}) {
   return Boolean(
     cleanBoolean(registration.isFeaturedGuest) ||
       cleanBoolean(registration.isFeaturedMember) ||
+      cleanBoolean(registration.isFeaturedAuthor) ||
       cleanBoolean(registration.isFeaturedPartner) ||
       cleanBoolean(registration.isPresenter) ||
       cleanBoolean(registration.isRoundtableLeader) ||
-      ["featured-guest", "featured-member", "featured-partner", "presenter", "roundtable-leader"].includes(role)
+      ["featured-guest", "featured-member", "featured-author", "featured-partner", "presenter", "roundtable-leader"].includes(role)
   );
 }
 
@@ -575,6 +580,7 @@ function inviteMeta(inviteRecord) {
     isPresenter: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "presenter",
     isRoundtableLeader: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "roundtable-leader",
     isFeaturedGuest: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "featured-guest",
+    isFeaturedAuthor: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "featured-author",
     isFeaturedPartner: cleanGuestRegistrationType(record.partnerRegistrationType || record.registrationRole) === "featured-partner",
     partnerCompany: cleanString(record.partnerCompany),
     partnerContactEmail: cleanString(record.partnerContactEmail).toLowerCase(),

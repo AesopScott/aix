@@ -1375,6 +1375,28 @@
       min-width: 8.5rem;
     }
 
+    .invite-show-edit {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: end;
+      margin: 0.55rem 0;
+    }
+
+    .invite-show-edit label {
+      display: grid;
+      gap: 0.2rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .invite-show-edit select {
+      min-width: 15rem;
+    }
+
     .invite-qr {
       display: grid;
       gap: 0.4rem;
@@ -1644,6 +1666,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <option value="roundtable">Round Table Leaders</option>
           <option value="featured-guest">Featured Guests</option>
           <option value="featured-member">Featured Members</option>
+          <option value="featured-author">Featured Authors</option>
           <option value="attendee">Attendees</option>
         </select>
       </label>
@@ -1770,6 +1793,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <select id="guestMatrixAddType" name="guestRegistrationType">
             <option value="guest">Guest</option>
             <option value="featured-guest">Featured Guest</option>
+            <option value="featured-author">Featured Author</option>
           </select>
         </label>
         <label>
@@ -1849,6 +1873,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <select id="registrationInviteType" name="type">
             <option value="guest">Guest</option>
             <option value="featured-guest">Featured Guest (on screen)</option>
+            <option value="featured-author">Featured Author</option>
           </select>
         </label>
         <label>
@@ -2491,6 +2516,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         "no-show": "No Show",
         "do-not-contact": "Do Not Contact",
         "featured-guest": "Featured Guest",
+        "featured-author": "Featured Author",
         "contributing-fellow": "Contributing Fellow",
         "senior-fellow": "Senior Fellow",
         "distinguished-fellow": "Distinguished Fellow"
@@ -2524,12 +2550,30 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const role = String(value || "").toLowerCase();
       if (role === "featured-partner") return "Featured Partner";
       if (role === "featured-guest") return "Featured Guest";
+      if (role === "featured-author") return "Featured Author";
       if (role === "presenter") return "Presenter";
       if (role === "roundtable-leader" || role === "roundtable") return "Round Table Leader";
       if (role === "partner") return "Partner Guest";
       if (role === "featured-member") return "Featured Member";
       if (role === "member") return "Member";
       return "Guest";
+    }
+
+    function normalizeRoleValue(value) {
+      const raw = String(value || "").trim().toLowerCase();
+      if (raw.includes("featured partner")) return "featured-partner";
+      if (raw.includes("featured guest")) return "featured-guest";
+      if (raw.includes("featured member")) return "featured-member";
+      if (raw.includes("featured author")) return "featured-author";
+      if (raw.includes("round table") || raw.includes("roundtable")) return "roundtable-leader";
+      if (raw.includes("presenter") || raw.includes("speaker")) return "presenter";
+      if (raw.includes("partner")) return "partner";
+      if (raw.includes("member")) return "member";
+      return raw.replace(/\s+/g, "-");
+    }
+
+    function isSingleShowRegistrationRole(value) {
+      return ["featured-guest", "featured-author", "featured-partner"].includes(normalizeRoleValue(value));
     }
 
     function eventShowId(value, fallback = "both") {
@@ -2562,6 +2606,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const label = record.eventShowLabel || (show ? eventShowLabel(show) : "");
       const time = record.eventShowTime || record.eventTime || (show ? eventShowTime(show) : "");
       return [label, time].filter(Boolean).join(" | ");
+    }
+
+    function registrationInviteShowOptions(invite = {}) {
+      const role = invite.guestRegistrationType || invite.registrationRole || invite.type || "guest";
+      const current = eventShowId(invite.eventShowId || invite.showId || invite.eventShow, isSingleShowRegistrationRole(role) ? "morning" : "both");
+      const options = [
+        ...(isSingleShowRegistrationRole(role) ? [] : [["both", "Both shows | 10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"]]),
+        ["morning", "Morning show | 10:00 am - 11:30 am CT"],
+        ["afternoon", "Afternoon show | 1:00 pm - 2:30 pm CT"]
+      ];
+      return options.map(([value, label]) => `<option value="${value}" ${value === current ? "selected" : ""}>${escapeHtml(label)}</option>`).join("");
     }
 
     function actualEventBase(event = {}) {
@@ -2598,6 +2653,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const registrationRole = String(event.registrationRole || event.partnerRegistrationType || event.guestRegistrationType || "").toLowerCase();
       if (registrationRole === "featured-partner") return "Featured Partner";
       if (registrationRole === "featured-guest") return "Featured Guest";
+      if (registrationRole === "featured-author") return "Featured Author";
       if (registrationRole === "presenter") return "Presenter";
       if (registrationRole === "roundtable-leader") return "Round Table Leader";
       if (registrationRole === "guest") return "Guest";
@@ -2605,6 +2661,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const role = String(event.role || "").toLowerCase();
       if (role.includes("featured partner")) return "Featured Partner";
       if (role.includes("featured guest")) return "Featured Guest";
+      if (role.includes("featured author")) return "Featured Author";
       if (role.includes("presenter")) return "Presenter";
       if (role.includes("round table")) return "Round Table Leader";
       if (role.includes("partner")) return "Partner Guest";
@@ -2615,6 +2672,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const contactEventRoleOptions = [
       ["guest", "Guest"],
       ["featured-guest", "Featured Guest"],
+      ["featured-author", "Featured Author"],
       ["presenter", "Presenter"],
       ["roundtable-leader", "Round Table Leader"],
       ["member", "Member"],
@@ -2628,6 +2686,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (raw.includes("featured partner")) return "featured-partner";
       if (raw.includes("featured guest")) return "featured-guest";
       if (raw.includes("featured member")) return "featured-member";
+      if (raw.includes("featured author")) return "featured-author";
       if (raw.includes("round table") || raw.includes("roundtable")) return "roundtable-leader";
       if (raw.includes("presenter") || raw.includes("speaker")) return "presenter";
       if (raw.includes("partner")) return "partner";
@@ -2788,7 +2847,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (role === "roundtable") return Boolean(row.isRoundtableLeader);
         if (role === "featured-guest") return Boolean(row.isFeaturedGuest);
         if (role === "featured-member") return Boolean(row.isFeaturedMember);
-        if (role === "attendee") return !(row.isPresenter || row.isRoundtableLeader || row.isFeaturedGuest || row.isFeaturedMember);
+        if (role === "featured-author") return Boolean(row.isFeaturedAuthor) || normalizeRoleValue(row.guestRegistrationType || row.registrationRole || row.role) === "featured-author";
+        if (role === "attendee") return !(row.isPresenter || row.isRoundtableLeader || row.isFeaturedGuest || row.isFeaturedMember || row.isFeaturedAuthor);
         return true;
       }
 
@@ -2799,6 +2859,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (role === "roundtable") return label.includes("round table") || label.includes("roundtable") || rawRole.includes("round table") || rawRole.includes("roundtable");
         if (role === "featured-guest") return label.includes("featured guest") || rawRole.includes("featured guest");
         if (role === "featured-member") return label.includes("featured member") || rawRole.includes("featured member");
+        if (role === "featured-author") return label.includes("featured author") || rawRole.includes("featured author");
         if (role === "attendee") return label === "guest" || label === "member" || label === "partner guest" || rawRole.includes("guest");
         return true;
       });
@@ -2908,6 +2969,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (row.isRoundtableLeader) roles.push("Round Table Leader");
       if (row.isFeaturedGuest) roles.push("Featured Guest");
       if (row.isFeaturedMember) roles.push("Featured Member");
+      if (row.isFeaturedAuthor || normalizeRoleValue(row.guestRegistrationType || row.registrationRole || row.role) === "featured-author") roles.push("Featured Author");
       if (row.manualPartner) roles.push(row.partnerTier || "Partner Candidate");
       if (!roles.length) roles.push("Attendee");
       return roles.map((role) => `<span class="pill">${escapeHtml(role)}</span>`).join("");
@@ -3921,7 +3983,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function updateRegistrationInviteSubmit() {
       const role = guestRegistrationTypeLabel(registrationInviteType.value || "guest");
       const currentShow = registrationInviteShow?.value || "both";
-      const featuredGuest = registrationInviteType.value === "featured-guest";
+      const featuredGuest = isSingleShowRegistrationRole(registrationInviteType.value);
       registrationInviteShow.innerHTML = [
         featuredGuest ? "" : '<option value="both">Both shows</option>',
         '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
@@ -3945,12 +4007,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           ].join("")
         : [
             '<option value="guest">Guest</option>',
-            '<option value="featured-guest">Featured Guest</option>'
+            '<option value="featured-guest">Featured Guest</option>',
+            '<option value="featured-author">Featured Author</option>'
           ].join("");
       if ([...guestMatrixAddType.options].some((option) => option.value === currentRole)) {
         guestMatrixAddType.value = currentRole;
       }
-      const featuredGuest = ["featured-guest", "featured-partner"].includes(guestMatrixAddType.value);
+      const featuredGuest = isSingleShowRegistrationRole(guestMatrixAddType.value);
       guestMatrixAddShow.innerHTML = [
         featuredGuest ? "" : '<option value="both">Both shows</option>',
         '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
@@ -4149,6 +4212,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const invitedName = invite.intendedGuestName || invite.invitedName || invite.guestName || "Name not recorded";
         const invitedEmail = invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || "";
         const invitedBy = invite.invitedBy || invite.inviter || invite.invitedByName || invite.createdBy || "Not recorded";
+        const inviteUsed = invite.status === "used" || Boolean(invite.usedBy || invite.usedByEmail || invite.usedByName);
         return `
           <div class="invite-row">
             <div class="invite-qr">
@@ -4158,6 +4222,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <div>
               <strong>${escapeHtml(invite.eventName || "Event registration invite")}</strong>
               <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(eventShowText(invite) || "Show time not assigned")} | ${escapeHtml(inviteStatusText(invite))}</p>
+              <div class="invite-show-edit">
+                <label>
+                  Show time
+                  <select data-registration-invite-show-key="${escapeHtml(invite.key)}" data-registration-invite-show-type="${escapeHtml(invite.type || "guest")}" ${inviteUsed ? "disabled" : ""}>
+                    ${registrationInviteShowOptions(invite)}
+                  </select>
+                </label>
+                <button class="compact secondary" type="button" data-save-registration-invite-show="${escapeHtml(invite.key)}" data-save-registration-invite-type="${escapeHtml(invite.type || "guest")}" ${inviteUsed ? "disabled title=\"Registered invite times are changed on the registrant record.\"" : ""}>Save Time</button>
+              </div>
               <p>Invited: ${escapeHtml(invitedName)}${invitedEmail ? ` | ${escapeHtml(invitedEmail)}` : ""}</p>
               <p>Invited by: ${escapeHtml(invitedBy)}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
@@ -5593,7 +5666,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.isFeaturedPartner ||
           row.isPresenter ||
           row.isRoundtableLeader ||
-          ["featured-guest", "featured-member", "featured-partner", "presenter", "roundtable-leader"].includes(role)
+          ["featured-guest", "featured-member", "featured-author", "featured-partner", "presenter", "roundtable-leader"].includes(role)
       );
     }
 
@@ -6635,6 +6708,46 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    async function saveRegistrationInviteShow(button) {
+      const key = button.dataset.saveRegistrationInviteShow || "";
+      if (!key) return;
+      const select = registrationInviteList.querySelector(`[data-registration-invite-show-key="${CSS.escape(key)}"]`);
+      const eventShowIdValue = select?.value || "";
+      if (!eventShowIdValue) {
+        setNotice("Choose a show time before saving the invite.", "error");
+        return;
+      }
+      const idleText = button.textContent;
+      setNotice("Saving invite show time...");
+      button.disabled = true;
+      if (select) select.disabled = true;
+      button.textContent = "Saving...";
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "update-registration-invite-show",
+            key,
+            type: button.dataset.saveRegistrationInviteType || select?.dataset.registrationInviteShowType || "guest",
+            eventShowId: eventShowIdValue
+          })
+        }).then(readJson);
+        state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
+        state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
+        state.partnerMatrixProspects = data.partnerMatrixProspects || state.partnerMatrixProspects || [];
+        renderRegistrationInvites();
+        renderGuestMatrix();
+        setNotice("Invite show time updated.", "ok");
+      } catch (error) {
+        showErrorNotice(error, "Invite show time could not be updated.");
+        button.disabled = false;
+        if (select) select.disabled = false;
+        button.textContent = idleText;
+      }
+    }
+
     async function saveRegistrantAttendance(input) {
       const key = input.dataset.registrantAttendanceKey;
       const existing = state.rows.find((row) => row.key === key);
@@ -6779,7 +6892,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const partnerMode = isPartnerMatrix();
       const guestRegistrationType = formData.get(partnerMode ? "partnerRegistrationType" : "guestRegistrationType") || (partnerMode ? "partner" : "guest");
       const selectedShowId = eventShowId(formData.get("eventShowId") || guestMatrixAddShow?.value || "both");
-      const showId = ["featured-guest", "featured-partner"].includes(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
+      const showId = isSingleShowRegistrationRole(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
       return {
         action: partnerMode ? "create-partner-matrix-prospect" : "create-guest-matrix-prospect",
         guestRegistrationType: partnerMode ? "" : guestRegistrationType,
@@ -7796,7 +7909,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const selected = registrationInviteEvent.selectedOptions[0];
       const guestRegistrationType = formData.get("type") || "guest";
       const selectedShowId = eventShowId(formData.get("eventShowId") || registrationInviteShow?.value || "both");
-      const showId = guestRegistrationType === "featured-guest" && selectedShowId === "both" ? "morning" : selectedShowId;
+      const showId = isSingleShowRegistrationRole(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
       return {
         action: "create-registration-invite",
         type: "guest",
@@ -7898,6 +8011,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const url = button.dataset.copyUrl;
       const deleteKey = button.dataset.deleteInviteKey;
       const reminderKey = button.dataset.reminderInviteKey;
+      const saveShowKey = button.dataset.saveRegistrationInviteShow;
+      if (saveShowKey) {
+        await saveRegistrationInviteShow(button);
+        return;
+      }
       if (deleteKey) {
         await deleteInviteLink(deleteKey, button.dataset.deleteInviteType || "guest");
         return;
