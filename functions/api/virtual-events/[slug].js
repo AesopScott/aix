@@ -105,9 +105,8 @@ function isFeaturedRegistrant(registrant = {}) {
 }
 
 function publicFeaturedGuest(registrant, type) {
-  const canUseName = registrant?.publicationUseName === true;
   const canUseCompany = registrant?.publicationUseCompany === true;
-  const name = canUseName ? cleanString(registrant?.name, 180) : "";
+  const name = cleanString(registrant?.name, 180);
   const title = cleanString(registrant?.title, 180);
   const company = canUseCompany ? cleanString(registrant?.company || registrant?.partnerCompany, 180) : "";
   const photoUrl = cleanString(registrant?.photoUrl || registrant?.photoURL || registrant?.photo, 500);
@@ -115,8 +114,7 @@ function publicFeaturedGuest(registrant, type) {
 
   return {
     type,
-    displayName: name || "Name withheld",
-    nameAllowed: canUseName,
+    displayName: name || "Name pending",
     company,
     companyAllowed: canUseCompany,
     title,
@@ -135,9 +133,8 @@ function publicFeaturedGuest(registrant, type) {
 }
 
 function publicRegisteredGuest(registrant, type) {
-  const canUseName = registrant?.publicationUseName === true;
   const canUseCompany = registrant?.publicationUseCompany === true;
-  const name = canUseName ? cleanString(registrant?.name, 180) : "";
+  const name = cleanString(registrant?.name, 180);
   const title = cleanString(registrant?.title, 180);
   const company = canUseCompany ? cleanString(registrant?.company || registrant?.partnerCompany, 180) : "";
   const industry = cleanString(registrant?.industry || registrant?.organizationType, 140);
@@ -145,12 +142,11 @@ function publicRegisteredGuest(registrant, type) {
   return {
     type,
     displayName: name,
-    nameAllowed: canUseName,
     company,
     companyAllowed: canUseCompany,
     title,
     industry,
-    restricted: !name || !company
+    restricted: !company
   };
 }
 

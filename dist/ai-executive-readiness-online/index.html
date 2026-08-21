@@ -87,7 +87,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 .registered-head p{max-width:520px;color:var(--muted);font-size:14px;line-height:1.6}
 .registered-list{display:grid;border:1px solid var(--line);background:var(--line)}
 .registered-row{display:grid;grid-template-columns:minmax(160px,.8fr) minmax(160px,.65fr) minmax(160px,.7fr);gap:1px;background:var(--line)}
-.registered-row.is-restricted{grid-template-columns:minmax(160px,.8fr) minmax(160px,.65fr)}
 .registered-row span{min-height:54px;padding:14px 16px;background:rgba(10,15,30,.82);color:rgba(255,255,255,.84);font-size:14px;line-height:1.45}
 .registered-row strong{display:block;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
 .registered-empty{padding:18px;background:rgba(10,15,30,.82);color:var(--dim);font-size:13px;line-height:1.6}
@@ -174,7 +173,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   }
   function renderPhoto(guest) {
     if (guest.photoUrl) {
-      const alt = guest.nameAllowed ? `${guest.displayName} photo` : "Featured guest photo";
+      const alt = guest.displayName ? `${guest.displayName} photo` : "Featured guest photo";
       return `<img src="${escapeHtml(guest.photoUrl)}" alt="${escapeHtml(alt)}" loading="lazy">`;
     }
     return `<span class="guest-initials" aria-hidden="true">${escapeHtml(guest.initials || initials(guest.displayName))}</span>`;
@@ -190,15 +189,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return;
     }
     registeredList.innerHTML = rows.map((guest) => {
-      const restricted = guest.restricted || !guest.nameAllowed || !guest.companyAllowed;
-      const primary = restricted ? (guest.industry || "Industry pending") : guest.displayName;
+      const companyVisible = guest.companyAllowed && guest.company;
+      const primary = guest.displayName || "Name pending";
       const secondary = guest.title || "Title pending";
-      const tertiary = guest.companyAllowed && guest.company ? guest.company : "";
+      const tertiaryLabel = companyVisible ? "Company" : "Industry";
+      const tertiary = companyVisible ? guest.company : (guest.industry || "Industry pending");
       return `
-        <div class="registered-row${restricted ? " is-restricted" : ""}">
-          <span><strong>${restricted ? "Industry" : "Name"}</strong>${escapeHtml(primary)}</span>
+        <div class="registered-row">
+          <span><strong>Name</strong>${escapeHtml(primary)}</span>
           <span><strong>Title</strong>${escapeHtml(secondary)}</span>
-          ${restricted ? "" : `<span><strong>Company</strong>${escapeHtml(tertiary)}</span>`}
+          <span><strong>${escapeHtml(tertiaryLabel)}</strong>${escapeHtml(tertiary)}</span>
         </div>
       `;
     }).join("");
@@ -320,14 +320,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     grid.innerHTML = visibleSlots.map((guest, index) => `
       <article class="guest-card${guest.isPlaceholder ? " is-placeholder" : ""}">
         <div class="guest-photo">${renderPhoto(guest)}</div>
-        <h3>${escapeHtml(guest.displayName || "Name withheld")}</h3>
+        <h3>${escapeHtml(guest.displayName || "Name pending")}</h3>
         <div class="guest-meta">
           ${renderMeta("Role", guest.roleLabel || "Featured guest", "Featured guest")}
           ${renderMeta("Industry", guest.industry, "Industry pending")}
           ${renderMeta("Title", guest.title, "Title pending")}
           ${renderMeta("Company", guest.company, guest.companyAllowed ? "Company pending" : "Company withheld")}
         </div>
-        <p class="guest-note">${escapeHtml(guest.note || (guest.nameAllowed ? "Name approved for public use." : "Name withheld until publication permission is approved."))}</p>
+        <p class="guest-note">${escapeHtml(guest.note || "Featured guest details will be updated as event information is confirmed.")}</p>
         <button class="slot-action" type="button" data-slot-index="${index}">Request this slot</button>
       </article>
     `).join("");
