@@ -107,11 +107,8 @@ function isFeaturedRegistrant(registrant = {}) {
 function publicFeaturedGuest(registrant, type) {
   const canUseName = registrant?.publicationUseName === true;
   const canUseCompany = registrant?.publicationUseCompany === true;
-  const canUseTitle = registrant?.publicationUseTitle === true ||
-    registrant?.publicUseTitle === true ||
-    registrant?.publicationUseRole === true;
   const name = canUseName ? cleanString(registrant?.name, 180) : "";
-  const title = canUseTitle ? cleanString(registrant?.title, 180) : "";
+  const title = cleanString(registrant?.title, 180);
   const company = canUseCompany ? cleanString(registrant?.company || registrant?.partnerCompany, 180) : "";
   const photoUrl = cleanString(registrant?.photoUrl || registrant?.photoURL || registrant?.photo, 500);
   const industry = cleanString(registrant?.industry || registrant?.organizationType, 140);
@@ -123,7 +120,6 @@ function publicFeaturedGuest(registrant, type) {
     company,
     companyAllowed: canUseCompany,
     title,
-    titleAllowed: canUseTitle,
     industry,
     photoUrl,
     roleLabel: cleanString(
@@ -141,11 +137,8 @@ function publicFeaturedGuest(registrant, type) {
 function publicRegisteredGuest(registrant, type) {
   const canUseName = registrant?.publicationUseName === true;
   const canUseCompany = registrant?.publicationUseCompany === true;
-  const canUseTitle = registrant?.publicationUseTitle === true ||
-    registrant?.publicUseTitle === true ||
-    registrant?.publicationUseRole === true;
   const name = canUseName ? cleanString(registrant?.name, 180) : "";
-  const title = canUseTitle ? cleanString(registrant?.title, 180) : "";
+  const title = cleanString(registrant?.title, 180);
   const company = canUseCompany ? cleanString(registrant?.company || registrant?.partnerCompany, 180) : "";
   const industry = cleanString(registrant?.industry || registrant?.organizationType, 140);
 
@@ -156,7 +149,6 @@ function publicRegisteredGuest(registrant, type) {
     company,
     companyAllowed: canUseCompany,
     title,
-    titleAllowed: canUseTitle,
     industry,
     restricted: !name || !company
   };
