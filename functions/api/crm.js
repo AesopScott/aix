@@ -1407,6 +1407,8 @@ function cleanGuestRegistrationType(value) {
     "featured-partner": "featured-partner",
     "featured-guest": "featured-guest",
     "featured-member": "featured-member",
+    "featured-author": "featured-author",
+    "featured author": "featured-author",
     partner: "partner",
     presenter: "presenter",
     roundtable: "roundtable-leader",
@@ -1426,6 +1428,7 @@ function cleanContactEventRole(value) {
   if (raw.includes("featured partner")) return "featured-partner";
   if (raw.includes("featured guest")) return "featured-guest";
   if (raw.includes("featured member")) return "featured-member";
+  if (raw.includes("featured author")) return "featured-author";
   if (raw.includes("round table") || raw.includes("roundtable")) return "roundtable-leader";
   if (raw.includes("presenter") || raw.includes("speaker")) return "presenter";
   if (raw.includes("partner")) return "partner";
@@ -1438,6 +1441,7 @@ function contactEventRoleLabel(value) {
     "featured-partner": "Featured Partner",
     "featured-guest": "Featured Guest",
     "featured-member": "Featured Member",
+    "featured-author": "Featured Author",
     partner: "Partner Guest",
     presenter: "Presenter",
     "roundtable-leader": "Round Table Leader",
@@ -1450,8 +1454,13 @@ function contactEventStrategicRole(value) {
   const role = cleanContactEventRole(value);
   if (role === "presenter") return "speaker";
   if (role === "roundtable-leader") return "roundtable-leader";
+  if (role === "featured-author") return "research-contributor";
   if (role === "partner" || role === "featured-partner") return "partner";
   return "attendee";
+}
+
+function requiresSingleShowRegistrationRole(role) {
+  return ["featured-guest", "featured-author", "featured-partner"].includes(cleanGuestRegistrationType(role));
 }
 
 function cleanEventShowId(value, fallback = "both") {
@@ -1551,6 +1560,7 @@ function normalizeRecord(key, record) {
     isRoundtableLeader: Boolean(record?.isRoundtableLeader),
     isFeaturedGuest: Boolean(record?.isFeaturedGuest),
     isFeaturedMember: Boolean(record?.isFeaturedMember),
+    isFeaturedAuthor: Boolean(record?.isFeaturedAuthor),
     isFeaturedPartner: Boolean(record?.isFeaturedPartner),
     publicationUseName: Boolean(record?.publicationUseName),
     publicationUseCompany: Boolean(record?.publicationUseCompany),
@@ -1810,6 +1820,7 @@ function roleLabelForRow(row = {}, type = "") {
   if (role === "roundtable-leader" || row.isRoundtableLeader) return "Round Table Leader";
   if (role === "featured-guest" || row.isFeaturedGuest) return "Featured Guest";
   if (role === "featured-member" || row.isFeaturedMember) return "Featured Member";
+  if (role === "featured-author" || row.isFeaturedAuthor) return "Featured Author";
   if (role === "member") return "Member";
   return "Guest";
 }
@@ -4066,7 +4077,7 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
   const intendedGuestName = isEmail(rawGuestName) ? "" : rawGuestName;
   const guestRegistrationType = matrixProspectRole(prospectType, record);
   const rawShowId = cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, "both");
-  const eventShowId = ["featured-guest", "featured-partner"].includes(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
+  const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
   return {
     key,
     id: cleanString(record?.id, 200) || key,
@@ -4143,7 +4154,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
 
   const guestRegistrationType = matrixProspectRole(prospectType, payload);
   const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
-  const eventShowId = ["featured-guest", "featured-partner"].includes(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
+  const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
   const eventTime = eventShowTime(eventShowId);
   const createdAt = new Date().toISOString();
   const id = crypto.randomUUID?.() || `${Date.now()}-${randomInviteCode()}`;
@@ -4311,7 +4322,9 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
 
   const eventSlug = cleanString(payload.eventSlug, 200);
   const eventName = cleanString(payload.eventName, 240);
-  const eventShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
+  const guestRegistrationType = cleanGuestRegistrationType(payload.guestRegistrationType || payload.registrationRole || payload.type);
+  const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
+  const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
   const eventTime = eventShowTime(eventShowId);
   const rawGuestName = cleanString(
     payload.intendedGuestName || payload.invitedName || payload.guestName || payload.name,
@@ -4327,7 +4340,6 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
       ? rawGuestName.toLowerCase()
       : "";
   const intendedGuestName = isEmail(rawGuestName) ? "" : rawGuestName;
-  const guestRegistrationType = cleanGuestRegistrationType(payload.guestRegistrationType || payload.registrationRole || payload.type);
   if (!eventSlug && !eventName) throw new Error("Select an event before generating an invite code.");
 
   const createdAt = new Date().toISOString();
@@ -4452,6 +4464,41 @@ async function findInviteCodeRecord(env, payload = {}) {
   }
 
   throw new Error("Invite link was not found.");
+}
+
+async function updateRegistrationInviteShow(env, payload = {}, actor = "") {
+  const invite = await findInviteCodeRecord(env, payload);
+  if (invite.status === "used" || invite.usedBy || invite.usedByEmail || invite.usedByName) {
+    throw new Error("This invite has already been used. Update the registrant event details instead.");
+  }
+
+  const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(invite.key, "json").catch(() => null);
+  if (!existing) throw new Error("Invite link was not found.");
+
+  const role = cleanGuestRegistrationType(existing.guestRegistrationType || existing.registrationRole || invite.guestRegistrationType || invite.registrationRole);
+  const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "");
+  if (!rawShowId) throw new Error("Choose a valid show time.");
+  if (requiresSingleShowRegistrationRole(role) && rawShowId === "both") {
+    throw new Error("Choose either the morning show or afternoon show for this featured invite.");
+  }
+
+  const now = new Date().toISOString();
+  const next = {
+    ...existing,
+    eventShowId: rawShowId,
+    eventShowLabel: eventShowLabel(rawShowId),
+    eventShowTime: eventShowTime(rawShowId),
+    eventTime: eventShowTime(rawShowId),
+    eventId: cleanString(existing.eventSlug || existing.eventName, 200)
+      ? `${cleanString(existing.eventSlug || existing.eventName, 200)}:${rawShowId}`
+      : existing.eventId,
+    updatedAt: now,
+    updatedBy: actor
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(invite.key, JSON.stringify(next));
+  const updatedInvite = normalizeInviteCode(invite.key, next);
+  await upsertContactFromInviteRecord(env, updatedInvite, `${updatedInvite.type || "guest"}-invite`, actor);
+  return updatedInvite;
 }
 
 function inviteRegistrationUrl(origin, invite) {
@@ -5313,6 +5360,7 @@ function contactEventMatches(event = {}, target = {}) {
   for (const field of directFields) {
     const left = cleanString(event[field]).toLowerCase();
     const right = cleanString(target[field]).toLowerCase();
+    if (["registrationId", "inviteCode"].includes(field) && left && right && left === right) return true;
     if (left && right && left === right && showCompatible) return true;
   }
 
@@ -6543,6 +6591,24 @@ export async function onRequestPost({ request, env, data }) {
       });
     } catch (error) {
       return json({ error: error.message || "Invite link could not be deleted." }, { status: 404 });
+    }
+  }
+
+  if (payload?.action === "update-registration-invite-show") {
+    try {
+      const invite = await updateRegistrationInviteShow(env, payload, access.email);
+      return json({
+        ok: true,
+        invite,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        partnerMatrixProspects: await partnerMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      const status = /already been used|valid show|featured invite/i.test(error.message || "") ? 400 : 404;
+      return json({ error: error.message || "Invite show time could not be updated." }, { status });
     }
   }
 

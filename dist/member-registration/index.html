@@ -628,8 +628,16 @@
     return fallback;
   }
 
+  function normalizeInviteRole(role = currentInviteRole){
+    return String(role || '').trim().toLowerCase().replace(/\s+/g, '-');
+  }
+
   function requiresBriefPhotoForRole(role = currentInviteRole){
-    return ['featured-guest', 'featured-member', 'featured-partner', 'presenter', 'speaker', 'roundtable-leader', 'roundtable'].includes(String(role || '').toLowerCase());
+    return ['featured-guest', 'featured-member', 'featured-author', 'featured-partner', 'presenter', 'speaker', 'roundtable-leader', 'roundtable'].includes(normalizeInviteRole(role));
+  }
+
+  function requiresSingleShowForRole(role = currentInviteRole){
+    return ['featured-guest', 'featured-author', 'featured-partner'].includes(normalizeInviteRole(role));
   }
 
   function configureBriefPhotoRequirement(){
@@ -640,8 +648,8 @@
   }
 
   function configureShowOptions(invite = {}){
-    currentInviteRole = String(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || 'guest').toLowerCase();
-    const featured = currentInviteRole === 'featured-guest' || currentInviteRole === 'featured-partner';
+    currentInviteRole = normalizeInviteRole(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || 'guest');
+    const featured = requiresSingleShowForRole();
     const assignedShow = normalizeEventShow(invite.eventShowId || invite.showId || invite.eventShow, '');
     eventShowSelect.innerHTML = [
       featured ? '<option value="">Select a show time</option>' : '<option value="both">Both shows</option>',
@@ -867,7 +875,7 @@
       return;
     }
     const selectedShow = normalizeEventShow(payload.eventShowId, '');
-    if ((currentInviteRole === 'featured-guest' || currentInviteRole === 'featured-partner') && !['morning', 'afternoon'].includes(selectedShow)) {
+    if (requiresSingleShowForRole() && !['morning', 'afternoon'].includes(selectedShow)) {
       setMessage(formError, 'Choose either the morning show or afternoon show.', 'error');
       eventShowSelect.focus();
       return;

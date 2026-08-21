@@ -93,14 +93,15 @@ function isFeaturedRegistrant(registrant = {}) {
       registrant.strategicRole ||
       registrant.role,
     120
-  ).toLowerCase();
+  ).toLowerCase().replace(/\s+/g, "-");
 
   return Boolean(
     registrant.isFeaturedGuest ||
-      registrant.isFeaturedMember ||
-      registrant.isPresenter ||
-      registrant.isRoundtableLeader ||
-      ["featured-guest", "featured-partner", "presenter", "speaker", "roundtable-leader"].includes(role)
+    registrant.isFeaturedMember ||
+    registrant.isFeaturedAuthor ||
+    registrant.isPresenter ||
+    registrant.isRoundtableLeader ||
+    ["featured-guest", "featured-author", "featured-partner", "presenter", "speaker", "roundtable-leader"].includes(role)
   );
 }
 

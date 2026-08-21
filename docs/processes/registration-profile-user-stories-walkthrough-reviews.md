@@ -17,7 +17,7 @@ Review UI note: each walkthrough review check renders with `Complete` and `Updat
 
 ## Shared Review Standards
 
-- All registration forms require name, company, title, industry where present, email, LinkedIn profile URL, phone, phone verification status, and a six-digit invite code except partner candidate requests. Brief photo is required only when the invite role is a featured guest-style role such as featured guest, featured member, featured partner, presenter, or round table leader.
+- All registration forms require name, company, title, industry where present, email, LinkedIn profile URL, phone, phone verification status, and a six-digit invite code except partner candidate requests. Brief photo is required only when the invite role is a featured guest-style role such as featured guest, featured author, featured member, featured partner, presenter, or round table leader.
 - Gmail and Googlemail addresses are accepted for guest, member, and partner registration.
 - Successful guest, member, and partner registrations create registration records, canonical CRM contacts, event history entries, and company rollups.
 - Invite links should show event context, used status, `Used by`, and `Used for` wherever the reviewing UI lists them.
