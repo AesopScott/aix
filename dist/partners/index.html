@@ -349,6 +349,37 @@
     display:grid;
     gap:22px;
   }
+  .partner-hero-side{
+    display:grid;
+    gap:24px;
+  }
+  .partner-video-card{
+    position:relative;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:18px;
+    background:linear-gradient(135deg, rgba(27,35,51,.76), rgba(10,15,30,.72));
+    box-shadow:0 24px 80px rgba(0,0,0,.34), 0 0 34px rgba(0,230,255,.08);
+    overflow:hidden;
+  }
+  .partner-video-card::before{
+    content:"";
+    position:absolute;
+    inset:-1px;
+    pointer-events:none;
+    background:linear-gradient(135deg, rgba(0,230,255,.24), transparent 34%, rgba(22,102,255,.18));
+    opacity:.72;
+  }
+  .partner-video-card video{
+    position:relative;
+    z-index:1;
+    display:block;
+    width:100%;
+    aspect-ratio:16 / 9;
+    object-fit:cover;
+    border-radius:10px;
+    background:#050812;
+  }
   .proof-row{
     display:grid;
     grid-template-columns:84px minmax(0,1fr);
@@ -734,26 +765,31 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button class="btn ghost subscription-request" type="button" data-partner-subscription-open>Request partner subscription information</button>
         </div>
       </div>
-      <div class="partner-proof" aria-label="Partner value summary">
-        <div class="proof-row">
-          <span class="proof-num">12</span>
-          <div>
-            <h3>Virtual events currently set up</h3>
-            <p>The site currently has 12 virtual AI event pages configured from September 2026 through January 2027.</p>
-          </div>
+      <div class="partner-hero-side">
+        <div class="partner-video-card" aria-label="Mojo AI Summits partner video">
+          <video src="/assets/video/mojo-ai-summits-partner-page-video.mp4" poster="/assets/video/mojo-ai-summits-partner-page-video-poster.jpg" controls playsinline preload="metadata" aria-label="Mojo AI Summits partner page video with Miller Freeman"></video>
         </div>
-        <div class="proof-row">
-          <span class="proof-num">06</span>
-          <div>
-            <h3>Executive cohorts</h3>
-            <p>Mojo AI Summits is organized around six executive AI cohorts, with 36 cohort sessions across the live-room model.</p>
+        <div class="partner-proof" aria-label="Partner value summary">
+          <div class="proof-row">
+            <span class="proof-num">12</span>
+            <div>
+              <h3>Virtual events currently set up</h3>
+              <p>The site currently has 12 virtual AI event pages configured from September 2026 through January 2027.</p>
+            </div>
           </div>
-        </div>
-        <div class="proof-row">
-          <span class="proof-num">Q1</span>
-          <div>
-            <h3>Dallas live room</h3>
-            <p>The first live room is planned for Q1 2027, connecting the virtual series to in-person executive work.</p>
+          <div class="proof-row">
+            <span class="proof-num">06</span>
+            <div>
+              <h3>Executive cohorts</h3>
+              <p>Mojo AI Summits is organized around six executive AI cohorts, with 36 cohort sessions across the live-room model.</p>
+            </div>
+          </div>
+          <div class="proof-row">
+            <span class="proof-num">Q1</span>
+            <div>
+              <h3>Dallas live room</h3>
+              <p>The first live room is planned for Q1 2027, connecting the virtual series to in-person executive work.</p>
+            </div>
           </div>
         </div>
       </div>
