@@ -409,6 +409,7 @@
           <div class="status-item"><span class="status-mark"></span><span>Invite code required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Email required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>LinkedIn profile required</span></div>
+          <div class="status-item"><span class="status-mark"></span><span>Brief photo required for featured guests</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Phone confirmation recorded</span></div>
         </div>
       </section>
@@ -510,6 +511,11 @@
                 <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
               </select>
             </div>
+            <div class="field full" id="briefPhotoField" hidden>
+              <label for="briefPhoto">Brief photo</label>
+              <input type="file" id="briefPhoto" name="briefPhoto" accept="image/jpeg,image/png,image/webp">
+              <p class="file-help">Featured guests upload a picture suitable for inclusion in MOJO AI Summits briefs. JPG, PNG, or WebP, up to 6 MB.</p>
+            </div>
             <div class="field full">
               <label for="phone">Mobile phone</label>
               <div class="phone-row">
@@ -549,6 +555,8 @@
   const emailInput = document.getElementById('email');
   const linkedinProfileInput = document.getElementById('linkedinProfileUrl');
   const eventShowSelect = document.getElementById('eventShowId');
+  const briefPhotoField = document.getElementById('briefPhotoField');
+  const briefPhotoInput = document.getElementById('briefPhoto');
   const phoneInput = document.getElementById('phone');
   const sendCodeButton = document.getElementById('sendCodeButton');
   const verifyCodeRow = document.getElementById('verifyCodeRow');
@@ -588,6 +596,12 @@
     };
   }
 
+  function appendCampaignAttribution(formData){
+    Object.entries(campaignAttributionFields()).forEach(([key, value]) => {
+      if (value) formData.set(key, value);
+    });
+  }
+
   function normalizeCode(code){
     return String(code || '').replace(/\D/g, '').slice(0, 6);
   }
@@ -614,6 +628,17 @@
     return fallback;
   }
 
+  function requiresBriefPhotoForRole(role = currentInviteRole){
+    return ['featured-guest', 'featured-member', 'featured-partner', 'presenter', 'speaker', 'roundtable-leader', 'roundtable'].includes(String(role || '').toLowerCase());
+  }
+
+  function configureBriefPhotoRequirement(){
+    const required = requiresBriefPhotoForRole();
+    briefPhotoField.hidden = !required;
+    briefPhotoInput.required = required;
+    if (!required) briefPhotoInput.value = '';
+  }
+
   function configureShowOptions(invite = {}){
     currentInviteRole = String(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || 'guest').toLowerCase();
     const featured = currentInviteRole === 'featured-guest' || currentInviteRole === 'featured-partner';
@@ -626,6 +651,7 @@
     eventShowSelect.value = assignedShow === 'morning' || assignedShow === 'afternoon'
       ? assignedShow
       : featured ? '' : 'both';
+    configureBriefPhotoRequirement();
   }
 
   function normalizePhone(phone){
@@ -726,6 +752,29 @@
     return data;
   }
 
+  async function postForm(url, formData){
+    const response = await fetch(url, {
+      method:'POST',
+      body:formData
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Unable to complete this step.');
+    return data;
+  }
+
+  function selectedBriefPhoto(){
+    return briefPhotoInput.files && briefPhotoInput.files[0] ? briefPhotoInput.files[0] : null;
+  }
+
+  async function validateBriefPhoto(){
+    const file = selectedBriefPhoto();
+    if (!file && !requiresBriefPhotoForRole()) return '';
+    if (!file) return 'Upload a picture for the event brief before submitting featured guest registration.';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return 'Upload the brief picture as a JPG, PNG, or WebP image.';
+    if (file.size > 6 * 1024 * 1024) return 'Upload a brief picture smaller than 6 MB.';
+    return '';
+  }
+
   sendCodeButton.addEventListener('click', async () => {
     clearMessage(formError);
     const phone = normalizePhone(phoneInput.value);
@@ -795,10 +844,12 @@
     payload.email = String(payload.email || '').trim();
     payload.linkedinProfileUrl = String(payload.linkedinProfileUrl || '').trim();
     payload.phone = normalizePhone(payload.phone);
-    payload.publicationUseName = formData.has('publicationUseName');
-    payload.publicationUseCompany = formData.has('publicationUseCompany');
     payload.phoneVerificationStatus = verificationStatus.value;
-    Object.assign(payload, campaignAttributionFields());
+    formData.set('email', payload.email);
+    formData.set('linkedinProfileUrl', payload.linkedinProfileUrl);
+    formData.set('phone', payload.phone);
+    formData.set('phoneVerificationStatus', payload.phoneVerificationStatus);
+    appendCampaignAttribution(formData);
 
     if (!/^\d{6}$/.test(String(payload.inviteCode || '').trim())) {
       setMessage(formError, 'Enter a valid six-digit invite code.', 'error');
@@ -807,6 +858,12 @@
     if (!payload.linkedinProfileUrl) {
       setMessage(formError, 'LinkedIn profile URL is required.', 'error');
       linkedinProfileInput.focus();
+      return;
+    }
+    const photoError = await validateBriefPhoto();
+    if (photoError) {
+      setMessage(formError, photoError, 'error');
+      briefPhotoInput.focus();
       return;
     }
     const selectedShow = normalizeEventShow(payload.eventShowId, '');
@@ -831,7 +888,7 @@
     submitButton.disabled = true;
     submitButton.textContent = 'Submitting...';
     try {
-      await postJson('/api/member-registration', payload);
+      await postForm('/api/member-registration', formData);
       form.classList.add('hide');
       success.classList.add('show');
     } catch (error) {

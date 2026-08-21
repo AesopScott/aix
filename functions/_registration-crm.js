@@ -177,8 +177,10 @@ function cleanGuestRegistrationType(value) {
   return {
     "featured-partner": "featured-partner",
     "featured-guest": "featured-guest",
+    "featured-member": "featured-member",
     partner: "partner",
     presenter: "presenter",
+    speaker: "presenter",
     roundtable: "roundtable-leader",
     "roundtable-leader": "roundtable-leader",
     guest: "guest"
@@ -433,8 +435,12 @@ async function readRegistrationRequest(request, type = "") {
   };
 }
 
+function hasRegistrationPhotoFile(file) {
+  return Boolean(file && typeof file === "object" && typeof file.arrayBuffer === "function" && cleanString(file.name));
+}
+
 function validateRegistrationPhoto(file) {
-  if (!isImageFile(file) || !cleanString(file.name)) {
+  if (!hasRegistrationPhotoFile(file)) {
     return "Upload a picture for the event brief before submitting registration.";
   }
   const type = cleanString(file.type).toLowerCase();
@@ -445,6 +451,25 @@ function validateRegistrationPhoto(file) {
     return "Upload a brief picture smaller than 6 MB.";
   }
   return "";
+}
+
+function requiresRegistrationPhoto(registration = {}, invite = {}) {
+  const role = cleanGuestRegistrationType(
+    invite.partnerRegistrationType ||
+      invite.guestRegistrationType ||
+      invite.registrationRole ||
+      registration.partnerRegistrationType ||
+      registration.guestRegistrationType ||
+      registration.registrationRole
+  );
+  return Boolean(
+    cleanBoolean(registration.isFeaturedGuest) ||
+      cleanBoolean(registration.isFeaturedMember) ||
+      cleanBoolean(registration.isFeaturedPartner) ||
+      cleanBoolean(registration.isPresenter) ||
+      cleanBoolean(registration.isRoundtableLeader) ||
+      ["featured-guest", "featured-member", "featured-partner", "presenter", "roundtable-leader"].includes(role)
+  );
 }
 
 async function storeRegistrationPhoto(env, type, registration, file) {
@@ -1201,18 +1226,6 @@ export async function handlePublicRegistration({ request, env }, type) {
       });
       return json({ error: validationError }, { status: 400 });
     }
-    if (type === "guest" || type === "partner") {
-      const photoError = validateRegistrationPhoto(photoFile);
-      if (photoError) {
-        await writeRegistrationDebug(env, type, "rejected", {
-          ...debugBase,
-          stage: "photo-validation",
-          error: photoError
-        });
-        return json({ error: photoError }, { status: 400 });
-      }
-    }
-
     const inviteValidation = await validateInviteCode(env, type, registration.inviteCode);
     if (!inviteValidation.ok) {
       await writeRegistrationDebug(env, type, "rejected", {
@@ -1232,6 +1245,18 @@ export async function handlePublicRegistration({ request, env }, type) {
         error: showError
       });
       return json({ error: showError }, { status: 400 });
+    }
+    const photoRequired = requiresRegistrationPhoto(registration, invite);
+    if (photoRequired || hasRegistrationPhotoFile(photoFile)) {
+      const photoError = validateRegistrationPhoto(photoFile);
+      if (photoError) {
+        await writeRegistrationDebug(env, type, "rejected", {
+          ...debugBase,
+          stage: "photo-validation",
+          error: photoError
+        });
+        return json({ error: photoError }, { status: 400 });
+      }
     }
     const selectedShow = resolveRegistrationShow(registration, invite);
 
@@ -1254,7 +1279,7 @@ export async function handlePublicRegistration({ request, env }, type) {
       crmUpdatedAt: "",
       crmUpdatedBy: ""
     };
-    const photoRefs = type === "guest" || type === "partner"
+    const photoRefs = hasRegistrationPhotoFile(photoFile)
       ? await storeRegistrationPhoto(env, type, record, photoFile)
       : {};
     Object.assign(record, photoRefs);
