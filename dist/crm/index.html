@@ -2155,6 +2155,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     let activePartnerAddCompany = "";
     let activeProspectingCompanyId = "";
     let activeProspectingEditCompanyId = "";
+    let activeProspectingSourceFilter = "";
     const partnerCompaniesPerPage = 10;
     let guestMatrixDrafts = loadGuestMatrixDrafts();
     let guestMatrixPendingChanges = {};
@@ -3071,6 +3072,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!options.keepCompanyFilter) {
         activeProspectingCompanyId = "";
         activeProspectingEditCompanyId = "";
+      }
+      if (!options.keepSourceFilter && activeView !== "vendor-universe") {
+        activeProspectingSourceFilter = "";
       }
       if (activeView === "partners-company" || activeView === "partner") partnerCompanyPage = 1;
       syncViewPanels();
@@ -4198,6 +4202,50 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return prospectingState?.companies || [];
     }
 
+    function prospectCompanySourceNames(company = {}) {
+      const attributionSources = Array.isArray(company.sourceAttributions)
+        ? company.sourceAttributions.map((row) => row?.sourceName)
+        : [];
+      return [...new Set([...(company.discoverySources || []), ...attributionSources].filter(Boolean))]
+        .sort((a, b) => String(a).localeCompare(String(b)));
+    }
+
+    function prospectSourceNames() {
+      return [...new Set(prospectCompanies().flatMap(prospectCompanySourceNames))]
+        .sort((a, b) => String(a).localeCompare(String(b)));
+    }
+
+    function companyMatchesProspectingSource(company = {}, sourceName = "") {
+      if (!sourceName) return true;
+      return prospectCompanySourceNames(company).some((source) => source === sourceName);
+    }
+
+    function prospectSourceOptions() {
+      const byName = new Map();
+      const addSource = (source = {}, kind = "saved") => {
+        const sourceName = source.sourceName || source.name || "";
+        if (!sourceName) return;
+        const existing = byName.get(sourceName);
+        if (existing && existing.kind !== "company") return;
+        byName.set(sourceName, {
+          ...source,
+          sourceName,
+          kind
+        });
+      };
+      (prospectingState?.sources || []).forEach((source) => addSource(source, "saved"));
+      (prospectingState?.starterSources || []).forEach((source) => addSource(source, "starter"));
+      (prospectingState?.emergingSources || []).forEach((source) => addSource(source, "emerging"));
+      prospectCompanies().flatMap(prospectCompanySourceNames).forEach((sourceName) => addSource({ sourceName }, "company"));
+      return [...byName.values()].sort((a, b) =>
+        String(a.sourceName || "").localeCompare(String(b.sourceName || ""))
+      );
+    }
+
+    function prospectSourceOptionByName(sourceName = "") {
+      return prospectSourceOptions().find((source) => source.sourceName === sourceName) || null;
+    }
+
     const emergingDiscoverySegment = "emerging-10-100";
 
     function employeeRangeBounds(value = "") {
@@ -4230,7 +4278,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function sortedProspectCompanies() {
-      const companies = activeView === "emerging-10-100" ? emergingCompanies() : prospectCompanies();
+      const sourceFilteredCompanies = activeProspectingSourceFilter
+        ? prospectCompanies().filter((company) => companyMatchesProspectingSource(company, activeProspectingSourceFilter))
+        : prospectCompanies();
+      const companies = activeView === "emerging-10-100" ? emergingCompanies() : sourceFilteredCompanies;
       return [...companies].sort((a, b) =>
         String(a.companyName || a.canonicalDomain || "").localeCompare(String(b.companyName || b.canonicalDomain || ""))
       );
@@ -4371,6 +4422,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           </div>
           <p>${escapeHtml(why)}</p>
           <div class="crm-compact-pills">${prospectPills(company.categories, "No prospect category")}</div>
+          <div class="crm-compact-pills">${prospectPills(prospectCompanySourceNames(company), "No source recorded")}</div>
           ${company.sponsoredEvents?.length || company.sponsorshipFit || company.sponsorshipEstimatedSpend ? `
             <div class="crm-compact-pills">
               ${prospectPills(company.sponsoredEvents, "No sponsor evidence")}
@@ -4830,20 +4882,40 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function renderVendorUniverse() {
       const allCompanies = prospectCompanies();
+      const sourceOptions = prospectSourceOptions();
+      const selectedSource = activeProspectingSourceFilter ? prospectSourceOptionByName(activeProspectingSourceFilter) : null;
+      const sourceFilteredCompanies = activeProspectingSourceFilter
+        ? allCompanies.filter((company) => companyMatchesProspectingSource(company, activeProspectingSourceFilter))
+        : allCompanies;
       const selectedCompany = activeProspectingCompanyId
-        ? allCompanies.find((company) => company.companyId === activeProspectingCompanyId)
+        ? sourceFilteredCompanies.find((company) => company.companyId === activeProspectingCompanyId)
         : null;
-      const companies = selectedCompany ? [selectedCompany] : allCompanies;
+      const companies = selectedCompany ? [selectedCompany] : sourceFilteredCompanies;
       prospectingContent.innerHTML = `
         <div class="prospecting-grid">
-          <div class="metric"><span>${selectedCompany ? "Selected Company" : "Companies Discovered"}</span><strong>${selectedCompany ? 1 : prospectingState?.dashboard?.companiesDiscovered || 0}</strong></div>
-          <div class="metric"><span>Qualified AI Vendors</span><strong>${selectedCompany ? (selectedCompany.aiVendor && selectedCompany.partnerScore >= 60 ? 1 : 0) : prospectingState?.dashboard?.qualifiedAiVendors || 0}</strong></div>
-          <div class="metric"><span>People Identified</span><strong>${selectedCompany ? selectedCompany.peopleCount || 0 : prospectingState?.dashboard?.peopleIdentified || 0}</strong></div>
+          <div class="metric"><span>${selectedCompany ? "Selected Company" : activeProspectingSourceFilter ? "Source Companies" : "Companies Discovered"}</span><strong>${selectedCompany ? 1 : activeProspectingSourceFilter ? companies.length : prospectingState?.dashboard?.companiesDiscovered || 0}</strong></div>
+          <div class="metric"><span>Qualified AI Vendors</span><strong>${selectedCompany ? (selectedCompany.aiVendor && selectedCompany.partnerScore >= 60 ? 1 : 0) : companies.filter((company) => company.aiVendor && company.partnerScore >= 60).length}</strong></div>
+          <div class="metric"><span>People Identified</span><strong>${selectedCompany ? selectedCompany.peopleCount || 0 : companies.reduce((sum, company) => sum + Number(company.peopleCount || 0), 0)}</strong></div>
+        </div>
+        <div class="source-run-status">
+          <strong>Source filter</strong>
+          <label>Discovery Source
+            <select data-prospect-source-filter>
+              <option value="">All sources</option>
+              ${sourceOptions.map((source) => `<option value="${escapeHtml(source.sourceName)}" ${source.sourceName === activeProspectingSourceFilter ? "selected" : ""}>${escapeHtml(source.sourceName)}</option>`).join("")}
+            </select>
+          </label>
+          ${activeProspectingSourceFilter ? `
+            <div class="prospecting-actions">
+              ${selectedSource?.sourceId ? `<button class="compact secondary" type="button" data-run-selected-prospect-source="${escapeHtml(selectedSource.sourceName)}">Run This Source</button>` : ""}
+              <button class="compact secondary" type="button" data-clear-prospect-source-filter>Show All Sources</button>
+            </div>
+          ` : ""}
         </div>
         ${selectedCompany ? `
           <div class="source-run-status">
             <strong>${escapeHtml(selectedCompany.companyName || "Selected company")}</strong>
-            <span>Vendor Universe is filtered to this company.</span>
+            <span>Vendor Universe is filtered to this company${activeProspectingSourceFilter ? ` from ${escapeHtml(activeProspectingSourceFilter)}` : ""}.</span>
             <div class="prospecting-actions">
               <button class="compact secondary" type="button" data-clear-prospect-company-filter>Show All Companies</button>
             </div>
@@ -4851,7 +4923,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ` : ""}
         ${renderProspectingCompanyForm()}
         ${selectedCompany ? renderCompanyPeopleTracker(selectedCompany) : activeProspectingEditCompanyId ? renderCompanyPeopleTracker(prospectCompanies().find((company) => company.companyId === activeProspectingEditCompanyId)) : ""}
-        <div class="prospecting-grid">${companies.map((company) => prospectCompanyCard(company)).join("") || '<p>No vendor companies have been added yet.</p>'}</div>
+        <div class="prospecting-grid">${companies.map((company) => prospectCompanyCard(company)).join("") || '<p>No vendor companies match this source filter yet.</p>'}</div>
       `;
     }
 
@@ -6064,6 +6136,43 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    async function runSelectedProspectingSource(button) {
+      const sourceName = button?.dataset.runSelectedProspectSource || activeProspectingSourceFilter;
+      const source = prospectSourceOptionByName(sourceName);
+      if (!source?.sourceId) {
+        setNotice("Select a runnable discovery source first.");
+        return;
+      }
+      activeProspectingSourceFilter = source.sourceName;
+      activeProspectingCompanyId = "";
+      activeProspectingEditCompanyId = "";
+      const payload = source.kind === "emerging"
+        ? {
+          action: "run-partner-prospect-emerging-sources",
+          sourceIds: [source.sourceId],
+          limitPerSource: 50,
+          maxSources: 1,
+          targetNewCompanies: 10
+        }
+        : source.kind === "starter"
+          ? {
+            action: "run-partner-prospect-starter-source",
+            sourceId: source.sourceId,
+            limit: 50,
+            targetNewCompanies: 10
+          }
+          : {
+            action: "rerun-partner-prospect-source",
+            sourceId: source.sourceId,
+            limit: 50
+          };
+      await runProspectingButtonAction(button, "Running source...", () => postPartnerProspecting(payload, `${source.sourceName} processed.`, {
+        pendingMessage: `Running ${source.sourceName}. This can take a few seconds.`,
+        resultTitle: `${source.sourceName} run complete`,
+        successFromResponse: true
+      }));
+    }
+
     function prospectingFormPayload(form) {
       return Object.fromEntries(new FormData(form).entries());
     }
@@ -7172,6 +7281,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       personForm.reset();
     });
 
+    prospectingContent.addEventListener("change", (event) => {
+      const sourceSelect = event.target.closest("[data-prospect-source-filter]");
+      if (!sourceSelect) return;
+      activeProspectingSourceFilter = sourceSelect.value || "";
+      activeProspectingCompanyId = "";
+      activeProspectingEditCompanyId = "";
+      activeView = "vendor-universe";
+      render();
+    });
+
     prospectingContent.addEventListener("click", async (event) => {
       const actionButton = event.target.closest("[data-prospect-person-action]");
       const retryButton = event.target.closest("[data-retry-prospect-company]");
@@ -7184,6 +7303,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const runStarterSourcesButton = event.target.closest("[data-run-starter-prospect-sources]");
       const runEmergingSourcesButton = event.target.closest("[data-run-emerging-prospect-sources]");
       const clearCompanyFilterButton = event.target.closest("[data-clear-prospect-company-filter]");
+      const clearSourceFilterButton = event.target.closest("[data-clear-prospect-source-filter]");
+      const runSelectedSourceButton = event.target.closest("[data-run-selected-prospect-source]");
       const editCompanyButton = event.target.closest("[data-edit-prospect-company]");
       const editCompanyCard = event.target.closest("[data-edit-prospect-card]");
       const clearCompanyEditButton = event.target.closest("[data-clear-prospect-company-edit]");
@@ -7207,6 +7328,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         activeProspectingCompanyId = "";
         activeProspectingEditCompanyId = "";
         render();
+        return;
+      }
+      if (clearSourceFilterButton) {
+        activeProspectingSourceFilter = "";
+        activeProspectingCompanyId = "";
+        activeProspectingEditCompanyId = "";
+        activeView = "vendor-universe";
+        render();
+        return;
+      }
+      if (runSelectedSourceButton) {
+        await runSelectedProspectingSource(runSelectedSourceButton);
         return;
       }
       if (editCompanyButton) {
