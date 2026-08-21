@@ -192,7 +192,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     registeredList.innerHTML = rows.map((guest) => {
       const restricted = guest.restricted || !guest.nameAllowed || !guest.companyAllowed;
       const primary = restricted ? (guest.industry || "Industry pending") : guest.displayName;
-      const secondary = guest.titleAllowed && guest.title ? guest.title : (guest.title || "Title pending");
+      const secondary = guest.title || "Title pending";
       const tertiary = guest.companyAllowed && guest.company ? guest.company : "";
       return `
         <div class="registered-row${restricted ? " is-restricted" : ""}">
@@ -312,7 +312,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const filledGuests = guests.slice(0, 9).map((guest, index) => ({ ...placeholderSlots[index], ...guest }));
     const visibleSlots = [
       ...filledGuests,
-      ...placeholderSlots.slice(0, Math.max(0, 9 - filledGuests.length)).map((slot) => ({ ...slot, isPlaceholder: true }))
+      ...placeholderSlots.slice(filledGuests.length, 9).map((slot) => ({ ...slot, isPlaceholder: true }))
     ];
     currentSlots = visibleSlots;
     source.textContent = label;
@@ -324,7 +324,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <div class="guest-meta">
           ${renderMeta("Role", guest.roleLabel || "Featured guest", "Featured guest")}
           ${renderMeta("Industry", guest.industry, "Industry pending")}
-          ${renderMeta("Title", guest.title, guest.titleAllowed ? "Title pending" : "Title withheld")}
+          ${renderMeta("Title", guest.title, "Title pending")}
           ${renderMeta("Company", guest.company, guest.companyAllowed ? "Company pending" : "Company withheld")}
         </div>
         <p class="guest-note">${escapeHtml(guest.note || (guest.nameAllowed ? "Name approved for public use." : "Name withheld until publication permission is approved."))}</p>
