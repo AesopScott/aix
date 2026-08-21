@@ -449,6 +449,7 @@
           <div class="status-item"><span class="status-mark"></span><span>Invite code required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Email required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>LinkedIn profile required</span></div>
+          <div class="status-item"><span class="status-mark"></span><span>Brief photo required for featured guests</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Phone confirmation recorded</span></div>
         </div>
       </section>
@@ -541,10 +542,10 @@
                 <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
               </select>
             </div>
-            <div class="field full">
+            <div class="field full" id="briefPhotoField" hidden>
               <label for="briefPhoto">Brief photo</label>
-              <input type="file" id="briefPhoto" name="briefPhoto" accept="image/jpeg,image/png,image/webp" required>
-              <p class="file-help">Upload a picture of yourself suitable for inclusion in MOJO AI Summits briefs. JPG, PNG, or WebP, up to 6 MB.</p>
+              <input type="file" id="briefPhoto" name="briefPhoto" accept="image/jpeg,image/png,image/webp">
+              <p class="file-help">Featured guests upload a picture suitable for inclusion in MOJO AI Summits briefs. JPG, PNG, or WebP, up to 6 MB.</p>
             </div>
             <div class="field full">
               <label for="partnerProductTypes">Products sold</label>
@@ -596,6 +597,7 @@
   const emailInput = document.getElementById('email');
   const linkedinProfileInput = document.getElementById('linkedinProfileUrl');
   const eventShowSelect = document.getElementById('eventShowId');
+  const briefPhotoField = document.getElementById('briefPhotoField');
   const briefPhotoInput = document.getElementById('briefPhoto');
   const phoneInput = document.getElementById('phone');
   const sendCodeButton = document.getElementById('sendCodeButton');
@@ -668,6 +670,17 @@
     return fallback;
   }
 
+  function requiresBriefPhotoForRole(role = currentInviteRole){
+    return ['featured-guest', 'featured-member', 'featured-partner', 'presenter', 'speaker', 'roundtable-leader', 'roundtable'].includes(String(role || '').toLowerCase());
+  }
+
+  function configureBriefPhotoRequirement(){
+    const required = requiresBriefPhotoForRole();
+    briefPhotoField.hidden = !required;
+    briefPhotoInput.required = required;
+    if (!required) briefPhotoInput.value = '';
+  }
+
   function configureShowOptions(invite = {}){
     currentInviteRole = String(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || 'partner').toLowerCase();
     const featured = currentInviteRole === 'featured-guest' || currentInviteRole === 'featured-partner';
@@ -680,6 +693,7 @@
     eventShowSelect.value = assignedShow === 'morning' || assignedShow === 'afternoon'
       ? assignedShow
       : featured ? '' : 'both';
+    configureBriefPhotoRequirement();
   }
 
   function normalizePhone(phone){
@@ -779,7 +793,8 @@
 
   async function validateBriefPhoto(){
     const file = selectedBriefPhoto();
-    if (!file) return 'Upload a picture for the event brief before submitting registration.';
+    if (!file && !requiresBriefPhotoForRole()) return '';
+    if (!file) return 'Upload a picture for the event brief before submitting featured guest registration.';
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return 'Upload the brief picture as a JPG, PNG, or WebP image.';
     if (file.size > 6 * 1024 * 1024) return 'Upload a brief picture smaller than 6 MB.';
     return '';
