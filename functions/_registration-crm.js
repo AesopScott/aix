@@ -1280,7 +1280,7 @@ export async function handlePublicRegistration({ request, env }, type) {
       createdAt,
       source: config.source,
       crmType: config.crmType,
-      crmStatus: "new",
+      crmStatus: "registered",
       crmNotes: "",
       crmUpdatedAt: "",
       crmUpdatedBy: ""

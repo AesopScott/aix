@@ -4052,8 +4052,20 @@ async function enrichInviteUsage(env, invites, types = ["member", "guest", "part
       (invite.registrationId && entry.id === invite.registrationId) ||
       (invite.code && entry.inviteCode === invite.code && (!usedEmail || entry.email === usedEmail))
     );
+    const registered = Boolean(row || invite.usedAt || invite.usedBy || invite.usedByName || invite.usedByEmail);
+    const currentStatus = cleanGuestRegistrationLifecycleStatus(
+      row?.crmStatus || invite.crmStatus || invite.guestStatus || invite.registrationStatus,
+      invite.code ? "invited" : "contacted"
+    );
+    const registrationStatus = registered && ["pending-engagement", "contacted", "confirmed", "invited"].includes(currentStatus)
+      ? "registered"
+      : currentStatus;
     return {
       ...invite,
+      status: registered ? "used" : invite.status,
+      crmStatus: registrationStatus,
+      guestStatus: registrationStatus,
+      registrationStatus,
       usedByName: cleanString(invite.usedByName || row?.name),
       usedByEmail: cleanString(invite.usedByEmail || row?.email || invite.usedBy).toLowerCase(),
       usedFor: cleanString(row?.eventName || invite.usedFor || invite.eventName),
