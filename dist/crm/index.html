@@ -3431,8 +3431,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         active: "invited"
       };
       const normalized = aliases[raw] || raw;
+      const actualRegistrationComplete = isRegistrationInviteRegistered(invite);
+      if (actualRegistrationComplete && ["pending-engagement", "contacted", "confirmed", "invited"].includes(normalized)) {
+        return "registered";
+      }
       if (guestRegistrationLifecycleValues.includes(normalized)) return normalized;
-      if (isRegistrationInviteRegistered(invite)) return "registered";
+      if (actualRegistrationComplete) return "registered";
       if (invite.code || invite.inviteCode) return "invited";
       return "pending-engagement";
     }
