@@ -1644,6 +1644,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <option value="partner-candidate">Partner Candidate</option>
           <option value="partner">Partner</option>
           <option value="new">New</option>
+          <option value="pending-engagement">Pending Engagement</option>
           <option value="contacted">Contacted</option>
           <option value="confirmed">Confirmed</option>
           <option value="accepted">Accepted</option>
@@ -1770,13 +1771,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     <section class="invite-panel view-section guest-pipeline-panel" id="guestMatrixPanel" data-view-panel="guest-matrix" hidden>
       <div>
         <p class="eyebrow" id="guestMatrixEyebrow">Guest invite matrix</p>
-        <h2 id="guestMatrixTitle">Event-by-event guest engagement</h2>
-        <p id="guestMatrixDescription">Add individual guests before an invite link exists, then track LinkedIn connection, invite request, and registration completion.</p>
+        <h2 id="guestMatrixTitle">Guest engagement matrix</h2>
+        <p id="guestMatrixDescription">Add individual guests before an invite link exists, then track their guest registration status.</p>
       </div>
       <form class="guest-matrix-add-form" id="guestMatrixAddForm" aria-label="Add a person before sending an invite">
         <label>
           Event
-          <select id="guestMatrixAddEvent" name="eventSlug" required>
+          <select id="guestMatrixAddEvent" name="eventSlug">
             <option value="">Loading events...</option>
           </select>
         </label>
@@ -1844,6 +1845,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Status
           <select id="guestMatrixStatusFilter">
             <option value="all">All statuses</option>
+            <option value="pending-engagement">Pending Engagement</option>
             <option value="contacted">Contacted</option>
             <option value="confirmed">Confirmed</option>
             <option value="declined">Declined</option>
@@ -2006,6 +2008,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Status
           <select id="manualPartnerStatus" name="crmStatus">
             <option value="new">New</option>
+            <option value="pending-engagement">Pending Engagement</option>
             <option value="contacted">Contacted</option>
             <option value="confirmed">Confirmed</option>
             <option value="accepted">Accepted</option>
@@ -2206,6 +2209,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["declined", "Declined"]
     ];
     const guestRegistrationLifecycleOptions = [
+      ["pending-engagement", "Pending Engagement"],
       ["contacted", "Contacted"],
       ["confirmed", "Confirmed"],
       ["declined", "Declined"],
@@ -2553,7 +2557,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function guestRegistrationLifecycleStatus(value = "") {
       const raw = String(value || "").toLowerCase();
       const aliases = {
-        new: "contacted",
+        new: "pending-engagement",
+        pending: "pending-engagement",
+        "pending-angel": "pending-engagement",
+        pending_angel: "pending-engagement",
+        "pending engagement": "pending-engagement",
+        pending_engagement: "pending-engagement",
+        tracking: "pending-engagement",
         accepted: "confirmed",
         waitlist: "alternate",
         waitlisted: "alternate",
@@ -2561,8 +2571,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         started: "invited",
         canceled: "declined",
         cancelled: "declined",
-        "not-registered": "contacted",
-        not_registered: "contacted"
+        "not-registered": "pending-engagement",
+        not_registered: "pending-engagement"
       };
       const normalized = aliases[raw] || raw;
       return guestRegistrationLifecycleValues.includes(normalized) ? normalized : "contacted";
@@ -3086,7 +3096,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         .join("");
     }
 
-    function crmStatusOptions(current = "new", statuses = ["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"]) {
+    function crmStatusOptions(current = "new", statuses = ["new", "pending-engagement", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"]) {
       const selected = statuses.includes(current) ? current : "new";
       return statuses
         .map((status) => `<option value="${status}" ${selected === status ? "selected" : ""}>${statusLabel(status)}</option>`)
@@ -3408,7 +3418,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         invite.status
       ));
       const aliases = {
-        new: "contacted",
+        new: "pending-engagement",
+        pending: "pending-engagement",
+        "pending-angel": "pending-engagement",
+        pending_angel: "pending-engagement",
+        "pending engagement": "pending-engagement",
+        pending_engagement: "pending-engagement",
         opened: "invited",
         started: "invited",
         waitlisted: "alternate",
@@ -3416,19 +3431,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         canceled: "declined",
         cancelled: "declined",
         used: "registered",
-        tracking: "contacted",
+        tracking: "pending-engagement",
         active: "invited"
       };
       const normalized = aliases[raw] || raw;
       if (guestRegistrationLifecycleValues.includes(normalized)) return normalized;
       if (isRegistrationInviteRegistered(invite)) return "registered";
       if (invite.code || invite.inviteCode) return "invited";
-      return "contacted";
+      return "pending-engagement";
     }
 
     function guestMatrixStageClass(value = "") {
       if (["confirmed", "registered", "attended"].includes(value)) return "good";
-      if (["contacted", "invited", "alternate"].includes(value)) return "warn";
+      if (["pending-engagement", "contacted", "invited", "alternate"].includes(value)) return "warn";
       if (["declined", "bad-fit", "no-show"].includes(value)) return "neutral";
       return "";
     }
@@ -3705,7 +3720,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return [
         row.registered ? 10000 : 0,
         row.matrixOnly ? 0 : 5000,
-        guestMatrixStatusRank(row.registrationStatus, ["attended", "registered", "confirmed", "invited", "contacted", "alternate", "declined", "bad-fit", "no-show"]) * 100
+        guestMatrixStatusRank(row.registrationStatus, ["attended", "registered", "confirmed", "invited", "contacted", "pending-engagement", "alternate", "declined", "bad-fit", "no-show"]) * 100
       ].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
     }
 
@@ -3733,7 +3748,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function mergeGuestMatrixDuplicateRows(left, right) {
       const primary = guestMatrixRowRank(right) > guestMatrixRowRank(left) ? right : left;
       const secondary = primary === right ? left : right;
-      const registrationStatus = bestMatrixValue(primary.registrationStatus, secondary.registrationStatus, ["attended", "registered", "confirmed", "invited", "contacted", "alternate", "declined", "bad-fit", "no-show"]);
+      const registrationStatus = bestMatrixValue(primary.registrationStatus, secondary.registrationStatus, ["attended", "registered", "confirmed", "invited", "contacted", "pending-engagement", "alternate", "declined", "bad-fit", "no-show"]);
       const futureEvents = mergeGuestMatrixFutureEvents(primary.futureEvents, secondary.futureEvents);
       return {
         ...primary,
@@ -3849,6 +3864,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const stats = [
         ["Event groups", new Set(rows.map((row) => row.eventKey)).size],
         [isPartnerMatrix() ? "Tracked partners" : "Tracked people", rows.filter((row) => row.name !== "Name not recorded").length],
+        ["Pending Engagement", rows.filter((row) => row.registrationStatus === "pending-engagement").length],
         ["Contacted", rows.filter((row) => row.registrationStatus === "contacted").length],
         ["Invited", rows.filter((row) => row.registrationStatus === "invited").length],
         ["Registered", rows.filter((row) => row.registered).length]
@@ -3868,11 +3884,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         guestMatrixPanel.classList.toggle("partner-pipeline-panel", isPartnerMatrix());
       }
       if (guestMatrixEyebrow) guestMatrixEyebrow.textContent = isPartnerMatrix() ? "Partner invite matrix" : "Guest invite matrix";
-      if (guestMatrixTitle) guestMatrixTitle.textContent = isPartnerMatrix() ? "Event-by-event partner engagement" : "Event-by-event guest engagement";
+      if (guestMatrixTitle) guestMatrixTitle.textContent = isPartnerMatrix() ? "Partner engagement matrix" : "Guest engagement matrix";
       if (guestMatrixDescription) {
         guestMatrixDescription.textContent = isPartnerMatrix()
-          ? "Review tracked partners by event and guest registration status."
-          : "Review tracked guests by event and guest registration status.";
+          ? "Review tracked partners by event, unassigned pipeline stage, and guest registration status."
+          : "Review tracked guests by event, unassigned pipeline stage, and guest registration status.";
       }
       const rows = guestMatrixRows();
       syncGuestMatrixEventFilter(rows);
@@ -3880,7 +3896,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const filtered = filteredGuestMatrixRows(rows);
       if (guestMatrixSearchSummary) {
         guestMatrixSearchSummary.textContent = rows.length
-          ? `Showing ${filtered.length} of ${rows.length} ${isPartnerMatrix() ? "partner" : "guest and member"} tracking records grouped by event. Registration status comes from CRM records.`
+          ? `Showing ${filtered.length} of ${rows.length} ${isPartnerMatrix() ? "partner" : "guest and member"} tracking records grouped by event or unassigned stage. Registration status comes from CRM records.`
           : "";
       }
       if (!guestMatrixList) {
@@ -3905,6 +3921,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       guestMatrixList.innerHTML = [...groups.values()].map((groupRows) => {
         const first = groupRows[0];
         const registered = groupRows.filter((row) => row.registered).length;
+        const pending = groupRows.filter((row) => row.registrationStatus === "pending-engagement").length;
         const contacted = groupRows.filter((row) => row.registrationStatus === "contacted").length;
         const invited = groupRows.filter((row) => row.registrationStatus === "invited").length;
         const confirmed = groupRows.filter((row) => row.registrationStatus === "confirmed").length;
@@ -3917,6 +3934,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               </div>
               <div class="guest-matrix-pills">
                 <span class="pill">${groupRows.length} tracked</span>
+                <span class="pill warn">${pending} pending</span>
                 <span class="pill warn">${contacted} contacted</span>
                 <span class="pill warn">${invited} invited</span>
                 <span class="pill good">${confirmed} confirmed</span>
@@ -3984,17 +4002,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       requestAnimationFrame(syncTableScrollProxy);
     }
 
-    function eventOptionMarkup() {
+    function eventOptionMarkup(emptyLabel = "Select an event", noEventsLabel = "No upcoming event pages found") {
       const bySlug = new Map(fallbackMojoEvents.map((event) => [event.slug, event]));
       for (const event of state.upcomingEvents || []) {
         if (event?.slug && event?.title) bySlug.set(event.slug, event);
       }
       const events = [...bySlug.values()];
       if (!events.length) {
-        return '<option value="">No upcoming event pages found</option>';
+        return `<option value="">${escapeHtml(noEventsLabel)}</option>`;
       }
       return [
-        '<option value="">Select an event</option>',
+        `<option value="">${escapeHtml(emptyLabel)}</option>`,
         ...events.map((event) => `
           <option value="${escapeHtml(event.slug)}" data-event-name="${escapeHtml(event.title)}" data-event-date="${escapeHtml(event.date || "")}">
             ${escapeHtml(event.title)}${event.date ? ` | ${escapeHtml(event.date)}` : ""}
@@ -4007,7 +4025,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const markup = eventOptionMarkup();
       registrationInviteEvent.innerHTML = markup;
       partnerInviteEvent.innerHTML = markup;
-      if (guestMatrixAddEvent) guestMatrixAddEvent.innerHTML = markup;
+      if (guestMatrixAddEvent) guestMatrixAddEvent.innerHTML = eventOptionMarkup("No event yet", "No event yet");
     }
 
     function optionMarkup(value, label, selectedValue) {
@@ -7008,22 +7026,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function buildGuestMatrixProspectPayload() {
       const formData = new FormData(guestMatrixAddForm);
       const selected = guestMatrixAddEvent.selectedOptions[0];
+      const eventSlug = String(formData.get("eventSlug") || "").trim();
+      const hasEvent = Boolean(eventSlug);
       const partnerMode = isPartnerMatrix();
       const guestRegistrationType = formData.get(partnerMode ? "partnerRegistrationType" : "guestRegistrationType") || (partnerMode ? "partner" : "guest");
-      const selectedShowId = eventShowId(formData.get("eventShowId") || guestMatrixAddShow?.value || "both");
-      const showId = isSingleShowRegistrationRole(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
+      const selectedShowId = hasEvent ? eventShowId(formData.get("eventShowId") || guestMatrixAddShow?.value || "both") : "";
+      const showId = hasEvent && isSingleShowRegistrationRole(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
       return {
         action: partnerMode ? "create-partner-matrix-prospect" : "create-guest-matrix-prospect",
         guestRegistrationType: partnerMode ? "" : guestRegistrationType,
         partnerRegistrationType: partnerMode ? guestRegistrationType : "",
         registrationRole: guestRegistrationType,
-        eventSlug: formData.get("eventSlug") || "",
-        eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
-        eventDate: selected?.dataset.eventDate || "",
+        eventSlug,
+        eventName: hasEvent ? selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "" : "",
+        eventDate: hasEvent ? selected?.dataset.eventDate || "" : "",
         eventShowId: showId,
-        eventShowLabel: eventShowLabel(showId),
-        eventShowTime: eventShowTime(showId),
-        eventTime: eventShowTime(showId),
+        eventShowLabel: showId ? eventShowLabel(showId) : "",
+        eventShowTime: showId ? eventShowTime(showId) : "",
+        eventTime: showId ? eventShowTime(showId) : "",
         partnerCompany: partnerMode ? formData.get("company") || "" : "",
         company: formData.get("company") || "",
         intendedGuestName: formData.get("intendedGuestName") || "",
@@ -7040,10 +7060,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       event.preventDefault();
       const submitButton = guestMatrixAddSubmit || guestMatrixAddForm.querySelector('button[type="submit"]');
       const payload = buildGuestMatrixProspectPayload();
-      if (!payload.eventSlug) {
-        setNotice(`Select an event before adding a tracked ${matrixEntityLabel()}.`, "error");
-        return;
-      }
       if (!String(payload.intendedGuestName || "").trim() && !String(payload.intendedGuestEmail || "").trim() && !String(payload.linkedinProfileUrl || "").trim()) {
         setNotice(`Enter a name, email, or LinkedIn profile before adding a tracked ${matrixEntityLabel()}.`, "error");
         return;

@@ -150,8 +150,8 @@ const DEFAULT_UPCOMING_EVENTS = [
     format: "In person"
   }
 ];
-const allowedStatuses = new Set(["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
-const allowedGuestRegistrationLifecycleStatuses = new Set(["contacted", "confirmed", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
+const allowedStatuses = new Set(["new", "pending-engagement", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
+const allowedGuestRegistrationLifecycleStatuses = new Set(["pending-engagement", "contacted", "confirmed", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
 const allowedLifecycleStages = new Set(["guest", "featured-guest", "fellow", "contributing-fellow", "senior-fellow", "distinguished-fellow"]);
 const allowedRegistrationStatuses = new Set(["invited", "opened", "started", "confirmed", "declined", "canceled", "waitlisted"]);
 const allowedStrategicRoles = new Set(["attendee", "speaker", "moderator", "roundtable-leader", "research-contributor", "sponsor-representative", "partner"]);
@@ -558,7 +558,13 @@ function cleanAllowed(value, allowed, fallback = "") {
 function cleanGuestRegistrationLifecycleStatus(value, fallback = "contacted") {
   const cleaned = cleanString(value, 120).toLowerCase();
   const aliases = {
-    new: "contacted",
+    new: "pending-engagement",
+    pending: "pending-engagement",
+    "pending-angel": "pending-engagement",
+    pending_angel: "pending-engagement",
+    "pending engagement": "pending-engagement",
+    pending_engagement: "pending-engagement",
+    tracking: "pending-engagement",
     accepted: "confirmed",
     waitlist: "alternate",
     waitlisted: "alternate",
@@ -566,8 +572,8 @@ function cleanGuestRegistrationLifecycleStatus(value, fallback = "contacted") {
     started: "invited",
     canceled: "declined",
     cancelled: "declined",
-    "not-registered": "contacted",
-    not_registered: "contacted"
+    "not-registered": "pending-engagement",
+    not_registered: "pending-engagement"
   };
   const normalized = aliases[cleaned] || cleaned;
   return allowedGuestRegistrationLifecycleStatuses.has(normalized) ? normalized : fallback;
@@ -4175,7 +4181,8 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
   const intendedGuestName = isEmail(rawGuestName) ? "" : rawGuestName;
   const guestRegistrationType = matrixProspectRole(prospectType, record);
   const linkedinProfileUrl = cleanLinkedInProfileUrl(record?.linkedinProfileUrl || record?.linkedInProfileUrl || record?.linkedinUrl || record?.linkedInUrl);
-  const rawShowId = cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, "both");
+  const hasAssignedEvent = Boolean(cleanString(record?.eventSlug || record?.eventName || record?.eventId, 240));
+  const rawShowId = hasAssignedEvent ? cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, "both") : "";
   const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
   return {
     key,
@@ -4183,14 +4190,14 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     type: matrixProspectRecordType(prospectType),
     matrixOnly: true,
     status: cleanString(record?.status, 80) || "tracking",
-    eventId: cleanString(record?.eventId || `${record?.eventSlug || record?.eventName || "event"}:${eventShowId}`, 200),
+    eventId: cleanString(record?.eventId || (hasAssignedEvent ? `${record?.eventSlug || record?.eventName || "event"}:${eventShowId || "both"}` : ""), 200),
     eventSlug: cleanString(record?.eventSlug, 200),
     eventName: cleanString(record?.eventName, 240),
     eventDate: cleanString(record?.eventDate, 120),
-    eventTime: cleanString(record?.eventTime || eventShowTime(eventShowId), 120),
+    eventTime: cleanString(record?.eventTime || (eventShowId ? eventShowTime(eventShowId) : ""), 120),
     eventShowId,
-    eventShowLabel: cleanString(record?.eventShowLabel, 120) || eventShowLabel(eventShowId),
-    eventShowTime: cleanString(record?.eventShowTime || record?.eventTime, 120) || eventShowTime(eventShowId),
+    eventShowLabel: cleanString(record?.eventShowLabel, 120) || (eventShowId ? eventShowLabel(eventShowId) : ""),
+    eventShowTime: cleanString(record?.eventShowTime || record?.eventTime, 120) || (eventShowId ? eventShowTime(eventShowId) : ""),
     intendedGuestName,
     intendedGuestEmail,
     invitedEmail: intendedGuestEmail,
@@ -4205,9 +4212,9 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     linkedinProfileUrl,
     linkedinUrl: linkedinProfileUrl,
     enrichmentSource: cleanString(record?.enrichmentSource, 120),
-    crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.guestStatus || record?.registrationStatus, "contacted"),
-    guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.crmStatus || record?.registrationStatus, "contacted"),
-    registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, "contacted"),
+    crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.guestStatus || record?.registrationStatus, "pending-engagement"),
+    guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.crmStatus || record?.registrationStatus, "pending-engagement"),
+    registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, "pending-engagement"),
     guestRegistrationType,
     partnerRegistrationType: prospectType === "partner" ? guestRegistrationType : "",
     registrationRole: guestRegistrationType,
@@ -4340,7 +4347,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
   const prospectType = type === "partner" ? "partner" : "guest";
   const eventSlug = cleanString(payload.eventSlug, 200);
   const eventName = cleanString(payload.eventName, 240);
-  if (!eventSlug && !eventName) throw new Error("Select an event before adding a tracked person.");
+  const hasAssignedEvent = Boolean(eventSlug || eventName || cleanString(payload.eventId, 200));
 
   const rawLinkedInProfileUrl = cleanString(payload.linkedinProfileUrl || payload.linkedInProfileUrl || payload.linkedinUrl || payload.linkedInUrl, 500);
   const linkedinProfileUrl = cleanLinkedInProfileUrl(rawLinkedInProfileUrl);
@@ -4373,9 +4380,9 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
   if (!intendedGuestName && !intendedGuestEmail && !linkedinProfileUrl) throw new Error("Enter a name, email, or LinkedIn profile before adding a tracked person.");
 
   const guestRegistrationType = matrixProspectRole(prospectType, payload);
-  const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
+  const rawShowId = hasAssignedEvent ? cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both") : "";
   const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
-  const eventTime = eventShowTime(eventShowId);
+  const eventTime = eventShowId ? eventShowTime(eventShowId) : "";
   const createdAt = new Date().toISOString();
   const id = crypto.randomUUID?.() || `${Date.now()}-${randomInviteCode()}`;
   const record = {
@@ -4383,13 +4390,13 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     type: matrixProspectRecordType(prospectType),
     matrixOnly: true,
     status: "tracking",
-    eventId: cleanString(payload.eventId || `${eventSlug || eventName}:${eventShowId}`, 200),
+    eventId: cleanString(payload.eventId || (hasAssignedEvent ? `${eventSlug || eventName}:${eventShowId || "both"}` : ""), 200),
     eventSlug,
     eventName,
     eventDate: cleanString(payload.eventDate, 120),
     eventTime,
     eventShowId,
-    eventShowLabel: eventShowLabel(eventShowId),
+    eventShowLabel: eventShowId ? eventShowLabel(eventShowId) : "",
     eventShowTime: eventTime,
     intendedGuestName,
     intendedGuestEmail,
@@ -4405,9 +4412,9 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     linkedinProfileUrl,
     linkedinUrl: linkedinProfileUrl,
     enrichmentSource: cleanString(enrichment.enrichmentSource || (linkedinProfileUrl ? "linkedin-profile-url" : ""), 120),
-    crmStatus: cleanGuestRegistrationLifecycleStatus(payload.crmStatus || payload.guestStatus || payload.registrationStatus, "contacted"),
-    guestStatus: cleanGuestRegistrationLifecycleStatus(payload.guestStatus || payload.crmStatus || payload.registrationStatus, "contacted"),
-    registrationStatus: cleanGuestRegistrationLifecycleStatus(payload.registrationStatus || payload.guestStatus || payload.crmStatus, "contacted"),
+    crmStatus: cleanGuestRegistrationLifecycleStatus(payload.crmStatus || payload.guestStatus || payload.registrationStatus, "pending-engagement"),
+    guestStatus: cleanGuestRegistrationLifecycleStatus(payload.guestStatus || payload.crmStatus || payload.registrationStatus, "pending-engagement"),
+    registrationStatus: cleanGuestRegistrationLifecycleStatus(payload.registrationStatus || payload.guestStatus || payload.crmStatus, "pending-engagement"),
     guestRegistrationType,
     partnerRegistrationType: prospectType === "partner" ? guestRegistrationType : "",
     registrationRole: guestRegistrationType,
@@ -4422,7 +4429,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
   const identityId = linkedInProfileIdentity(linkedinProfileUrl)
     ? `linkedin:${safeFileSegment(linkedInProfileIdentity(linkedinProfileUrl), "profile")}`
     : id;
-  const eventSegment = safeFileSegment(`${eventSlug || eventName}:${eventShowId}`, "event");
+  const eventSegment = safeFileSegment(hasAssignedEvent ? `${eventSlug || eventName}:${eventShowId || "both"}` : "unassigned", "unassigned");
   const key = `${matrixProspectPrefix(prospectType)}${eventSegment}:${identityId}`;
   const previous = await readRawRecord(env, key);
   const nextRecord = {
@@ -4455,7 +4462,7 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   } else if (field === "registrationRequest") {
     next.registrationRequestStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixRegistrationRequestStatuses, existing.registrationRequestStatus || "not-sent");
   } else if (field === "guestStatus") {
-    const status = cleanGuestRegistrationLifecycleStatus(payload.value, existing.crmStatus || existing.guestStatus || "contacted");
+    const status = cleanGuestRegistrationLifecycleStatus(payload.value, existing.crmStatus || existing.guestStatus || "pending-engagement");
     next.crmStatus = status;
     next.guestStatus = status;
     next.registrationStatus = status;
@@ -4503,7 +4510,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.registrationRequestStatus = cleanGuestMatrixOption(change.registrationRequest, allowedGuestMatrixRegistrationRequestStatuses, existing.registrationRequestStatus || "not-sent");
     }
     if (Object.prototype.hasOwnProperty.call(change, "guestStatus")) {
-      const status = cleanGuestRegistrationLifecycleStatus(change.guestStatus, existing.crmStatus || existing.guestStatus || "contacted");
+      const status = cleanGuestRegistrationLifecycleStatus(change.guestStatus, existing.crmStatus || existing.guestStatus || "pending-engagement");
       next.crmStatus = status;
       next.guestStatus = status;
       next.registrationStatus = status;
