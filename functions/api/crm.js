@@ -151,6 +151,7 @@ const DEFAULT_UPCOMING_EVENTS = [
   }
 ];
 const allowedStatuses = new Set(["new", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
+const allowedGuestRegistrationLifecycleStatuses = new Set(["contacted", "confirmed", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
 const allowedLifecycleStages = new Set(["guest", "featured-guest", "fellow", "contributing-fellow", "senior-fellow", "distinguished-fellow"]);
 const allowedRegistrationStatuses = new Set(["invited", "opened", "started", "confirmed", "declined", "canceled", "waitlisted"]);
 const allowedStrategicRoles = new Set(["attendee", "speaker", "moderator", "roundtable-leader", "research-contributor", "sponsor-representative", "partner"]);
@@ -552,6 +553,31 @@ function cleanType(value) {
 function cleanAllowed(value, allowed, fallback = "") {
   const cleaned = cleanString(value, 120).toLowerCase();
   return allowed.has(cleaned) ? cleaned : fallback;
+}
+
+function cleanGuestRegistrationLifecycleStatus(value, fallback = "contacted") {
+  const cleaned = cleanString(value, 120).toLowerCase();
+  const aliases = {
+    new: "contacted",
+    accepted: "confirmed",
+    waitlist: "alternate",
+    waitlisted: "alternate",
+    opened: "invited",
+    started: "invited",
+    canceled: "declined",
+    cancelled: "declined",
+    "not-registered": "contacted",
+    not_registered: "contacted"
+  };
+  const normalized = aliases[cleaned] || cleaned;
+  return allowedGuestRegistrationLifecycleStatuses.has(normalized) ? normalized : fallback;
+}
+
+function recordUsesGuestRegistrationLifecycle(key = "", record = {}) {
+  return cleanString(key).startsWith(registrantTypes.guest.crmPrefix) ||
+    cleanString(key).startsWith(registrantTypes.guest.legacyPrefix) ||
+    record?.crmType === registrantTypes.guest.crmType ||
+    record?.type === "guest";
 }
 
 function splitName(name = "") {
@@ -1570,7 +1596,9 @@ function normalizeRecord(key, record) {
     attendedAt: cleanString(record?.attendedAt),
     attendanceUpdatedAt: cleanString(record?.attendanceUpdatedAt),
     attendanceUpdatedBy: cleanString(record?.attendanceUpdatedBy),
-    crmStatus: allowedStatuses.has(record?.crmStatus) ? record.crmStatus : "new",
+    crmStatus: recordUsesGuestRegistrationLifecycle(key, record)
+      ? cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.status, "contacted")
+      : allowedStatuses.has(record?.crmStatus) ? record.crmStatus : "new",
     crmNotes: cleanString(record?.crmNotes),
     crmUpdatedAt: cleanString(record?.crmUpdatedAt),
     crmUpdatedBy: cleanString(record?.crmUpdatedBy),
@@ -6893,7 +6921,9 @@ export async function onRequestPost({ request, env, data }) {
   if (!row) return json({ error: `${registrantTypes[type].label} registrant was not found.` }, { status: 404 });
 
   const { key: crmKey, row: crmRow } = await ensureCrmRecord(env, row, type);
-  const crmStatus = allowedStatuses.has(payload?.crmStatus) ? payload.crmStatus : crmRow.crmStatus;
+  const crmStatus = type === "guest"
+    ? cleanGuestRegistrationLifecycleStatus(payload?.crmStatus, crmRow.crmStatus || "contacted")
+    : allowedStatuses.has(payload?.crmStatus) ? payload.crmStatus : crmRow.crmStatus;
   const partnerEmail = cleanString(payload?.email, 180).toLowerCase();
   if (type === "partner" && partnerEmail && !isEmail(partnerEmail)) {
     return json({ error: "Enter a valid partner email." }, { status: 400 });

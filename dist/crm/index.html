@@ -2523,6 +2523,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }[String(value || "").toLowerCase()] || titleCaseLabel(value || "new");
     }
 
+    function guestRegistrationLifecycleStatus(value = "") {
+      const raw = String(value || "").toLowerCase();
+      const aliases = {
+        new: "contacted",
+        accepted: "confirmed",
+        waitlist: "alternate",
+        waitlisted: "alternate",
+        opened: "invited",
+        started: "invited",
+        canceled: "declined",
+        cancelled: "declined",
+        "not-registered": "contacted",
+        not_registered: "contacted"
+      };
+      const normalized = aliases[raw] || raw;
+      return guestRegistrationLifecycleValues.includes(normalized) ? normalized : "contacted";
+    }
+
+    function guestRegistrationLifecycleLabel(value = "") {
+      return labelForOption(guestRegistrationLifecycleOptions, guestRegistrationLifecycleStatus(value));
+    }
+
     function optionList(options, current = "") {
       return options.map(([value, label]) =>
         `<option value="${escapeHtml(value)}" ${String(current || "") === value ? "selected" : ""}>${escapeHtml(label)}</option>`
@@ -3045,7 +3067,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestCrmStatusOptions(current = "new") {
-      const selected = guestRegistrationLifecycleValues.includes(current) ? current : "contacted";
+      const selected = guestRegistrationLifecycleStatus(current);
       return optionList(guestRegistrationLifecycleOptions, selected);
     }
 
@@ -3936,17 +3958,34 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return `<option value="${escapeHtml(value)}" ${value === selectedValue ? "selected" : ""}>${escapeHtml(label)}</option>`;
     }
 
+    function recordStatusFilterOptions(type = state.type, selectedValue = "all") {
+      const options = type === "contacts"
+        ? lifecycleStageOptions
+        : type === "guest"
+          ? guestRegistrationLifecycleOptions
+          : [
+              ["new", "New"],
+              ["contacted", "Contacted"],
+              ["confirmed", "Confirmed"],
+              ["accepted", "Accepted"],
+              ["waitlist", "Waitlist"],
+              ["declined", "Declined"],
+              ["bad-fit", "Bad Fit"]
+            ];
+      return [
+        optionMarkup("all", "All statuses", selectedValue),
+        ...options.map(([value, label]) => optionMarkup(value, label, selectedValue))
+      ].join("");
+    }
+
     function renderRecordFilterOptions() {
+      const selectedStatus = statusFilter.value || "all";
       const selectedEvent = eventFilter.value || "all";
       const selectedCompany = companyFilter.value || "all";
       const events = new Map();
       const companies = new Map();
-      for (const option of statusFilter.options) {
-        const hideForGuest = state.type === "guest" && option.value !== "all" && !guestRegistrationLifecycleValues.includes(option.value);
-        option.hidden = hideForGuest;
-        option.disabled = hideForGuest;
-        if (hideForGuest && statusFilter.value === option.value) statusFilter.value = "all";
-      }
+      statusFilter.innerHTML = recordStatusFilterOptions(state.type, selectedStatus);
+      if (selectedStatus !== "all" && statusFilter.value !== selectedStatus) statusFilter.value = "all";
 
       for (const row of state.rows || []) {
         const company = String(row.company || "").trim();
@@ -5858,7 +5897,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <td>
             ${state.type === "contacts" ? `<select class="inline-select" data-contact-field="lifecycleStage" data-contact-key="${escapeHtml(row.key)}">
               ${optionList(lifecycleStageOptions, row.lifecycleStage || "guest")}
-            </select>` : state.type === "guest" ? `<span class="pill">${escapeHtml(statusLabel(row.crmStatus || "new"))}</span>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
+            </select>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
               ${state.type === "guest" ? guestCrmStatusOptions(row.crmStatus) : crmStatusOptions(row.crmStatus)}
             </select>`}
           </td>
@@ -7166,7 +7205,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (guestEventStatusKey) {
         const existing = state.rows.find((row) => row.key === guestEventStatusKey);
         saveRegistrant(guestEventStatusKey, {
-          crmStatus: event.target.value,
+          crmStatus: guestRegistrationLifecycleStatus(event.target.value),
           crmNotes: existing?.crmNotes || ""
         });
         return;
@@ -7179,8 +7218,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const activeKey = key || tierKey;
       const existing = state.rows.find((row) => row.key === activeKey);
       const noteField = rowsElement.querySelector(`[data-notes-key="${CSS.escape(activeKey)}"]`);
+      const nextCrmStatus = key && state.type === "guest"
+        ? guestRegistrationLifecycleStatus(event.target.value)
+        : key
+          ? event.target.value
+          : existing?.crmStatus;
       saveRegistrant(activeKey, {
-        crmStatus: key ? event.target.value : existing?.crmStatus,
+        crmStatus: nextCrmStatus,
         memberTier: tierKey ? event.target.value : existing?.memberTier,
         crmNotes: noteField ? noteField.value : existing?.crmNotes || ""
       });
