@@ -526,6 +526,14 @@ function cleanString(value, max = maxFieldLength) {
     : "";
 }
 
+function cleanEventNotes(record = {}) {
+  return cleanString(record?.eventNotes || record?.registrationNotes || "", 4000);
+}
+
+function cleanPreRegistrationNotes(record = {}) {
+  return cleanString(record?.preRegistrationNotes || record?.matrixNotes || record?.engagementNotes || record?.notes || "", 4000);
+}
+
 function safeFileSegment(value, fallback = "file") {
   const clean = String(value || "")
     .trim()
@@ -1638,6 +1646,9 @@ function normalizeRecord(key, record) {
       ? cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.status, "contacted")
       : allowedStatuses.has(record?.crmStatus) ? record.crmStatus : "new",
     crmNotes: cleanString(record?.crmNotes),
+    eventNotes: cleanEventNotes(record),
+    registrationNotes: cleanEventNotes(record),
+    preRegistrationNotes: cleanPreRegistrationNotes(record),
     crmUpdatedAt: cleanString(record?.crmUpdatedAt),
     crmUpdatedBy: cleanString(record?.crmUpdatedBy),
     manualPartner: record?.manualPartner === true,
@@ -1968,6 +1979,7 @@ function contactFromRegistrant(row = {}, type = "") {
       partnerRegistrationType: cleanOptionalRegistrationType(row.partnerRegistrationType || row.registrationRole),
       registrationRole: cleanGuestRegistrationType(row.registrationRole || row.partnerRegistrationType || row.guestRegistrationType),
       role: roleLabelForRow(row, type),
+      eventNotes: cleanEventNotes(row) || (type === "guest" ? cleanString(row.crmNotes, 4000) : ""),
       publicationUseName: row.publicationUseName === true,
       publicationUseCompany: row.publicationUseCompany === true,
       registeredAt: cleanString(row.createdAt),
@@ -4040,7 +4052,10 @@ function normalizeInviteCode(key, record) {
     usedByEmail: cleanString(record?.usedByEmail || record?.usedBy).toLowerCase(),
     usedFor: cleanString(record?.usedFor || record?.eventName),
     usedForDate: cleanString(record?.usedForDate || record?.eventDate),
-    registrationId: cleanString(record?.registrationId)
+    registrationId: cleanString(record?.registrationId),
+    eventNotes: cleanEventNotes(record),
+    registrationNotes: cleanEventNotes(record),
+    preRegistrationNotes: cleanPreRegistrationNotes(record)
   };
 }
 
@@ -4066,6 +4081,9 @@ async function enrichInviteUsage(env, invites, types = ["member", "guest", "part
       crmStatus: registrationStatus,
       guestStatus: registrationStatus,
       registrationStatus,
+      eventNotes: cleanEventNotes(row) || (row ? cleanString(row.crmNotes, 4000) : "") || cleanEventNotes(invite),
+      registrationNotes: cleanEventNotes(row) || (row ? cleanString(row.crmNotes, 4000) : "") || cleanEventNotes(invite),
+      preRegistrationNotes: cleanPreRegistrationNotes(invite),
       usedByName: cleanString(invite.usedByName || row?.name),
       usedByEmail: cleanString(invite.usedByEmail || row?.email || invite.usedBy).toLowerCase(),
       usedFor: cleanString(row?.eventName || invite.usedFor || invite.eventName),
@@ -4227,6 +4245,7 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.guestStatus || record?.registrationStatus, "pending-engagement"),
     guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.crmStatus || record?.registrationStatus, "pending-engagement"),
     registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, "pending-engagement"),
+    preRegistrationNotes: cleanPreRegistrationNotes(record),
     guestRegistrationType,
     partnerRegistrationType: prospectType === "partner" ? guestRegistrationType : "",
     registrationRole: guestRegistrationType,
@@ -4433,6 +4452,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     invitedBy: cleanString(payload.invitedBy || payload.inviter || payload.invitedByName || actor, 180),
     linkedinConnectionStatus: cleanGuestMatrixOption(payload.linkedinConnectionStatus || payload.connectionStatus, allowedGuestMatrixLinkedInStatuses, "unknown"),
     registrationRequestStatus: cleanGuestMatrixOption(payload.registrationRequestStatus || payload.inviteStage || payload.inviteStatus, allowedGuestMatrixRegistrationRequestStatuses, "not-sent"),
+    preRegistrationNotes: cleanPreRegistrationNotes(payload),
     createdAt,
     createdBy: actor,
     updatedAt: createdAt,
@@ -4478,6 +4498,8 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.crmStatus = status;
     next.guestStatus = status;
     next.registrationStatus = status;
+  } else if (field === "preRegistrationNotes" || field === "eventNotes") {
+    next.preRegistrationNotes = cleanString(payload.value, 4000);
   } else {
     throw new Error("Unsupported tracked person field.");
   }
@@ -4497,6 +4519,38 @@ async function deleteGuestMatrixProspect(env, payload = {}) {
   if (!existing) throw new Error("Tracked person was not found.");
   await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
   return normalizeGuestMatrixProspect(key, existing, isPartnerProspect ? "partner" : "guest");
+}
+
+async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteValue = "", actor = "", now = new Date().toISOString()) {
+  const note = cleanString(noteValue, 4000);
+  const inviteCode = cleanCode(record.code || record.inviteCode);
+  const registrationId = cleanString(record.registrationId);
+  const email = cleanString(record.usedByEmail || record.usedBy || record.intendedGuestEmail || record.invitedEmail || record.guestEmail || record.partnerContactEmail).toLowerCase();
+  const typeCandidates = record.type === "partner" || record.partnerContactEmail
+    ? ["partner"]
+    : ["guest", "member"];
+
+  for (const type of typeCandidates) {
+    const rows = await registrants(env, type);
+    const row = rows.find((entry) =>
+      (registrationId && (entry.key === registrationId || entry.id === registrationId)) ||
+      (inviteCode && cleanCode(entry.inviteCode) === inviteCode && (!email || cleanString(entry.email).toLowerCase() === email))
+    );
+    if (!row) continue;
+    const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+      ...crmRow,
+      key: undefined,
+      crmType: registrantTypes[type].crmType,
+      eventNotes: note,
+      registrationNotes: note,
+      crmUpdatedAt: now,
+      crmUpdatedBy: actor
+    }));
+    return true;
+  }
+
+  return false;
 }
 
 async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
@@ -4526,6 +4580,15 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.crmStatus = status;
       next.guestStatus = status;
       next.registrationStatus = status;
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "preRegistrationNotes")) {
+      next.preRegistrationNotes = cleanString(change.preRegistrationNotes, 4000);
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "eventNotes")) {
+      const eventNotes = cleanString(change.eventNotes, 4000);
+      next.eventNotes = eventNotes;
+      next.registrationNotes = eventNotes;
+      await updateRegistrantEventNotesForMatrixChange(env, next, eventNotes, actor, now);
     }
     next.updatedAt = now;
     next.updatedBy = actor;
@@ -7189,6 +7252,11 @@ export async function onRequestPost({ request, env, data }) {
     return json({ error: "Enter a valid partner email." }, { status: 400 });
   }
   const partnerCompany = cleanString(payload?.partnerCompany || payload?.company, 240);
+  const hasEventNotesPayload = Object.prototype.hasOwnProperty.call(payload || {}, "eventNotes") ||
+    Object.prototype.hasOwnProperty.call(payload || {}, "registrationNotes");
+  const eventNotes = hasEventNotesPayload
+    ? cleanString(payload?.eventNotes || payload?.registrationNotes, 4000)
+    : cleanEventNotes(crmRow);
   const next = {
     ...crmRow,
     key: undefined,
@@ -7202,7 +7270,9 @@ export async function onRequestPost({ request, env, data }) {
     phone: type === "partner" ? cleanString(payload?.phone, 80) : crmRow.phone,
     partnerTier: type === "partner" ? cleanString(payload?.partnerTier, 120) || crmRow.partnerTier || "Partner Candidate" : crmRow.partnerTier,
     memberTier: type === "member" ? cleanString(payload?.memberTier, 120) || crmRow.memberTier || "Fellow" : crmRow.memberTier,
-    crmNotes: cleanString(payload?.crmNotes),
+    crmNotes: type === "guest" ? cleanString(crmRow.crmNotes, 4000) : cleanString(payload?.crmNotes, 4000),
+    eventNotes: type === "guest" ? eventNotes : cleanEventNotes(payload) || cleanEventNotes(crmRow),
+    registrationNotes: type === "guest" ? eventNotes : cleanEventNotes(payload) || cleanEventNotes(crmRow),
     crmUpdatedAt: new Date().toISOString(),
     crmUpdatedBy: access.email
   };
