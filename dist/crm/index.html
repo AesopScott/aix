@@ -1813,10 +1813,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           LinkedIn profile
           <input id="guestMatrixAddLinkedIn" name="linkedinProfileUrl" type="url" placeholder="https://www.linkedin.com/in/...">
         </label>
-        <label>
-          Owner
-          <input id="guestMatrixAddOwner" name="invitedBy" type="text" placeholder="Owner">
-        </label>
         <button type="submit" id="guestMatrixAddSubmit">Add Before Invite</button>
       </form>
       <form class="guest-matrix-controls" id="guestMatrixFilters">
@@ -3654,6 +3650,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         id,
         invite,
         matrixOnly,
+        partnerRow,
         eventKey,
         eventName,
         eventMeta: guestMatrixEventMeta(invite),
@@ -3986,8 +3983,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       <td>${escapeHtml(row.invitedBy)}</td>
                       <td>
                         ${row.matrixOnly ? '<span class="pill warn">No invite link yet</span>' : `<code>${escapeHtml(row.code || "No code")}</code>`}
-                        <div class="matrix-muted">${escapeHtml(row.url || "Tracked before invite")}</div>
+                        <div class="matrix-muted">${row.matrixOnly ? "Create one when this person is ready for an invite." : escapeHtml(row.url || "Tracked before invite")}</div>
                         <div class="guest-matrix-actions">
+                          ${row.matrixOnly ? `<button class="compact secondary" type="button" data-create-guest-matrix-invite-id="${escapeHtml(row.id)}">Create one</button>` : ""}
                           ${!isPartnerMatrix() && !row.matrixOnly && row.invite.key ? `<button class="compact secondary" type="button" data-reminder-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-reminder-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}" ${row.email ? "" : "disabled title=\"No email address on file for this invite\""}>Reminder Email</button>` : ""}
                         </div>
                       </td>
@@ -7052,7 +7050,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         linkedinUrl: formData.get("linkedinProfileUrl") || "",
         partnerContactName: partnerMode ? formData.get("intendedGuestName") || "" : "",
         partnerContactEmail: partnerMode ? formData.get("intendedGuestEmail") || "" : "",
-        invitedBy: formData.get("invitedBy") || ""
+        invitedBy: ""
       };
     }
 
@@ -7085,11 +7083,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         const keepEvent = guestMatrixAddEvent.value;
-        const keepOwner = guestMatrixAddForm.querySelector('[name="invitedBy"]')?.value || "";
         guestMatrixAddForm.reset();
         guestMatrixAddEvent.value = keepEvent;
-        const ownerInput = guestMatrixAddForm.querySelector('[name="invitedBy"]');
-        if (ownerInput) ownerInput.value = keepOwner;
         updateGuestMatrixAddShowOptions();
         renderGuestMatrix();
         setNotice(`Tracking ${data.prospect?.intendedGuestName || data.prospect?.intendedGuestEmail || data.prospect?.linkedinProfileUrl || payload.intendedGuestName || matrixEntityLabel()} before invite.`, "ok");
@@ -7129,6 +7124,62 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       } catch (error) {
         showErrorNotice(error, `Tracked ${matrixEntityLabel()} could not be removed.`);
       }
+    }
+
+    function meaningfulMatrixValue(value = "") {
+      const text = String(value || "").trim();
+      return text && text !== "Not recorded" && text !== "Name not recorded" && text !== "No email recorded" && text !== "No event assigned" ? text : "";
+    }
+
+    function setFormFieldValue(form, selector, value = "") {
+      const field = form?.querySelector(selector);
+      if (!field) return;
+      field.value = meaningfulMatrixValue(value);
+    }
+
+    function setSelectValueIfPresent(select, value = "") {
+      const nextValue = meaningfulMatrixValue(value);
+      if (!select || !nextValue) return;
+      if ([...select.options].some((option) => option.value === nextValue)) select.value = nextValue;
+    }
+
+    function prefillInviteFromGuestMatrixRow(row = {}) {
+      const invite = row.invite || {};
+      const partnerMode = row.partnerRow || invite.type === "partner" || invite.type === "partner-matrix-prospect";
+      const targetView = partnerMode ? "partner-invite-links" : "create-guest-invite-links";
+      const form = partnerMode ? partnerInviteForm : registrationInviteForm;
+      const eventSelect = partnerMode ? partnerInviteEvent : registrationInviteEvent;
+      const showSelect = partnerMode ? partnerInviteShow : registrationInviteShow;
+      const roleSelect = partnerMode ? partnerInviteType : registrationInviteType;
+      setActiveView(targetView);
+      setSelectValueIfPresent(eventSelect, invite.eventSlug || "");
+      setSelectValueIfPresent(showSelect, invite.eventShowId || invite.showId || invite.eventShow || row.showKey || "");
+      setSelectValueIfPresent(roleSelect, partnerMode
+        ? invite.partnerRegistrationType || invite.registrationRole || ""
+        : invite.guestRegistrationType || invite.registrationRole || invite.type || "");
+      if (partnerMode) {
+        setFormFieldValue(form, '[name="partnerCompany"]', row.company || invite.partnerCompany || invite.company || "");
+        setFormFieldValue(form, '[name="partnerContactName"]', row.name || invite.partnerContactName || invite.intendedGuestName || "");
+        setFormFieldValue(form, '[name="partnerContactEmail"]', row.email || invite.partnerContactEmail || invite.intendedGuestEmail || "");
+      } else {
+        setFormFieldValue(form, '[name="intendedGuestName"]', row.name || invite.intendedGuestName || invite.invitedName || "");
+        setFormFieldValue(form, '[name="intendedGuestEmail"]', row.email || invite.intendedGuestEmail || invite.invitedEmail || "");
+      }
+      setFormFieldValue(form, '[name="invitedBy"]', row.invitedBy || invite.invitedBy || invite.createdBy || "");
+      if (partnerMode) {
+        updatePartnerInviteSubmit();
+      } else {
+        updateRegistrationInviteSubmit();
+      }
+      const missingEvent = !meaningfulMatrixValue(eventSelect?.value);
+      setNotice(
+        missingEvent
+          ? `Invite form opened with known ${partnerMode ? "partner" : "guest"} details. Select an event to create the link.`
+          : `Invite form opened with known ${partnerMode ? "partner" : "guest"} details.`,
+        "ok"
+      );
+      const focusTarget = missingEvent ? eventSelect : form?.querySelector('button[type="submit"]');
+      focusTarget?.focus();
     }
 
     async function sendInviteReminder(key, type) {
@@ -7877,6 +7928,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     guestMatrixList.addEventListener("click", async (event) => {
+      const createInviteButton = event.target.closest("[data-create-guest-matrix-invite-id]");
+      if (createInviteButton) {
+        const row = guestMatrixRows().find((candidate) => candidate.id === createInviteButton.dataset.createGuestMatrixInviteId);
+        if (row) prefillInviteFromGuestMatrixRow(row);
+        return;
+      }
       const reminderButton = event.target.closest("[data-reminder-guest-matrix-invite-key]");
       if (reminderButton) {
         await sendInviteReminder(
