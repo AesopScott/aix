@@ -1578,14 +1578,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <button class="active" type="button" data-view="contacts">Contacts</button>
         <div class="side-nav-group guest-pipeline" aria-label="Guest pipeline">
           <button type="button" data-view="guest-invite-links">Guest Invites</button>
-          <button type="button" data-view="guest-matrix">Guest Matrix</button>
+          <button type="button" data-view="guest-matrix">Add Guests Before Invite</button>
           <button type="button" data-view="create-guest-invite-links">Create Guest Invite Links</button>
           <button type="button" data-view="guest">Guest Registration</button>
           <button type="button" data-view="member">Members</button>
         </div>
         <div class="side-nav-group partner-pipeline" aria-label="Partner pipeline">
           <button type="button" data-view="partner-invite-links">Create Partner Registration Links</button>
-          <button type="button" data-view="partner-matrix">Partner Matrix</button>
+          <button type="button" data-view="partner-matrix">Add Partners Before Invite</button>
           <button type="button" data-view="partner">Partner Registration</button>
           <button type="button" data-view="manual-partners">Add Partner</button>
           <button type="button" data-view="partners-company">Partners by Company</button>
@@ -1771,9 +1771,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div>
         <p class="eyebrow" id="guestMatrixEyebrow">Guest invite matrix</p>
         <h2 id="guestMatrixTitle">Event-by-event guest engagement</h2>
-        <p id="guestMatrixDescription">Review tracked guests by event, LinkedIn connection, registration request, and registration completion.</p>
+        <p id="guestMatrixDescription">Add individual guests before an invite link exists, then track LinkedIn connection, invite request, and registration completion.</p>
       </div>
-      <form class="guest-matrix-add-form" id="guestMatrixAddForm">
+      <form class="guest-matrix-add-form" id="guestMatrixAddForm" aria-label="Add a person before sending an invite">
         <label>
           Event
           <select id="guestMatrixAddEvent" name="eventSlug" required>
@@ -1809,10 +1809,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <input id="guestMatrixAddEmail" name="intendedGuestEmail" type="email" placeholder="guest@example.com">
         </label>
         <label>
+          LinkedIn profile
+          <input id="guestMatrixAddLinkedIn" name="linkedinProfileUrl" type="url" placeholder="https://www.linkedin.com/in/...">
+        </label>
+        <label>
           Owner
           <input id="guestMatrixAddOwner" name="invitedBy" type="text" placeholder="Owner">
         </label>
-        <button type="submit" id="guestMatrixAddSubmit">Track Person</button>
+        <button type="submit" id="guestMatrixAddSubmit">Add Before Invite</button>
       </form>
       <form class="guest-matrix-controls" id="guestMatrixFilters">
         <label>
@@ -1840,12 +1844,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Status
           <select id="guestMatrixStatusFilter">
             <option value="all">All statuses</option>
-            <option value="linkedin-not-connected">LinkedIn not connected</option>
-            <option value="linkedin-connected">LinkedIn connected</option>
-            <option value="registration-request-needed">Registration request needed</option>
-            <option value="registration-request-sent">Registration request sent</option>
+            <option value="contacted">Contacted</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="declined">Declined</option>
+            <option value="bad-fit">Bad Fit</option>
+            <option value="invited">Invited</option>
             <option value="registered">Registered</option>
-            <option value="not-registered">Not registered</option>
+            <option value="alternate">Alternate</option>
+            <option value="attended">Attended</option>
+            <option value="no-show">No Show</option>
           </select>
         </label>
         <label>
@@ -1865,7 +1872,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div>
         <p class="eyebrow">Guest invite links</p>
         <h2>Create event-tied guest invite links</h2>
-        <p>Select an event, choose whether the guest is featured on-screen, and generate the link to send.</p>
+        <p>Select an event and enter the individual guest before generating or emailing the link.</p>
+      </div>
+      <div class="invite-result visible">
+        <span>Need to track someone before creating their invite link?</span>
+        <div class="invite-result-actions">
+          <button class="secondary" type="button" data-open-view="guest-matrix">Add Guest Before Invite</button>
+        </div>
       </div>
       <form class="invite-grid registration-invite-grid" id="registrationInviteForm">
         <label>
@@ -1914,13 +1927,27 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <div>
         <p class="eyebrow">Partner event invites</p>
         <h2>Create hidden partner registration links</h2>
-        <p>Select an event, choose whether the partner is featured on-screen, and generate the link to send.</p>
+        <p>Select an event and enter the partner contact before generating or emailing the link.</p>
+      </div>
+      <div class="invite-result visible">
+        <span>Need to track a partner contact before creating their invite link?</span>
+        <div class="invite-result-actions">
+          <button class="secondary" type="button" data-open-view="partner-matrix">Add Partner Before Invite</button>
+        </div>
       </div>
       <form class="invite-grid" id="partnerInviteForm">
         <label>
           Event
           <select id="partnerInviteEvent" name="eventSlug" required>
             <option value="">Loading events...</option>
+          </select>
+        </label>
+        <label>
+          Show time
+          <select id="partnerInviteShow" name="eventShowId">
+            <option value="both">Both shows</option>
+            <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
+            <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
           </select>
         </label>
         <label>
@@ -1933,6 +1960,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <label>
           Partner company
           <input id="partnerInviteCompany" name="partnerCompany" placeholder="Partner company">
+        </label>
+        <label>
+          Partner contact
+          <input id="partnerInviteName" name="partnerContactName" placeholder="Partner contact name" autocomplete="name">
         </label>
         <label>
           Partner email
@@ -2102,6 +2133,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const guestMatrixAddCompany = document.querySelector("#guestMatrixAddCompany");
     const guestMatrixAddName = document.querySelector("#guestMatrixAddName");
     const guestMatrixAddEmail = document.querySelector("#guestMatrixAddEmail");
+    const guestMatrixAddLinkedIn = document.querySelector("#guestMatrixAddLinkedIn");
     const guestMatrixAddSubmit = document.querySelector("#guestMatrixAddSubmit");
     const guestMatrixEyebrow = document.querySelector("#guestMatrixEyebrow");
     const guestMatrixTitle = document.querySelector("#guestMatrixTitle");
@@ -2120,6 +2152,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const guestMatrixList = document.querySelector("#guestMatrixList");
     const partnerInviteForm = document.querySelector("#partnerInviteForm");
     const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
+    const partnerInviteShow = document.querySelector("#partnerInviteShow");
+    const partnerInviteType = document.querySelector("#partnerInviteType");
     const partnerInviteSubmit = document.querySelector("#partnerInviteSubmit");
     const partnerInviteSendEmail = document.querySelector("#partnerInviteSendEmail");
     const partnerInviteList = document.querySelector("#partnerInviteList");
@@ -2171,14 +2205,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["bounced", "Bounced"],
       ["declined", "Declined"]
     ];
-    const guestMatrixRegistrationStatusOptions = [
-      ["not-registered", "Not registered"],
-      ["opened", "Opened"],
-      ["started", "Started"],
-      ["registered", "Registered"],
-      ["waitlisted", "Waitlisted"],
-      ["declined", "Declined"]
-    ];
     const guestRegistrationLifecycleOptions = [
       ["contacted", "Contacted"],
       ["confirmed", "Confirmed"],
@@ -2191,6 +2217,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["no-show", "No Show"]
     ];
     const guestRegistrationLifecycleValues = guestRegistrationLifecycleOptions.map(([value]) => value);
+    const guestMatrixRegistrationStatusOptions = guestRegistrationLifecycleOptions;
     let activeView = "contacts";
     let registrationInviteStatusFilter = "all";
     let partnerCompanyPage = 1;
@@ -3367,24 +3394,42 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixRegistrationStatus(invite = {}) {
-      if (isRegistrationInviteRegistered(invite)) return "registered";
+      const draft = guestMatrixDraft(invite);
       const raw = normalizedMatrixValue(firstCleanValue(
+        draft.guestStatus,
+        draft.crmStatus,
+        draft.registrationStatus,
+        invite.guestStatus,
+        invite.crmStatus,
         invite.registrationStatus,
         invite.guestRegistrationStatus,
+        invite.lifecycleStatus,
+        invite.lifecycleStage,
         invite.status
       ));
-      if (raw === "used") return "registered";
-      if (["declined", "canceled"].includes(raw)) return "declined";
-      if (raw === "waitlisted") return "waitlisted";
-      if (raw === "opened") return "opened";
-      if (raw === "started") return "started";
-      return "not-registered";
+      const aliases = {
+        new: "contacted",
+        opened: "invited",
+        started: "invited",
+        waitlisted: "alternate",
+        waitlist: "alternate",
+        canceled: "declined",
+        cancelled: "declined",
+        used: "registered",
+        tracking: "contacted",
+        active: "invited"
+      };
+      const normalized = aliases[raw] || raw;
+      if (guestRegistrationLifecycleValues.includes(normalized)) return normalized;
+      if (isRegistrationInviteRegistered(invite)) return "registered";
+      if (invite.code || invite.inviteCode) return "invited";
+      return "contacted";
     }
 
     function guestMatrixStageClass(value = "") {
-      if (["registered", "connected", "sent", "reminder-sent"].includes(value)) return "good";
-      if (["not-registered", "not-connected", "not-sent", "unknown", "connection-requested", "drafted"].includes(value)) return "warn";
-      if (["declined", "unreachable", "bounced", "waitlisted"].includes(value)) return "neutral";
+      if (["confirmed", "registered", "attended"].includes(value)) return "good";
+      if (["contacted", "invited", "alternate"].includes(value)) return "warn";
+      if (["declined", "bad-fit", "no-show"].includes(value)) return "neutral";
       return "";
     }
 
@@ -3427,10 +3472,26 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return firstCleanValue(invite.intendedGuestEmail, invite.invitedEmail, invite.guestEmail, invite.partnerContactEmail, invite.usedByEmail, invite.usedBy);
     }
 
-    function guestMatrixPersonKey(email = "", name = "") {
-      const cleanEmail = String(email || "").trim().toLowerCase();
+    function guestMatrixPersonLinkedIn(invite = {}) {
+      return firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl);
+    }
+
+    function normalizedLinkedInKey(value = "") {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, "")
+        .replace(/^www\./, "")
+        .replace(/[?#].*$/, "")
+        .replace(/\/+$/, "");
+    }
+
+    function guestMatrixPersonKey(person = {}, email = "", name = "") {
+      const linkedIn = normalizedLinkedInKey(guestMatrixPersonLinkedIn(person));
+      if (linkedIn) return `linkedin:${linkedIn}`;
+      const cleanEmail = String(email || guestMatrixPersonEmail(person) || "").trim().toLowerCase();
       if (cleanEmail) return `email:${cleanEmail}`;
-      return `name:${normalizedMatrixValue(name)}`;
+      return `name:${normalizedMatrixValue(name || guestMatrixPersonName(person))}`;
     }
 
     function guestMatrixDateTime(value = "") {
@@ -3482,7 +3543,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function guestMatrixFutureEventsForPerson(invite = {}) {
       const email = guestMatrixPersonEmail(invite);
       const name = guestMatrixPersonName(invite);
-      const personKey = guestMatrixPersonKey(email, name);
+      const personKey = guestMatrixPersonKey(invite, email, name);
       const entries = new Map();
       const addEntry = (entry) => {
         if (!entry) return;
@@ -3499,7 +3560,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const matrixProspects = isPartnerMatrix() ? state.partnerMatrixProspects || [] : state.guestMatrixProspects || [];
 
       inviteCodes.forEach((candidate) => {
-        const candidateKey = guestMatrixPersonKey(guestMatrixPersonEmail(candidate), guestMatrixPersonName(candidate));
+        const candidateKey = guestMatrixPersonKey(candidate, guestMatrixPersonEmail(candidate), guestMatrixPersonName(candidate));
         if (candidateKey !== personKey) return;
         addEntry(guestMatrixEventEntry({
           status: isRegistrationInviteRegistered(candidate) ? "Registered" : "Invited",
@@ -3510,7 +3571,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       });
 
       matrixProspects.forEach((candidate) => {
-        const candidateKey = guestMatrixPersonKey(guestMatrixPersonEmail(candidate), guestMatrixPersonName(candidate));
+        const candidateKey = guestMatrixPersonKey(candidate, guestMatrixPersonEmail(candidate), guestMatrixPersonName(candidate));
         if (candidateKey !== personKey) return;
         addEntry(guestMatrixEventEntry({
           status: "Tracking",
@@ -3522,7 +3583,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
       (state.rows || []).forEach((contact) => {
         if (!matrixContactTypeMatches(contact)) return;
-        const contactKey = guestMatrixPersonKey(contact.email, contact.name);
+        const contactKey = guestMatrixPersonKey(contact, contact.email, contact.name);
         if (contactKey !== personKey) return;
         (contact.events || []).forEach((event) => {
           addEntry(guestMatrixEventEntry({
@@ -3555,10 +3616,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixRegistrationDetail(row = {}) {
-      if (row.registered) {
+      if (row.registrationStatus === "registered" || row.registrationStatus === "attended") {
         return [row.invite.usedFor || row.eventName, row.invite.usedForDate || row.invite.eventDate, row.invite.usedForShow || row.invite.eventShowLabel].filter(Boolean).join(" | ");
       }
-      return "No completed registration found in CRM.";
+      return matrixOptionLabel(guestMatrixRegistrationStatusOptions, row.registrationStatus);
     }
 
     function guestMatrixRowForInvite(invite = {}) {
@@ -3585,6 +3646,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         showLabel: guestMatrixShowMeta(invite),
         name: guestMatrixPersonName(invite),
         email,
+        company: firstCleanValue(invite.company, invite.organization, invite.partnerCompany),
+        title: firstCleanValue(invite.title, invite.jobTitle, invite.roleTitle),
+        linkedinProfileUrl: firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl),
+        createdAt: firstCleanValue(invite.createdAt, invite.addedAt),
+        updatedAt: firstCleanValue(invite.updatedAt, invite.crmUpdatedAt),
         invitedBy: firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy, "Not recorded"),
         role,
         roleKey: guestMatrixRoleKey(invite),
@@ -3600,13 +3666,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           guestMatrixEventMeta(invite),
           guestMatrixPersonName(invite),
           email,
+          firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl),
+          firstCleanValue(invite.title, invite.jobTitle, invite.roleTitle),
+          firstCleanValue(invite.createdAt, invite.addedAt),
           firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy),
           firstCleanValue(invite.company, invite.organization, invite.partnerCompany),
           firstCleanValue(invite.code, invite.inviteCode),
           role,
           guestMatrixShowMeta(invite),
-          matrixOptionLabel(guestMatrixLinkedInConnectionOptions, linkedinConnection),
-          matrixOptionLabel(guestMatrixRegistrationRequestOptions, registrationRequest),
           matrixOptionLabel(guestMatrixRegistrationStatusOptions, registrationStatus),
           ...futureEvents.flatMap((event) => [event.status, event.eventName, event.eventDate, event.eventShow])
         ].join(" ").toLowerCase()
@@ -3614,13 +3681,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixRowIdentity(row = {}) {
-      return `${row.eventKey}|${guestMatrixPersonKey(row.email, row.name)}`;
+      return `${row.eventKey}|${guestMatrixPersonKey(row, row.email, row.name)}`;
     }
 
     function guestMatrixRowIdentityKeys(row = {}) {
       const keys = [];
+      const linkedIn = normalizedLinkedInKey(row.linkedinProfileUrl);
       const email = String(row.email || "").trim().toLowerCase();
       const name = normalizedMatrixValue(row.name);
+      if (linkedIn) keys.push(`${row.eventKey}|linkedin:${linkedIn}`);
       if (email) keys.push(`${row.eventKey}|email:${email}`);
       if (name && name !== "name-not-recorded") keys.push(`${row.eventKey}|name:${name}`);
       if (!keys.length) keys.push(guestMatrixRowIdentity(row));
@@ -3636,9 +3705,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return [
         row.registered ? 10000 : 0,
         row.matrixOnly ? 0 : 5000,
-        guestMatrixStatusRank(row.registrationStatus, ["registered", "started", "opened", "waitlisted", "not-registered", "declined"]) * 100,
-        guestMatrixStatusRank(row.registrationRequest, ["reminder-sent", "sent", "drafted", "not-sent", "bounced", "declined"]) * 10,
-        guestMatrixStatusRank(row.linkedinConnection, ["connected", "connection-requested", "not-connected", "unknown", "declined", "unreachable"])
+        guestMatrixStatusRank(row.registrationStatus, ["attended", "registered", "confirmed", "invited", "contacted", "alternate", "declined", "bad-fit", "no-show"]) * 100
       ].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
     }
 
@@ -3666,9 +3733,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function mergeGuestMatrixDuplicateRows(left, right) {
       const primary = guestMatrixRowRank(right) > guestMatrixRowRank(left) ? right : left;
       const secondary = primary === right ? left : right;
-      const linkedinConnection = bestMatrixValue(primary.linkedinConnection, secondary.linkedinConnection, ["connected", "connection-requested", "not-connected", "unknown", "declined", "unreachable"]);
-      const registrationRequest = bestMatrixValue(primary.registrationRequest, secondary.registrationRequest, ["reminder-sent", "sent", "drafted", "not-sent", "bounced", "declined"]);
-      const registrationStatus = bestMatrixValue(primary.registrationStatus, secondary.registrationStatus, ["registered", "started", "opened", "waitlisted", "not-registered", "declined"]);
+      const registrationStatus = bestMatrixValue(primary.registrationStatus, secondary.registrationStatus, ["attended", "registered", "confirmed", "invited", "contacted", "alternate", "declined", "bad-fit", "no-show"]);
       const futureEvents = mergeGuestMatrixFutureEvents(primary.futureEvents, secondary.futureEvents);
       return {
         ...primary,
@@ -3676,8 +3741,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         showLabel: primary.showLabel || secondary.showLabel,
         roleKey: primary.roleKey || secondary.roleKey,
         role: primary.role || secondary.role,
-        linkedinConnection,
-        registrationRequest,
+        createdAt: [primary.createdAt, secondary.createdAt].filter(Boolean).sort()[0] || primary.createdAt || secondary.createdAt,
+        updatedAt: [primary.updatedAt, secondary.updatedAt].filter(Boolean).sort().slice(-1)[0] || primary.updatedAt || secondary.updatedAt,
+        linkedinConnection: primary.linkedinConnection || secondary.linkedinConnection,
+        registrationRequest: primary.registrationRequest || secondary.registrationRequest,
         registrationStatus,
         registered: primary.registered || secondary.registered || registrationStatus === "registered",
         futureEvents,
@@ -3726,12 +3793,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixStatusMatch(row, status) {
-      if (status === "linkedin-not-connected") return row.linkedinConnection !== "connected";
-      if (status === "linkedin-connected") return row.linkedinConnection === "connected";
-      if (status === "registration-request-needed") return !["sent", "reminder-sent", "declined"].includes(row.registrationRequest);
-      if (status === "registration-request-sent") return ["sent", "reminder-sent"].includes(row.registrationRequest);
-      if (status === "registered") return row.registered;
-      if (status === "not-registered") return !row.registered;
+      if (status !== "all" && guestRegistrationLifecycleValues.includes(status)) return row.registrationStatus === status;
       return true;
     }
 
@@ -3787,8 +3849,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const stats = [
         ["Event groups", new Set(rows.map((row) => row.eventKey)).size],
         [isPartnerMatrix() ? "Tracked partners" : "Tracked people", rows.filter((row) => row.name !== "Name not recorded").length],
-        ["LinkedIn connected", rows.filter((row) => row.linkedinConnection === "connected").length],
-        ["Requests sent", rows.filter((row) => ["sent", "reminder-sent"].includes(row.registrationRequest)).length],
+        ["Contacted", rows.filter((row) => row.registrationStatus === "contacted").length],
+        ["Invited", rows.filter((row) => row.registrationStatus === "invited").length],
         ["Registered", rows.filter((row) => row.registered).length]
       ];
       guestMatrixSummary.innerHTML = stats.map(([label, value]) => `
@@ -3809,8 +3871,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (guestMatrixTitle) guestMatrixTitle.textContent = isPartnerMatrix() ? "Event-by-event partner engagement" : "Event-by-event guest engagement";
       if (guestMatrixDescription) {
         guestMatrixDescription.textContent = isPartnerMatrix()
-          ? "Review tracked partners by event, LinkedIn connection, registration request, and registration completion."
-          : "Review tracked guests by event, LinkedIn connection, registration request, and registration completion.";
+          ? "Review tracked partners by event and guest registration status."
+          : "Review tracked guests by event and guest registration status.";
       }
       const rows = guestMatrixRows();
       syncGuestMatrixEventFilter(rows);
@@ -3843,9 +3905,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       guestMatrixList.innerHTML = [...groups.values()].map((groupRows) => {
         const first = groupRows[0];
         const registered = groupRows.filter((row) => row.registered).length;
-        const linkedInConnected = groupRows.filter((row) => row.linkedinConnection === "connected").length;
-        const requestsSent = groupRows.filter((row) => ["sent", "reminder-sent"].includes(row.registrationRequest)).length;
-        const requestsNeeded = groupRows.filter((row) => guestMatrixStatusMatch(row, "registration-request-needed")).length;
+        const contacted = groupRows.filter((row) => row.registrationStatus === "contacted").length;
+        const invited = groupRows.filter((row) => row.registrationStatus === "invited").length;
+        const confirmed = groupRows.filter((row) => row.registrationStatus === "confirmed").length;
         return `
           <article class="guest-matrix-event">
             <div class="guest-matrix-event-header">
@@ -3855,10 +3917,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               </div>
               <div class="guest-matrix-pills">
                 <span class="pill">${groupRows.length} tracked</span>
-                <span class="pill good">${linkedInConnected} LinkedIn connected</span>
-                <span class="pill good">${requestsSent} requests sent</span>
+                <span class="pill warn">${contacted} contacted</span>
+                <span class="pill warn">${invited} invited</span>
+                <span class="pill good">${confirmed} confirmed</span>
                 <span class="pill good">${registered} registered</span>
-                <span class="pill ${requestsNeeded ? "warn" : "good"}">${requestsNeeded} need request</span>
               </div>
             </div>
             <div class="table-wrap guest-matrix-table">
@@ -3867,9 +3929,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                   <tr>
                     <th>${isPartnerMatrix() ? "Partner" : "Guest"}</th>
                     <th>Role</th>
-                    <th>LinkedIn Connection</th>
-                    <th>Registration Request</th>
-                    <th>Registration</th>
+                    <th>Guest Status</th>
+                    <th>Created</th>
                     <th>Future Events</th>
                     <th>Invited By</th>
                     <th>Code / Link</th>
@@ -3882,7 +3943,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                         <div class="matrix-person-row">
                           <div class="matrix-person">
                             <strong>${escapeHtml(row.name)}</strong>
+                            ${row.title || row.company ? `<span>${escapeHtml([row.title, row.company].filter(Boolean).join(" | "))}</span>` : ""}
                             ${row.email ? `<span>${escapeHtml(row.email)}</span>` : '<span>No email recorded</span>'}
+                            ${row.linkedinProfileUrl ? `<a href="${escapeHtml(row.linkedinProfileUrl)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}
                           </div>
                           ${row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Remove tracked ${escapeHtml(matrixEntityLabel())}" aria-label="Remove tracked ${escapeHtml(matrixEntityLabel())} ${escapeHtml(row.name)}" data-delete-guest-matrix-prospect-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-prospect-label="${escapeHtml(row.name || row.email || row.invite.key)}">${trashIconMarkup()}</button>` : ""}
                           ${!row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Delete invite record" aria-label="Delete invite record for ${escapeHtml(row.name)}" data-delete-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}">${trashIconMarkup()}</button>` : ""}
@@ -3893,20 +3956,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                         ${row.showLabel ? `<div class="matrix-muted">${escapeHtml(row.showLabel)}</div>` : ""}
                       </td>
                       <td>
-                        <select class="matrix-select" data-guest-matrix-field="linkedinConnection" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="LinkedIn connection status for ${escapeHtml(row.name)}">
-                          ${matrixOptionList(guestMatrixLinkedInConnectionOptions, row.linkedinConnection)}
+                        <select class="matrix-select ${guestMatrixStageClass(row.registrationStatus)}" data-guest-matrix-field="guestStatus" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Guest status for ${escapeHtml(row.name)}">
+                          ${matrixOptionList(guestMatrixRegistrationStatusOptions, row.registrationStatus)}
                         </select>
-                      </td>
-                      <td>
-                        <select class="matrix-select" data-guest-matrix-field="registrationRequest" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Registration request status for ${escapeHtml(row.name)}">
-                          ${matrixOptionList(guestMatrixRegistrationRequestOptions, row.registrationRequest)}
-                        </select>
-                      </td>
-                      <td>
-                        <div class="guest-matrix-pills">
-                          <span class="pill ${guestMatrixStageClass(row.registrationStatus)}">${escapeHtml(matrixOptionLabel(guestMatrixRegistrationStatusOptions, row.registrationStatus))}</span>
-                        </div>
                         <div class="matrix-muted">${escapeHtml(guestMatrixRegistrationDetail(row))}</div>
+                      </td>
+                      <td>
+                        ${row.createdAt ? `<span>${escapeHtml(formatDate(row.createdAt))}</span>` : '<span class="matrix-muted">Not recorded</span>'}
                       </td>
                       <td>${guestMatrixFutureEventsMarkup(row.futureEvents)}</td>
                       <td>${escapeHtml(row.invitedBy)}</td>
@@ -4034,6 +4090,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       registrationInviteSendEmail.textContent = `Generate ${role} Link + Send Email`;
     }
 
+    function updatePartnerInviteSubmit() {
+      if (!partnerInviteType || !partnerInviteShow) return;
+      const role = guestRegistrationTypeLabel(partnerInviteType.value || "partner");
+      const currentShow = partnerInviteShow.value || "both";
+      const featuredPartner = isSingleShowRegistrationRole(partnerInviteType.value);
+      partnerInviteShow.innerHTML = [
+        featuredPartner ? "" : '<option value="both">Both shows</option>',
+        '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
+        '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
+      ].join("");
+      partnerInviteShow.value = featuredPartner && currentShow === "both" ? "morning" : currentShow;
+      if (!partnerInviteShow.value) partnerInviteShow.value = "morning";
+      partnerInviteSubmit.textContent = `Generate ${role} Link`;
+      partnerInviteSendEmail.textContent = `Generate ${role} Link + Send Email`;
+    }
+
     function updateGuestMatrixAddShowOptions() {
       if (!guestMatrixAddShow || !guestMatrixAddType) return;
       const currentShow = guestMatrixAddShow.value || "both";
@@ -4062,8 +4134,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!guestMatrixAddShow.value) guestMatrixAddShow.value = "morning";
       if (guestMatrixAddName) guestMatrixAddName.placeholder = isPartnerMatrix() ? "Partner contact name" : "Guest name";
       if (guestMatrixAddEmail) guestMatrixAddEmail.placeholder = isPartnerMatrix() ? "partner@company.com" : "guest@example.com";
+      if (guestMatrixAddLinkedIn) guestMatrixAddLinkedIn.placeholder = "https://www.linkedin.com/in/...";
       if (guestMatrixAddCompany) guestMatrixAddCompany.closest("label").hidden = !isPartnerMatrix();
-      if (guestMatrixAddSubmit) guestMatrixAddSubmit.textContent = isPartnerMatrix() ? "Track Partner" : "Track Person";
+      if (guestMatrixAddSubmit) guestMatrixAddSubmit.textContent = isPartnerMatrix() ? "Add Partner Before Invite" : "Add Guest Before Invite";
     }
 
     function mergeInviteList(existingInvites, newInvites) {
@@ -4195,6 +4268,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const qrUrl = qrCodeUrl(url);
         const role = guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.registrationRole || "partner");
         const invitedBy = invite.invitedBy || invite.inviter || invite.invitedByName || invite.createdBy || "Not recorded";
+        const partnerContact = invite.partnerContactName || invite.intendedGuestName || invite.invitedName || invite.guestName || "";
         return `
           <div class="invite-row">
             <div class="invite-qr">
@@ -4204,6 +4278,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <div>
               <strong>${escapeHtml(invite.eventName || "Partner event invite")}</strong>
               <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(inviteStatusText(invite))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}</p>
+              ${partnerContact ? `<p>Partner contact: ${escapeHtml(partnerContact)}${invite.partnerContactEmail ? ` | ${escapeHtml(invite.partnerContactEmail)}` : ""}</p>` : ""}
               <p>Invited by: ${escapeHtml(invitedBy)}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
@@ -6148,7 +6223,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     async function runStarterDiscoveryToTarget(button) {
       const originalLabel = button?.textContent || "";
       const targetNewCompanies = 50;
-      const perStepNewCap = 10;
+      const perStepNewCap = 5;
       prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
       const sourceQueue = (prospectingState?.starterSources || [])
         .filter((source) => source.sourceId)
@@ -6183,7 +6258,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             body: JSON.stringify({
               action: "run-partner-prospect-starter-sources",
               sourceIds: source?.sourceId ? [source.sourceId] : [],
-              limitPerSource: 50,
+              limitPerSource: 8,
+              crawlPageLimit: 1,
               maxSources: 1,
               targetNewCompanies: Math.min(perStepNewCap, remaining)
             })
@@ -6235,7 +6311,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     async function runEmergingDiscoveryToTarget(button) {
       const originalLabel = button?.textContent || "";
       const targetCompanies = 50;
-      const perStepNewCap = 10;
+      const perStepNewCap = 5;
       prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
       const sourceQueue = (prospectingState?.emergingSources || [])
         .filter((source) => source.sourceId)
@@ -6270,7 +6346,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             body: JSON.stringify({
               action: "run-partner-prospect-emerging-sources",
               sourceIds: source?.sourceId ? [source.sourceId] : [],
-              limitPerSource: 50,
+              limitPerSource: 8,
+              crawlPageLimit: 1,
               maxSources: 1,
               targetNewCompanies: Math.min(perStepNewCap, remaining)
             })
@@ -6332,21 +6409,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ? {
           action: "run-partner-prospect-emerging-sources",
           sourceIds: [source.sourceId],
-          limitPerSource: 50,
+          limitPerSource: 8,
+          crawlPageLimit: 1,
           maxSources: 1,
-          targetNewCompanies: 10
+          targetNewCompanies: 5
         }
         : source.kind === "starter"
           ? {
             action: "run-partner-prospect-starter-source",
             sourceId: source.sourceId,
-            limit: 50,
-            targetNewCompanies: 10
+            limit: 8,
+            crawlPageLimit: 1,
+            targetNewCompanies: 5
           }
           : {
             action: "rerun-partner-prospect-source",
             sourceId: source.sourceId,
-            limit: 50
+            limit: 8,
+            crawlPageLimit: 1
           };
       await runProspectingButtonAction(button, "Running source...", () => postPartnerProspecting(payload, `${source.sourceName} processed.`, {
         pendingMessage: `Running ${source.sourceName}. This can take a few seconds.`,
@@ -6948,6 +7028,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         company: formData.get("company") || "",
         intendedGuestName: formData.get("intendedGuestName") || "",
         intendedGuestEmail: formData.get("intendedGuestEmail") || "",
+        linkedinProfileUrl: formData.get("linkedinProfileUrl") || "",
+        linkedinUrl: formData.get("linkedinProfileUrl") || "",
         partnerContactName: partnerMode ? formData.get("intendedGuestName") || "" : "",
         partnerContactEmail: partnerMode ? formData.get("intendedGuestEmail") || "" : "",
         invitedBy: formData.get("invitedBy") || ""
@@ -6962,8 +7044,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         setNotice(`Select an event before adding a tracked ${matrixEntityLabel()}.`, "error");
         return;
       }
-      if (!String(payload.intendedGuestName || "").trim() && !String(payload.intendedGuestEmail || "").trim()) {
-        setNotice(`Enter a name or email before adding a tracked ${matrixEntityLabel()}.`, "error");
+      if (!String(payload.intendedGuestName || "").trim() && !String(payload.intendedGuestEmail || "").trim() && !String(payload.linkedinProfileUrl || "").trim()) {
+        setNotice(`Enter a name, email, or LinkedIn profile before adding a tracked ${matrixEntityLabel()}.`, "error");
         return;
       }
       setNotice(`Adding tracked ${matrixEntityLabel()}...`);
@@ -6994,13 +7076,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (ownerInput) ownerInput.value = keepOwner;
         updateGuestMatrixAddShowOptions();
         renderGuestMatrix();
-        setNotice(`Tracking ${data.prospect?.intendedGuestName || data.prospect?.intendedGuestEmail || payload.intendedGuestName || matrixEntityLabel()} before invite.`, "ok");
+        setNotice(`Tracking ${data.prospect?.intendedGuestName || data.prospect?.intendedGuestEmail || data.prospect?.linkedinProfileUrl || payload.intendedGuestName || matrixEntityLabel()} before invite.`, "ok");
       } catch (error) {
         showErrorNotice(error, `Tracked ${matrixEntityLabel()} could not be added.`);
       } finally {
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent = isPartnerMatrix() ? "Track Partner" : "Track Person";
+      if (submitButton) {
+        submitButton.disabled = false;
+          submitButton.textContent = isPartnerMatrix() ? "Add Partner Before Invite" : "Add Guest Before Invite";
         }
       }
     }
@@ -7615,7 +7697,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         await postPartnerProspecting({
           action: "rerun-partner-prospect-source",
           sourceId: rerunSourceButton.dataset.rerunProspectSource,
-          limit: 20
+          limit: 8,
+          crawlPageLimit: 1
         }, "Discovery source rerun complete.");
         return;
       }
@@ -7636,8 +7719,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         await runProspectingButtonAction(runStarterSourceButton, "Running...", () => postPartnerProspecting({
           action: "run-partner-prospect-starter-source",
           sourceId: runStarterSourceButton.dataset.runStarterProspectSource,
-          limit: 50,
-          targetNewCompanies: 10
+          limit: 8,
+          crawlPageLimit: 1,
+          targetNewCompanies: 5
         }, "Starter source processed.", {
           pendingMessage: `Running ${sourceName}. This can take a few seconds.`,
           resultTitle: `${sourceName} run complete`,
@@ -7883,9 +7967,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function buildPartnerInvitePayload(sendEmail) {
       const formData = new FormData(partnerInviteForm);
       const selected = partnerInviteEvent.selectedOptions[0];
+      const partnerRegistrationType = formData.get("partnerRegistrationType") || "partner";
+      const selectedShowId = eventShowId(formData.get("eventShowId") || partnerInviteShow?.value || "both");
+      const showId = isSingleShowRegistrationRole(partnerRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
       return {
         action: "create-partner-invite",
         ...Object.fromEntries(formData.entries()),
+        eventShowId: showId,
+        eventShowLabel: eventShowLabel(showId),
+        eventShowTime: eventShowTime(showId),
+        eventTime: eventShowTime(showId),
         eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
         eventDate: selected?.dataset.eventDate || "",
         sendEmail: Boolean(sendEmail)
@@ -7928,6 +8019,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         partnerInviteSubmit.disabled = false;
         partnerInviteSendEmail.disabled = false;
         if (busyButton) busyButton.textContent = idleText;
+        updatePartnerInviteSubmit();
       }
     }
 
@@ -7947,6 +8039,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         idleText: partnerInviteSendEmail.textContent
       });
     });
+    partnerInviteType?.addEventListener("change", updatePartnerInviteSubmit);
+    updatePartnerInviteSubmit();
 
     function buildRegistrationInvitePayload(sendEmail) {
       const formData = new FormData(registrationInviteForm);
