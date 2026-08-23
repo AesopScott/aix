@@ -265,7 +265,7 @@ const eventSponsorCrawlStarterSources = [
   description,
   category: "Event Sponsor Crawls",
   crawlSponsorPages: true,
-  crawlPageLimit: 6
+  crawlPageLimit: 1
 }));
 const emergingCompanyDiscoverySegment = "emerging-10-100";
 const emergingCompanyTargetEmployeeRange = "10-100";
@@ -753,6 +753,38 @@ function cleanLinkedInProfileUrl(value = "") {
   url.search = "";
   url.hash = "";
   return url.toString();
+}
+
+function linkedInProfileIdentity(value = "") {
+  return cleanLinkedInProfileUrl(value).toLowerCase().replace(/\/+$/, "");
+}
+
+function titleCaseWords(value = "") {
+  return cleanString(value, 240)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function nameFromLinkedInProfileUrl(value = "") {
+  const normalized = cleanLinkedInProfileUrl(value);
+  if (!normalized) return "";
+  try {
+    const url = new URL(normalized);
+    const slug = decodeURIComponent((url.pathname.match(/^\/(?:in|pub)\/([^/]+)/i)?.[1] || ""))
+      .replace(/\.(?:html?)$/i, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!slug) return "";
+    const tokens = slug
+      .split(" ")
+      .filter((token) => token && !/^\d+$/.test(token) && !/^[a-f0-9]{6,}$/i.test(token));
+    return titleCaseWords(tokens.slice(0, 4).join(" "));
+  } catch {
+    return "";
+  }
 }
 
 function sameRootDomain(left = "", right = "") {
@@ -1945,6 +1977,8 @@ function contactFromRegistrant(row = {}, type = "") {
 function contactKeyForInviteRecord(row = {}, source = "guest-invite") {
   const email = cleanString(row.email || row.intendedGuestEmail || row.invitedEmail || row.guestEmail || row.partnerContactEmail || row.usedByEmail || row.usedBy).toLowerCase();
   if (isEmail(email)) return `${registrantTypes.contacts.crmPrefix}${email}`;
+  const linkedIn = linkedInProfileIdentity(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl);
+  if (linkedIn) return `${registrantTypes.contacts.crmPrefix}linkedin:${safeFileSegment(linkedIn, "profile")}`;
   const id = cleanString(row.id || row.code || row.inviteCode || row.key || crypto.randomUUID(), 240);
   return `${registrantTypes.contacts.crmPrefix}pending:${safeFileSegment(source, "guest")}:${safeFileSegment(id, "person")}`;
 }
@@ -1991,8 +2025,8 @@ function contactFromInviteRecord(row = {}, source = "guest-invite") {
       registrationId: cleanString(row.registrationId),
       registrationType: source,
       role: roleLabelForRow({ ...row, guestRegistrationType: registrationRole, partnerRegistrationType: registrationRole }, isPartner ? "partner" : row.type === "member" ? "member" : "guest"),
-      registrationStatus: row.usedAt || row.usedBy || row.usedByEmail ? "confirmed" : "invited",
-      status: row.usedAt || row.usedBy || row.usedByEmail ? "confirmed" : "invited",
+      registrationStatus: cleanGuestRegistrationLifecycleStatus(row.crmStatus || row.guestStatus || row.registrationStatus, row.usedAt || row.usedBy || row.usedByEmail ? "registered" : "invited"),
+      status: cleanGuestRegistrationLifecycleStatus(row.crmStatus || row.guestStatus || row.registrationStatus, row.usedAt || row.usedBy || row.usedByEmail ? "registered" : "invited"),
       registeredAt: cleanString(row.usedAt),
       attended: false,
       attendanceStatus: "not_recorded"
@@ -2389,7 +2423,29 @@ async function prospectCompanies(env) {
   return rows.filter(Boolean).sort((a, b) => (b.partnerScore - a.partnerScore) || String(a.companyName).localeCompare(String(b.companyName)));
 }
 
-async function findProspectCompany(env, payload = {}) {
+async function findProspectCompanyDirect(env, payload = {}, config = null, options = {}) {
+  const keys = cleanArray([
+    cleanString(payload.key || payload.companyKey, 500),
+    cleanString(payload.companyId, 180) ? `${PARTNER_PROSPECT_COMPANY_PREFIX}${cleanString(payload.companyId, 180)}` : "",
+    `${PARTNER_PROSPECT_COMPANY_PREFIX}${prospectCompanyId(payload)}`
+  ], 6, 500);
+  const activeConfig = config || await partnerScoreConfig(env);
+  for (const key of keys) {
+    if (!key.startsWith(PARTNER_PROSPECT_COMPANY_PREFIX)) continue;
+    const record = await readRawRecord(env, key);
+    if (!record) continue;
+    const companyId = cleanString(record.companyId, 180) || key.replace(PARTNER_PROSPECT_COMPANY_PREFIX, "");
+    const people = options.includePeople === false ? [] : await prospectPeople(env, companyId);
+    return normalizeProspectCompany(key, record, people, activeConfig.weights);
+  }
+  return null;
+}
+
+async function findProspectCompany(env, payload = {}, options = {}) {
+  const direct = await findProspectCompanyDirect(env, payload, options.config || null, {
+    includePeople: options.includePeople !== false
+  });
+  if (direct || options.directOnly) return direct;
   return findProspectCompanyInList(await prospectCompanies(env), payload);
 }
 
@@ -2512,14 +2568,18 @@ async function saveProspectSource(env, payload = {}, actor = "") {
   return normalizeProspectSource(key, record);
 }
 
-async function saveProspectCompany(env, payload = {}, actor = "") {
+async function saveProspectCompany(env, payload = {}, actor = "", options = {}) {
   if (!cleanString(payload.companyName || payload.company || payload.name) &&
     !normalizeDomain(payload.canonicalDomain || payload.websiteUrl) &&
     !cleanString(payload.companyId || payload.key || payload.companyKey, 500)) {
     throw new Error("Company name or domain is required.");
   }
-  const existing = await findProspectCompany(env, payload);
   const config = await partnerScoreConfig(env);
+  const existing = await findProspectCompany(env, payload, {
+    directOnly: options.directOnly === true,
+    config,
+    includePeople: options.includePeople !== false
+  });
   const now = new Date().toISOString();
   const companyId = cleanString(existing?.companyId, 180) || prospectCompanyId(payload);
   const key = cleanString(existing?.key, 500) || `${PARTNER_PROSPECT_COMPANY_PREFIX}${companyId}`;
@@ -2584,7 +2644,8 @@ async function saveProspectCompany(env, payload = {}, actor = "") {
     updatedAt: now,
     updatedBy: actor || "crm"
   };
-  const normalized = normalizeProspectCompany(key, record, await prospectPeople(env, companyId), config.weights);
+  const people = options.includePeople === false ? [] : await prospectPeople(env, companyId);
+  const normalized = normalizeProspectCompany(key, record, people, config.weights);
   const next = {
     ...record,
     partnerScore: normalized.partnerScore,
@@ -2600,7 +2661,7 @@ async function saveProspectCompany(env, payload = {}, actor = "") {
   };
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
   if (scoreChanged) await writeProspectAudit(env, companyId, { actor, action: "score-override", from: previous?.partnerScoreOverride ?? "", to: normalized.partnerScoreOverride });
-  return normalizeProspectCompany(key, next, await prospectPeople(env, companyId), config.weights);
+  return normalizeProspectCompany(key, next, people, config.weights);
 }
 
 async function saveDiscoveredProspectCompany(env, payload = {}, actor = "", config = null) {
@@ -2987,8 +3048,8 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
     category: payload.category,
     description: payload.description
   }, actor);
-  const limit = cleanNumber(payload.limit, 25, 1, 75);
-  const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew || payload.targetRemaining || limit, limit, 1, 75);
+  const limit = cleanNumber(payload.limit, 8, 1, 8);
+  const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew || payload.targetRemaining || Math.min(limit, 5), Math.min(limit, 5), 1, 5);
   const now = new Date().toISOString();
   const debug = { accepted: [], rejected: [], skipped: [] };
   const debugRunId = `${companySlug(sourceName) || "source"}:${now}`;
@@ -2996,7 +3057,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
     const { html } = await fetchPublicHtml(sourceUrl);
     const title = htmlTitle(html);
     const shouldCrawlSponsorPages = sourceWantsSponsorCrawl({ ...source, ...payload }, payload);
-    const crawlPageLimit = cleanNumber(payload.crawlPageLimit || payload.maxSponsorPages || source.crawlPageLimit, 6, 0, 8);
+    const crawlPageLimit = cleanNumber(payload.crawlPageLimit || payload.maxSponsorPages || source.crawlPageLimit, 1, 0, 1);
     const discoveryPages = [{ url: sourceUrl, html, title, role: "source" }];
     if (shouldCrawlSponsorPages && crawlPageLimit > 0) {
       const sponsorPageUrls = extractSponsorCrawlLinks(html, sourceUrl, crawlPageLimit, debug);
@@ -3025,7 +3086,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       candidates: extractCompanyLinks(page.html, page.url, limit, debug)
     })), limit);
     const saved = [];
-    const existingCompanies = Array.isArray(payload.existingCompanies) ? payload.existingCompanies : await prospectCompanies(env);
+    const existingCompanies = Array.isArray(payload.existingCompanies) ? payload.existingCompanies : [];
     const seenCompanyIds = payload.seenCompanyIds instanceof Set
       ? payload.seenCompanyIds
       : new Set(existingCompanies.map((company) => company.companyId).filter(Boolean));
@@ -3050,7 +3111,8 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
         websiteUrl: candidate.websiteUrl
       };
       const candidateId = prospectCompanyId(candidatePayload);
-      const existing = findProspectCompanyInList(existingCompanies, candidatePayload);
+      let existing = findProspectCompanyInList(existingCompanies, candidatePayload);
+      if (!existing) existing = await findProspectCompanyDirect(env, candidatePayload, config, { includePeople: false });
       const sourceAttribution = discoverySourceAttribution({
         source,
         candidate,
@@ -3086,7 +3148,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
               ? `Found on ${sourceName}${candidate.sourceUrl && candidate.sourceUrl !== sourceUrl ? ` via ${candidate.sourceUrl}` : ""}; verify sponsorship level and spend manually.`
               : matchedExisting.sponsorshipNotes,
             mergeDiscoverySourceFields: true
-          }, actor);
+          }, actor, { directOnly: true, includePeople: false });
           const index = existingCompanies.findIndex((company) => company.companyId === updatedExisting.companyId);
           if (index >= 0) existingCompanies[index] = updatedExisting;
           taggedExisting += 1;
@@ -3305,23 +3367,24 @@ async function runStarterProspectSource(env, payload = {}, actor = "") {
   if (!source) throw new Error("Starter discovery source was not found.");
   return runSourceDiscovery(env, {
     ...source,
-    limit: payload.limit || 75,
-    targetNewCompanies: payload.targetNewCompanies || payload.targetNew || 50
+    limit: payload.limit || 8,
+    targetNewCompanies: payload.targetNewCompanies || payload.targetNew || 5,
+    crawlPageLimit: payload.crawlPageLimit ?? 1
   }, actor);
 }
 
 async function runStarterProspectSources(env, payload = {}, actor = "") {
   const selectedIds = cleanArray(payload.sourceIds || payload.starterSourceIds, 30, 180);
-  const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew, 50, 1, 200);
-  const maxSources = cleanNumber(payload.maxSources, partnerProspectStarterSources.length, 1, partnerProspectStarterSources.length);
-  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 75, 1, 75);
+  const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew, 5, 1, 5);
+  const maxSources = cleanNumber(payload.maxSources, 1, 1, 1);
+  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 8, 1, 8);
   const starterSources = await starterSourcesWithRunState(env);
   const selectedSet = new Set(selectedIds);
   const sources = selectedIds.length
     ? starterSources.filter((source) => selectedSet.has(source.sourceId) || selectedSet.has(companySlug(source.sourceName)))
     : starterSourcesForRun(starterSources, maxSources);
-  const existingCompanies = await prospectCompanies(env);
-  const seenCompanyIds = new Set(existingCompanies.map((company) => company.companyId).filter(Boolean));
+  const existingCompanies = [];
+  const seenCompanyIds = new Set();
   const results = [];
   for (const source of sources) {
     const remaining = targetNewCompanies - results.reduce((sum, result) => sum + Number(result.discovered || 0), 0);
@@ -3330,6 +3393,7 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
       const result = await runSourceDiscovery(env, {
         ...source,
         limit: limitPerSource,
+        crawlPageLimit: payload.crawlPageLimit ?? 1,
         targetRemaining: remaining,
         existingCompanies,
         seenCompanyIds
@@ -3373,16 +3437,16 @@ async function runStarterProspectSources(env, payload = {}, actor = "") {
 
 async function runEmergingProspectSources(env, payload = {}, actor = "") {
   const selectedIds = cleanArray(payload.sourceIds || payload.emergingSourceIds, 30, 180);
-  const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew, 50, 1, 200);
-  const maxSources = cleanNumber(payload.maxSources, emergingCompanyStarterSources.length, 1, emergingCompanyStarterSources.length);
-  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 50, 1, 75);
+  const targetNewCompanies = cleanNumber(payload.targetNewCompanies || payload.targetNew, 5, 1, 5);
+  const maxSources = cleanNumber(payload.maxSources, 1, 1, 1);
+  const limitPerSource = cleanNumber(payload.limitPerSource || payload.limit, 8, 1, 8);
   const emergingSources = await emergingSourcesWithRunState(env);
   const selectedSet = new Set(selectedIds);
   const sources = selectedIds.length
     ? emergingSources.filter((source) => selectedSet.has(source.sourceId) || selectedSet.has(companySlug(source.sourceName)))
     : starterSourcesForRun(emergingSources, maxSources);
-  const existingCompanies = await prospectCompanies(env);
-  const seenCompanyIds = new Set(existingCompanies.map((company) => company.companyId).filter(Boolean));
+  const existingCompanies = [];
+  const seenCompanyIds = new Set();
   const results = [];
   for (const source of sources) {
     const remaining = targetNewCompanies - results.reduce((sum, result) => sum + Number(result.discovered || 0), 0);
@@ -3391,6 +3455,7 @@ async function runEmergingProspectSources(env, payload = {}, actor = "") {
       const result = await runSourceDiscovery(env, {
         ...source,
         limit: limitPerSource,
+        crawlPageLimit: payload.crawlPageLimit ?? 1,
         targetRemaining: remaining,
         targetNewCompanies: remaining,
         discoverySegment: emergingCompanyDiscoverySegment,
@@ -3503,7 +3568,8 @@ async function rerunProspectSource(env, payload = {}, actor = "") {
     sourceName: source.sourceName,
     sourceType: source.sourceType,
     sourceUrl: source.sourceUrl,
-    limit: payload.limit || 20
+    limit: payload.limit || 8,
+    crawlPageLimit: payload.crawlPageLimit ?? 1
   }, actor);
 }
 
@@ -3950,9 +4016,13 @@ function normalizeInviteCode(key, record) {
     guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
     partnerRegistrationType: cleanOptionalRegistrationType(record?.partnerRegistrationType || record?.registrationRole),
     registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.partnerRegistrationType || record?.guestRegistrationType),
+    crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.guestStatus || record?.registrationStatus, record?.status === "used" ? "registered" : record?.code ? "invited" : "contacted"),
+    guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.crmStatus || record?.registrationStatus, record?.status === "used" ? "registered" : record?.code ? "invited" : "contacted"),
+    registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, record?.status === "used" ? "registered" : record?.code ? "invited" : "contacted"),
     linkedinConnectionStatus: cleanGuestMatrixOption(record?.linkedinConnectionStatus || record?.linkedInConnectionStatus || record?.connectionStatus, allowedGuestMatrixLinkedInStatuses, "unknown"),
     registrationRequestStatus: cleanGuestMatrixOption(record?.registrationRequestStatus || record?.inviteStage || record?.inviteStatus, allowedGuestMatrixRegistrationRequestStatuses, "not-sent"),
     partnerCompany: cleanString(record?.partnerCompany),
+    partnerContactName: cleanString(record?.partnerContactName || record?.intendedGuestName || record?.invitedName || record?.guestName),
     partnerContactEmail: cleanString(record?.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record?.partnerTier),
     invitedBy: cleanString(record?.invitedBy || record?.inviter || record?.invitedByName || record?.createdBy, 180),
@@ -4104,6 +4174,7 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
       : "";
   const intendedGuestName = isEmail(rawGuestName) ? "" : rawGuestName;
   const guestRegistrationType = matrixProspectRole(prospectType, record);
+  const linkedinProfileUrl = cleanLinkedInProfileUrl(record?.linkedinProfileUrl || record?.linkedInProfileUrl || record?.linkedinUrl || record?.linkedInUrl);
   const rawShowId = cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, "both");
   const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
   return {
@@ -4129,6 +4200,14 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     partnerContactEmail: prospectType === "partner" ? intendedGuestEmail : "",
     partnerContactName: prospectType === "partner" ? intendedGuestName : "",
     partnerCompany: prospectType === "partner" ? cleanString(record?.partnerCompany || record?.company, 240) : "",
+    company: cleanString(record?.company || record?.partnerCompany, 240),
+    title: cleanString(record?.title || record?.jobTitle || record?.roleTitle, 240),
+    linkedinProfileUrl,
+    linkedinUrl: linkedinProfileUrl,
+    enrichmentSource: cleanString(record?.enrichmentSource, 120),
+    crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.guestStatus || record?.registrationStatus, "contacted"),
+    guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.crmStatus || record?.registrationStatus, "contacted"),
+    registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, "contacted"),
     guestRegistrationType,
     partnerRegistrationType: prospectType === "partner" ? guestRegistrationType : "",
     registrationRole: guestRegistrationType,
@@ -4164,21 +4243,134 @@ async function partnerMatrixProspects(env) {
   return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
+function matrixPersonEnrichmentFromRecord(record = {}, linkedinProfileUrl = "", extra = {}) {
+  const name = cleanString(
+    record.name ||
+      record.fullName ||
+      record.intendedGuestName ||
+      record.invitedName ||
+      record.guestName ||
+      record.partnerContactName,
+    240
+  );
+  return {
+    intendedGuestName: name,
+    intendedGuestEmail: cleanString(
+      record.email ||
+        record.intendedGuestEmail ||
+        record.invitedEmail ||
+        record.guestEmail ||
+        record.partnerContactEmail,
+      240
+    ).toLowerCase(),
+    company: cleanString(record.company || record.organization || record.partnerCompany || extra.company, 240),
+    title: cleanString(record.title || record.jobTitle || record.roleTitle, 240),
+    linkedinProfileUrl,
+    enrichmentSource: cleanString(extra.source || record.source || "crm-linkedin-match", 120)
+  };
+}
+
+function mergeMatrixPersonEnrichment(fallback = {}, found = {}) {
+  return {
+    ...fallback,
+    ...found,
+    intendedGuestName: cleanString(found.intendedGuestName, 240) || cleanString(fallback.intendedGuestName, 240),
+    intendedGuestEmail: cleanString(found.intendedGuestEmail, 240).toLowerCase() || cleanString(fallback.intendedGuestEmail, 240).toLowerCase(),
+    company: cleanString(found.company, 240) || cleanString(fallback.company, 240),
+    title: cleanString(found.title, 240) || cleanString(fallback.title, 240),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(found.linkedinProfileUrl || fallback.linkedinProfileUrl),
+    enrichmentSource: cleanString(found.enrichmentSource || fallback.enrichmentSource, 120)
+  };
+}
+
+async function enrichMatrixPersonFromLinkedIn(env, rawLinkedInProfileUrl = "") {
+  const linkedinProfileUrl = cleanLinkedInProfileUrl(rawLinkedInProfileUrl);
+  if (!linkedinProfileUrl) return {};
+  const identity = linkedInProfileIdentity(linkedinProfileUrl);
+  const fallback = {
+    intendedGuestName: nameFromLinkedInProfileUrl(linkedinProfileUrl),
+    linkedinProfileUrl,
+    enrichmentSource: "linkedin-profile-slug"
+  };
+  const profileMatches = (record = {}) => {
+    const values = [
+      record.linkedinProfileUrl,
+      record.linkedInProfileUrl,
+      record.linkedinUrl,
+      record.linkedInUrl
+    ];
+    return values.some((value) => linkedInProfileIdentity(value) === identity);
+  };
+  const prefixes = [
+    registrantTypes.contacts.crmPrefix,
+    registrantTypes.guest.crmPrefix,
+    registrantTypes.guest.legacyPrefix,
+    registrantTypes.member.crmPrefix,
+    registrantTypes.member.legacyPrefix,
+    registrantTypes.partner.crmPrefix,
+    registrantTypes.partner.legacyPrefix,
+    GUEST_MATRIX_PROSPECT_PREFIX,
+    PARTNER_MATRIX_PROSPECT_PREFIX,
+    PARTNER_PROSPECT_PERSON_PREFIX
+  ];
+  const keys = [...new Set((await Promise.all(prefixes.map((prefix) => listKeys(env, prefix).catch(() => [])))).flat())];
+  for (const key of keys) {
+    const record = await readRawRecord(env, key);
+    if (!record) continue;
+    if (profileMatches(record)) {
+      let extra = { source: "crm-linkedin-match" };
+      if (key.startsWith(PARTNER_PROSPECT_PERSON_PREFIX) && record.companyId) {
+        const company = await readRawRecord(env, `${PARTNER_PROSPECT_COMPANY_PREFIX}${cleanString(record.companyId, 180)}`);
+        extra = { ...extra, company: company?.companyName || company?.company || company?.name };
+      }
+      return mergeMatrixPersonEnrichment(fallback, matrixPersonEnrichmentFromRecord(record, linkedinProfileUrl, extra));
+    }
+    const event = Array.isArray(record.events) ? record.events.find(profileMatches) : null;
+    if (event) {
+      return mergeMatrixPersonEnrichment(
+        fallback,
+        matrixPersonEnrichmentFromRecord({ ...record, ...event }, linkedinProfileUrl, { source: "crm-contact-event-linkedin-match" })
+      );
+    }
+  }
+  return fallback;
+}
+
 async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "guest") {
   const prospectType = type === "partner" ? "partner" : "guest";
   const eventSlug = cleanString(payload.eventSlug, 200);
   const eventName = cleanString(payload.eventName, 240);
   if (!eventSlug && !eventName) throw new Error("Select an event before adding a tracked person.");
 
-  const rawGuestName = cleanString(payload.intendedGuestName || payload.invitedName || payload.guestName || payload.partnerContactName || payload.name, 240);
-  const rawGuestEmail = cleanString(payload.intendedGuestEmail || payload.invitedEmail || payload.guestEmail || payload.partnerContactEmail || payload.email, 240).toLowerCase();
+  const rawLinkedInProfileUrl = cleanString(payload.linkedinProfileUrl || payload.linkedInProfileUrl || payload.linkedinUrl || payload.linkedInUrl, 500);
+  const linkedinProfileUrl = cleanLinkedInProfileUrl(rawLinkedInProfileUrl);
+  if (rawLinkedInProfileUrl && !linkedinProfileUrl) throw new Error("Enter a valid LinkedIn profile URL.");
+  const enrichment = linkedinProfileUrl ? await enrichMatrixPersonFromLinkedIn(env, linkedinProfileUrl) : {};
+  const rawGuestName = cleanString(
+    payload.intendedGuestName ||
+      payload.invitedName ||
+      payload.guestName ||
+      payload.partnerContactName ||
+      payload.name ||
+      enrichment.intendedGuestName,
+    240
+  );
+  const rawGuestEmail = cleanString(
+    payload.intendedGuestEmail ||
+      payload.invitedEmail ||
+      payload.guestEmail ||
+      payload.partnerContactEmail ||
+      payload.email ||
+      enrichment.intendedGuestEmail,
+    240
+  ).toLowerCase();
   const intendedGuestEmail = isEmail(rawGuestEmail)
     ? rawGuestEmail
     : isEmail(rawGuestName)
       ? rawGuestName.toLowerCase()
       : "";
   const intendedGuestName = isEmail(rawGuestName) ? "" : rawGuestName;
-  if (!intendedGuestName && !intendedGuestEmail) throw new Error("Enter a name or email before adding a tracked person.");
+  if (!intendedGuestName && !intendedGuestEmail && !linkedinProfileUrl) throw new Error("Enter a name, email, or LinkedIn profile before adding a tracked person.");
 
   const guestRegistrationType = matrixProspectRole(prospectType, payload);
   const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
@@ -4207,7 +4399,15 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     guestName: intendedGuestName,
     partnerContactEmail: prospectType === "partner" ? intendedGuestEmail : "",
     partnerContactName: prospectType === "partner" ? intendedGuestName : "",
-    partnerCompany: prospectType === "partner" ? cleanString(payload.partnerCompany || payload.company, 240) : "",
+    partnerCompany: prospectType === "partner" ? cleanString(payload.partnerCompany || payload.company || enrichment.company, 240) : "",
+    company: cleanString(payload.company || payload.partnerCompany || enrichment.company, 240),
+    title: cleanString(payload.title || payload.jobTitle || enrichment.title, 240),
+    linkedinProfileUrl,
+    linkedinUrl: linkedinProfileUrl,
+    enrichmentSource: cleanString(enrichment.enrichmentSource || (linkedinProfileUrl ? "linkedin-profile-url" : ""), 120),
+    crmStatus: cleanGuestRegistrationLifecycleStatus(payload.crmStatus || payload.guestStatus || payload.registrationStatus, "contacted"),
+    guestStatus: cleanGuestRegistrationLifecycleStatus(payload.guestStatus || payload.crmStatus || payload.registrationStatus, "contacted"),
+    registrationStatus: cleanGuestRegistrationLifecycleStatus(payload.registrationStatus || payload.guestStatus || payload.crmStatus, "contacted"),
     guestRegistrationType,
     partnerRegistrationType: prospectType === "partner" ? guestRegistrationType : "",
     registrationRole: guestRegistrationType,
@@ -4219,16 +4419,33 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     updatedAt: createdAt,
     updatedBy: actor
   };
-  const key = `${matrixProspectPrefix(prospectType)}${createdAt}:${id}`;
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
-  const prospect = normalizeGuestMatrixProspect(key, record, prospectType);
+  const identityId = linkedInProfileIdentity(linkedinProfileUrl)
+    ? `linkedin:${safeFileSegment(linkedInProfileIdentity(linkedinProfileUrl), "profile")}`
+    : id;
+  const eventSegment = safeFileSegment(`${eventSlug || eventName}:${eventShowId}`, "event");
+  const key = `${matrixProspectPrefix(prospectType)}${eventSegment}:${identityId}`;
+  const previous = await readRawRecord(env, key);
+  const nextRecord = {
+    ...(previous || {}),
+    ...record,
+    id: cleanString(previous?.id, 200) || record.id,
+    linkedinConnectionStatus: cleanString(previous?.linkedinConnectionStatus) || record.linkedinConnectionStatus,
+    registrationRequestStatus: cleanString(previous?.registrationRequestStatus) || record.registrationRequestStatus,
+    createdAt: cleanString(previous?.createdAt) || record.createdAt,
+    createdBy: cleanString(previous?.createdBy) || record.createdBy,
+    updatedAt: createdAt,
+    updatedBy: actor
+  };
+  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(nextRecord));
+  const prospect = normalizeGuestMatrixProspect(key, nextRecord, prospectType);
   await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
   return prospect;
 }
 
 async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   const key = cleanString(payload.key, 500);
-  if (!key || !key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)) throw new Error("Tracked person was not found.");
+  const prospectType = key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner" : "guest";
+  if (!key || (!key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) && !key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX))) throw new Error("Tracked person was not found.");
   const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
   if (!existing) throw new Error("Tracked person was not found.");
   const field = cleanString(payload.field, 80);
@@ -4237,13 +4454,20 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.linkedinConnectionStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
   } else if (field === "registrationRequest") {
     next.registrationRequestStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixRegistrationRequestStatuses, existing.registrationRequestStatus || "not-sent");
+  } else if (field === "guestStatus") {
+    const status = cleanGuestRegistrationLifecycleStatus(payload.value, existing.crmStatus || existing.guestStatus || "contacted");
+    next.crmStatus = status;
+    next.guestStatus = status;
+    next.registrationStatus = status;
   } else {
     throw new Error("Unsupported tracked person field.");
   }
   next.updatedAt = new Date().toISOString();
   next.updatedBy = actor;
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
-  return normalizeGuestMatrixProspect(key, next);
+  const prospect = normalizeGuestMatrixProspect(key, next, prospectType);
+  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
+  return prospect;
 }
 
 async function deleteGuestMatrixProspect(env, payload = {}) {
@@ -4278,9 +4502,24 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     if (Object.prototype.hasOwnProperty.call(change, "registrationRequest")) {
       next.registrationRequestStatus = cleanGuestMatrixOption(change.registrationRequest, allowedGuestMatrixRegistrationRequestStatuses, existing.registrationRequestStatus || "not-sent");
     }
+    if (Object.prototype.hasOwnProperty.call(change, "guestStatus")) {
+      const status = cleanGuestRegistrationLifecycleStatus(change.guestStatus, existing.crmStatus || existing.guestStatus || "contacted");
+      next.crmStatus = status;
+      next.guestStatus = status;
+      next.registrationStatus = status;
+    }
     next.updatedAt = now;
     next.updatedBy = actor;
     await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+    const normalized = key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)
+      ? normalizeGuestMatrixProspect(key, next, "partner")
+      : key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)
+        ? normalizeGuestMatrixProspect(key, next, "guest")
+        : normalizeInviteCode(key, next);
+    const source = key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)
+      ? key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner-matrix-prospect" : "partner-invite"
+      : key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) ? "guest-matrix-prospect" : `${normalized.type || "guest"}-invite`;
+    await upsertContactFromInviteRecord(env, normalized, source, actor);
     updatedCount += 1;
   }
   return { updatedCount };
@@ -4414,9 +4653,10 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   }
   if (!code) throw new Error("Could not generate a unique partner invite code.");
 
-  const eventShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
-  const eventTime = eventShowTime(eventShowId);
   const partnerRegistrationType = cleanGuestRegistrationType(payload.partnerRegistrationType || payload.registrationRole || "partner");
+  const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
+  const eventShowId = requiresSingleShowRegistrationRole(partnerRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
+  const eventTime = eventShowTime(eventShowId);
   const createdAt = new Date().toISOString();
   const record = {
     type: "partner",
@@ -4432,6 +4672,7 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
     eventShowTime: eventTime,
     invitedBy: cleanString(payload.invitedBy || payload.inviter || payload.invitedByName || actor, 180),
     partnerCompany: cleanString(payload.partnerCompany, 240),
+    partnerContactName: cleanString(payload.partnerContactName || payload.intendedGuestName || payload.invitedName || payload.name, 240),
     partnerContactEmail: cleanString(payload.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(payload.partnerTier, 120),
     partnerRegistrationType,
@@ -6536,7 +6777,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = /select an event|name or email/i.test(error.message || "") ? 400 : 500;
+      const status = /select an event|name, email|name or email|LinkedIn profile/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Tracked person could not be added." }, { status });
     }
   }
@@ -6553,7 +6794,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = /select an event|name or email/i.test(error.message || "") ? 400 : 500;
+      const status = /select an event|name, email|name or email|LinkedIn profile/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Tracked partner could not be added." }, { status });
     }
   }
