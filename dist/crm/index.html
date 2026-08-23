@@ -3484,6 +3484,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (actualRegistrationComplete && ["pending-engagement", "contacted", "confirmed", "invited"].includes(normalized)) {
         return "registered";
       }
+      if (!actualRegistrationComplete && ["registered", "attended"].includes(normalized)) {
+        return invite.code || invite.inviteCode ? "invited" : "contacted";
+      }
       if (guestRegistrationLifecycleValues.includes(normalized)) return normalized;
       if (actualRegistrationComplete) return "registered";
       if (invite.code || invite.inviteCode) return "invited";
@@ -4317,6 +4320,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function isRegistrationInviteRegistered(invite) {
+      if (invite.actualRegistrationRegistered === true || invite.registrationMatched === true) return true;
+      if (invite.actualRegistrationRegistered === false || invite.registrationMatched === false) return false;
       const status = String(invite.status || "").toLowerCase();
       return status === "used" || status === "registered" || Boolean(invite.usedAt || invite.usedByName || invite.usedByEmail || invite.usedBy);
     }

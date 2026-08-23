@@ -4067,20 +4067,22 @@ async function enrichInviteUsage(env, invites, types = ["member", "guest", "part
       (invite.registrationId && entry.id === invite.registrationId) ||
       (invite.code && entry.inviteCode === invite.code && (!usedEmail || entry.email === usedEmail))
     );
-    const registered = Boolean(row || invite.usedAt || invite.usedBy || invite.usedByName || invite.usedByEmail);
+    const registered = Boolean(row);
     const currentStatus = cleanGuestRegistrationLifecycleStatus(
       row?.crmStatus || invite.crmStatus || invite.guestStatus || invite.registrationStatus,
       invite.code ? "invited" : "contacted"
     );
-    const registrationStatus = registered && ["pending-engagement", "contacted", "confirmed", "invited"].includes(currentStatus)
-      ? "registered"
-      : currentStatus;
+    const registrationStatus = registered
+      ? ["pending-engagement", "contacted", "confirmed", "invited"].includes(currentStatus) ? "registered" : currentStatus
+      : currentStatus === "registered" || currentStatus === "attended" ? invite.code ? "invited" : "contacted" : currentStatus;
     return {
       ...invite,
       status: registered ? "used" : invite.status,
       crmStatus: registrationStatus,
       guestStatus: registrationStatus,
       registrationStatus,
+      actualRegistrationRegistered: registered,
+      registrationMatched: registered,
       eventNotes: cleanEventNotes(row) || (row ? cleanString(row.crmNotes, 4000) : "") || cleanEventNotes(invite),
       registrationNotes: cleanEventNotes(row) || (row ? cleanString(row.crmNotes, 4000) : "") || cleanEventNotes(invite),
       preRegistrationNotes: cleanPreRegistrationNotes(invite),
