@@ -48,15 +48,17 @@ function cleanEnvString(value) {
 function cleanPhone(value) {
   const normalized = cleanString(value, 80).replace(/[^\d+]/g, "");
   const digits = normalized.replace(/\D/g, "");
+  if (!digits) return "";
   if (normalized.startsWith("+")) return `+${digits}`;
+  if (digits.startsWith("00") && digits.length > 4) return `+${digits.slice(2)}`;
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  if (digits.length > 10 && digits.length <= 15) return `+${digits}`;
   return normalized;
 }
 
 function isLikelyPhone(phone) {
-  const digits = cleanString(phone, 80).replace(/\D/g, "");
-  return digits.length >= 10 && digits.length <= 15;
+  return /^\+[1-9]\d{7,14}$/.test(cleanString(phone, 80));
 }
 
 function maskPhone(phone) {
