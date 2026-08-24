@@ -1725,6 +1725,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         </select>
       </label>
       <label>
+        Stars
+        <select id="contactStarSort">
+          <option value="none">Default order</option>
+          <option value="stars-desc">3 to 1 stars</option>
+          <option value="stars-asc">1 to 3 stars</option>
+        </select>
+      </label>
+      <label>
         Company
         <select id="companyFilter">
           <option value="all">All companies</option>
@@ -1915,12 +1923,20 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           </select>
         </label>
         <label>
+          Stars
+          <select id="guestMatrixStarSort">
+            <option value="none">Default order</option>
+            <option value="stars-desc">3 to 1 stars</option>
+            <option value="stars-asc">1 to 3 stars</option>
+          </select>
+        </label>
+        <label>
           Search matrix
           <input id="guestMatrixSearch" type="search" placeholder="name, email, company, event, code">
         </label>
         <button class="secondary" type="button" id="guestMatrixClear">Clear</button>
         <button class="secondary" type="button" id="guestMatrixSave" disabled>Save Changes</button>
-        <button class="secondary" type="button" id="guestMatrixRefresh">Refresh</button>
+        <button class="secondary" type="button" id="guestMatrixExport">Export</button>
       </form>
       <div class="guest-matrix-summary" id="guestMatrixSummary"></div>
       <div class="invite-search-summary" id="guestMatrixSearchSummary"></div>
@@ -2156,6 +2172,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const statusFilter = document.querySelector("#statusFilter");
     const eventFilter = document.querySelector("#eventFilter");
     const roleFilter = document.querySelector("#roleFilter");
+    const contactStarSort = document.querySelector("#contactStarSort");
     const companyFilter = document.querySelector("#companyFilter");
     const publicationOperatorFilter = document.querySelector("#publicationOperatorFilter");
     const publicationThresholdFilter = document.querySelector("#publicationThresholdFilter");
@@ -2204,10 +2221,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const guestMatrixShowFilter = document.querySelector("#guestMatrixShowFilter");
     const guestMatrixRoleFilter = document.querySelector("#guestMatrixRoleFilter");
     const guestMatrixStatusFilter = document.querySelector("#guestMatrixStatusFilter");
+    const guestMatrixStarSort = document.querySelector("#guestMatrixStarSort");
     const guestMatrixSearch = document.querySelector("#guestMatrixSearch");
     const guestMatrixClear = document.querySelector("#guestMatrixClear");
     const guestMatrixSave = document.querySelector("#guestMatrixSave");
-    const guestMatrixRefresh = document.querySelector("#guestMatrixRefresh");
+    const guestMatrixExport = document.querySelector("#guestMatrixExport");
     const guestMatrixSummary = document.querySelector("#guestMatrixSummary");
     const guestMatrixSearchSummary = document.querySelector("#guestMatrixSearchSummary");
     const guestMatrixList = document.querySelector("#guestMatrixList");
@@ -2705,6 +2723,37 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <span class="star-rating-label">${escapeHtml(currentLabel)}</span>
         </div>
       `;
+    }
+
+    function compareTextValues(left = "", right = "") {
+      return String(left || "").localeCompare(String(right || ""), undefined, { sensitivity: "base" });
+    }
+
+    function starSortValue(select) {
+      return ["stars-desc", "stars-asc"].includes(select?.value) ? select.value : "none";
+    }
+
+    function compareStarRatings(leftRating = 1, rightRating = 1, sort = "none") {
+      if (sort === "stars-desc") return rightRating - leftRating;
+      if (sort === "stars-asc") return leftRating - rightRating;
+      return 0;
+    }
+
+    function contactGuestRatingForSort(row = {}) {
+      const draft = row?.key ? contactPendingChanges[row.key] || {} : {};
+      return starRatingValue(draft.contactGuestRating ?? row.contactGuestRating, 1);
+    }
+
+    function matrixInterestRatingForSort(row = {}) {
+      return starRatingValue(row.matrixInterestRating, 1);
+    }
+
+    function sortRowsByStars(rows = [], sort = "none", ratingForRow = () => 1, fallbackCompare = () => 0) {
+      if (sort === "none") return rows;
+      return [...rows].sort((left, right) =>
+        compareStarRatings(ratingForRow(left), ratingForRow(right), sort) ||
+        fallbackCompare(left, right)
+      );
     }
 
     function titleCaseLabel(value) {
@@ -4078,20 +4127,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const showValue = guestMatrixShowFilter?.value || "all";
       const roleValue = guestMatrixRoleFilter?.value || "all";
       const statusValue = guestMatrixStatusFilter?.value || "all";
+      const starSort = starSortValue(guestMatrixStarSort);
       const terms = (guestMatrixSearch?.value.trim().toLowerCase() || "").split(/\s+/).filter(Boolean);
-      return rows.filter((row) => {
+      const filtered = rows.filter((row) => {
         if (eventValue !== "all" && row.eventKey !== eventValue) return false;
         if (showValue !== "all" && row.showKey !== showValue) return false;
         if (roleValue !== "all" && row.roleKey !== roleValue) return false;
         if (!guestMatrixStatusMatch(row, statusValue)) return false;
         return !terms.length || terms.every((term) => row.haystack.includes(term));
       });
+      return sortRowsByStars(filtered, starSort, matrixInterestRatingForSort, (left, right) =>
+        compareTextValues(`${left.eventName} ${left.name}`, `${right.eventName} ${right.name}`)
+      );
     }
 
     function renderGuestMatrixSummary(rows) {
       if (!guestMatrixSummary) return;
       const stats = [
-        ["Event groups", new Set(rows.map((row) => row.eventKey)).size],
         [isPartnerMatrix() ? "Tracked partners" : "Tracked people", rows.length],
         ["Pending Engagement", rows.filter((row) => row.registrationStatus === "pending-engagement").length],
         ["Contacted", rows.filter((row) => row.registrationStatus === "contacted").length],
@@ -4104,6 +4156,81 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <span>${escapeHtml(label)}</span>
         </div>
       `).join("");
+    }
+
+    function csvCell(value = "") {
+      const text = String(value ?? "");
+      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function downloadCsv(filename = "export.csv", rows = []) {
+      const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function guestMatrixFutureEventsText(events = []) {
+      return events.map((event) =>
+        [event.status, event.eventName, event.eventDate, event.eventShow].filter(Boolean).join(" | ")
+      ).join("; ");
+    }
+
+    function exportGuestMatrixCsv() {
+      const rows = filteredGuestMatrixRows(guestMatrixRows());
+      if (!rows.length) {
+        setNotice(`No ${matrixEntityLabel()} records match the current matrix filters.`);
+        return;
+      }
+      const headers = [
+        "Event",
+        "Event Date",
+        "Assigned Show",
+        "Registered Show",
+        isPartnerMatrix() ? "Partner" : "Guest",
+        "Title",
+        "Company",
+        "Email",
+        "LinkedIn",
+        "Role",
+        "Interest Stars",
+        "Interest Label",
+        "Status",
+        "Future Events",
+        "Notes",
+        "Invited By",
+        "Code",
+        "Link"
+      ];
+      const body = rows.map((row) => [
+        row.eventName,
+        row.eventMeta,
+        row.showLabel,
+        row.registeredShowLabel,
+        row.name,
+        row.title,
+        row.company,
+        row.email,
+        row.linkedinProfileUrl,
+        row.role,
+        matrixInterestRatingForSort(row),
+        starRatingLabel(matrixInterestRatingOptions, matrixInterestRatingForSort(row)),
+        matrixOptionLabel(guestMatrixRegistrationStatusOptions, row.registrationStatus),
+        guestMatrixFutureEventsText(row.futureEvents),
+        row.notes,
+        row.invitedBy,
+        row.code,
+        row.url
+      ]);
+      const today = new Date().toISOString().slice(0, 10);
+      downloadCsv(`${matrixMode()}-matrix-${today}.csv`, [headers, ...body]);
+      setNotice(`${matrixEntityLabelTitle()} Matrix export downloaded.`, "ok");
     }
 
     function renderGuestMatrix() {
@@ -4340,6 +4467,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (contactSaveAllButton) {
         contactSaveAllButton.hidden = activeView !== "contacts" || state.type !== "contacts";
         updateContactSaveAllButton();
+      }
+      if (contactStarSort) {
+        contactStarSort.closest("label").hidden = activeView !== "contacts" || state.type !== "contacts";
       }
     }
 
@@ -4646,9 +4776,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const attendedOperator = attendedOperatorFilter.value || "all";
       const attendedThreshold = attendedThresholdFilter.value.trim();
       const phone = phoneFilter.value;
+      const starSort = state.type === "contacts" ? starSortValue(contactStarSort) : "none";
       const search = searchInput.value.trim().toLowerCase();
 
-      return state.rows.filter((row) => {
+      const filtered = state.rows.filter((row) => {
         if (!rowHasEvent(row, eventValue)) return false;
         if (!contactHasRole(row, role)) return false;
         if (company !== "all" && filterKey(row.company || row.partnerCompany || row.organization) !== company) return false;
@@ -4706,6 +4837,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.crmNotes
         ].some((value) => String(value || "").toLowerCase().includes(search));
       });
+      return sortRowsByStars(filtered, starSort, contactGuestRatingForSort, (left, right) =>
+        compareTextValues(left.name || left.email, right.name || right.email)
+      );
     }
 
     function isProspectingView(view = activeView) {
@@ -7786,6 +7920,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       statusFilter,
       eventFilter,
       roleFilter,
+      contactStarSort,
       companyFilter,
       publicationOperatorFilter,
       publicationThresholdFilter,
@@ -7863,6 +7998,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       statusFilter.value = "all";
       eventFilter.value = "all";
       roleFilter.value = "all";
+      if (contactStarSort) contactStarSort.value = "none";
       companyFilter.value = "all";
       publicationOperatorFilter.value = "all";
       publicationThresholdFilter.value = "";
@@ -8215,7 +8351,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       renderGuestMatrix();
     });
 
-    [guestMatrixEventFilter, guestMatrixShowFilter, guestMatrixRoleFilter, guestMatrixStatusFilter, guestMatrixSearch].forEach((input) => {
+    [guestMatrixEventFilter, guestMatrixShowFilter, guestMatrixRoleFilter, guestMatrixStatusFilter, guestMatrixStarSort, guestMatrixSearch].forEach((input) => {
       if (!input) return;
       input.addEventListener("input", renderGuestMatrix);
       input.addEventListener("change", renderGuestMatrix);
@@ -8226,12 +8362,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (guestMatrixShowFilter) guestMatrixShowFilter.value = "all";
       if (guestMatrixRoleFilter) guestMatrixRoleFilter.value = "all";
       guestMatrixStatusFilter.value = "all";
+      if (guestMatrixStarSort) guestMatrixStarSort.value = "none";
       guestMatrixSearch.value = "";
       renderGuestMatrix();
       guestMatrixSearch.focus();
     });
 
-    guestMatrixRefresh.addEventListener("click", loadCrm);
+    guestMatrixExport?.addEventListener("click", exportGuestMatrixCsv);
     guestMatrixSave?.addEventListener("click", saveGuestMatrixChanges);
 
     guestMatrixAddForm?.addEventListener("submit", submitGuestMatrixProspect);
