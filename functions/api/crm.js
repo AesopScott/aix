@@ -1503,6 +1503,17 @@ function cleanOptionalRegistrationType(value) {
 
 function cleanContactEventRole(value) {
   const raw = cleanString(value, 120).toLowerCase();
+  if ([
+    "featured-partner",
+    "featured-guest",
+    "featured-member",
+    "featured-author",
+    "roundtable-leader",
+    "presenter",
+    "partner",
+    "member",
+    "guest"
+  ].includes(raw)) return raw;
   if (raw.includes("featured partner")) return "featured-partner";
   if (raw.includes("featured guest")) return "featured-guest";
   if (raw.includes("featured member")) return "featured-member";
@@ -4095,6 +4106,9 @@ async function enrichInviteUsage(env, invites, types = ["member", "guest", "part
       eventNotes: cleanEventNotes(row) || (row ? cleanString(row.crmNotes, 4000) : "") || cleanEventNotes(invite),
       registrationNotes: cleanEventNotes(row) || (row ? cleanString(row.crmNotes, 4000) : "") || cleanEventNotes(invite),
       preRegistrationNotes: cleanPreRegistrationNotes(invite),
+      guestRegistrationType: row?.guestRegistrationType || invite.guestRegistrationType,
+      partnerRegistrationType: row?.partnerRegistrationType || invite.partnerRegistrationType,
+      registrationRole: row?.registrationRole || row?.contactEventRole || row?.partnerRegistrationType || row?.guestRegistrationType || invite.registrationRole || invite.partnerRegistrationType || invite.guestRegistrationType,
       usedByName: cleanString(invite.usedByName || row?.name),
       usedByEmail: cleanString(invite.usedByEmail || row?.email || invite.usedBy).toLowerCase(),
       usedFor: cleanString(row?.eventName || invite.usedFor || invite.eventName),
@@ -4511,6 +4525,8 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.crmStatus = status;
     next.guestStatus = status;
     next.registrationStatus = status;
+  } else if (field === "registrationRole") {
+    Object.assign(next, registrationRoleUpdate(payload.value, prospectType, existing));
   } else if (field === "matrixInterestRating") {
     next.matrixInterestRating = cleanStarRating(payload.value, existing.matrixInterestRating || 1);
   } else if (field === "preRegistrationNotes" || field === "eventNotes") {
@@ -4568,6 +4584,47 @@ async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteV
   return false;
 }
 
+function registrationRoleUpdate(roleValue, type = "", existing = {}) {
+  const role = cleanContactEventRole(roleValue || existing.registrationRole || existing.contactEventRole || existing.partnerRegistrationType || existing.guestRegistrationType || existing.type);
+  const partnerRecord = type === "partner" || existing.type === "partner" || existing.partnerContactEmail || role === "partner" || role === "featured-partner";
+  return {
+    contactEventRole: role,
+    registrationRole: role,
+    guestRegistrationType: partnerRecord ? cleanGuestRegistrationType(existing.guestRegistrationType || existing.registrationRole || existing.type) : role,
+    partnerRegistrationType: partnerRecord ? role : cleanOptionalRegistrationType(existing.partnerRegistrationType)
+  };
+}
+
+async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue = "", actor = "", now = new Date().toISOString()) {
+  const inviteCode = cleanCode(record.code || record.inviteCode);
+  const registrationId = cleanString(record.registrationId);
+  const email = cleanString(record.usedByEmail || record.usedBy || record.intendedGuestEmail || record.invitedEmail || record.guestEmail || record.partnerContactEmail).toLowerCase();
+  const typeCandidates = record.type === "partner" || record.partnerContactEmail
+    ? ["partner"]
+    : ["guest", "member"];
+
+  for (const type of typeCandidates) {
+    const rows = await registrants(env, type);
+    const row = rows.find((entry) =>
+      (registrationId && (entry.key === registrationId || entry.id === registrationId)) ||
+      (inviteCode && cleanCode(entry.inviteCode) === inviteCode && (!email || cleanString(entry.email).toLowerCase() === email))
+    );
+    if (!row) continue;
+    const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+      ...crmRow,
+      key: undefined,
+      crmType: registrantTypes[type].crmType,
+      ...registrationRoleUpdate(roleValue, type, crmRow),
+      crmUpdatedAt: now,
+      crmUpdatedBy: actor
+    }));
+    return true;
+  }
+
+  return false;
+}
+
 async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
   const changes = Array.isArray(payload.changes) ? payload.changes : [];
   const now = new Date().toISOString();
@@ -4595,6 +4652,11 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.crmStatus = status;
       next.guestStatus = status;
       next.registrationStatus = status;
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "registrationRole")) {
+      const roleUpdate = registrationRoleUpdate(change.registrationRole, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) || existing.type === "partner" ? "partner" : existing.type, existing);
+      Object.assign(next, roleUpdate);
+      await updateRegistrantRoleForMatrixChange(env, next, roleUpdate.registrationRole, actor, now);
     }
     if (Object.prototype.hasOwnProperty.call(change, "matrixInterestRating")) {
       next.matrixInterestRating = cleanStarRating(change.matrixInterestRating, existing.matrixInterestRating || 1);

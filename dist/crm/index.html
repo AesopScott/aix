@@ -1859,6 +1859,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <input id="guestMatrixAddName" name="intendedGuestName" type="text" placeholder="Guest name">
         </label>
         <label>
+          Title
+          <input id="guestMatrixAddTitle" name="title" type="text" placeholder="Job title">
+        </label>
+        <label>
           Email
           <input id="guestMatrixAddEmail" name="intendedGuestEmail" type="email" placeholder="guest@example.com">
         </label>
@@ -2188,6 +2192,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const guestMatrixAddType = document.querySelector("#guestMatrixAddType");
     const guestMatrixAddCompany = document.querySelector("#guestMatrixAddCompany");
     const guestMatrixAddName = document.querySelector("#guestMatrixAddName");
+    const guestMatrixAddTitle = document.querySelector("#guestMatrixAddTitle");
     const guestMatrixAddEmail = document.querySelector("#guestMatrixAddEmail");
     const guestMatrixAddLinkedIn = document.querySelector("#guestMatrixAddLinkedIn");
     const guestMatrixAddSubmit = document.querySelector("#guestMatrixAddSubmit");
@@ -2723,6 +2728,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function normalizeRoleValue(value) {
       const raw = String(value || "").trim().toLowerCase();
+      const exactRoles = ["featured-partner", "featured-guest", "featured-member", "featured-author", "roundtable-leader", "presenter", "partner", "member", "guest"];
+      if (exactRoles.includes(raw)) return raw;
       if (raw.includes("featured partner")) return "featured-partner";
       if (raw.includes("featured guest")) return "featured-guest";
       if (raw.includes("featured member")) return "featured-member";
@@ -2843,8 +2850,26 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["featured-partner", "Featured Partner"]
     ];
 
+    function guestMatrixRoleOptions(row = {}) {
+      return row.partnerRow
+        ? [
+            ["partner", "Partner Guest"],
+            ["featured-partner", "Featured Partner"]
+          ]
+        : [
+            ["guest", "Guest"],
+            ["featured-guest", "Featured Guest"],
+            ["featured-author", "Featured Author"],
+            ["presenter", "Presenter"],
+            ["roundtable-leader", "Round Table Leader"],
+            ["member", "Member"],
+            ["featured-member", "Featured Member"]
+          ];
+    }
+
     function contactEventRoleValue(event = {}) {
       const raw = String(event.contactEventRole || event.registrationRole || event.partnerRegistrationType || event.guestRegistrationType || event.role || event.registrationType || "").toLowerCase();
+      if (contactEventRoleOptions.some(([value]) => value === raw)) return raw;
       if (raw.includes("featured partner")) return "featured-partner";
       if (raw.includes("featured guest")) return "featured-guest";
       if (raw.includes("featured member")) return "featured-member";
@@ -3470,13 +3495,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixShowKey(invite = {}) {
-      const direct = eventShowId(invite.eventShowId || invite.showId || invite.eventShow, "");
+      const direct = eventShowId(invite.usedForShow || invite.usedForTime || invite.eventShowId || invite.showId || invite.eventShow, "");
       if (direct) return direct;
       const text = [
-        invite.eventShowLabel,
         invite.usedForShow,
-        invite.eventShowTime,
         invite.usedForTime,
+        invite.eventShowLabel,
+        invite.eventShowTime,
         invite.eventTime
       ].filter(Boolean).join(" ").toLowerCase();
       const hasMorning = text.includes("morning") || text.includes("10:00") || text.includes("10am");
@@ -3606,7 +3631,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixRoleKey(invite = {}) {
-      return normalizedMatrixValue(guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || invite.type));
+      const draft = guestMatrixDraft(invite);
+      return normalizedMatrixValue(guestRegistrationTypeLabel(draft.registrationRole || invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || invite.type));
     }
 
     function guestMatrixEventLabel(invite = {}) {
@@ -3619,6 +3645,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function guestMatrixShowMeta(invite = {}) {
       return eventShowText(invite);
+    }
+
+    function guestMatrixRegisteredShowMeta(invite = {}) {
+      return [invite.usedForShow, invite.usedForTime].filter(Boolean).join(" | ");
     }
 
     function guestMatrixPersonName(invite = {}) {
@@ -3831,7 +3861,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const futureEvents = guestMatrixFutureEventsForPerson(invite);
       const partnerRow = isPartnerMatrix() || invite.type === "partner" || invite.type === "partner-matrix-prospect";
       const matrixOnly = invite.matrixOnly === true || invite.type === "guest-matrix-prospect" || invite.type === "partner-matrix-prospect";
-      const role = guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.guestRegistrationType || invite.registrationRole || invite.type);
+      const roleValue = normalizeRoleValue(draft.registrationRole || invite.registrationRole || invite.partnerRegistrationType || invite.guestRegistrationType || invite.type || "guest");
+      const role = guestRegistrationTypeLabel(roleValue);
       const showKey = guestMatrixShowKey(invite);
       const isRegisteredRow = registrationStatus === "registered" || registrationStatus === "attended";
       const eventNotes = firstCleanValue(draft.eventNotes, invite.eventNotes, invite.registrationNotes, isRegisteredRow ? invite.crmNotes : "");
@@ -3858,7 +3889,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         updatedAt: firstCleanValue(invite.updatedAt, invite.crmUpdatedAt),
         invitedBy: firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy, "Not recorded"),
         role,
+        roleValue,
         roleKey: guestMatrixRoleKey(invite),
+        registeredShowLabel: guestMatrixRegisteredShowMeta(invite),
         code: matrixOnly ? "" : firstCleanValue(invite.code, invite.inviteCode),
         url: matrixOnly ? "" : partnerRow ? partnerRegistrationUrl(invite) : registrationInviteUrl(invite),
         linkedinConnection,
@@ -3883,6 +3916,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           notes,
           role,
           guestMatrixShowMeta(invite),
+          guestMatrixRegisteredShowMeta(invite),
           matrixOptionLabel(guestMatrixRegistrationStatusOptions, registrationStatus),
           ...futureEvents.flatMap((event) => [event.status, event.eventName, event.eventDate, event.eventShow])
         ].join(" ").toLowerCase()
@@ -3945,8 +3979,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ...primary,
         showKey: primary.showKey || secondary.showKey,
         showLabel: primary.showLabel || secondary.showLabel,
+        registeredShowLabel: primary.registeredShowLabel || secondary.registeredShowLabel,
         roleKey: primary.roleKey || secondary.roleKey,
         role: primary.role || secondary.role,
+        roleValue: primary.roleValue || secondary.roleValue,
         createdAt: [primary.createdAt, secondary.createdAt].filter(Boolean).sort()[0] || primary.createdAt || secondary.createdAt,
         updatedAt: [primary.updatedAt, secondary.updatedAt].filter(Boolean).sort().slice(-1)[0] || primary.updatedAt || secondary.updatedAt,
         linkedinConnection: primary.linkedinConnection || secondary.linkedinConnection,
@@ -4056,7 +4092,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!guestMatrixSummary) return;
       const stats = [
         ["Event groups", new Set(rows.map((row) => row.eventKey)).size],
-        [isPartnerMatrix() ? "Tracked partners" : "Tracked people", rows.filter((row) => row.name !== "Name not recorded").length],
+        [isPartnerMatrix() ? "Tracked partners" : "Tracked people", rows.length],
         ["Pending Engagement", rows.filter((row) => row.registrationStatus === "pending-engagement").length],
         ["Contacted", rows.filter((row) => row.registrationStatus === "contacted").length],
         ["Invited", rows.filter((row) => row.registrationStatus === "invited").length],
@@ -4165,8 +4201,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                         </div>
                       </td>
                       <td>
-                        <span class="pill">${escapeHtml(row.role)}</span>
-                        ${row.showLabel ? `<div class="matrix-muted">${escapeHtml(row.showLabel)}</div>` : ""}
+                        <select class="matrix-select" data-guest-matrix-field="registrationRole" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Role for ${escapeHtml(row.name)}">
+                          ${matrixOptionList(guestMatrixRoleOptions(row), row.roleValue || row.roleKey || "guest")}
+                        </select>
+                        ${row.showLabel ? `<div class="matrix-muted">Assigned: ${escapeHtml(row.showLabel)}</div>` : ""}
+                        ${row.registeredShowLabel ? `<div class="matrix-muted">Registered for: ${escapeHtml(row.registeredShowLabel)}</div>` : ""}
                       </td>
                       <td>
                         ${starRatingMarkup({
@@ -7314,6 +7353,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventTime: showId ? eventShowTime(showId) : "",
         partnerCompany: partnerMode ? formData.get("company") || "" : "",
         company: formData.get("company") || "",
+        title: formData.get("title") || "",
+        jobTitle: formData.get("title") || "",
         intendedGuestName: formData.get("intendedGuestName") || "",
         intendedGuestEmail: formData.get("intendedGuestEmail") || "",
         linkedinProfileUrl: formData.get("linkedinProfileUrl") || "",
