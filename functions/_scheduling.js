@@ -743,6 +743,7 @@ async function createZoomMeeting(env, employee, meetingType, booking, start, end
         `Booked through mojoaisummits.com.`,
         `Host: ${employee.name} <${employee.email}>`,
         `Guest: ${booking.guestName} <${booking.guestEmail}>`,
+        booking.guestTimeZone ? `Guest time zone: ${booking.guestTimeZone}` : "",
         booking.company ? `Company: ${booking.company}` : ""
       ].filter(Boolean).join("\n"),
       settings: {
@@ -1408,6 +1409,7 @@ async function createGraphEvent(env, employee, meetingType, booking, start, end,
             zoomMeeting?.passcode ? `Zoom passcode: ${zoomMeeting.passcode}` : "",
             zoomMeeting?.meetingId ? `Zoom meeting ID: ${zoomMeeting.meetingId}` : "",
             `Guest: ${booking.guestName} <${booking.guestEmail}>`,
+            booking.guestTimeZone ? `Guest time zone: ${booking.guestTimeZone}` : "",
             booking.company ? `Company: ${booking.company}` : "",
             booking.notes ? `Notes: ${booking.notes}` : ""
           ].filter(Boolean).join("\n")
@@ -1488,6 +1490,7 @@ export async function createBooking(env, input = {}) {
     guestEmail,
     company: cleanText(input.company, 160),
     notes: cleanLongText(input.notes, 1200),
+    guestTimeZone: cleanText(input.guestTimeZone || input.timezone, 80),
     start: start.toISOString(),
     end: end.toISOString(),
     timezone: employee.timezone,
@@ -1526,6 +1529,7 @@ export async function createBooking(env, input = {}) {
         start: record.start,
         end: record.end,
         timezone: record.timezone,
+        guestTimeZone: record.guestTimeZone,
         onlineMeetingUrl: record.onlineMeetingUrl
       }
     };

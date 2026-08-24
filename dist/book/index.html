@@ -237,10 +237,22 @@
       box-shadow: 0 0 0 1px rgba(0, 230, 255, 0.2);
     }
 
+    .slot {
+      display: grid;
+      gap: 0.22rem;
+    }
+
     .person strong,
     .slot strong {
       color: var(--white);
       font-size: 0.94rem;
+    }
+
+    .slot-meta {
+      color: var(--muted);
+      font-size: 0.76rem;
+      letter-spacing: 0.02em;
+      text-transform: none;
     }
 
     .meta {
@@ -619,33 +631,55 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       confirmationEl.innerHTML = "";
     }
 
-    function formatBookingRange(booking) {
-      const start = new Date(booking.start);
-      const end = new Date(booking.end);
-      const timezone = booking.timezone || state.employee?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const date = new Intl.DateTimeFormat("en-US", {
+    function visitorTimeZone() {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      } catch {
+        return "UTC";
+      }
+    }
+
+    function formatDateInTimeZone(date, timezone) {
+      return new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
         weekday: "long",
         month: "long",
         day: "numeric",
         year: "numeric"
-      }).format(start);
-      const time = `${new Intl.DateTimeFormat("en-US", {
+      }).format(date);
+    }
+
+    function formatTimeRangeInTimeZone(start, end, timezone) {
+      const startText = new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
         hour: "numeric",
         minute: "2-digit"
-      }).format(start)} - ${new Intl.DateTimeFormat("en-US", {
+      }).format(start);
+      const endText = new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
         hour: "numeric",
         minute: "2-digit",
         timeZoneName: "short"
-      }).format(end)}`;
-      return { date, time };
+      }).format(end);
+      return `${startText} - ${endText}`;
+    }
+
+    function formatBookingRange(booking) {
+      const start = new Date(booking.start);
+      const end = new Date(booking.end);
+      const localTimezone = visitorTimeZone();
+      const mojoTimezone = booking.timezone || state.employee?.timezone || "";
+      const date = formatDateInTimeZone(start, localTimezone);
+      const time = formatTimeRangeInTimeZone(start, end, localTimezone);
+      const mojoTime = mojoTimezone && mojoTimezone !== localTimezone
+        ? formatTimeRangeInTimeZone(start, end, mojoTimezone)
+        : "";
+      return { date, time, mojoTime };
     }
 
     function renderConfirmation(booking) {
       state.confirmation = booking;
-      const { date, time } = formatBookingRange(booking);
+      const { date, time, mojoTime } = formatBookingRange(booking);
       const employeeName = booking.employee?.name || state.employee?.name || "Mojo AI Summits";
       const meetingLabel = booking.meetingType?.label || state.meetingType?.label || "Meeting";
       const location = booking.onlineMeetingUrl ? "Zoom link included" : booking.meetingType?.location || "Zoom";
@@ -657,6 +691,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <div class="confirmation-row"><span>Host</span><strong>${escapeHtml(employeeName)}</strong></div>
           <div class="confirmation-row"><span>Date</span><strong>${escapeHtml(date)}</strong></div>
           <div class="confirmation-row"><span>Time</span><strong>${escapeHtml(time)}</strong></div>
+          ${mojoTime ? `<div class="confirmation-row"><span>Mojo time</span><strong>${escapeHtml(mojoTime)}</strong></div>` : ""}
           <div class="confirmation-row"><span>Location</span><strong>${escapeHtml(location)}</strong></div>
         </div>
         <div class="confirmation-actions">
@@ -849,6 +884,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return (slots || []).filter((slot) => !state.confirmedStarts.has(slot.start));
     }
 
+    function slotDisplay(slot) {
+      const start = new Date(slot.start);
+      const end = new Date(slot.end);
+      const localTimezone = visitorTimeZone();
+      const mojoTimezone = state.employee?.timezone || "";
+      const localTime = formatTimeRangeInTimeZone(start, end, localTimezone);
+      const mojoTime = mojoTimezone && mojoTimezone !== localTimezone
+        ? formatTimeRangeInTimeZone(start, end, mojoTimezone)
+        : "";
+      return { localTime, mojoTime };
+    }
+
     function renderSlots(slots) {
       slots = visibleSlots(slots);
       slotsEl.innerHTML = "";
@@ -858,11 +905,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
 
+      const localTimezone = visitorTimeZone();
+      const timezoneNote = document.createElement("div");
+      timezoneNote.className = "notice";
+      timezoneNote.textContent = `Times are shown in your local time (${localTimezone}).`;
+      slotsEl.append(timezoneNote);
+
       slots.forEach((slot) => {
+        const { localTime, mojoTime } = slotDisplay(slot);
         const button = document.createElement("button");
         button.type = "button";
         button.className = `slot secondary ${state.slot?.start === slot.start ? "active" : ""}`;
-        button.innerHTML = `<strong>${slot.label}</strong>`;
+        button.innerHTML = `
+          <strong>${escapeHtml(localTime)}</strong>
+          ${mojoTime ? `<span class="slot-meta">Mojo time: ${escapeHtml(mojoTime)}</span>` : ""}
+        `;
         button.addEventListener("click", () => {
           state.slot = slot;
           renderSlots(slots);
@@ -971,6 +1028,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           guestEmail: form.get("guestEmail"),
           company: form.get("company"),
           notes: form.get("notes"),
+          guestTimeZone: visitorTimeZone(),
           website: form.get("website")
         })
       });
