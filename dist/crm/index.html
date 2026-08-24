@@ -1140,6 +1140,46 @@
       font-size: 0.82rem;
     }
 
+    .star-rating {
+      display: inline-grid;
+      grid-template-columns: repeat(3, 1.8rem);
+      gap: 0.15rem;
+      align-items: center;
+    }
+
+    .star-rating button {
+      width: 1.8rem;
+      height: 1.8rem;
+      padding: 0;
+      border-radius: 6px;
+      border: 1px solid rgba(138, 181, 255, 0.34);
+      background: rgba(10, 15, 30, 0.72);
+      color: rgba(138, 181, 255, 0.64);
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+
+    .star-rating button.active {
+      border-color: rgba(255, 215, 95, 0.7);
+      background: rgba(255, 215, 95, 0.12);
+      color: #ffd75f;
+    }
+
+    .star-rating button:hover,
+    .star-rating button:focus-visible {
+      border-color: rgba(0, 230, 255, 0.72);
+      color: #fff4c2;
+    }
+
+    .star-rating-label {
+      display: block;
+      margin-top: 0.3rem;
+      color: var(--muted-blue);
+      font-size: 0.72rem;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
     .matrix-notes {
       min-width: 14rem;
       width: 100%;
@@ -2376,6 +2416,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["senior-fellow", "Senior Fellow"],
       ["distinguished-fellow", "Distinguished Fellow"]
     ];
+    const contactGuestRatingOptions = [
+      [1, "Normal guest"],
+      [2, "Recurring guest"],
+      [3, "Moderator / super-member"]
+    ];
+    const matrixInterestRatingOptions = [
+      [1, "Normal"],
+      [2, "Elevated"],
+      [3, "Prime invite"]
+    ];
     const executiveFunctionOptions = [
       ["", "Unassigned"],
       ["ceo", "CEO / Founder"],
@@ -2610,6 +2660,46 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function labelForOption(options, value = "") {
       return options.find(([candidate]) => candidate === value)?.[1] || titleCaseLabel(value);
+    }
+
+    function starRatingValue(value, fallback = 1) {
+      const rating = Number.parseInt(value, 10);
+      return [1, 2, 3].includes(rating) ? rating : fallback;
+    }
+
+    function starRatingLabel(options, value = 1) {
+      const rating = starRatingValue(value);
+      return options.find(([candidate]) => candidate === rating)?.[1] || options[0]?.[1] || "Normal";
+    }
+
+    function starRatingMarkup({ options, value = 1, scope = "", field = "", key = "", id = "", kind = "", label = "" } = {}) {
+      const rating = starRatingValue(value);
+      const currentLabel = starRatingLabel(options, rating);
+      const buttons = options.map(([candidate, optionLabel]) => `
+        <button
+          type="button"
+          class="${candidate <= rating ? "active" : ""}"
+          aria-pressed="${candidate <= rating ? "true" : "false"}"
+          title="${escapeHtml(optionLabel)}"
+          data-star-rating-scope="${escapeHtml(scope)}"
+          data-star-rating-field="${escapeHtml(field)}"
+          data-star-rating-value="${candidate}"
+          ${key ? `data-star-rating-key="${escapeHtml(key)}"` : ""}
+          ${id ? `data-star-rating-id="${escapeHtml(id)}"` : ""}
+          ${kind ? `data-star-rating-kind="${escapeHtml(kind)}"` : ""}
+          aria-label="${escapeHtml(`${optionLabel}: ${candidate} star${candidate === 1 ? "" : "s"}`)}"
+        >${candidate <= rating ? "★" : "☆"}</button>
+      `).join("");
+      const hiddenContactField = scope === "contact" && key && field
+        ? `<input type="hidden" data-contact-field="${escapeHtml(field)}" data-contact-key="${escapeHtml(key)}" value="${rating}">`
+        : "";
+      return `
+        <div>
+          <div class="star-rating" role="group" aria-label="${escapeHtml(label || currentLabel)}">${buttons}</div>
+          ${hiddenContactField}
+          <span class="star-rating-label">${escapeHtml(currentLabel)}</span>
+        </div>
+      `;
     }
 
     function titleCaseLabel(value) {
@@ -3748,6 +3838,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const preRegistrationNotes = firstCleanValue(draft.preRegistrationNotes, invite.preRegistrationNotes, invite.matrixNotes, invite.engagementNotes, invite.notes);
       const notesField = isRegisteredRow ? "eventNotes" : "preRegistrationNotes";
       const notes = isRegisteredRow ? firstCleanValue(eventNotes, preRegistrationNotes) : preRegistrationNotes;
+      const matrixInterestRating = starRatingValue(draft.matrixInterestRating ?? invite.matrixInterestRating ?? invite.participationInterestRating ?? invite.interestRating, 1);
       return {
         id,
         invite,
@@ -3773,6 +3864,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         linkedinConnection,
         registrationRequest,
         registrationStatus,
+        matrixInterestRating,
         registered: registrationStatus === "registered",
         futureEvents,
         notes,
@@ -3860,6 +3952,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         linkedinConnection: primary.linkedinConnection || secondary.linkedinConnection,
         registrationRequest: primary.registrationRequest || secondary.registrationRequest,
         registrationStatus,
+        matrixInterestRating: Math.max(starRatingValue(primary.matrixInterestRating, 1), starRatingValue(secondary.matrixInterestRating, 1)),
         registered: primary.registered || secondary.registered || registrationStatus === "registered",
         futureEvents,
         notes,
@@ -4047,6 +4140,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                   <tr>
                     <th>${isPartnerMatrix() ? "Partner" : "Guest"}</th>
                     <th>Role</th>
+                    <th>Interest</th>
                     <th>Guest Status</th>
                     <th>Created</th>
                     <th>Future Events</th>
@@ -4073,6 +4167,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       <td>
                         <span class="pill">${escapeHtml(row.role)}</span>
                         ${row.showLabel ? `<div class="matrix-muted">${escapeHtml(row.showLabel)}</div>` : ""}
+                      </td>
+                      <td>
+                        ${starRatingMarkup({
+                          options: matrixInterestRatingOptions,
+                          value: row.matrixInterestRating,
+                          scope: "guest-matrix",
+                          field: "matrixInterestRating",
+                          id: row.id,
+                          key: row.invite.key || "",
+                          kind: row.matrixOnly ? "prospect" : "invite",
+                          label: `Participation interest for ${row.name}`
+                        })}
                       </td>
                       <td>
                         <select class="matrix-select ${guestMatrixStageClass(row.registrationStatus)}" data-guest-matrix-field="guestStatus" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Guest status for ${escapeHtml(row.name)}">
@@ -6106,7 +6212,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <td>
             ${state.type === "contacts" ? `<select class="inline-select" data-contact-field="lifecycleStage" data-contact-key="${escapeHtml(row.key)}">
               ${optionList(lifecycleStageOptions, row.lifecycleStage || "guest")}
-            </select>` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
+            </select>
+            ${starRatingMarkup({
+              options: contactGuestRatingOptions,
+              value: row.contactGuestRating,
+              scope: "contact",
+              field: "contactGuestRating",
+              key: row.key,
+              label: `Guest relationship level for ${row.name}`
+            })}` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
               ${state.type === "guest" ? guestCrmStatusOptions(row.crmStatus) : crmStatusOptions(row.crmStatus)}
             </select>`}
           </td>
@@ -6636,6 +6750,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         invitedBy: changes.invitedBy ?? existing.invitedBy ?? "",
         relationshipOwner: changes.relationshipOwner ?? existing.relationshipOwner ?? "",
         lifecycleStage: changes.lifecycleStage ?? existing.lifecycleStage ?? "guest",
+        contactGuestRating: changes.contactGuestRating ?? existing.contactGuestRating ?? 1,
         lastContactDate: changes.lastContactDate ?? existing.lastContactDate ?? "",
         nextAction: changes.nextAction ?? existing.nextAction ?? "none",
         nextActionDueDate: changes.nextActionDueDate ?? existing.nextActionDueDate ?? "",
@@ -7110,6 +7225,40 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       updateGuestMatrixSaveButton();
     }
 
+    function stageStarRating(button) {
+      const scope = button?.dataset?.starRatingScope;
+      const field = button?.dataset?.starRatingField;
+      const value = String(starRatingValue(button?.dataset?.starRatingValue, 1));
+      if (!scope || !field) return false;
+      if (scope === "contact") {
+        const key = button.dataset.starRatingKey || "";
+        if (!key) return false;
+        contactPendingChanges[key] = {
+          ...(contactPendingChanges[key] || {}),
+          [field]: value
+        };
+        updateContactSaveAllButton();
+        renderRows();
+        setNotice("Contact guest star rating staged. Click Save Contact Changes to persist it.", "ok");
+        return true;
+      }
+      if (scope === "guest-matrix") {
+        queueGuestMatrixChange({
+          value,
+          dataset: {
+            guestMatrixId: button.dataset.starRatingId || "",
+            guestMatrixKey: button.dataset.starRatingKey || "",
+            guestMatrixKind: button.dataset.starRatingKind || "invite",
+            guestMatrixField: field
+          }
+        });
+        renderGuestMatrix();
+        setNotice(`${matrixEntityLabelTitle()} Matrix star rating staged. Click Save Changes to persist it.`, "ok");
+        return true;
+      }
+      return false;
+    }
+
     async function saveGuestMatrixChanges() {
       const changes = Object.values(guestMatrixPendingChanges || {});
       if (!changes.length) return;
@@ -7504,6 +7653,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     rowsElement.addEventListener("click", async (event) => {
+      const starButton = event.target.closest("[data-star-rating-scope]");
+      if (starButton && stageStarRating(starButton)) return;
+
       const actionButton = event.target.closest("button, a");
       const key = actionButton?.dataset.saveKey;
       const passwordKey = actionButton?.dataset.passwordKey;
@@ -8060,6 +8212,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     guestMatrixList.addEventListener("click", async (event) => {
+      const starButton = event.target.closest("[data-star-rating-scope]");
+      if (starButton && stageStarRating(starButton)) return;
+
       const createInviteButton = event.target.closest("[data-create-guest-matrix-invite-id]");
       if (createInviteButton) {
         const row = guestMatrixRows().find((candidate) => candidate.id === createInviteButton.dataset.createGuestMatrixInviteId);
