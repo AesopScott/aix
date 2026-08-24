@@ -563,6 +563,12 @@ function cleanAllowed(value, allowed, fallback = "") {
   return allowed.has(cleaned) ? cleaned : fallback;
 }
 
+function cleanStarRating(value, fallback = 1) {
+  const rating = Number.parseInt(value, 10);
+  if ([1, 2, 3].includes(rating)) return rating;
+  return [1, 2, 3].includes(fallback) ? fallback : 1;
+}
+
 function cleanGuestRegistrationLifecycleStatus(value, fallback = "contacted") {
   const cleaned = cleanString(value, 120).toLowerCase();
   const aliases = {
@@ -1708,6 +1714,7 @@ function normalizeContactRecord(key, record = {}) {
     partnerClientMessaging: cleanString(record.partnerClientMessaging, 4000),
     relationshipOwner: cleanString(record.relationshipOwner, 180),
     lifecycleStage: cleanAllowed(record.lifecycleStage, allowedLifecycleStages, "guest"),
+    contactGuestRating: cleanStarRating(record.contactGuestRating ?? record.guestRelationshipRating ?? record.guestRating, 1),
     nextAction: cleanAllowed(record.nextAction, allowedNextActions, "none"),
     nextActionDueDate: cleanString(record.nextActionDueDate || record.dueDate, 40),
     lastContactDate: cleanString(record.lastContactDate, 40),
@@ -2160,6 +2167,7 @@ function mergeContactRows(storedRows, derivedRows) {
       invitedBy: cleanString(row.invitedBy) || cleanString(previous.invitedBy),
       relationshipOwner: cleanString(row.relationshipOwner) || cleanString(previous.relationshipOwner),
       lifecycleStage: cleanString(row.lifecycleStage) || cleanString(previous.lifecycleStage),
+      contactGuestRating: Math.max(cleanStarRating(previous.contactGuestRating, 1), cleanStarRating(row.contactGuestRating, 1)),
       nextAction: cleanString(row.nextAction) || cleanString(previous.nextAction),
       nextActionDueDate: cleanString(row.nextActionDueDate) || cleanString(previous.nextActionDueDate),
       lastContactDate: cleanString(row.lastContactDate) || cleanString(previous.lastContactDate),
@@ -4039,6 +4047,7 @@ function normalizeInviteCode(key, record) {
     registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, record?.status === "used" ? "registered" : record?.code ? "invited" : "contacted"),
     linkedinConnectionStatus: cleanGuestMatrixOption(record?.linkedinConnectionStatus || record?.linkedInConnectionStatus || record?.connectionStatus, allowedGuestMatrixLinkedInStatuses, "unknown"),
     registrationRequestStatus: cleanGuestMatrixOption(record?.registrationRequestStatus || record?.inviteStage || record?.inviteStatus, allowedGuestMatrixRegistrationRequestStatuses, "not-sent"),
+    matrixInterestRating: cleanStarRating(record?.matrixInterestRating ?? record?.participationInterestRating ?? record?.interestRating, 1),
     partnerCompany: cleanString(record?.partnerCompany),
     partnerContactName: cleanString(record?.partnerContactName || record?.intendedGuestName || record?.invitedName || record?.guestName),
     partnerContactEmail: cleanString(record?.partnerContactEmail).toLowerCase(),
@@ -4247,6 +4256,7 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.guestStatus || record?.registrationStatus, "pending-engagement"),
     guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.crmStatus || record?.registrationStatus, "pending-engagement"),
     registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, "pending-engagement"),
+    matrixInterestRating: cleanStarRating(record?.matrixInterestRating ?? record?.participationInterestRating ?? record?.interestRating, 1),
     preRegistrationNotes: cleanPreRegistrationNotes(record),
     guestRegistrationType,
     partnerRegistrationType: prospectType === "partner" ? guestRegistrationType : "",
@@ -4454,6 +4464,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     invitedBy: cleanString(payload.invitedBy || payload.inviter || payload.invitedByName || actor, 180),
     linkedinConnectionStatus: cleanGuestMatrixOption(payload.linkedinConnectionStatus || payload.connectionStatus, allowedGuestMatrixLinkedInStatuses, "unknown"),
     registrationRequestStatus: cleanGuestMatrixOption(payload.registrationRequestStatus || payload.inviteStage || payload.inviteStatus, allowedGuestMatrixRegistrationRequestStatuses, "not-sent"),
+    matrixInterestRating: cleanStarRating(payload.matrixInterestRating ?? payload.participationInterestRating ?? payload.interestRating, 1),
     preRegistrationNotes: cleanPreRegistrationNotes(payload),
     createdAt,
     createdBy: actor,
@@ -4500,6 +4511,8 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.crmStatus = status;
     next.guestStatus = status;
     next.registrationStatus = status;
+  } else if (field === "matrixInterestRating") {
+    next.matrixInterestRating = cleanStarRating(payload.value, existing.matrixInterestRating || 1);
   } else if (field === "preRegistrationNotes" || field === "eventNotes") {
     next.preRegistrationNotes = cleanString(payload.value, 4000);
   } else {
@@ -4582,6 +4595,9 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.crmStatus = status;
       next.guestStatus = status;
       next.registrationStatus = status;
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "matrixInterestRating")) {
+      next.matrixInterestRating = cleanStarRating(change.matrixInterestRating, existing.matrixInterestRating || 1);
     }
     if (Object.prototype.hasOwnProperty.call(change, "preRegistrationNotes")) {
       next.preRegistrationNotes = cleanString(change.preRegistrationNotes, 4000);
@@ -5470,6 +5486,7 @@ async function updateContact(env, payload = {}, actor = "") {
     invitedBy: cleanString(payload.invitedBy ?? payload.inviter ?? payload.invitedByName ?? existing?.invitedBy, 180),
     relationshipOwner: cleanString(payload.relationshipOwner ?? existing?.relationshipOwner, 180),
     lifecycleStage: cleanAllowed(payload.lifecycleStage ?? existing?.lifecycleStage, allowedLifecycleStages, "guest"),
+    contactGuestRating: cleanStarRating(payload.contactGuestRating ?? payload.guestRelationshipRating ?? existing?.contactGuestRating, 1),
     nextAction: cleanAllowed(payload.nextAction ?? existing?.nextAction, allowedNextActions, "none"),
     nextActionDueDate: cleanString(payload.nextActionDueDate ?? payload.dueDate ?? existing?.nextActionDueDate, 40),
     lastContactDate: cleanString(payload.lastContactDate ?? existing?.lastContactDate, 40),
