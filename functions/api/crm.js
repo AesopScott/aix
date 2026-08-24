@@ -4525,6 +4525,8 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.crmStatus = status;
     next.guestStatus = status;
     next.registrationStatus = status;
+  } else if (field === "intendedGuestName") {
+    Object.assign(next, matrixPersonNameUpdate(payload.value, prospectType, existing));
   } else if (field === "registrationRole") {
     Object.assign(next, registrationRoleUpdate(payload.value, prospectType, existing));
   } else if (field === "matrixInterestRating") {
@@ -4575,6 +4577,53 @@ async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteV
       crmType: registrantTypes[type].crmType,
       eventNotes: note,
       registrationNotes: note,
+      crmUpdatedAt: now,
+      crmUpdatedBy: actor
+    }));
+    return true;
+  }
+
+  return false;
+}
+
+function matrixPersonNameUpdate(nameValue, type = "", existing = {}) {
+  const name = cleanString(nameValue, 240);
+  const partnerRecord = type === "partner" || existing.type === "partner" || existing.partnerContactEmail;
+  return {
+    intendedGuestName: name,
+    invitedName: name,
+    guestName: name,
+    partnerContactName: partnerRecord ? name : cleanString(existing.partnerContactName, 240)
+  };
+}
+
+async function updateRegistrantNameForMatrixChange(env, record = {}, nameValue = "", actor = "", now = new Date().toISOString()) {
+  const name = cleanString(nameValue, 240);
+  const inviteCode = cleanCode(record.code || record.inviteCode);
+  const registrationId = cleanString(record.registrationId);
+  const email = cleanString(record.usedByEmail || record.usedBy || record.intendedGuestEmail || record.invitedEmail || record.guestEmail || record.partnerContactEmail).toLowerCase();
+  const typeCandidates = record.type === "partner" || record.partnerContactEmail
+    ? ["partner"]
+    : ["guest", "member"];
+
+  for (const type of typeCandidates) {
+    const rows = await registrants(env, type);
+    const row = rows.find((entry) =>
+      (registrationId && (entry.key === registrationId || entry.id === registrationId)) ||
+      (inviteCode && cleanCode(entry.inviteCode) === inviteCode && (!email || cleanString(entry.email).toLowerCase() === email))
+    );
+    if (!row) continue;
+    const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
+    const partnerRecord = type === "partner" || crmRow.type === "partner" || crmRow.partnerContactEmail;
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+      ...crmRow,
+      key: undefined,
+      crmType: registrantTypes[type].crmType,
+      name,
+      intendedGuestName: name,
+      invitedName: name,
+      guestName: name,
+      partnerContactName: partnerRecord ? name : crmRow.partnerContactName,
       crmUpdatedAt: now,
       crmUpdatedBy: actor
     }));
@@ -4652,6 +4701,11 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.crmStatus = status;
       next.guestStatus = status;
       next.registrationStatus = status;
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "intendedGuestName")) {
+      const nameUpdate = matrixPersonNameUpdate(change.intendedGuestName, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) || existing.type === "partner" ? "partner" : existing.type, existing);
+      Object.assign(next, nameUpdate);
+      await updateRegistrantNameForMatrixChange(env, next, nameUpdate.intendedGuestName, actor, now);
     }
     if (Object.prototype.hasOwnProperty.call(change, "registrationRole")) {
       const roleUpdate = registrationRoleUpdate(change.registrationRole, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) || existing.type === "partner" ? "partner" : existing.type, existing);
