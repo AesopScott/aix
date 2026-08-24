@@ -1124,6 +1124,24 @@
       line-height: 1.35;
     }
 
+    .matrix-text-input {
+      width: 100%;
+      min-width: 0;
+      min-height: 2.35rem;
+      padding: 0.45rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid rgba(56, 189, 248, 0.42);
+      background: rgba(10, 15, 30, 0.72);
+      color: var(--white);
+      font-size: 0.88rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .matrix-text-input::placeholder {
+      color: rgba(209, 213, 219, 0.64);
+    }
+
     .matrix-event-list {
       display: grid;
       gap: 0.35rem;
@@ -2298,7 +2316,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     ];
     const guestRegistrationLifecycleValues = guestRegistrationLifecycleOptions.map(([value]) => value);
     const guestMatrixRegistrationStatusOptions = guestRegistrationLifecycleOptions;
-    let activeView = "contacts";
+    let activeView = "guest-matrix";
     let registrationInviteStatusFilter = "all";
     let partnerCompanyPage = 1;
     let activePartnerAddCompany = "";
@@ -3415,7 +3433,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function setActiveView(view, options = {}) {
-      activeView = view === "guest-partner-invite-links" ? "partner-invite-links" : view || "contacts";
+      activeView = view === "guest-partner-invite-links" ? "partner-invite-links" : view || "guest-matrix";
       if (!options.keepCompanyFilter) {
         activeProspectingCompanyId = "";
         activeProspectingEditCompanyId = "";
@@ -3919,6 +3937,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const notesField = isRegisteredRow ? "eventNotes" : "preRegistrationNotes";
       const notes = isRegisteredRow ? firstCleanValue(eventNotes, preRegistrationNotes) : preRegistrationNotes;
       const matrixInterestRating = starRatingValue(draft.matrixInterestRating ?? invite.matrixInterestRating ?? invite.participationInterestRating ?? invite.interestRating, 1);
+      const name = firstCleanValue(draft.intendedGuestName, guestMatrixPersonName(invite));
       return {
         id,
         invite,
@@ -3929,7 +3948,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventMeta: guestMatrixEventMeta(invite),
         showKey,
         showLabel: guestMatrixShowMeta(invite),
-        name: guestMatrixPersonName(invite),
+        name,
         email,
         company: firstCleanValue(invite.company, invite.organization, invite.partnerCompany),
         title: firstCleanValue(invite.title, invite.jobTitle, invite.roleTitle),
@@ -3954,7 +3973,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         haystack: [
           eventName,
           guestMatrixEventMeta(invite),
-          guestMatrixPersonName(invite),
+          name,
           email,
           firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl),
           firstCleanValue(invite.title, invite.jobTitle, invite.roleTitle),
@@ -4318,7 +4337,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       <td>
                         <div class="matrix-person-row">
                           <div class="matrix-person">
-                            <strong>${escapeHtml(row.name)}</strong>
+                            <input class="matrix-text-input" data-guest-matrix-field="intendedGuestName" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" value="${escapeHtml(row.name === "Name not recorded" ? "" : row.name)}" placeholder="${isPartnerMatrix() ? "Partner name" : "Guest name"}" aria-label="${isPartnerMatrix() ? "Partner name" : "Guest name"}">
                             ${row.title || row.company ? `<span>${escapeHtml([row.title, row.company].filter(Boolean).join(" | "))}</span>` : ""}
                             ${row.email ? `<span>${escapeHtml(row.email)}</span>` : '<span>No email recorded</span>'}
                             ${row.linkedinProfileUrl ? `<a href="${escapeHtml(row.linkedinProfileUrl)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}
@@ -8384,7 +8403,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     guestMatrixList.addEventListener("input", (event) => {
-      const input = event.target.closest("textarea[data-guest-matrix-field]");
+      const input = event.target.closest("textarea[data-guest-matrix-field], input[data-guest-matrix-field]");
       if (!input) return;
       queueGuestMatrixChange(input);
     });
