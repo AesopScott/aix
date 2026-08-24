@@ -724,10 +724,27 @@ function zoomStartTime(start) {
   return start.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
+function normalizeZoomUserId(value) {
+  return cleanText(value, 200).toLowerCase();
+}
+
+function zoomUserForEmployee(config, employee) {
+  return cleanText(employee.zoomUserId || employee.zoomUserEmail || employee.email || config.userId, 200);
+}
+
+function zoomUserForBooking(config, booking) {
+  return cleanText(booking.zoomUserId || config.userId, 200);
+}
+
+function isMissingZoomUser(payload) {
+  return Number(payload?.code) === 1001 || /user does not exist/i.test(payload?.message || "");
+}
+
 async function createZoomMeeting(env, employee, meetingType, booking, start, end) {
   const token = await zoomAccessToken(env);
   const config = zoomConfig(env);
-  const response = await fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(config.userId)}/meetings`, {
+  const targetUserId = zoomUserForEmployee(config, employee);
+  const createForUser = async (userId) => fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(userId)}/meetings`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${token}`,
@@ -758,13 +775,20 @@ async function createZoomMeeting(env, employee, meetingType, booking, start, end
       }
     })
   });
-  const payload = await response.json().catch(() => ({}));
+
+  let response = await createForUser(targetUserId);
+  let payload = await response.json().catch(() => ({}));
+  if (!response.ok && targetUserId !== config.userId && isMissingZoomUser(payload)) {
+    response = await createForUser(config.userId);
+    payload = await response.json().catch(() => ({}));
+  }
   if (!response.ok) throw new Error(payload.message || "Zoom meeting creation failed.");
   return {
     meetingId: String(payload.id || ""),
     joinUrl: payload.join_url || "",
     passcode: payload.password || "",
-    startAt: payload.start_time || start.toISOString()
+    startAt: payload.start_time || start.toISOString(),
+    zoomUserId: payload.host_email || payload.host_id || targetUserId
   };
 }
 
@@ -1164,7 +1188,9 @@ async function connectedCalendarBusyIntervals(env, employee, start, end) {
   return busyIntervalsFromSchedule(calendars.flat(), employee);
 }
 
-async function sharedZoomBusyIntervals(env, start, end) {
+async function sharedZoomBusyIntervals(env, start, end, zoomUserId = "") {
+  const config = zoomConfig(env);
+  const targetZoomUserId = normalizeZoomUserId(zoomUserId || config.userId);
   const dateKeys = new Set();
   for (let cursor = addUtcDays(start, -1); cursor <= addUtcDays(end, 1); cursor = addUtcDays(cursor, 1)) {
     dateKeys.add(utcDateKey(cursor));
@@ -1178,6 +1204,7 @@ async function sharedZoomBusyIntervals(env, start, end) {
 
   return records
     .filter((record) => record.status !== "cancelled")
+    .filter((record) => normalizeZoomUserId(zoomUserForBooking(config, record)) === targetZoomUserId)
     .map((record) => ({
       start: record.start,
       end: record.end
@@ -1190,8 +1217,8 @@ async function sharedZoomBusyIntervals(env, start, end) {
     }));
 }
 
-async function hasSharedZoomConflict(env, start, end) {
-  return (await sharedZoomBusyIntervals(env, start, end)).length > 0;
+async function hasSharedZoomConflict(env, start, end, zoomUserId = "") {
+  return (await sharedZoomBusyIntervals(env, start, end, zoomUserId)).length > 0;
 }
 
 function buildCandidateSlots(employee, dateValue, meetingType, busyIntervals = []) {
@@ -1235,6 +1262,8 @@ export async function availability(env, query) {
   if (!validDate(dateValue)) {
     return { response: json({ error: "Choose a date in YYYY-MM-DD format." }, { status: 400 }) };
   }
+  const zoom = zoomConfig(env);
+  const employeeZoomUserId = zoom.configured ? zoomUserForEmployee(zoom, employee) : "";
 
   const dayStart = zonedTimeToUtc(dateValue, employee.dayStart, employee.timezone);
   const dayEnd = zonedTimeToUtc(dateValue, employee.dayEnd, employee.timezone);
@@ -1263,7 +1292,7 @@ export async function availability(env, query) {
     source = `${source}+connected-calendars`;
   }
 
-  const sharedZoomIntervals = await sharedZoomBusyIntervals(env, dayStart, dayEnd);
+  const sharedZoomIntervals = await sharedZoomBusyIntervals(env, dayStart, dayEnd, employeeZoomUserId);
   if (sharedZoomIntervals.length) {
     busyIntervals = [...busyIntervals, ...sharedZoomIntervals];
     source = `${source}+shared-zoom`;
@@ -1290,6 +1319,8 @@ export async function calendarFeedDiagnostics(env, query) {
   if (!validDate(dateValue)) {
     return { response: json({ error: "Choose a date in YYYY-MM-DD format." }, { status: 400 }) };
   }
+  const zoom = zoomConfig(env);
+  const employeeZoomUserId = zoom.configured ? zoomUserForEmployee(zoom, employee) : "";
 
   const dayStart = zonedTimeToUtc(dateValue, employee.dayStart, employee.timezone);
   const dayEnd = zonedTimeToUtc(dateValue, employee.dayEnd, employee.timezone);
@@ -1313,7 +1344,7 @@ export async function calendarFeedDiagnostics(env, query) {
   }
 
   try {
-    baseBusyIntervals = [...baseBusyIntervals, ...(await sharedZoomBusyIntervals(env, dayStart, dayEnd))];
+    baseBusyIntervals = [...baseBusyIntervals, ...(await sharedZoomBusyIntervals(env, dayStart, dayEnd, employeeZoomUserId))];
   } catch (error) {
     sourceWarnings.push(error?.message || "Shared Zoom booking lookup failed.");
   }
@@ -1445,6 +1476,7 @@ export async function createBooking(env, input = {}) {
   }
 
   const meetingType = employee.meetingTypes.find((type) => type.id === cleanSlug(input.type)) || employee.meetingTypes[0];
+  const employeeZoomUserId = zoomUserForEmployee(zoom, employee);
   const start = new Date(input.start);
   if (Number.isNaN(start.getTime())) return { response: json({ error: "Choose a valid slot." }, { status: 400 }) };
 
@@ -1465,15 +1497,16 @@ export async function createBooking(env, input = {}) {
   if (!isValidEmail(guestEmail)) return { response: json({ error: "Enter a valid email address." }, { status: 400 }) };
 
   const end = new Date(start.getTime() + meetingType.durationMinutes * 60000);
-  if (await hasSharedZoomConflict(env, start, end)) {
+  if (await hasSharedZoomConflict(env, start, end, employeeZoomUserId)) {
     return { response: json({ error: "That Zoom time is no longer available. Choose another time." }, { status: 409 }) };
   }
 
-  const holdKey = `${HOLD_PREFIX}zoom:${start.toISOString()}`;
+  const holdKey = `${HOLD_PREFIX}zoom:${normalizeZoomUserId(employeeZoomUserId)}:${start.toISOString()}`;
   await putStoredJson(env, holdKey, {
     id: crypto.randomUUID(),
     employeeSlug: employee.slug,
     employeeEmail: employee.email,
+    zoomUserId: employeeZoomUserId,
     meetingTypeId: meetingType.id,
     start: start.toISOString(),
     end: end.toISOString(),
@@ -1512,6 +1545,7 @@ export async function createBooking(env, input = {}) {
       graphEventId: event.id || "",
       graphWebLink: event.webLink || "",
       zoomMeetingId: zoomMeeting.meetingId || "",
+      zoomUserId: zoomMeeting.zoomUserId || employeeZoomUserId,
       zoomJoinUrl: zoomMeeting.joinUrl || "",
       zoomPasscode: zoomMeeting.passcode || "",
       onlineMeetingUrl: zoomMeeting.joinUrl || ""
