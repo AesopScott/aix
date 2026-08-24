@@ -1,6 +1,6 @@
 # Partner Prospecting Engine
 
-Updated: 2026-08-13
+Updated: 2026-08-21
 
 ## Summary
 
@@ -25,6 +25,8 @@ Miller's queue is LinkedIn-first. The CRM provides platform links, prepared sear
 The Discovery Queue can now run a public-source discovery pass from a supplied URL, such as a conference sponsor page, public portfolio page, marketplace list, or AI directory page.
 
 The Discovery Queue now includes built-in starter sources so operators do not need to bring source URLs before Vendor Universe can start. The starter library includes conference sponsor lists/prospectuses and AI company directories, and exposes `Run Source` and `Run One Starter Source` actions. Source runs intentionally process one source per request with a small company limit so Cloudflare Workers do not exceed per-invocation request limits.
+
+The one-click 50-company discovery buttons are implemented as browser-driven batches, not one large Worker transaction. Each Worker invocation processes one source, up to eight candidate links, up to five new company saves, and at most one sponsor subpage crawl. Discovery dedupe uses direct company-key lookups and avoids hydrating the full Vendor Universe or prospect people records inside source-run requests, keeping each invocation below Cloudflare subrequest limits.
 
 Discovery runs now write bounded CRM debug records. The Discovery Queue exposes a Discovery Debug panel showing source URL, status, accepted link names/domains, rejected link labels/domains, and the reason a company name was chosen or rejected. Sponsor-tier labels such as `2026 premier sponsor` are treated as labels, not company names; the extractor falls back to logo alt/title text or the linked domain when labels are generic.
 
@@ -55,6 +57,12 @@ Source performance now tracks more than discovered counts. The dashboard reports
 Discovery Source cards also surface qualified count, ready count, response count, and average score so operators can compare source quality where sources are managed.
 
 Vendor Universe includes a Discovery Source filter. It is populated from saved sources, built-in starter sources, emerging sources, legacy `discoverySources`, and structured `sourceAttributions`, so operators can view a subset such as Black Hat-sourced companies without creating duplicate company records. When a selected source is runnable, the filter exposes `Run This Source` to execute discovery only for that source and return to the same filtered source view.
+
+## Carahsoft AI Vendor Import
+
+On 2026-08-23, the Carahsoft AI vendor CSV from `C:\Users\scott\Downloads\carahsoft_ai_vendors.csv` was imported directly into the remote `MOJO_SUMMITS_SETUP_STATE` KV namespace. The import preserved existing Vendor Universe records by matching company names and keys, added `Carahsoft AI Vendors` as a discovery source, kept Carahsoft URLs as evidence/source URLs rather than company websites, and wrote a runnable source record at `crm:partner-prospect-source:carahsoft-ai-vendors`.
+
+Import result: 388 CSV rows processed, 357 net-new company records created, 31 existing company records updated with Carahsoft attribution, and the remote Vendor Universe count increased from 283 to 640.
 
 ## Phase C Research Queue
 
@@ -137,3 +145,4 @@ Verified with:
 - Local `GET /crm/` check with Conference Sponsor Playbook, sponsor evidence forms, and `Conference Sponsorship Prospectus` source type present.
 - Local `GET /crm/` check with Walkthroughs button and walkthrough content present.
 - Local `GET /api/crm?prospecting=1` check with built-in `starterSources` present.
+- CRM discovery subrequest-budget patch verified with Worker syntax check, inline CRM script syntax check, and diff whitespace check.

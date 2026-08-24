@@ -524,6 +524,9 @@
     }
     .meeting-link-button {
       min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border: 1px solid rgba(0, 230, 255, .38);
       border-radius: 999px;
       padding: 0 14px;
@@ -534,8 +537,13 @@
       font-weight: 800;
       letter-spacing: .08em;
       text-transform: uppercase;
-      cursor: not-allowed;
+      cursor: pointer;
       opacity: .86;
+    }
+    .meeting-link-button:hover {
+      border-color: rgba(0, 230, 255, .7);
+      background: rgba(0, 230, 255, .16);
+      opacity: 1;
     }
     .event-action {
       min-height: 74px;
@@ -649,7 +657,7 @@
 <body>
   <header>
     <nav class="wrap" aria-label="Attendee navigation">
-      <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+      <a class="brand-lockup" href="../" aria-label="MOJO AI Summits home">
         <img class="brand-mark" src="/assets/logo-mark.png" alt="">
         <span class="brand-divider" aria-hidden="true"></span>
         <span class="brand-name" aria-hidden="true">
@@ -658,10 +666,10 @@
         </span>
       </a>
       <div class="nav-actions">
-        <a href="/calendar/" aria-current="page">Calendar</a>
-        <a href="/virtual/">Virtual</a>
-        <a href="/membership/">Membership</a>
-        <a href="/partners/">Partners</a>
+        <a href="../calendar/" aria-current="page">Calendar</a>
+        <a href="../virtual/">Virtual</a>
+        <a href="../membership/">Membership</a>
+        <a href="../partners/">Partners</a>
       </div>
     </nav>
   </header>
@@ -708,7 +716,7 @@
     <section class="event-grid wrap" id="all-events" aria-label="All upcoming events">
 
       <article class="event-card" id="virtual-events" data-format="virtual" data-cohort="technology-strategy">
-        <a class="event-art is-photo" href="/ai-executive-readiness-online/" aria-label="View details for AI Executive Readiness">
+        <a class="event-art is-photo" href="../ai-executive-readiness-online/" aria-label="View details for AI Executive Readiness">
           <img class="event-photo" src="/assets/calendar/virtual/ai-executive-readiness.webp" alt="" decoding="async">
           <span class="track-chip">Technology Strategy</span>
         </a>
@@ -720,18 +728,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-executive-readiness-online/" aria-label="View AI Executive Readiness details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-executive-readiness-online/">Learn more</a>
+          <a class="learn-more" href="../ai-executive-readiness-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="integration">
-        <a class="event-art is-photo" href="/ai-data-readiness-and-knowledge-strategy-online/" aria-label="View details for AI Data Readiness and Knowledge Strategy">
+        <a class="event-art is-photo" href="../ai-data-readiness-and-knowledge-strategy-online/" aria-label="View details for AI Data Readiness and Knowledge Strategy">
           <img class="event-photo" src="/assets/calendar/virtual/ai-data-readiness-and-knowledge-strategy.webp" alt="" decoding="async">
           <span class="track-chip">Integration</span>
         </a>
@@ -743,18 +751,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-data-readiness-and-knowledge-strategy-online/" aria-label="View AI Data Readiness and Knowledge Strategy details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-data-readiness-and-knowledge-strategy-online/">Learn more</a>
+          <a class="learn-more" href="../ai-data-readiness-and-knowledge-strategy-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="operations-finance">
-        <a class="event-art is-photo" href="/ai-use-cases-that-survive-finance-online/" aria-label="View details for AI Use Cases That Survive Finance">
+        <a class="event-art is-photo" href="../ai-use-cases-that-survive-finance-online/" aria-label="View details for AI Use Cases That Survive Finance">
           <img class="event-photo" src="/assets/calendar/virtual/ai-use-cases-that-survive-finance.webp" alt="" decoding="async">
           <span class="track-chip">Operations and Finance</span>
         </a>
@@ -766,18 +774,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-use-cases-that-survive-finance-online/" aria-label="View AI Use Cases That Survive Finance details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-use-cases-that-survive-finance-online/">Learn more</a>
+          <a class="learn-more" href="../ai-use-cases-that-survive-finance-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="innovation">
-        <a class="event-art is-photo" href="/ai-agents-automation-and-human-handoffs-online/" aria-label="View details for AI Agents, Automation, and Human Handoffs">
+        <a class="event-art is-photo" href="../ai-agents-automation-and-human-handoffs-online/" aria-label="View details for AI Agents, Automation, and Human Handoffs">
           <img class="event-photo" src="/assets/calendar/virtual/ai-agents-automation-and-human-handoffs.webp" alt="" decoding="async">
           <span class="track-chip">Innovation</span>
         </a>
@@ -789,18 +797,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-agents-automation-and-human-handoffs-online/" aria-label="View AI Agents, Automation, and Human Handoffs details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-agents-automation-and-human-handoffs-online/">Learn more</a>
+          <a class="learn-more" href="../ai-agents-automation-and-human-handoffs-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="integration">
-        <a class="event-art is-photo" href="/ai-integration-and-workflow-online/" aria-label="View details for AI Integration and Workflow">
+        <a class="event-art is-photo" href="../ai-integration-and-workflow-online/" aria-label="View details for AI Integration and Workflow">
           <img class="event-photo" src="/assets/calendar/virtual/ai-integration-and-workflow.webp" alt="" decoding="async">
           <span class="track-chip">Integration</span>
         </a>
@@ -812,18 +820,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-integration-and-workflow-online/" aria-label="View AI Integration and Workflow details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-integration-and-workflow-online/">Learn more</a>
+          <a class="learn-more" href="../ai-integration-and-workflow-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="technology-strategy">
-        <a class="event-art is-photo" href="/ai-vendor-strategy-and-platform-decisions-online/" aria-label="View details for AI Vendor Strategy and Platform Decisions">
+        <a class="event-art is-photo" href="../ai-vendor-strategy-and-platform-decisions-online/" aria-label="View details for AI Vendor Strategy and Platform Decisions">
           <img class="event-photo" src="/assets/calendar/virtual/ai-vendor-strategy-and-platform-decisions.webp" alt="" decoding="async">
           <span class="track-chip">Technology Strategy</span>
         </a>
@@ -835,18 +843,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-vendor-strategy-and-platform-decisions-online/" aria-label="View AI Vendor Strategy and Platform Decisions details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-vendor-strategy-and-platform-decisions-online/">Learn more</a>
+          <a class="learn-more" href="../ai-vendor-strategy-and-platform-decisions-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="security-risk">
-        <a class="event-art is-photo" href="/ai-security-governance-and-trust-online/" aria-label="View details for AI Security, Governance, and Trust">
+        <a class="event-art is-photo" href="../ai-security-governance-and-trust-online/" aria-label="View details for AI Security, Governance, and Trust">
           <img class="event-photo" src="/assets/calendar/virtual/ai-security-governance-and-trust.webp" alt="" decoding="async">
           <span class="track-chip">Security and Risk</span>
         </a>
@@ -858,18 +866,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-security-governance-and-trust-online/" aria-label="View AI Security, Governance, and Trust details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-security-governance-and-trust-online/">Learn more</a>
+          <a class="learn-more" href="../ai-security-governance-and-trust-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="business-enablement">
-        <a class="event-art is-photo" href="/ai-workforce-talent-and-change-adoption-online/" aria-label="View details for AI Workforce, Talent, and Change Adoption">
+        <a class="event-art is-photo" href="../ai-workforce-talent-and-change-adoption-online/" aria-label="View details for AI Workforce, Talent, and Change Adoption">
           <img class="event-photo" src="/assets/calendar/virtual/ai-workforce-talent-and-change-adoption.webp" alt="" decoding="async">
           <span class="track-chip">Business Enablement</span>
         </a>
@@ -881,18 +889,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-workforce-talent-and-change-adoption-online/" aria-label="View AI Workforce, Talent, and Change Adoption details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-workforce-talent-and-change-adoption-online/">Learn more</a>
+          <a class="learn-more" href="../ai-workforce-talent-and-change-adoption-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="operations-finance">
-        <a class="event-art is-photo" href="/ai-operating-model-for-2027-online/" aria-label="View details for AI Operating Model for 2027">
+        <a class="event-art is-photo" href="../ai-operating-model-for-2027-online/" aria-label="View details for AI Operating Model for 2027">
           <img class="event-photo" src="/assets/calendar/virtual/ai-operating-model-for-2027.webp" alt="" decoding="async">
           <span class="track-chip">Operations and Finance</span>
         </a>
@@ -904,18 +912,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-operating-model-for-2027-online/" aria-label="View AI Operating Model for 2027 details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-operating-model-for-2027-online/">Learn more</a>
+          <a class="learn-more" href="../ai-operating-model-for-2027-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="operations-finance">
-        <a class="event-art is-photo" href="/ai-budgeting-and-investment-priorities-online/" aria-label="View details for AI Budgeting and Investment Priorities">
+        <a class="event-art is-photo" href="../ai-budgeting-and-investment-priorities-online/" aria-label="View details for AI Budgeting and Investment Priorities">
           <img class="event-photo" src="/assets/calendar/virtual/ai-budgeting-and-investment-priorities.webp" alt="" decoding="async">
           <span class="track-chip">Operations and Finance</span>
         </a>
@@ -927,18 +935,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-budgeting-and-investment-priorities-online/" aria-label="View AI Budgeting and Investment Priorities details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-budgeting-and-investment-priorities-online/">Learn more</a>
+          <a class="learn-more" href="../ai-budgeting-and-investment-priorities-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="business-enablement">
-        <a class="event-art is-photo" href="/ai-workforce-readiness-and-change-leadership-online/" aria-label="View details for AI Workforce Readiness and Change Leadership">
+        <a class="event-art is-photo" href="../ai-workforce-readiness-and-change-leadership-online/" aria-label="View details for AI Workforce Readiness and Change Leadership">
           <img class="event-photo" src="/assets/calendar/virtual/ai-workforce-readiness-and-change-leadership.webp" alt="" decoding="async">
           <span class="track-chip">Business Enablement</span>
         </a>
@@ -950,18 +958,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-workforce-readiness-and-change-leadership-online/" aria-label="View AI Workforce Readiness and Change Leadership details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-workforce-readiness-and-change-leadership-online/">Learn more</a>
+          <a class="learn-more" href="../ai-workforce-readiness-and-change-leadership-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card" data-format="virtual" data-cohort="technology-strategy">
-        <a class="event-art is-photo" href="/ai-executive-operating-agenda-for-2027-online/" aria-label="View details for AI Executive Operating Agenda for 2027">
+        <a class="event-art is-photo" href="../ai-executive-operating-agenda-for-2027-online/" aria-label="View details for AI Executive Operating Agenda for 2027">
           <img class="event-photo" src="/assets/calendar/virtual/ai-executive-operating-agenda-for-2027.webp" alt="" decoding="async">
           <span class="track-chip">Technology Strategy</span>
         </a>
@@ -973,18 +981,18 @@
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
             <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
-            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><button class="meeting-link-button" type="button" disabled title="Meeting link will be added 24 hours before the event">Link</button></div>
+            <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-executive-operating-agenda-for-2027-online/" aria-label="View AI Executive Operating Agenda for 2027 details">Link</a></div>
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/ai-executive-operating-agenda-for-2027-online/">Learn more</a>
+          <a class="learn-more" href="../ai-executive-operating-agenda-for-2027-online/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card summit-card" id="live-events" data-format="in-person" data-cohort="all-cohorts">
-        <a class="event-art is-photo" href="/dallas/" aria-label="View details for Q1 Intelligence Brief Summit: Dallas">
+        <a class="event-art is-photo" href="../dallas/" aria-label="View details for Q1 Intelligence Brief Summit: Dallas">
           <img class="event-photo" src="/assets/calendar/summits/q1-intelligence-brief-summit-dallas.webp" alt="" decoding="async">
           <span class="track-chip">All Cohorts</span>
         </a>
@@ -998,14 +1006,14 @@
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/dallas/">Learn more</a>
+          <a class="learn-more" href="../dallas/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card summit-card" id="brief-events" data-format="in-person" data-cohort="all-cohorts">
-        <a class="event-art is-photo" href="/briefs/" aria-label="View details for Q2 Intelligence Brief Summit">
+        <a class="event-art is-photo" href="../briefs/" aria-label="View details for Q2 Intelligence Brief Summit">
           <img class="event-photo" src="/assets/calendar/summits/q2-intelligence-brief-summit-denver.webp" alt="" decoding="async">
           <span class="track-chip">All Cohorts</span>
         </a>
@@ -1019,14 +1027,14 @@
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/briefs/">Learn more</a>
+          <a class="learn-more" href="../briefs/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card summit-card" data-format="in-person" data-cohort="all-cohorts">
-        <a class="event-art is-photo" href="/briefs/" aria-label="View details for Q3 Intelligence Brief Summit">
+        <a class="event-art is-photo" href="../briefs/" aria-label="View details for Q3 Intelligence Brief Summit">
           <img class="event-photo" src="/assets/calendar/summits/q3-intelligence-brief-summit-raleigh.webp" alt="" decoding="async">
           <span class="track-chip">All Cohorts</span>
         </a>
@@ -1040,14 +1048,14 @@
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/briefs/">Learn more</a>
+          <a class="learn-more" href="../briefs/">Learn more</a>
         </div>
       </article>
 
 
 
       <article class="event-card summit-card" data-format="in-person" data-cohort="all-cohorts">
-        <a class="event-art is-photo" href="/briefs/" aria-label="View details for Q4 Intelligence Brief Summit">
+        <a class="event-art is-photo" href="../briefs/" aria-label="View details for Q4 Intelligence Brief Summit">
           <img class="event-photo" src="/assets/calendar/summits/q4-intelligence-brief-summit-chicago.webp" alt="" decoding="async">
           <span class="track-chip">All Cohorts</span>
         </a>
@@ -1061,7 +1069,7 @@
           </div>
         </div>
         <div class="event-action">
-          <a class="learn-more" href="/briefs/">Learn more</a>
+          <a class="learn-more" href="../briefs/">Learn more</a>
         </div>
       </article>
     </section>
@@ -1071,7 +1079,7 @@
   <footer>
     <div class="wrap">
       <span>© 2026 MOJO AI Summits. Executive AI events.</span>
-      <a href="/virtual/">Virtual event series</a>
+      <a href="../virtual/">Virtual event series</a>
     </div>
   </footer>
   <script>
