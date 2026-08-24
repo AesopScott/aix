@@ -113,6 +113,44 @@ function cleanCampaignAttribution(payload = {}) {
   return attribution;
 }
 
+function cleanQuestionRankings(value) {
+  let source = value;
+  if (typeof value === "string") {
+    try {
+      source = JSON.parse(value || "[]");
+    } catch {
+      source = [];
+    }
+  }
+  if (!Array.isArray(source)) return [];
+  const rankings = source.map((item) => ({
+    id: cleanString(item?.id).slice(0, 120),
+    rank: Number(item?.rank),
+    prompt: cleanString(item?.prompt).slice(0, 300),
+    detail: cleanString(item?.detail).slice(0, 600)
+  })).filter((item) =>
+    item.id &&
+    item.prompt &&
+    Number.isInteger(item.rank) &&
+    item.rank >= 1 &&
+    item.rank <= 8
+  );
+  const uniqueRanks = new Set(rankings.map((item) => item.rank));
+  const uniqueIds = new Set(rankings.map((item) => item.id));
+  if (rankings.length !== 8 || uniqueRanks.size !== 8 || uniqueIds.size !== 8) return [];
+  return rankings.sort((a, b) => a.rank - b.rank);
+}
+
+function questionRankingSummary(rankings = []) {
+  return (Array.isArray(rankings) ? rankings : [])
+    .slice()
+    .sort((a, b) => Number(a.rank) - Number(b.rank))
+    .map((item) => `${item.rank}. ${cleanString(item.prompt)}`)
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 4000);
+}
+
 function safeFileSegment(value, fallback = "file") {
   return cleanString(value)
     .toLowerCase()
@@ -346,6 +384,8 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
     attendanceStatus: cleanString(previous.attendanceStatus || registration.attendanceStatus) || "not_recorded",
     attendedAt: cleanString(previous.attendedAt || registration.attendedAt),
     attendanceNotes: cleanString(previous.attendanceNotes),
+    eventQuestionRankings: cleanQuestionRankings(registration.eventQuestionRankings),
+    eventQuestionRankingSummary: cleanString(registration.eventQuestionRankingSummary),
     campaignAttribution: cleanCampaignAttribution(registration.campaignAttribution || registration),
     updatedAt: now
   };
@@ -404,6 +444,9 @@ function cleanLinkedInProfileUrl(value) {
 }
 
 function cleanPayload(payload, type = "") {
+  const eventQuestionRankings = cleanQuestionRankings(payload?.eventQuestionRankings || payload?.questionRankings || payload?.topicRankings);
+  const eventQuestionRankingSummary = cleanString(payload?.eventQuestionRankingSummary) || questionRankingSummary(eventQuestionRankings);
+  const eventNotes = cleanString(payload?.eventNotes || payload?.registrationNotes || eventQuestionRankingSummary, 4000);
   return {
     inviteCode: cleanString(payload?.inviteCode),
     name: cleanString(payload?.name),
@@ -415,6 +458,10 @@ function cleanPayload(payload, type = "") {
     phone: cleanString(payload?.phone),
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
     eventShowId: cleanEventShowId(payload?.eventShowId || payload?.showId || payload?.eventShow, ""),
+    eventQuestionRankings,
+    eventQuestionRankingSummary,
+    eventNotes,
+    registrationNotes: eventNotes,
     partnerProductTypes: type === "partner" ? cleanString(payload?.partnerProductTypes, 2000) : "",
     partnerClientMessaging: type === "partner" ? cleanString(payload?.partnerClientMessaging, 4000) : "",
     publicationUseName: cleanBoolean(payload?.publicationUseName),
@@ -804,6 +851,7 @@ function staffRegistrationRows(type, registration = {}) {
     ["Company", registration.company || registration.partnerCompany],
     ["Title", registration.title],
     ["Industry", registration.industry],
+    ["Ranked conversation questions", registration.eventQuestionRankingSummary],
     ["Brief photo", registration.photoUrl],
     ["Products sold", type === "partner" ? registration.partnerProductTypes : ""],
     ["Typical client messaging", type === "partner" ? registration.partnerClientMessaging : ""],
@@ -886,6 +934,9 @@ function validateRegistration(registration, type = "") {
   if (!registration.phone) return "Phone number is required.";
   if (!acceptedPhoneStatuses.has(registration.phoneVerificationStatus)) {
     return "Phone verification status is required.";
+  }
+  if (type === "guest" && cleanQuestionRankings(registration.eventQuestionRankings).length !== 8) {
+    return "Rank each conversation question once, from 1 through 8.";
   }
   return "";
 }
@@ -1125,6 +1176,8 @@ export async function upsertRegistrationContact(env, type, registration, config 
       partnerProductTypes: cleanString(registration.partnerProductTypes, 2000),
       partnerClientMessaging: cleanString(registration.partnerClientMessaging, 4000)
     } : {}),
+    eventQuestionRankings: cleanQuestionRankings(registration.eventQuestionRankings),
+    eventQuestionRankingSummary: cleanString(registration.eventQuestionRankingSummary),
     registrationId: cleanString(registration.id),
     registrationType: cleanString(config.label || type),
     lifecycleStage: "registered",
