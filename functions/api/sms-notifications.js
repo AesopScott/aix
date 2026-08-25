@@ -23,6 +23,9 @@ const r2RegistrationPrefixes = [
   "crm-overflow/registrations/member/",
   "crm-overflow/registrations/partner/"
 ];
+const registrationIndexCacheKey = "sms/cache/notification-registration-index.json";
+const registrationIndexCacheTtlMs = 5 * 60 * 1000;
+const registrationIndexCacheMaxStaleMs = 24 * 60 * 60 * 1000;
 const additionalNoticeKey = "sms:notifications:last-additional-event-notice";
 const additionalNoticeCooldownMs = 30 * 24 * 60 * 60 * 1000;
 const encoder = new TextEncoder();
@@ -239,11 +242,29 @@ async function sendSms(config, phone, message) {
   return result.MessageId || "";
 }
 
-async function listKeys(env, prefix) {
+function noteLookupWarning(warnings, source, prefix, error) {
+  if (!warnings) return;
+  warnings.push({
+    source,
+    prefix,
+    message: cleanString(error?.message || error, 240)
+  });
+}
+
+async function listKeys(env, prefix, warnings) {
   const keys = [];
   let cursor;
   do {
-    const result = await env.MOJO_SUMMITS_SETUP_STATE.list({ prefix, cursor, limit: 1000 });
+    const result = await env.MOJO_SUMMITS_SETUP_STATE.list({ prefix, cursor, limit: 1000 }).catch((error) => {
+      noteLookupWarning(warnings, "kv", prefix, error);
+      console.warn(JSON.stringify({
+        event: "sms_notification_kv_list_failed",
+        prefix,
+        error: cleanString(error?.message || error, 240)
+      }));
+      return null;
+    });
+    if (!result) break;
     keys.push(...result.keys.map((entry) => entry.name));
     cursor = result.list_complete ? undefined : result.cursor;
   } while (cursor);
@@ -301,11 +322,11 @@ function normalizeRegistration(key, record = {}, source = "") {
   };
 }
 
-async function collectRegistrations(env) {
+async function collectRegistrations(env, warnings) {
   const map = new Map();
 
   for (const prefix of registrationPrefixes) {
-    for (const key of await listKeys(env, prefix)) {
+    for (const key of await listKeys(env, prefix, warnings)) {
       const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
       if (!record) continue;
       const normalized = normalizeRegistration(key, record, prefix);
@@ -317,7 +338,10 @@ async function collectRegistrations(env) {
     for (const prefix of r2RegistrationPrefixes) {
       let cursor;
       do {
-        const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit: 1000 }).catch(() => null);
+        const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit: 1000 }).catch((error) => {
+          noteLookupWarning(warnings, "r2", prefix, error);
+          return null;
+        });
         if (!result) break;
         for (const object of result.objects || []) {
           const stored = await env.MOJO_SUMMITS_STORAGE.get(object.key).catch(() => null);
@@ -332,6 +356,63 @@ async function collectRegistrations(env) {
   }
 
   return [...map.values()].sort((a, b) => String(b.registeredAt).localeCompare(String(a.registeredAt)));
+}
+
+function registrationCacheAgeMs(payload) {
+  const generatedAt = Date.parse(payload?.generatedAt || "");
+  return Number.isFinite(generatedAt) ? Date.now() - generatedAt : Infinity;
+}
+
+async function readRegistrationCache(env, maxAgeMs) {
+  if (!env.MOJO_SUMMITS_STORAGE?.get) return null;
+  const object = await env.MOJO_SUMMITS_STORAGE.get(registrationIndexCacheKey).catch(() => null);
+  const payload = object ? await object.json().catch(() => null) : null;
+  if (!payload || !Array.isArray(payload.registrations)) return null;
+  if (registrationCacheAgeMs(payload) > maxAgeMs) return null;
+  return payload;
+}
+
+async function writeRegistrationCache(env, registrations) {
+  if (!env.MOJO_SUMMITS_STORAGE?.put) return;
+  await env.MOJO_SUMMITS_STORAGE.put(
+    registrationIndexCacheKey,
+    JSON.stringify({ generatedAt: new Date().toISOString(), registrations }),
+    { httpMetadata: { contentType: "application/json" } }
+  ).catch(() => null);
+}
+
+async function collectRegistrationsCached(env) {
+  const fresh = await readRegistrationCache(env, registrationIndexCacheTtlMs);
+  if (fresh) {
+    return {
+      registrations: fresh.registrations,
+      source: "cache",
+      generatedAt: cleanString(fresh.generatedAt, 120),
+      warning: ""
+    };
+  }
+
+  const stale = await readRegistrationCache(env, registrationIndexCacheMaxStaleMs);
+  const warnings = [];
+  const registrations = await collectRegistrations(env, warnings);
+  if (warnings.length && stale && registrations.length < stale.registrations.length) {
+    return {
+      registrations: stale.registrations,
+      source: "stale-cache",
+      generatedAt: cleanString(stale.generatedAt, 120),
+      warning: "Using cached event data because live registration lookup is partially unavailable."
+    };
+  }
+
+  if (!warnings.length || registrations.length) {
+    await writeRegistrationCache(env, registrations);
+  }
+  return {
+    registrations,
+    source: warnings.length ? "partial-live" : "live",
+    generatedAt: new Date().toISOString(),
+    warning: warnings.length ? "Some registration sources were unavailable; showing available event data." : ""
+  };
 }
 
 function registrationsForEvent(registrations, eventKey) {
@@ -456,10 +537,10 @@ async function collectVerifiedRecipients(env) {
   return [...map.values()].sort((a, b) => String(b.lastVerifiedAt).localeCompare(String(a.lastVerifiedAt)));
 }
 
-async function collectEventRecipients(env, eventKey) {
-  const registrations = registrationsForEvent(await collectRegistrations(env), eventKey);
+function collectEventRecipientsFromRegistrations(registrations, eventKey) {
+  const selectedRegistrations = registrationsForEvent(registrations, eventKey);
   const map = new Map();
-  for (const registration of registrations) {
+  for (const registration of selectedRegistrations) {
     if (registration.phoneVerificationStatus !== "verified") continue;
     addRecipient(map, registration.phone, {
       source: "event-registration",
@@ -475,6 +556,11 @@ async function collectEventRecipients(env, eventKey) {
     });
   }
   return [...map.values()].sort((a, b) => String(a.name || a.email || a.maskedPhone).localeCompare(String(b.name || b.email || b.maskedPhone)));
+}
+
+async function collectEventRecipients(env, eventKey) {
+  const { registrations } = await collectRegistrationsCached(env);
+  return collectEventRecipientsFromRegistrations(registrations, eventKey);
 }
 
 function collectReplyTestRecipients() {
@@ -574,15 +660,31 @@ export async function onRequestGet({ request, env, data }) {
   const url = new URL(request.url);
   const type = notificationType(url.searchParams.get("type"));
   const eventKey = cleanString(url.searchParams.get("eventKey"), 240);
-  const registrations = await collectRegistrations(env);
+  if (type === "reply-test") {
+    const recipients = collectReplyTestRecipients();
+    return json({
+      ok: true,
+      recipients,
+      events: [],
+      registrations: [],
+      summary: {
+        total: recipients.length,
+        selectedEventKey: "",
+        selectedRegistrationCount: 0,
+        lastAdditionalNoticeAt: ""
+      }
+    });
+  }
+  const registrationIndex = type === "event-reminder"
+    ? await collectRegistrationsCached(env)
+    : { registrations: [], source: "", generatedAt: "", warning: "" };
+  const registrations = registrationIndex.registrations;
   const selectedRegistrations = type === "event-reminder" && eventKey
     ? registrationsForEvent(registrations, eventKey)
     : [];
-  const recipients = type === "reply-test"
-    ? collectReplyTestRecipients()
-    : type === "event-reminder"
+  const recipients = type === "event-reminder"
       ? eventKey
-        ? await collectEventRecipients(env, eventKey)
+        ? collectEventRecipientsFromRegistrations(registrations, eventKey)
         : []
       : await collectVerifiedRecipients(env);
   const lastAdditionalNotice = await env.MOJO_SUMMITS_SETUP_STATE.get(additionalNoticeKey, "json").catch(() => null);
@@ -595,7 +697,10 @@ export async function onRequestGet({ request, env, data }) {
       total: recipients.length,
       selectedEventKey: eventKey,
       selectedRegistrationCount: selectedRegistrations.length,
-      lastAdditionalNoticeAt: cleanString(lastAdditionalNotice?.sentAt)
+      lastAdditionalNoticeAt: cleanString(lastAdditionalNotice?.sentAt),
+      registrationIndexSource: cleanString(registrationIndex.source, 80),
+      registrationIndexGeneratedAt: cleanString(registrationIndex.generatedAt, 120),
+      registrationIndexWarning: cleanString(registrationIndex.warning, 240)
     }
   });
 }

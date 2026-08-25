@@ -303,8 +303,16 @@
     }
 
     async function readJson(response) {
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Request failed.");
+      const text = await response.text().catch(() => "");
+      let payload = {};
+      try {
+        payload = text ? JSON.parse(text) : {};
+      } catch {
+        payload = {};
+      }
+      if (!response.ok) {
+        throw new Error(payload.error || `Request failed (${response.status}).`);
+      }
       return payload;
     }
 
@@ -435,7 +443,8 @@
         renderEvents(payload);
         renderRegistrants(payload);
         renderRecipients(payload);
-        setNotice("SMS recipient data loaded.", "ok");
+        const warning = payload.summary?.registrationIndexWarning || "";
+        setNotice(warning || "SMS recipient data loaded.", warning ? "" : "ok");
       } catch (error) {
         setNotice(error.message, "error");
       }
