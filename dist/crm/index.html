@@ -2037,6 +2037,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <label>
           Partner role
           <select id="partnerInviteType" name="partnerRegistrationType">
+            <option value="partner-candidate">Partner Candidate</option>
             <option value="partner">Partner</option>
             <option value="featured-partner">Featured Partner (on screen)</option>
           </select>
@@ -2090,6 +2091,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Status
           <select id="manualPartnerStatus" name="crmStatus">
             <option value="new">New</option>
+            <option value="scott-engagement">Scott Engagement</option>
             <option value="pending-engagement">Pending Engagement</option>
             <option value="contacted">Contacted</option>
             <option value="confirmed">Confirmed</option>
@@ -2307,7 +2309,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["no-show", "No Show"]
     ];
     const guestRegistrationLifecycleValues = guestRegistrationLifecycleOptions.map(([value]) => value);
-    const guestMatrixRegistrationStatusOptions = guestRegistrationLifecycleOptions;
+    const partnerRegistrationLifecycleOptions = [
+      ["scott-engagement", "Scott Engagement"],
+      ...guestRegistrationLifecycleOptions
+    ];
+    const partnerRegistrationLifecycleValues = partnerRegistrationLifecycleOptions.map(([value]) => value);
     let activeView = "contacts";
     let registrationInviteStatusFilter = "all";
     let partnerCompanyPage = 1;
@@ -2639,6 +2645,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function statusLabel(value) {
       return {
+        "scott-engagement": "Scott Engagement",
         "bad-fit": "Bad Fit",
         "no-show": "No Show",
         "do-not-contact": "Do Not Contact",
@@ -2653,6 +2660,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function guestRegistrationLifecycleStatus(value = "") {
       const raw = String(value || "").toLowerCase();
       const aliases = {
+        "scott engagement": "scott-engagement",
+        scott_engagement: "scott-engagement",
         new: "pending-engagement",
         pending: "pending-engagement",
         "pending-angel": "pending-engagement",
@@ -2743,6 +2752,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function guestRegistrationTypeLabel(value) {
       const role = String(value || "").toLowerCase();
+      if (role === "partner-candidate") return "Partner Candidate";
       if (role === "featured-partner") return "Featured Partner";
       if (role === "featured-guest") return "Featured Guest";
       if (role === "featured-author") return "Featured Author";
@@ -2756,7 +2766,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function normalizeRoleValue(value) {
       const raw = String(value || "").trim().toLowerCase();
-      if (["featured-partner", "featured-guest", "featured-member", "featured-author", "roundtable-leader", "presenter", "partner", "member", "guest"].includes(raw)) return raw;
+      if (["partner-candidate", "featured-partner", "featured-guest", "featured-member", "featured-author", "roundtable-leader", "presenter", "partner", "member", "guest"].includes(raw)) return raw;
+      if (raw.includes("partner candidate")) return "partner-candidate";
       if (raw.includes("featured partner")) return "featured-partner";
       if (raw.includes("featured guest")) return "featured-guest";
       if (raw.includes("featured member")) return "featured-member";
@@ -2847,6 +2858,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (strategicRole === "sponsor-representative") return "Sponsor Representative";
       if (strategicRole === "partner") return "Partner";
       const registrationRole = String(event.registrationRole || event.partnerRegistrationType || event.guestRegistrationType || "").toLowerCase();
+      if (registrationRole === "partner-candidate") return "Partner Candidate";
       if (registrationRole === "featured-partner") return "Featured Partner";
       if (registrationRole === "featured-guest") return "Featured Guest";
       if (registrationRole === "featured-author") return "Featured Author";
@@ -2855,6 +2867,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (registrationRole === "guest") return "Guest";
 
       const role = String(event.role || "").toLowerCase();
+      if (role.includes("partner candidate")) return "Partner Candidate";
       if (role.includes("featured partner")) return "Featured Partner";
       if (role.includes("featured guest")) return "Featured Guest";
       if (role.includes("featured author")) return "Featured Author";
@@ -2873,6 +2886,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["roundtable-leader", "Round Table Leader"],
       ["member", "Member"],
       ["featured-member", "Featured Member"],
+      ["partner-candidate", "Partner Candidate"],
       ["partner", "Partner Guest"],
       ["featured-partner", "Featured Partner"]
     ];
@@ -2880,15 +2894,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function guestMatrixRoleOptions(row = {}) {
       return row.partnerRow
         ? [
+            ["partner-candidate", "Partner Candidate"],
             ["partner", "Partner Guest"],
             ["featured-partner", "Featured Partner"]
           ]
-        : contactEventRoleOptions.filter(([value]) => !["partner", "featured-partner"].includes(value));
+        : contactEventRoleOptions.filter(([value]) => !["partner-candidate", "partner", "featured-partner"].includes(value));
     }
 
     function contactEventRoleValue(event = {}) {
       const raw = String(event.contactEventRole || event.registrationRole || event.partnerRegistrationType || event.guestRegistrationType || event.role || event.registrationType || "").toLowerCase();
       if (contactEventRoleOptions.some(([value]) => value === raw)) return raw;
+      if (raw.includes("partner candidate")) return "partner-candidate";
       if (raw.includes("featured partner")) return "featured-partner";
       if (raw.includes("featured guest")) return "featured-guest";
       if (raw.includes("featured member")) return "featured-member";
@@ -3282,9 +3298,25 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         .join("");
     }
 
+    function partnerCrmStatusOptions(current = "new") {
+      return crmStatusOptions(current, ["new", "scott-engagement", "pending-engagement", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit"]);
+    }
+
     function guestCrmStatusOptions(current = "new") {
       const selected = guestRegistrationLifecycleStatus(current);
       return optionList(guestRegistrationLifecycleOptions, selected);
+    }
+
+    function matrixRegistrationStatusOptions() {
+      return isPartnerMatrix() ? partnerRegistrationLifecycleOptions : guestRegistrationLifecycleOptions;
+    }
+
+    function matrixRegistrationStatusValues() {
+      return isPartnerMatrix() ? partnerRegistrationLifecycleValues : guestRegistrationLifecycleValues;
+    }
+
+    function matrixRegistrationStatusOrder() {
+      return ["attended", "registered", "confirmed", "invited", "contacted", "pending-engagement", "scott-engagement", "alternate", "declined", "bad-fit", "no-show"];
     }
 
     function activeLabel() {
@@ -3643,13 +3675,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       };
       const normalized = aliases[raw] || raw;
       const actualRegistrationComplete = isRegistrationInviteRegistered(invite);
-      if (actualRegistrationComplete && ["pending-engagement", "contacted", "confirmed", "invited"].includes(normalized)) {
+      if (actualRegistrationComplete && ["scott-engagement", "pending-engagement", "contacted", "confirmed", "invited"].includes(normalized)) {
         return "registered";
       }
       if (!actualRegistrationComplete && ["registered", "attended"].includes(normalized)) {
         return invite.code || invite.inviteCode ? "invited" : "contacted";
       }
-      if (guestRegistrationLifecycleValues.includes(normalized)) return normalized;
+      if (matrixRegistrationStatusValues().includes(normalized)) return normalized;
       if (actualRegistrationComplete) return "registered";
       if (invite.code || invite.inviteCode) return "invited";
       return "pending-engagement";
@@ -3657,7 +3689,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function guestMatrixStageClass(value = "") {
       if (["confirmed", "registered", "attended"].includes(value)) return "good";
-      if (["pending-engagement", "contacted", "invited", "alternate"].includes(value)) return "warn";
+      if (["scott-engagement", "pending-engagement", "contacted", "invited", "alternate"].includes(value)) return "warn";
       if (["declined", "bad-fit", "no-show"].includes(value)) return "neutral";
       return "";
     }
@@ -3908,7 +3940,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (row.registrationStatus === "registered" || row.registrationStatus === "attended") {
         return [row.invite.usedFor || row.eventName, row.invite.usedForDate || row.invite.eventDate, row.invite.usedForShow || row.invite.eventShowLabel].filter(Boolean).join(" | ");
       }
-      return matrixOptionLabel(guestMatrixRegistrationStatusOptions, row.registrationStatus);
+      return matrixOptionLabel(matrixRegistrationStatusOptions(), row.registrationStatus);
     }
 
     function guestMatrixRowForInvite(invite = {}) {
@@ -3983,7 +4015,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           potentialSponsor ? "Potential Sponsor" : "",
           guestMatrixRegisteredShowMeta(invite),
           guestMatrixShowMeta(invite),
-          matrixOptionLabel(guestMatrixRegistrationStatusOptions, registrationStatus),
+          matrixOptionLabel(matrixRegistrationStatusOptions(), registrationStatus),
           ...futureEvents.flatMap((event) => [event.status, event.eventName, event.eventDate, event.eventShow])
         ].join(" ").toLowerCase()
       };
@@ -4018,7 +4050,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return [
         row.registered ? 10000 : 0,
         row.matrixOnly ? 0 : 5000,
-        guestMatrixStatusRank(row.registrationStatus, ["attended", "registered", "confirmed", "invited", "contacted", "pending-engagement", "alternate", "declined", "bad-fit", "no-show"]) * 100
+        guestMatrixStatusRank(row.registrationStatus, matrixRegistrationStatusOrder()) * 100
       ].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
     }
 
@@ -4042,7 +4074,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function mergeGuestMatrixDuplicateRows(left, right) {
       const primary = guestMatrixRowRank(right) > guestMatrixRowRank(left) ? right : left;
       const secondary = primary === right ? left : right;
-      const registrationStatus = bestMatrixValue(primary.registrationStatus, secondary.registrationStatus, ["attended", "registered", "confirmed", "invited", "contacted", "pending-engagement", "alternate", "declined", "bad-fit", "no-show"]);
+      const registrationStatus = bestMatrixValue(primary.registrationStatus, secondary.registrationStatus, matrixRegistrationStatusOrder());
       const futureEvents = mergeGuestMatrixFutureEvents(primary.futureEvents, secondary.futureEvents);
       const registeredShowLabel = primary.registeredShowLabel || secondary.registeredShowLabel;
       const noteValues = [primary.notes, secondary.notes].map((value) => String(value || "").trim()).filter(Boolean);
@@ -4133,7 +4165,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixStatusMatch(row, status) {
-      if (status !== "all" && guestRegistrationLifecycleValues.includes(status)) return row.registrationStatus === status;
+      if (status !== "all" && matrixRegistrationStatusValues().includes(status)) return row.registrationStatus === status;
       return true;
     }
 
@@ -4169,6 +4201,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    function syncGuestMatrixStatusFilter() {
+      if (!guestMatrixStatusFilter) return;
+      const current = guestMatrixStatusFilter.value || "all";
+      const options = matrixRegistrationStatusOptions();
+      guestMatrixStatusFilter.innerHTML = [
+        '<option value="all">All statuses</option>',
+        ...options.map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === current ? "selected" : ""}>${escapeHtml(label)}</option>`)
+      ].join("");
+      if (current !== "all" && !options.some(([value]) => value === current)) guestMatrixStatusFilter.value = "all";
+    }
+
     function filteredGuestMatrixRows(rows) {
       const eventValue = guestMatrixEventFilter?.value || "all";
       const showValue = guestMatrixShowFilter?.value || "all";
@@ -4190,6 +4233,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ["Event groups", new Set(rows.map((row) => row.eventKey)).size],
         [isPartnerMatrix() ? "Tracked partners" : "Tracked people", rows.length],
         ...(!isPartnerMatrix() ? [["Potential Sponsors", rows.filter((row) => row.potentialSponsor).length]] : []),
+        ...(isPartnerMatrix() ? [["Scott Engagement", rows.filter((row) => row.registrationStatus === "scott-engagement").length]] : []),
         ["Pending Engagement", rows.filter((row) => row.registrationStatus === "pending-engagement").length],
         ["Contacted", rows.filter((row) => row.registrationStatus === "contacted").length],
         ["Invited", rows.filter((row) => row.registrationStatus === "invited").length],
@@ -4218,6 +4262,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
       const rows = guestMatrixRows();
       syncGuestMatrixEventFilter(rows);
+      syncGuestMatrixStatusFilter();
       renderGuestMatrixSummary(rows);
       const filtered = filteredGuestMatrixRows(rows);
       if (guestMatrixSearchSummary) {
@@ -4275,7 +4320,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                     <th>${isPartnerMatrix() ? "Partner" : "Guest"}</th>
                     <th>Role</th>
                     <th>Interest</th>
-                    <th>${isPartnerMatrix() ? "Partner Type" : "Potential Sponsor"}</th>
+                    ${isPartnerMatrix() ? "" : "<th>Potential Sponsor</th>"}
                     <th>${isPartnerMatrix() ? "Partner Status" : "Guest Status"}</th>
                     <th>Created</th>
                     <th>Future Events</th>
@@ -4319,17 +4364,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                           label: `Participation interest for ${row.name}`
                         })}
                       </td>
-                      <td>
-                        ${isPartnerMatrix() ? '<span class="matrix-muted">Partner</span>' : `
+                      ${isPartnerMatrix() ? "" : `
+                        <td>
                           <label class="matrix-checkbox">
-                            <input type="checkbox" data-${dataPrefix}-matrix-field="potentialSponsor" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" ${row.potentialSponsor ? "checked" : ""} aria-label="Potential Sponsor for ${escapeHtml(row.name)}">
-                            Potential Sponsor
-                          </label>
-                        `}
-                      </td>
+                              <input type="checkbox" data-${dataPrefix}-matrix-field="potentialSponsor" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" ${row.potentialSponsor ? "checked" : ""} aria-label="Potential Sponsor for ${escapeHtml(row.name)}">
+                              Potential Sponsor
+                            </label>
+                        </td>
+                      `}
                       <td>
                         <select class="matrix-select ${guestMatrixStageClass(row.registrationStatus)}" data-${dataPrefix}-matrix-field="${isPartnerMatrix() ? "partnerStatus" : "guestStatus"}" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="${isPartnerMatrix() ? "Partner" : "Guest"} status for ${escapeHtml(row.name)}">
-                          ${matrixOptionList(guestMatrixRegistrationStatusOptions, row.registrationStatus)}
+                          ${matrixOptionList(matrixRegistrationStatusOptions(), row.registrationStatus)}
                         </select>
                         <div class="matrix-muted">${escapeHtml(guestMatrixRegistrationDetail(row))}</div>
                       </td>
@@ -4397,6 +4442,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           ? guestRegistrationLifecycleOptions
           : [
               ["new", "New"],
+              ["scott-engagement", "Scott Engagement"],
               ["contacted", "Contacted"],
               ["confirmed", "Confirmed"],
               ["accepted", "Accepted"],
@@ -4489,6 +4535,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       guestMatrixAddType.name = isPartnerMatrix() ? "partnerRegistrationType" : "guestRegistrationType";
       guestMatrixAddType.innerHTML = isPartnerMatrix()
         ? [
+            '<option value="partner-candidate">Partner Candidate</option>',
             '<option value="partner">Partner</option>',
             '<option value="featured-partner">Featured Partner</option>'
           ].join("")
@@ -4648,7 +4695,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       partnerInviteList.innerHTML = invites.slice(0, 12).map((invite) => {
         const url = partnerRegistrationUrl(invite);
         const qrUrl = qrCodeUrl(url);
-        const role = guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.registrationRole || "partner");
+        const role = guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.registrationRole || "partner-candidate");
         const invitedBy = invite.invitedBy || invite.inviter || invite.invitedByName || invite.createdBy || "Not recorded";
         const partnerContact = invite.partnerContactName || invite.intendedGuestName || invite.invitedName || invite.guestName || "";
         return `
@@ -6229,7 +6276,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                   </label>
                   <label>Status
                     <select data-add-contact-field="crmStatus">
-                      ${crmStatusOptions("new")}
+              ${state.type === "partner" ? partnerCrmStatusOptions("new") : crmStatusOptions("new")}
                     </select>
                   </label>
                   <label class="span-2">Notes
@@ -6287,7 +6334,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 <td><div class="role-list">${publicationBadges(row)}</div></td>
                 <td>
                   <select class="inline-select" data-partner-key="${escapeHtml(row.key)}" data-partner-field="crmStatus">
-                    ${crmStatusOptions(row.crmStatus)}
+                    ${partnerCrmStatusOptions(row.crmStatus)}
                   </select>
                 </td>
                 <td>${memberAccessCell(row)}</td>
@@ -6372,7 +6419,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
               key: row.key,
               label: `Guest relationship level for ${row.name}`
             })}` : `<select class="inline-select" data-status-key="${escapeHtml(row.key)}">
-              ${state.type === "guest" ? guestCrmStatusOptions(row.crmStatus) : crmStatusOptions(row.crmStatus)}
+              ${state.type === "guest" ? guestCrmStatusOptions(row.crmStatus) : state.type === "partner" ? partnerCrmStatusOptions(row.crmStatus) : crmStatusOptions(row.crmStatus)}
             </select>`}
           </td>
           <td>${memberAccessCell(row)}</td>

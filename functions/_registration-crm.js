@@ -275,6 +275,8 @@ function cleanBoolean(value) {
 
 function cleanGuestRegistrationType(value) {
   return {
+    "partner-candidate": "partner-candidate",
+    "partner candidate": "partner-candidate",
     "featured-partner": "featured-partner",
     "featured-guest": "featured-guest",
     "featured-member": "featured-member",
@@ -412,7 +414,7 @@ function registrationRoles(type, registration = {}) {
     if (cleanBoolean(registration.isFeaturedAuthor) || guestRegistrationType === "featured-author") roles.push("Featured Author");
     if (!roles.length) roles.push("Guest");
   } else if (type === "partner") {
-    roles.push(guestRegistrationType === "featured-partner" ? "Featured Partner" : registrationRoleLabel(type));
+    roles.push(guestRegistrationType === "featured-partner" ? "Featured Partner" : guestRegistrationType === "partner-candidate" ? "Partner Candidate" : registrationRoleLabel(type));
   } else {
     roles.push(registrationRoleLabel(type));
   }
