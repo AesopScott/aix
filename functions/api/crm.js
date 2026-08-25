@@ -65,6 +65,7 @@ const R2_REGISTRATION_PREFIX = "crm/registrations";
 const OVERFLOW_REGISTRATION_PREFIX = "crm-overflow/registrations";
 const R2_INVITE_USAGE_PREFIX = "crm/invite-usage";
 const CONTACT_PHOTO_PREFIX = "crm/contact-photos";
+const REGISTRATION_PHOTO_PREFIX = "crm/registration-photos";
 const PARTNER_PROSPECT_COMPANY_PREFIX = "crm:partner-prospect-company:";
 const PARTNER_PROSPECT_PERSON_PREFIX = "crm:partner-prospect-person:";
 const PARTNER_PROSPECT_AUDIT_PREFIX = "crm:partner-prospect-audit:";
@@ -5799,14 +5800,15 @@ async function serveContactPhoto(request, env) {
   }
   const url = new URL(request.url);
   const key = safeObjectKey(url.searchParams.get("photo"));
-  if (!key || !key.startsWith(`${CONTACT_PHOTO_PREFIX}/`)) {
+  const isAllowedPhotoKey = key.startsWith(`${CONTACT_PHOTO_PREFIX}/`) || key.startsWith(`${REGISTRATION_PHOTO_PREFIX}/`);
+  if (!key || !isAllowedPhotoKey) {
     return json({ error: "Contact photo was not found." }, { status: 404 });
   }
   const object = await env.MOJO_SUMMITS_STORAGE.get(key);
   if (!object) return json({ error: "Contact photo was not found." }, { status: 404 });
   return new Response(object.body, {
     headers: {
-      "cache-control": "private, max-age=300",
+      "cache-control": "public, max-age=300",
       "content-type": object.httpMetadata?.contentType || "application/octet-stream"
     }
   });
@@ -6430,15 +6432,15 @@ export async function onRequestOptions() {
 }
 
 export async function onRequestGet({ request, env, data }) {
+  const url = new URL(request.url);
+  if (url.searchParams.has("photo")) return serveContactPhoto(request, env);
+
   const access = requireCrmAccess(data);
   if (access.response) return access.response;
 
   if (!env.MOJO_SUMMITS_SETUP_STATE) {
     return json({ error: "CRM storage is not configured." }, { status: 500 });
   }
-
-  const url = new URL(request.url);
-  if (url.searchParams.has("photo")) return serveContactPhoto(request, env);
 
   if (url.searchParams.get("debug") === "registration") {
     return json(await registrationDiagnostics(env));

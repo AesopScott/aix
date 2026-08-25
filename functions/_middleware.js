@@ -36,6 +36,10 @@ function isPartnerProfileShell(pathname) {
   return pathname === "/partner-profile" || pathname === "/partner-profile/";
 }
 
+function isPublicCrmPhotoRequest(url) {
+  return url.pathname === "/api/crm" && url.searchParams.has("photo");
+}
+
 function inviteCodeFromUrl(url) {
   return String(url.searchParams.get("invite") || "").replace(/\D/g, "").slice(0, 6);
 }
@@ -109,6 +113,11 @@ export async function onRequest(context) {
     !isPartnerRegistrationPreview(url)
   ) {
     return notFound();
+  }
+
+  if (isPublicCrmPhotoRequest(url)) {
+    context.data.auth = { email: "", mode: "public", accessControlEnabled: true };
+    return context.next();
   }
 
   if (isPartnerProfileShell(url.pathname) && isPartnerRegistrationPreview(url)) {
