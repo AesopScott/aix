@@ -526,9 +526,29 @@
     }
 
     .item-text {
+      min-width: 0;
+    }
+
+    .item-main {
       grid-column: 1;
       grid-row: 1;
+      display: grid;
+      gap: 5px;
       min-width: 0;
+    }
+
+    .item-ref {
+      width: fit-content;
+      border: 1px solid rgba(0, 230, 255, 0.42);
+      border-radius: 6px;
+      background: rgba(0, 230, 255, 0.1);
+      color: var(--cyan);
+      padding: 2px 7px;
+      font-family: "Space Grotesk", Inter, sans-serif;
+      font-size: 0.68rem;
+      font-weight: 900;
+      line-height: 1.2;
+      letter-spacing: 0;
     }
 
     .owner-block {
@@ -1112,7 +1132,7 @@
   <script type="text/plain" id="source-md"># Master Event Execution Checklist
 
 Date: 2026-08-13
-Version: 3.18
+Version: 3.20
 Category: event operations
 
 ## Purpose
@@ -1721,6 +1741,7 @@ The following decisions should not be made by one owner alone:
 
 ## Version History
 
+- 3.20 - Added visible unique reference IDs to setup checklist tasks, calendar items, search, and CSV export.
 - 3.19 - Added Event specific as a setup item status.
 - 3.18 - Added analytics launch control to per-event virtual and in-person checklist workflows.
 - 3.17 - Established website analytics, privacy notice, consent, and conversion tracking standards.
@@ -1843,6 +1864,7 @@ The following decisions should not be made by one owner alone:
 
     const clean = (value) => value.trim().replace(/\.$/, "");
     const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const setupReferenceId = (index) => `SETUP-${String(index + 1).padStart(3, "0")}`;
     const normalizeOwnerName = (value) => ownerAliases[value] || value;
     const ownerClass = (owner) => ownerColors[owner] || "owner-shared";
     const statusClasses = {
@@ -1857,6 +1879,14 @@ The following decisions should not be made by one owner alone:
       "Event specific": "status-event-specific"
     };
     const statusClass = (status) => statusClasses[status] || "status-undefined";
+    function shortHash(value) {
+      let hash = 0;
+      for (const char of String(value || "")) {
+        hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+      }
+      return Math.abs(hash).toString(36).toUpperCase().padStart(4, "0").slice(0, 4);
+    }
+
     const escapeHtml = (value) => String(value ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -1981,6 +2011,7 @@ The following decisions should not be made by one owner alone:
     );
     staticItems.forEach((item, index) => {
       item.id = `item-${index}-${slug(item.text).slice(0, 60)}`;
+      item.refId = setupReferenceId(index);
     });
     let allItems = [...staticItems];
     let customItems = [];
@@ -1993,6 +2024,7 @@ The following decisions should not be made by one owner alone:
     function storedCustomItem(item) {
       return {
         id: item.id,
+        refId: item.refId,
         text: item.text,
         phase: item.phase,
         subsection: item.subsection
@@ -2009,6 +2041,7 @@ The following decisions should not be made by one owner alone:
       const id = String(data.id || `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${slug(text).slice(0, 40)}`).slice(0, 120);
       const item = {
         id,
+        refId: String(data.refId || `SETUP-C-${shortHash(id)}`).slice(0, 24),
         text,
         defaultOwner: "Shared",
         defaultSupport: "",
@@ -2154,7 +2187,7 @@ The following decisions should not be made by one owner alone:
     }
 
     function itemSearchText(item) {
-      return `${item.text} ${item.owner} ${item.support} ${item.priority} ${item.deliverable} ${item.dueDate} ${item.status} ${item.notes} ${item.phase} ${item.subsection}`.toLowerCase();
+      return `${item.refId} ${item.text} ${item.owner} ${item.support} ${item.priority} ${item.deliverable} ${item.dueDate} ${item.status} ${item.notes} ${item.phase} ${item.subsection}`.toLowerCase();
     }
 
     function currentAssignment(item) {
@@ -2918,8 +2951,11 @@ The following decisions should not be made by one owner alone:
                   <div class="subsection-title"><h3>${subsection.title}</h3></div>
                   <div class="items">
                     ${subsection.items.map((item) => `
-                      <div class="item" data-item-id="${item.id}" data-phase="${escapeHtml(item.phase)}" data-owner="${escapeHtml(item.owner)}" data-support="${escapeHtml(item.support)}" data-priority="${escapeHtml(item.priority)}" data-deliverable="${escapeHtml(item.deliverable)}" data-due-date="${escapeHtml(item.dueDate)}" data-status="${escapeHtml(item.status)}" data-search="${escapeHtml(itemSearchText(item))}">
-                        <span class="item-text">${escapeHtml(item.text)}</span>
+                      <div class="item" data-item-id="${item.id}" data-ref-id="${escapeHtml(item.refId)}" data-phase="${escapeHtml(item.phase)}" data-owner="${escapeHtml(item.owner)}" data-support="${escapeHtml(item.support)}" data-priority="${escapeHtml(item.priority)}" data-deliverable="${escapeHtml(item.deliverable)}" data-due-date="${escapeHtml(item.dueDate)}" data-status="${escapeHtml(item.status)}" data-search="${escapeHtml(itemSearchText(item))}">
+                        <div class="item-main">
+                          <span class="item-ref" title="Setup reference ID">${escapeHtml(item.refId)}</span>
+                          <span class="item-text">${escapeHtml(item.text)}</span>
+                        </div>
                         ${assignmentControls(item)}
                         ${statusSelect(item)}
                         ${itemNotesField(item)}
@@ -3267,12 +3303,13 @@ The following decisions should not be made by one owner alone:
     }
 
     function exportVisibleItemsToCsv() {
-      const csvColumns = ["Phase", "Subsection", "Item", "Owner", "Support", "Priority", "Deliverable", "Expected Delivery Date", "Status", "Notes"];
+      const csvColumns = ["Reference ID", "Phase", "Subsection", "Item", "Owner", "Support", "Priority", "Deliverable", "Expected Delivery Date", "Status", "Notes"];
       const rows = Array.from(document.querySelectorAll(".item"))
         .filter((row) => !row.classList.contains("hidden"))
         .map((row) => itemById.get(row.dataset.itemId))
         .filter(Boolean)
         .map((item) => [
+          item.refId,
           item.phase,
           item.subsection,
           item.text,

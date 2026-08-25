@@ -6,7 +6,7 @@ const jsonHeaders = {
 };
 
 const assignmentFields = ["owner", "support", "priority", "deliverable", "dueDate", "status", "notes"];
-const customItemFields = ["id", "text", "phase", "subsection"];
+const customItemFields = ["id", "refId", "text", "phase", "subsection"];
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {

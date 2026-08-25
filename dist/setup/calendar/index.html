@@ -293,6 +293,15 @@
       font-size: 0.62rem;
     }
 
+    .chip-ref,
+    .unscheduled-ref {
+      display: inline-block;
+      margin-right: 4px;
+      font-family: "Space Grotesk", Inter, sans-serif;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
     .owner-scott { background: var(--owner-scott); }
     .owner-robert { background: var(--owner-robert); }
     .owner-jodi { background: var(--owner-jodi); }
@@ -477,6 +486,7 @@
 
     const clean = (value) => value.trim().replace(/\.$/, "");
     const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const setupReferenceId = (index) => `SETUP-${String(index + 1).padStart(3, "0")}`;
     const normalizeOwnerName = (value) => ownerAliases[value] || value;
     const ownerClass = (owner) => ownerColors[owner] || "owner-shared";
     const statusClasses = {
@@ -491,6 +501,14 @@
       "Event specific": "status-event-specific"
     };
     const statusClass = (status) => statusClasses[status] || "status-undefined";
+    function shortHash(value) {
+      let hash = 0;
+      for (const char of String(value || "")) {
+        hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+      }
+      return Math.abs(hash).toString(36).toUpperCase().padStart(4, "0").slice(0, 4);
+    }
+
     const escapeHtml = (value) => String(value ?? "")
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -577,6 +595,7 @@
       );
       allItems.forEach((item, index) => {
         item.id = `item-${index}-${slug(item.text).slice(0, 60)}`;
+        item.refId = setupReferenceId(index);
       });
       return allItems;
     }
@@ -612,6 +631,7 @@
       if (!id || !text) return null;
       const item = {
         id,
+        refId: String(data.refId || `SETUP-C-${shortHash(id)}`).slice(0, 24),
         text,
         defaultOwner: "Shared",
         defaultSupport: "",
@@ -721,8 +741,8 @@
       const badgeOwner = isSupportMatch ? `Support: ${view.owner}` : item.owner;
       const stateClass = calendarStateClass(item);
       return `
-        <a class="day-chip ${statusClass(item.status)} ${stateClass}" href="${setupItemUrl(item)}" title="${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">
-          ${escapeHtml(item.text.length > 60 ? `${item.text.slice(0, 57)}...` : item.text)}
+        <a class="day-chip ${statusClass(item.status)} ${stateClass}" href="${setupItemUrl(item)}" title="${escapeHtml(item.refId)} — ${escapeHtml(item.text)} — Owner: ${escapeHtml(item.owner)}${item.support ? `, Support: ${escapeHtml(item.support)}` : ""} — Status: ${escapeHtml(item.status)}">
+          <span class="chip-ref">${escapeHtml(item.refId)}</span>${escapeHtml(item.text.length > 60 ? `${item.text.slice(0, 57)}...` : item.text)}
           <span class="chip-status">${escapeHtml(badgeOwner)} • ${escapeHtml(item.status)}</span>
         </a>
       `;
@@ -774,7 +794,7 @@
 
       list.innerHTML = items.map((item) => `
         <div class="unscheduled-item">
-          <span class="text">${escapeHtml(item.text)}</span>
+          <span class="text"><span class="unscheduled-ref">${escapeHtml(item.refId)}</span>${escapeHtml(item.text)}</span>
           <span class="meta">
             <span class="pill ${ownerClass(item.owner)}">${escapeHtml(item.owner)}</span>
             <span class="pill status-pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span>
