@@ -10,6 +10,8 @@ const acceptedPhoneStatuses = new Set(["verified"]);
 const registrationObjectPrefix = "crm/registrations";
 const registrationPhotoObjectPrefix = "crm/registration-photos";
 const inviteUsageObjectPrefix = "crm/invite-usage";
+const verifiedPhonePrefix = "sms:verified-phone:";
+const verifiedPhoneObjectPrefix = "sms/verified-phones";
 const maxRegistrationPhotoBytes = 6 * 1024 * 1024;
 const allowedRegistrationPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const guestConfirmationSubject = "Your Mojo AI Summits registration is confirmed";
@@ -75,6 +77,26 @@ function cleanString(value) {
   return typeof value === "string"
     ? value.trim().slice(0, maxFieldLength)
     : "";
+}
+
+function cleanPhone(value) {
+  const normalized = cleanString(value).replace(/[^\d+]/g, "");
+  const digits = normalized.replace(/\D/g, "");
+  if (!digits) return "";
+  if (normalized.startsWith("+")) return `+${digits}`;
+  if (digits.startsWith("00") && digits.length > 4) return `+${digits.slice(2)}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  if (digits.length > 10 && digits.length <= 15) return `+${digits}`;
+  return normalized;
+}
+
+function verifiedPhoneKey(phone) {
+  return `${verifiedPhonePrefix}${phone.replace(/\D/g, "")}`;
+}
+
+function verifiedPhoneObjectKey(phone) {
+  return `${verifiedPhoneObjectPrefix}/${phone.replace(/\D/g, "")}.json`;
 }
 
 function cleanCampaignValue(value) {
@@ -455,7 +477,7 @@ function cleanPayload(payload, type = "") {
     industry: cleanString(payload?.industry),
     email: cleanString(payload?.email).toLowerCase(),
     linkedinProfileUrl: cleanLinkedInProfileUrl(payload?.linkedinProfileUrl || payload?.linkedInProfileUrl || payload?.linkedinUrl || payload?.linkedInUrl),
-    phone: cleanString(payload?.phone),
+    phone: cleanPhone(payload?.phone),
     phoneVerificationStatus: cleanString(payload?.phoneVerificationStatus),
     eventShowId: cleanEventShowId(payload?.eventShowId || payload?.showId || payload?.eventShow, ""),
     eventQuestionRankings,
@@ -920,6 +942,29 @@ async function sendStaffRegistrationNotification(env, type, registration = {}) {
   return { attempted: true, sent: true };
 }
 
+async function readVerifiedPhone(env, phone) {
+  const r2Key = verifiedPhoneObjectKey(phone);
+  const kvKey = verifiedPhoneKey(phone);
+  const existingObject = env?.MOJO_SUMMITS_STORAGE?.get
+    ? await env.MOJO_SUMMITS_STORAGE.get(r2Key).catch(() => null)
+    : null;
+  const existing = existingObject
+    ? await existingObject.json().catch(() => null)
+    : await env?.MOJO_SUMMITS_SETUP_STATE?.get(kvKey, "json").catch(() => null);
+  return existing?.status === "verified" ? existing : null;
+}
+
+async function applyServerPhoneVerification(env, registration) {
+  if (acceptedPhoneStatuses.has(registration.phoneVerificationStatus)) return registration;
+  if (!registration.phone) return registration;
+  const verifiedPhone = await readVerifiedPhone(env, registration.phone);
+  if (!verifiedPhone) return registration;
+  return {
+    ...registration,
+    phoneVerificationStatus: "verified"
+  };
+}
+
 function validateRegistration(registration, type = "") {
   if (!/^\d{6}$/.test(registration.inviteCode)) return "Enter a valid six-digit invite code.";
   if (!registration.name) return "Name is required.";
@@ -1266,7 +1311,8 @@ export async function handlePublicRegistration({ request, env }, type) {
   }
 
   const { payload, photoFile } = await readRegistrationRequest(request, type);
-  const registration = normalizeRegistrationForType(type, cleanPayload(payload, type));
+  let registration = normalizeRegistrationForType(type, cleanPayload(payload, type));
+  registration = await applyServerPhoneVerification(env, registration);
   const debugBase = {
     stage: "received",
     name: registration.name,

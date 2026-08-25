@@ -372,6 +372,18 @@ async function upsertVerifiedPhone(env, phone, details = {}) {
   await env.MOJO_SUMMITS_SETUP_STATE.put(kvKey, JSON.stringify(record));
 }
 
+async function readVerifiedPhone(env, phone) {
+  const r2Key = verifiedPhoneObjectKey(phone);
+  const kvKey = verifiedPhoneKey(phone);
+  const existingObject = env?.MOJO_SUMMITS_STORAGE?.get
+    ? await env.MOJO_SUMMITS_STORAGE.get(r2Key).catch(() => null)
+    : null;
+  const existing = existingObject
+    ? await existingObject.json().catch(() => null)
+    : await env?.MOJO_SUMMITS_SETUP_STATE?.get(kvKey, "json").catch(() => null);
+  return existing?.status === "verified" ? existing : null;
+}
+
 async function startVerification(phone, inviteCode, env) {
   const config = awsConfig(env);
   await writePhoneDebug(env, "start-received", {
@@ -380,6 +392,23 @@ async function startVerification(phone, inviteCode, env) {
     inviteCode,
     config: configDebug(config, env)
   });
+  const existingVerifiedPhone = await readVerifiedPhone(env, phone);
+  if (existingVerifiedPhone) {
+    await writePhoneDebug(env, "start-skipped", {
+      action: "start",
+      phone,
+      inviteCode,
+      status: "already-verified",
+      config: configDebug(config, env)
+    });
+    return json({
+      ok: true,
+      requiresCode: false,
+      status: "verified",
+      message: "Phone already verified."
+    });
+  }
+
   const missing = missingAwsConfig(config, env);
   if (missing.length) {
     await writePhoneDebug(env, "start-rejected", {
