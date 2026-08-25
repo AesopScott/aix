@@ -53,7 +53,8 @@ async function listKeys(env, prefix) {
   const keys = [];
   let cursor;
   do {
-    const result = await store.list({ prefix, cursor, limit: 1000 });
+    const result = await store.list({ prefix, cursor, limit: 1000 }).catch(() => null);
+    if (!result) break;
     keys.push(...(result.keys || []).map((entry) => entry.name).filter(Boolean));
     cursor = result.list_complete ? undefined : result.cursor;
   } while (cursor);
@@ -200,10 +201,10 @@ async function r2Registrants(env) {
 }
 
 async function eventRegistrants(env, event) {
-  const registrants = await Promise.all([
-    kvRegistrants(env),
-    r2Registrants(env)
-  ]);
+  const r2Rows = await r2Registrants(env);
+  const r2HasEventRows = r2Rows.some((registrant) => registrantMatchesEvent(registrant, event));
+  const kvRows = r2HasEventRows ? [] : await kvRegistrants(env);
+  const registrants = [r2Rows, kvRows];
   const map = new Map();
 
   for (const registrant of registrants.flat()) {

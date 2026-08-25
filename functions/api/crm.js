@@ -2084,6 +2084,39 @@ function contactKeyForInviteRecord(row = {}, source = "guest-invite") {
   return `${registrantTypes.contacts.crmPrefix}pending:${safeFileSegment(source, "guest")}:${safeFileSegment(id, "person")}`;
 }
 
+function contactMergeNameKey(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\b(dr|doctor|phd|ph\.d|m\.d|md|mba|ms|ma|cpa|esq)\b\.?/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+async function contactAliasKeysForInviteRecord(env, contact = {}) {
+  const aliases = new Set();
+  const linkedIn = linkedInProfileIdentity(contact.linkedinProfileUrl);
+  const linkedinKey = linkedIn ? `${registrantTypes.contacts.crmPrefix}linkedin:${safeFileSegment(linkedIn, "profile")}` : "";
+  if (linkedinKey && linkedinKey !== contact.key) aliases.add(linkedinKey);
+
+  const targetNameKey = contactMergeNameKey(contact.name);
+  if (!contact.email || targetNameKey.length < 6) return [...aliases];
+
+  const keys = await listKeys(env, registrantTypes.contacts.crmPrefix);
+  for (const key of keys) {
+    if (key === contact.key || aliases.has(key)) continue;
+    const record = await readRawRecord(env, key);
+    if (!record) continue;
+    const recordEmail = cleanString(record.email).toLowerCase();
+    if (isEmail(recordEmail)) continue;
+    const source = cleanString(record.source || record.invitationSource).toLowerCase();
+    if (!source.includes("matrix-prospect") && !key.includes(":pending:") && !key.includes(":linkedin:")) continue;
+    const recordNameKey = contactMergeNameKey(record.name || record.intendedGuestName || record.invitedName || record.guestName);
+    if (recordNameKey && recordNameKey === targetNameKey) aliases.add(key);
+  }
+
+  return [...aliases];
+}
+
 function contactFromInviteRecord(row = {}, source = "guest-invite") {
   const key = contactKeyForInviteRecord(row, source);
   const email = cleanString(row.intendedGuestEmail || row.invitedEmail || row.guestEmail || row.partnerContactEmail || row.usedByEmail || row.usedBy).toLowerCase();
@@ -2153,24 +2186,39 @@ async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invi
   const contact = contactFromInviteRecord(row, source);
   if (!contact?.key) return {};
   const existing = await readRawRecord(env, contact.key);
+  const aliasKeys = await contactAliasKeysForInviteRecord(env, contact);
+  const aliases = (await Promise.all(aliasKeys.map(async (key) => ({
+    key,
+    record: await readRawRecord(env, key)
+  })))).filter((entry) => entry.record);
+  const mergedExisting = {
+    ...aliases.reduce((merged, entry) => ({ ...merged, ...entry.record }), {}),
+    ...(existing || {}),
+    events: [
+      ...aliases.flatMap((entry) => Array.isArray(entry.record?.events) ? entry.record.events : []),
+      ...(Array.isArray(existing?.events) ? existing.events : [])
+    ]
+  };
   const now = new Date().toISOString();
   const nextEvent = contact.events?.[0] || {};
   await env.MOJO_SUMMITS_SETUP_STATE.put(contact.key, JSON.stringify({
-    ...(existing || {}),
+    ...mergedExisting,
     id: contact.id,
     email: contact.email,
-    name: cleanString(existing?.name) && cleanString(existing?.name) !== "Name not recorded" ? cleanString(existing.name) : contact.name,
-    company: cleanString(existing?.company) || contact.company,
-    title: cleanString(existing?.title) || contact.title,
+    name: cleanString(mergedExisting?.name) && cleanString(mergedExisting?.name) !== "Name not recorded" ? cleanString(mergedExisting.name) : contact.name,
+    company: cleanString(mergedExisting?.company) || contact.company,
+    title: cleanString(mergedExisting?.title) || contact.title,
+    linkedinProfileUrl: contact.linkedinProfileUrl || cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl),
     invitedBy: cleanString(contact.invitedBy) || cleanString(existing?.invitedBy, 180),
-    source: cleanString(existing?.source) || contact.source,
-    invitationSource: cleanString(existing?.invitationSource) || contact.invitationSource || contact.source,
-    lifecycleStage: cleanAllowed(existing?.lifecycleStage, allowedLifecycleStages, "") || contact.lifecycleStage,
-    createdAt: cleanString(existing?.createdAt) || contact.createdAt || now,
+    source: cleanString(mergedExisting?.source) || contact.source,
+    invitationSource: cleanString(mergedExisting?.invitationSource) || contact.invitationSource || contact.source,
+    lifecycleStage: cleanAllowed(mergedExisting?.lifecycleStage, allowedLifecycleStages, "") || contact.lifecycleStage,
+    createdAt: cleanString(mergedExisting?.createdAt) || contact.createdAt || now,
     updatedAt: now,
     updatedBy: actor || "crm",
-    events: mergeContactEventList(existing?.events, nextEvent)
+    events: mergeContactEventList(mergedExisting?.events, nextEvent)
   }));
+  await Promise.all(aliasKeys.map((key) => env.MOJO_SUMMITS_SETUP_STATE.delete(key).catch(() => null)));
   return {
     contactKey: contact.key,
     contactId: contact.id,
