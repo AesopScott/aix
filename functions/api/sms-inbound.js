@@ -327,6 +327,7 @@ function notificationRows(inbound, contact = {}) {
     ["Email", contact?.email || ""],
     ["Company", contact?.company || ""],
     ["Title", contact?.title || ""],
+    ["CRM lookup", contact?.lookupError || contact?.activityError || ""],
     ["Inbound message ID", inbound.inboundMessageId],
     ["SNS message ID", inbound.snsMessageId],
     ["Received at", inbound.createdAt]
@@ -455,8 +456,36 @@ async function handleNotification(env, message) {
     ...inboundSms
   };
 
-  const contact = await findMatchingContact(env, baseInbound.fromPhone);
-  const crmContact = await appendContactActivity(env, contact, baseInbound);
+  let contact = null;
+  let crmContact = null;
+  let crmLookupError = "";
+  let crmActivityError = "";
+  try {
+    contact = await findMatchingContact(env, baseInbound.fromPhone);
+  } catch (error) {
+    crmLookupError = cleanString(error?.message || error, 400);
+    console.warn(JSON.stringify({
+      event: "sms_inbound_contact_lookup_failed",
+      id,
+      error: crmLookupError
+    }));
+  }
+  try {
+    crmContact = await appendContactActivity(env, contact, baseInbound);
+  } catch (error) {
+    crmActivityError = cleanString(error?.message || error, 400);
+    console.warn(JSON.stringify({
+      event: "sms_inbound_contact_activity_failed",
+      id,
+      error: crmActivityError
+    }));
+  }
+  if (!crmContact && (crmLookupError || crmActivityError)) {
+    crmContact = {
+      lookupError: crmLookupError,
+      activityError: crmActivityError
+    };
+  }
   const recordKey = `sms:inbound:message:${id}`;
   const notification = { attempted: false, sent: false };
   const record = {
