@@ -12,6 +12,12 @@ const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 
 const DEFAULT_TIMEZONE = "America/Denver";
 const DEFAULT_WORKING_DAYS = [1, 2, 3, 4, 5];
+const ANGEL_CENTRAL_AVAILABILITY_EFFECTIVE_DATE = "2026-09-08";
+const ANGEL_CENTRAL_AVAILABILITY = {
+  timezone: "America/Chicago",
+  dayStart: "08:30",
+  dayEnd: "13:30"
+};
 const DEFAULT_MEETING_TYPE = {
   id: "intro",
   label: "Intro call",
@@ -481,6 +487,20 @@ export function sanitizeEmployee(input = {}) {
 function defaultEmployee(slug) {
   const template = DEFAULT_EMPLOYEES.find((employee) => employee.slug === cleanSlug(slug));
   return template ? sanitizeEmployee(template) : null;
+}
+
+function effectiveEmployeeForDate(employee, dateValue) {
+  if (
+    cleanSlug(employee?.slug) === "angel" &&
+    validDate(dateValue) &&
+    dateValue >= ANGEL_CENTRAL_AVAILABILITY_EFFECTIVE_DATE
+  ) {
+    return {
+      ...employee,
+      ...ANGEL_CENTRAL_AVAILABILITY
+    };
+  }
+  return employee;
 }
 
 function mergeDefaultEmployee(employee) {
@@ -1252,16 +1272,17 @@ function buildCandidateSlots(employee, dateValue, meetingType, busyIntervals = [
 }
 
 export async function availability(env, query) {
-  const employee = await getEmployee(env, query.host || query.employee || query.slug);
+  let employee = await getEmployee(env, query.host || query.employee || query.slug);
   if (!employee || employee.active === false) {
     return { response: json({ error: "That employee booking page is not available." }, { status: 404 }) };
   }
 
-  const meetingType = employee.meetingTypes.find((type) => type.id === cleanSlug(query.type)) || employee.meetingTypes[0];
   const dateValue = String(query.date || "");
   if (!validDate(dateValue)) {
     return { response: json({ error: "Choose a date in YYYY-MM-DD format." }, { status: 400 }) };
   }
+  employee = effectiveEmployeeForDate(employee, dateValue);
+  const meetingType = employee.meetingTypes.find((type) => type.id === cleanSlug(query.type)) || employee.meetingTypes[0];
   const zoom = zoomConfig(env);
   const employeeZoomUserId = zoom.configured ? zoomUserForEmployee(zoom, employee) : "";
 
@@ -1309,16 +1330,17 @@ export async function availability(env, query) {
 }
 
 export async function calendarFeedDiagnostics(env, query) {
-  const employee = await getEmployee(env, query.host || query.employee || query.slug);
+  let employee = await getEmployee(env, query.host || query.employee || query.slug);
   if (!employee || employee.active === false) {
     return { response: json({ error: "That employee booking page is not available." }, { status: 404 }) };
   }
 
-  const meetingType = employee.meetingTypes.find((type) => type.id === cleanSlug(query.type)) || employee.meetingTypes[0];
   const dateValue = String(query.date || "");
   if (!validDate(dateValue)) {
     return { response: json({ error: "Choose a date in YYYY-MM-DD format." }, { status: 400 }) };
   }
+  employee = effectiveEmployeeForDate(employee, dateValue);
+  const meetingType = employee.meetingTypes.find((type) => type.id === cleanSlug(query.type)) || employee.meetingTypes[0];
   const zoom = zoomConfig(env);
   const employeeZoomUserId = zoom.configured ? zoomUserForEmployee(zoom, employee) : "";
 
@@ -1470,7 +1492,7 @@ export async function createBooking(env, input = {}) {
     return { response: json({ error: "Zoom scheduling credentials are not configured yet." }, { status: 503 }) };
   }
 
-  const employee = await getEmployee(env, input.host || input.employee || input.slug);
+  let employee = await getEmployee(env, input.host || input.employee || input.slug);
   if (!employee || employee.active === false) {
     return { response: json({ error: "That employee booking page is not available." }, { status: 404 }) };
   }
@@ -1481,6 +1503,7 @@ export async function createBooking(env, input = {}) {
   if (Number.isNaN(start.getTime())) return { response: json({ error: "Choose a valid slot." }, { status: 400 }) };
 
   const dateValue = localDateKey(start, employee.timezone);
+  employee = effectiveEmployeeForDate(employee, dateValue);
   const available = await availability(env, {
     host: employee.slug,
     type: meetingType.id,

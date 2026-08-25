@@ -30,6 +30,7 @@ Implementation notes:
 - Blind calendar invite emails are mirror/copy calendar addresses. The booking event is created on the Mojo calendar, those addresses are added as optional attendees, and Microsoft Graph `hideAttendees` is enabled so invitees only see themselves instead of the full mirror list.
 - Availability must always treat confirmed local booking records as busy time, independent of Microsoft Graph readback. This prevents already-booked slots from staying visible when Graph or KV readback is delayed.
 - The booking page also removes the selected slot client-side immediately after a successful booking response.
+- Starting 2026-09-08, Angel's `/book` availability is constrained in code to 8:30 AM-1:30 PM America/Chicago, regardless of broader stored profile hours.
 - Scheduling admin build `2026.07.30.4-auth-rows` added a visible build stamp so stale browser/admin UI loads can be identified quickly.
 - Scheduling admin build `2026.07.30.5-auth-row-editor` replaced the authenticated-calendar textarea with an editable row UI. The earlier placeholder looked like a configured email but was not saved data.
 - Scheduling admin build `2026.07.31.2-read-calendars` split external calendars into Microsoft read connections and published feed URL rows.

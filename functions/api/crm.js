@@ -63,6 +63,7 @@ const REGISTRATION_DEBUG_PREFIX = "crm:registration-debug:";
 const PHONE_VERIFICATION_DEBUG_PREFIX = "crm:phone-verification-debug:";
 const R2_REGISTRATION_PREFIX = "crm/registrations";
 const OVERFLOW_REGISTRATION_PREFIX = "crm-overflow/registrations";
+const R2_INVITE_USAGE_PREFIX = "crm/invite-usage";
 const CONTACT_PHOTO_PREFIX = "crm/contact-photos";
 const PARTNER_PROSPECT_COMPANY_PREFIX = "crm:partner-prospect-company:";
 const PARTNER_PROSPECT_PERSON_PREFIX = "crm:partner-prospect-person:";
@@ -598,6 +599,22 @@ function recordUsesGuestRegistrationLifecycle(key = "", record = {}) {
     cleanString(key).startsWith(registrantTypes.guest.legacyPrefix) ||
     record?.crmType === registrantTypes.guest.crmType ||
     record?.type === "guest";
+}
+
+function recordIsActualGuestOrMemberRegistrant(key = "", record = {}) {
+  const cleanKey = cleanString(key);
+  return cleanKey.startsWith(registrantTypes.guest.crmPrefix) ||
+    cleanKey.startsWith(registrantTypes.guest.legacyPrefix) ||
+    cleanKey.startsWith(registrantTypes.member.crmPrefix) ||
+    cleanKey.startsWith(registrantTypes.member.legacyPrefix) ||
+    record?.crmType === registrantTypes.guest.crmType ||
+    record?.crmType === registrantTypes.member.crmType ||
+    ["guest-registration", "member-registration"].includes(cleanString(record?.source));
+}
+
+function actualRegistrantLifecycleStatus(key = "", record = {}) {
+  const status = cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.status, "registered");
+  return ["pending-engagement", "contacted", "confirmed", "invited"].includes(status) ? "registered" : status;
 }
 
 function splitName(name = "") {
@@ -1503,17 +1520,8 @@ function cleanOptionalRegistrationType(value) {
 
 function cleanContactEventRole(value) {
   const raw = cleanString(value, 120).toLowerCase();
-  if ([
-    "featured-partner",
-    "featured-guest",
-    "featured-member",
-    "featured-author",
-    "roundtable-leader",
-    "presenter",
-    "partner",
-    "member",
-    "guest"
-  ].includes(raw)) return raw;
+  const exact = cleanGuestRegistrationType(raw);
+  if (exact !== "guest" || raw === "guest") return exact;
   if (raw.includes("featured partner")) return "featured-partner";
   if (raw.includes("featured guest")) return "featured-guest";
   if (raw.includes("featured member")) return "featured-member";
@@ -1522,7 +1530,7 @@ function cleanContactEventRole(value) {
   if (raw.includes("presenter") || raw.includes("speaker")) return "presenter";
   if (raw.includes("partner")) return "partner";
   if (raw.includes("member")) return "member";
-  return cleanGuestRegistrationType(raw);
+  return "guest";
 }
 
 function contactEventRoleLabel(value) {
@@ -1651,6 +1659,7 @@ function normalizeRecord(key, record) {
     isFeaturedMember: Boolean(record?.isFeaturedMember),
     isFeaturedAuthor: Boolean(record?.isFeaturedAuthor),
     isFeaturedPartner: Boolean(record?.isFeaturedPartner),
+    potentialSponsor: record?.potentialSponsor === true || record?.isPotentialSponsor === true || record?.sponsorProspect === true,
     publicationUseName: Boolean(record?.publicationUseName),
     publicationUseCompany: Boolean(record?.publicationUseCompany),
     attended: record?.attended === true,
@@ -1659,7 +1668,9 @@ function normalizeRecord(key, record) {
     attendedAt: cleanString(record?.attendedAt),
     attendanceUpdatedAt: cleanString(record?.attendanceUpdatedAt),
     attendanceUpdatedBy: cleanString(record?.attendanceUpdatedBy),
-    crmStatus: recordUsesGuestRegistrationLifecycle(key, record)
+    crmStatus: recordIsActualGuestOrMemberRegistrant(key, record)
+      ? actualRegistrantLifecycleStatus(key, record)
+      : recordUsesGuestRegistrationLifecycle(key, record)
       ? cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.status, "contacted")
       : allowedStatuses.has(record?.crmStatus) ? record.crmStatus : "new",
     crmNotes: cleanString(record?.crmNotes),
@@ -1771,6 +1782,7 @@ function normalizeContactRecord(key, record = {}) {
       guestRegistrationType: cleanGuestRegistrationType(event?.guestRegistrationType || event?.registrationRole || event?.contactEventRole),
       partnerRegistrationType: cleanOptionalRegistrationType(event?.partnerRegistrationType || event?.registrationRole || event?.contactEventRole),
       registrationRole: cleanContactEventRole(event?.registrationRole || event?.partnerRegistrationType || event?.guestRegistrationType || event?.contactEventRole || event?.role || event?.registrationType),
+      potentialSponsor: event?.potentialSponsor === true || event?.isPotentialSponsor === true || event?.sponsorProspect === true,
       inviteCode: cleanString(event?.inviteCode),
       registrationId: cleanString(event?.registrationId),
       registrationType: cleanString(event?.registrationType),
@@ -1860,6 +1872,57 @@ async function r2Registrants(env, type = "member") {
         ...record,
         source: record.source || (key.startsWith(OVERFLOW_REGISTRATION_PREFIX) ? `${cleanType(type)}-registration-overflow` : `${cleanType(type)}-registration`)
       }) : null;
+    })
+  );
+
+  return records.filter(Boolean);
+}
+
+function inviteUsageObjectCode(key = "") {
+  const file = String(key || "").split("/").pop() || "";
+  return cleanCode(file.replace(/\.json$/i, ""));
+}
+
+function normalizeInviteUsageRecord(key, record = {}, type = "guest") {
+  const code = cleanCode(record?.code || record?.inviteCode || inviteUsageObjectCode(key));
+  if (!code) return null;
+  return {
+    key,
+    type: cleanType(record?.type || type),
+    code,
+    status: cleanString(record?.status, 80) || "used",
+    usedAt: cleanString(record?.usedAt || record?.createdAt),
+    usedBy: cleanString(record?.usedBy),
+    usedByName: cleanString(record?.usedByName || record?.name),
+    usedByEmail: cleanString(record?.usedByEmail || record?.email || record?.usedBy).toLowerCase(),
+    registrationId: cleanString(record?.registrationId || record?.id),
+    eventName: cleanString(record?.eventName),
+    eventDate: cleanString(record?.eventDate),
+    eventTime: cleanString(record?.eventTime),
+    eventShowId: cleanString(record?.eventShowId),
+    eventShowLabel: cleanString(record?.eventShowLabel),
+    eventShowTime: cleanString(record?.eventShowTime)
+  };
+}
+
+async function r2InviteUsages(env, type = "member") {
+  if (!env.MOJO_SUMMITS_STORAGE?.list || !env.MOJO_SUMMITS_STORAGE?.get) return [];
+  const keys = [];
+  const prefix = `${R2_INVITE_USAGE_PREFIX}/${cleanType(type)}/`;
+  let cursor;
+
+  do {
+    const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit: 1000 }).catch(() => null);
+    if (!result) break;
+    keys.push(...(result.objects || []).map((object) => object.key));
+    cursor = result.truncated ? result.cursor : undefined;
+  } while (cursor);
+
+  const records = await Promise.all(
+    keys.map(async (key) => {
+      const object = await env.MOJO_SUMMITS_STORAGE.get(key).catch(() => null);
+      const record = object ? await object.json().catch(() => null) : null;
+      return record ? normalizeInviteUsageRecord(key, record, type) : normalizeInviteUsageRecord(key, {}, type);
     })
   );
 
@@ -1996,6 +2059,7 @@ function contactFromRegistrant(row = {}, type = "") {
       guestRegistrationType: cleanGuestRegistrationType(row.guestRegistrationType || row.registrationRole),
       partnerRegistrationType: cleanOptionalRegistrationType(row.partnerRegistrationType || row.registrationRole),
       registrationRole: cleanGuestRegistrationType(row.registrationRole || row.partnerRegistrationType || row.guestRegistrationType),
+      potentialSponsor: row.potentialSponsor === true || row.isPotentialSponsor === true || row.sponsorProspect === true,
       role: roleLabelForRow(row, type),
       eventNotes: cleanEventNotes(row) || (type === "guest" ? cleanString(row.crmNotes, 4000) : ""),
       publicationUseName: row.publicationUseName === true,
@@ -2060,6 +2124,7 @@ function contactFromInviteRecord(row = {}, source = "guest-invite") {
       inviteCode: cleanString(row.code || row.inviteCode),
       registrationId: cleanString(row.registrationId),
       registrationType: source,
+      potentialSponsor: row.potentialSponsor === true || row.isPotentialSponsor === true || row.sponsorProspect === true,
       role: roleLabelForRow({ ...row, guestRegistrationType: registrationRole, partnerRegistrationType: registrationRole }, isPartner ? "partner" : row.type === "member" ? "member" : "guest"),
       registrationStatus: cleanGuestRegistrationLifecycleStatus(row.crmStatus || row.guestStatus || row.registrationStatus, row.usedAt || row.usedBy || row.usedByEmail ? "registered" : "invited"),
       status: cleanGuestRegistrationLifecycleStatus(row.crmStatus || row.guestStatus || row.registrationStatus, row.usedAt || row.usedBy || row.usedByEmail ? "registered" : "invited"),
@@ -4053,6 +4118,7 @@ function normalizeInviteCode(key, record) {
     guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
     partnerRegistrationType: cleanOptionalRegistrationType(record?.partnerRegistrationType || record?.registrationRole),
     registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.partnerRegistrationType || record?.guestRegistrationType),
+    potentialSponsor: record?.potentialSponsor === true || record?.isPotentialSponsor === true || record?.sponsorProspect === true,
     crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.guestStatus || record?.registrationStatus, record?.status === "used" ? "registered" : record?.code ? "invited" : "contacted"),
     guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.crmStatus || record?.registrationStatus, record?.status === "used" ? "registered" : record?.code ? "invited" : "contacted"),
     registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, record?.status === "used" ? "registered" : record?.code ? "invited" : "contacted"),
@@ -4079,17 +4145,60 @@ function normalizeInviteCode(key, record) {
   };
 }
 
+function registrationMatchesInvite(invite = {}, row = {}) {
+  const inviteRegistrationId = cleanString(invite.registrationId);
+  const rowRegistrationId = cleanString(row.id || row.registrationId);
+  if (inviteRegistrationId && rowRegistrationId && inviteRegistrationId === rowRegistrationId) return true;
+
+  const inviteCode = cleanCode(invite.code || invite.inviteCode);
+  const rowInviteCode = cleanCode(row.inviteCode || row.code);
+  if (inviteCode && rowInviteCode && inviteCode === rowInviteCode) return true;
+
+  const inviteEmail = cleanString(
+    invite.usedByEmail ||
+    invite.usedBy ||
+    invite.intendedGuestEmail ||
+    invite.invitedEmail ||
+    invite.guestEmail ||
+    invite.partnerContactEmail
+  ).toLowerCase();
+  const rowEmail = cleanString(
+    row.email ||
+    row.usedByEmail ||
+    row.usedBy ||
+    row.intendedGuestEmail ||
+    row.invitedEmail ||
+    row.guestEmail ||
+    row.partnerContactEmail
+  ).toLowerCase();
+  if (!inviteEmail || !rowEmail || inviteEmail !== rowEmail) return false;
+
+  const inviteEvent = cleanString(invite.eventSlug || invite.eventName || invite.eventId || invite.eventDate).toLowerCase();
+  const rowEvent = cleanString(row.eventSlug || row.eventName || row.eventId || row.eventDate).toLowerCase();
+  return !inviteEvent || !rowEvent || inviteEvent === rowEvent;
+}
+
+function inviteUsageMatchesInvite(invite = {}, usage = {}) {
+  const inviteCode = cleanCode(invite.code || invite.inviteCode);
+  const usageCode = cleanCode(usage.code || usage.inviteCode);
+  if (inviteCode && usageCode && inviteCode === usageCode) return true;
+
+  const inviteRegistrationId = cleanString(invite.registrationId);
+  const usageRegistrationId = cleanString(usage.registrationId);
+  return Boolean(inviteRegistrationId && usageRegistrationId && inviteRegistrationId === usageRegistrationId);
+}
+
 async function enrichInviteUsage(env, invites, types = ["member", "guest", "partner"]) {
   const rows = (await Promise.all(types.map((type) => registrants(env, type)))).flat();
+  const usageRows = (await Promise.all(types.map((type) => r2InviteUsages(env, type)))).flat();
   return invites.map((invite) => {
-    const usedEmail = cleanString(invite.usedByEmail || invite.usedBy).toLowerCase();
-    const row = rows.find((entry) =>
-      (invite.registrationId && entry.id === invite.registrationId) ||
-      (invite.code && entry.inviteCode === invite.code && (!usedEmail || entry.email === usedEmail))
-    );
-    const registered = Boolean(row);
+    const row = rows.find((entry) => registrationMatchesInvite(invite, entry));
+    const usage = usageRows.find((entry) => inviteUsageMatchesInvite(invite, entry));
+    const inviteAlreadyUsed = cleanString(invite.status).toLowerCase() === "used" ||
+      Boolean(invite.usedAt || invite.usedByName || invite.usedByEmail || invite.usedBy);
+    const registered = Boolean(row || usage || inviteAlreadyUsed);
     const currentStatus = cleanGuestRegistrationLifecycleStatus(
-      row?.crmStatus || invite.crmStatus || invite.guestStatus || invite.registrationStatus,
+      row?.crmStatus || usage?.registrationStatus || invite.crmStatus || invite.guestStatus || invite.registrationStatus,
       invite.code ? "invited" : "contacted"
     );
     const registrationStatus = registered
@@ -4103,18 +4212,22 @@ async function enrichInviteUsage(env, invites, types = ["member", "guest", "part
       registrationStatus,
       actualRegistrationRegistered: registered,
       registrationMatched: registered,
+      potentialSponsor: invite.potentialSponsor === true || row?.potentialSponsor === true || row?.isPotentialSponsor === true || row?.sponsorProspect === true,
+      guestRegistrationType: row?.guestRegistrationType || invite.guestRegistrationType,
+      partnerRegistrationType: row?.partnerRegistrationType || invite.partnerRegistrationType,
+      registrationRole: row?.registrationRole || row?.partnerRegistrationType || row?.guestRegistrationType || invite.registrationRole || invite.partnerRegistrationType || invite.guestRegistrationType,
       eventNotes: cleanEventNotes(row) || (row ? cleanString(row.crmNotes, 4000) : "") || cleanEventNotes(invite),
       registrationNotes: cleanEventNotes(row) || (row ? cleanString(row.crmNotes, 4000) : "") || cleanEventNotes(invite),
       preRegistrationNotes: cleanPreRegistrationNotes(invite),
-      guestRegistrationType: row?.guestRegistrationType || invite.guestRegistrationType,
-      partnerRegistrationType: row?.partnerRegistrationType || invite.partnerRegistrationType,
-      registrationRole: row?.registrationRole || row?.contactEventRole || row?.partnerRegistrationType || row?.guestRegistrationType || invite.registrationRole || invite.partnerRegistrationType || invite.guestRegistrationType,
-      usedByName: cleanString(invite.usedByName || row?.name),
-      usedByEmail: cleanString(invite.usedByEmail || row?.email || invite.usedBy).toLowerCase(),
-      usedFor: cleanString(row?.eventName || invite.usedFor || invite.eventName),
-      usedForDate: cleanString(row?.eventDate || invite.usedForDate || invite.eventDate),
-      usedForShow: cleanString(row?.eventShowLabel || invite.usedForShow || invite.eventShowLabel),
-      usedForTime: cleanString(row?.eventShowTime || row?.eventTime || invite.usedForTime || invite.eventShowTime || invite.eventTime)
+      usedAt: cleanString(invite.usedAt || usage?.usedAt || row?.createdAt),
+      usedByName: cleanString(row?.name || usage?.usedByName || invite.usedByName),
+      usedByEmail: cleanString(row?.email || usage?.usedByEmail || invite.usedByEmail || invite.usedBy).toLowerCase(),
+      usedBy: cleanString(row?.name || row?.email || usage?.usedBy || usage?.usedByEmail || invite.usedBy),
+      registrationId: cleanString(row?.id || usage?.registrationId || invite.registrationId),
+      usedFor: cleanString(row?.eventName || usage?.eventName || invite.usedFor || invite.eventName),
+      usedForDate: cleanString(row?.eventDate || usage?.eventDate || invite.usedForDate || invite.eventDate),
+      usedForShow: cleanString(row?.eventShowLabel || usage?.eventShowLabel || invite.usedForShow || invite.eventShowLabel),
+      usedForTime: cleanString(row?.eventShowTime || row?.eventTime || usage?.eventShowTime || usage?.eventTime || invite.usedForTime || invite.eventShowTime || invite.eventTime)
     };
   });
 }
@@ -4271,6 +4384,7 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.crmStatus || record?.registrationStatus, "pending-engagement"),
     registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, "pending-engagement"),
     matrixInterestRating: cleanStarRating(record?.matrixInterestRating ?? record?.participationInterestRating ?? record?.interestRating, 1),
+    potentialSponsor: prospectType === "guest" && (record?.potentialSponsor === true || record?.isPotentialSponsor === true || record?.sponsorProspect === true),
     preRegistrationNotes: cleanPreRegistrationNotes(record),
     guestRegistrationType,
     partnerRegistrationType: prospectType === "partner" ? guestRegistrationType : "",
@@ -4283,6 +4397,36 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     updatedAt: cleanString(record?.updatedAt),
     updatedBy: cleanString(record?.updatedBy)
   };
+}
+
+function guestMatrixMergeNameKey(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\b(dr|doctor|phd|ph\.d|m\.d|md|mba|ms|ma|cpa|esq)\b\.?/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+async function findGuestMatrixProspectForInvite(env, invite = {}) {
+  const targetEmail = cleanString(invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || invite.email, 240).toLowerCase();
+  const targetLinkedIn = cleanLinkedInProfileUrl(invite.linkedinProfileUrl || invite.linkedInProfileUrl || invite.linkedinUrl || invite.linkedInUrl);
+  const targetNameKey = guestMatrixMergeNameKey(invite.intendedGuestName || invite.invitedName || invite.guestName || invite.name);
+  if (!targetEmail && !targetLinkedIn && targetNameKey.length < 6) return null;
+
+  const keys = await listKeys(env, GUEST_MATRIX_PROSPECT_PREFIX);
+  for (const key of keys) {
+    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    if (!record) continue;
+    const prospect = normalizeGuestMatrixProspect(key, record, "guest");
+    const prospectEmail = cleanString(prospect.intendedGuestEmail || prospect.invitedEmail || prospect.guestEmail || prospect.email, 240).toLowerCase();
+    const prospectLinkedIn = cleanLinkedInProfileUrl(prospect.linkedinProfileUrl || prospect.linkedinUrl);
+    const prospectNameKey = guestMatrixMergeNameKey(prospect.intendedGuestName || prospect.invitedName || prospect.guestName || prospect.name);
+    if (targetEmail && prospectEmail && targetEmail === prospectEmail) return { key, prospect };
+    if (targetLinkedIn && prospectLinkedIn && targetLinkedIn === prospectLinkedIn) return { key, prospect };
+    if (targetNameKey.length >= 6 && prospectNameKey.length >= 6 && targetNameKey === prospectNameKey) return { key, prospect };
+  }
+
+  return null;
 }
 
 async function guestMatrixProspects(env) {
@@ -4475,6 +4619,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     guestRegistrationType,
     partnerRegistrationType: prospectType === "partner" ? guestRegistrationType : "",
     registrationRole: guestRegistrationType,
+    potentialSponsor: prospectType === "guest" && (payload.potentialSponsor === true || payload.isPotentialSponsor === true || payload.sponsorProspect === true),
     invitedBy: cleanString(payload.invitedBy || payload.inviter || payload.invitedByName || actor, 180),
     linkedinConnectionStatus: cleanGuestMatrixOption(payload.linkedinConnectionStatus || payload.connectionStatus, allowedGuestMatrixLinkedInStatuses, "unknown"),
     registrationRequestStatus: cleanGuestMatrixOption(payload.registrationRequestStatus || payload.inviteStage || payload.inviteStatus, allowedGuestMatrixRegistrationRequestStatuses, "not-sent"),
@@ -4525,12 +4670,12 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.crmStatus = status;
     next.guestStatus = status;
     next.registrationStatus = status;
-  } else if (field === "intendedGuestName") {
-    Object.assign(next, matrixPersonNameUpdate(payload.value, prospectType, existing));
-  } else if (field === "registrationRole") {
-    Object.assign(next, registrationRoleUpdate(payload.value, prospectType, existing));
   } else if (field === "matrixInterestRating") {
     next.matrixInterestRating = cleanStarRating(payload.value, existing.matrixInterestRating || 1);
+  } else if (field === "potentialSponsor") {
+    next.potentialSponsor = prospectType === "guest" && payload.value === true;
+  } else if (field === "registrationRole") {
+    Object.assign(next, registrationRoleUpdate(payload.value, prospectType, existing));
   } else if (field === "preRegistrationNotes" || field === "eventNotes") {
     next.preRegistrationNotes = cleanString(payload.value, 4000);
   } else {
@@ -4586,61 +4731,20 @@ async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteV
   return false;
 }
 
-function matrixPersonNameUpdate(nameValue, type = "", existing = {}) {
-  const name = cleanString(nameValue, 240);
-  const partnerRecord = type === "partner" || existing.type === "partner" || existing.partnerContactEmail;
+function registrationRoleUpdate(roleValue = "", type = "guest", existing = {}) {
+  const role = cleanContactEventRole(roleValue);
+  const partnerRole = role.includes("partner") ? role : cleanOptionalRegistrationType(existing.partnerRegistrationType);
   return {
-    intendedGuestName: name,
-    invitedName: name,
-    guestName: name,
-    partnerContactName: partnerRecord ? name : cleanString(existing.partnerContactName, 240)
-  };
-}
-
-async function updateRegistrantNameForMatrixChange(env, record = {}, nameValue = "", actor = "", now = new Date().toISOString()) {
-  const name = cleanString(nameValue, 240);
-  const inviteCode = cleanCode(record.code || record.inviteCode);
-  const registrationId = cleanString(record.registrationId);
-  const email = cleanString(record.usedByEmail || record.usedBy || record.intendedGuestEmail || record.invitedEmail || record.guestEmail || record.partnerContactEmail).toLowerCase();
-  const typeCandidates = record.type === "partner" || record.partnerContactEmail
-    ? ["partner"]
-    : ["guest", "member"];
-
-  for (const type of typeCandidates) {
-    const rows = await registrants(env, type);
-    const row = rows.find((entry) =>
-      (registrationId && (entry.key === registrationId || entry.id === registrationId)) ||
-      (inviteCode && cleanCode(entry.inviteCode) === inviteCode && (!email || cleanString(entry.email).toLowerCase() === email))
-    );
-    if (!row) continue;
-    const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
-    const partnerRecord = type === "partner" || crmRow.type === "partner" || crmRow.partnerContactEmail;
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
-      ...crmRow,
-      key: undefined,
-      crmType: registrantTypes[type].crmType,
-      name,
-      intendedGuestName: name,
-      invitedName: name,
-      guestName: name,
-      partnerContactName: partnerRecord ? name : crmRow.partnerContactName,
-      crmUpdatedAt: now,
-      crmUpdatedBy: actor
-    }));
-    return true;
-  }
-
-  return false;
-}
-
-function registrationRoleUpdate(roleValue, type = "", existing = {}) {
-  const role = cleanContactEventRole(roleValue || existing.registrationRole || existing.contactEventRole || existing.partnerRegistrationType || existing.guestRegistrationType || existing.type);
-  const partnerRecord = type === "partner" || existing.type === "partner" || existing.partnerContactEmail || role === "partner" || role === "featured-partner";
-  return {
-    contactEventRole: role,
     registrationRole: role,
-    guestRegistrationType: partnerRecord ? cleanGuestRegistrationType(existing.guestRegistrationType || existing.registrationRole || existing.type) : role,
-    partnerRegistrationType: partnerRecord ? role : cleanOptionalRegistrationType(existing.partnerRegistrationType)
+    guestRegistrationType: type === "partner" ? cleanOptionalRegistrationType(existing.guestRegistrationType) : cleanGuestRegistrationType(role),
+    partnerRegistrationType: type === "partner" ? role : partnerRole,
+    role: contactEventRoleLabel(role),
+    isPresenter: role === "presenter",
+    isRoundtableLeader: role === "roundtable-leader",
+    isFeaturedGuest: role === "featured-guest",
+    isFeaturedMember: role === "featured-member",
+    isFeaturedAuthor: role === "featured-author",
+    isFeaturedPartner: role === "featured-partner"
   };
 }
 
@@ -4660,11 +4764,12 @@ async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue =
     );
     if (!row) continue;
     const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
+    const roleUpdate = registrationRoleUpdate(roleValue, type, crmRow);
     await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
       ...crmRow,
+      ...roleUpdate,
       key: undefined,
       crmType: registrantTypes[type].crmType,
-      ...registrationRoleUpdate(roleValue, type, crmRow),
       crmUpdatedAt: now,
       crmUpdatedBy: actor
     }));
@@ -4702,18 +4807,25 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.guestStatus = status;
       next.registrationStatus = status;
     }
-    if (Object.prototype.hasOwnProperty.call(change, "intendedGuestName")) {
-      const nameUpdate = matrixPersonNameUpdate(change.intendedGuestName, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) || existing.type === "partner" ? "partner" : existing.type, existing);
-      Object.assign(next, nameUpdate);
-      await updateRegistrantNameForMatrixChange(env, next, nameUpdate.intendedGuestName, actor, now);
-    }
     if (Object.prototype.hasOwnProperty.call(change, "registrationRole")) {
-      const roleUpdate = registrationRoleUpdate(change.registrationRole, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) || existing.type === "partner" ? "partner" : existing.type, existing);
-      Object.assign(next, roleUpdate);
+      const roleUpdate = registrationRoleUpdate(change.registrationRole, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner" : "guest", existing);
+      next.registrationRole = roleUpdate.registrationRole;
+      next.guestRegistrationType = roleUpdate.guestRegistrationType;
+      next.partnerRegistrationType = roleUpdate.partnerRegistrationType;
+      next.isPresenter = roleUpdate.isPresenter;
+      next.isRoundtableLeader = roleUpdate.isRoundtableLeader;
+      next.isFeaturedGuest = roleUpdate.isFeaturedGuest;
+      next.isFeaturedMember = roleUpdate.isFeaturedMember;
+      next.isFeaturedAuthor = roleUpdate.isFeaturedAuthor;
+      next.isFeaturedPartner = roleUpdate.isFeaturedPartner;
       await updateRegistrantRoleForMatrixChange(env, next, roleUpdate.registrationRole, actor, now);
     }
     if (Object.prototype.hasOwnProperty.call(change, "matrixInterestRating")) {
       next.matrixInterestRating = cleanStarRating(change.matrixInterestRating, existing.matrixInterestRating || 1);
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "potentialSponsor")) {
+      const isGuestRecord = !key.startsWith(PARTNER_INVITE_PREFIX) && !key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX);
+      next.potentialSponsor = isGuestRecord && change.potentialSponsor === true;
     }
     if (Object.prototype.hasOwnProperty.call(change, "preRegistrationNotes")) {
       next.preRegistrationNotes = cleanString(change.preRegistrationNotes, 4000);
@@ -4803,6 +4915,13 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
   }
   if (!code) throw new Error("Could not generate a unique registration invite code.");
 
+  let sourceMatrixProspectKey = cleanString(payload.sourceMatrixProspectKey, 500);
+  const sourceMatrixProspect = sourceMatrixProspectKey.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)
+    ? await env.MOJO_SUMMITS_SETUP_STATE.get(sourceMatrixProspectKey, "json").catch(() => null)
+    : null;
+  let sourceProspect = sourceMatrixProspect
+    ? normalizeGuestMatrixProspect(sourceMatrixProspectKey, sourceMatrixProspect, "guest")
+    : null;
   const eventSlug = cleanString(payload.eventSlug, 200);
   const eventName = cleanString(payload.eventName, 240);
   const guestRegistrationType = cleanGuestRegistrationType(payload.guestRegistrationType || payload.registrationRole || payload.type);
@@ -4826,6 +4945,36 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
   if (!eventSlug && !eventName) throw new Error("Select an event before generating an invite code.");
 
   const createdAt = new Date().toISOString();
+  if (!sourceProspect) {
+    const matchedProspect = await findGuestMatrixProspectForInvite(env, {
+      intendedGuestName,
+      intendedGuestEmail,
+      linkedinProfileUrl: payload.linkedinProfileUrl || payload.linkedInProfileUrl || payload.linkedinUrl || payload.linkedInUrl
+    });
+    if (matchedProspect) {
+      sourceMatrixProspectKey = matchedProspect.key;
+      sourceProspect = matchedProspect.prospect;
+    }
+  }
+  const linkedinProfileUrl = cleanLinkedInProfileUrl(
+    payload.linkedinProfileUrl ||
+    payload.linkedInProfileUrl ||
+    payload.linkedinUrl ||
+    payload.linkedInUrl ||
+    sourceProspect?.linkedinProfileUrl ||
+    sourceProspect?.linkedinUrl
+  );
+  const matrixInterestRating = cleanStarRating(
+    payload.matrixInterestRating ??
+    payload.participationInterestRating ??
+    payload.interestRating ??
+    sourceProspect?.matrixInterestRating,
+    1
+  );
+  const potentialSponsor = payload.potentialSponsor === true ||
+    payload.isPotentialSponsor === true ||
+    payload.sponsorProspect === true ||
+    sourceProspect?.potentialSponsor === true;
   const record = {
     type,
     code,
@@ -4839,6 +4988,11 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     eventShowLabel: eventShowLabel(eventShowId),
     eventShowTime: eventTime,
     invitedBy: cleanString(payload.invitedBy || payload.inviter || payload.invitedByName || actor, 180),
+    company: cleanString(payload.company || sourceProspect?.company || sourceProspect?.partnerCompany, 240),
+    title: cleanString(payload.title || payload.jobTitle || sourceProspect?.title, 240),
+    jobTitle: cleanString(payload.jobTitle || payload.title || sourceProspect?.title, 240),
+    linkedinProfileUrl,
+    linkedinUrl: linkedinProfileUrl,
     intendedGuestName,
     intendedGuestEmail,
     invitedEmail: intendedGuestEmail,
@@ -4847,12 +5001,32 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     guestName: intendedGuestName,
     guestRegistrationType,
     registrationRole: guestRegistrationType,
+    crmStatus: "invited",
+    guestStatus: "invited",
+    registrationStatus: "invited",
+    linkedinConnectionStatus: cleanGuestMatrixOption(
+      payload.linkedinConnectionStatus || payload.linkedInConnectionStatus || payload.connectionStatus || sourceProspect?.linkedinConnectionStatus,
+      allowedGuestMatrixLinkedInStatuses,
+      "unknown"
+    ),
+    registrationRequestStatus: cleanGuestMatrixOption(
+      payload.registrationRequestStatus || payload.inviteStage || payload.inviteStatus || sourceProspect?.registrationRequestStatus,
+      allowedGuestMatrixRegistrationRequestStatuses,
+      "sent"
+    ),
+    matrixInterestRating,
+    potentialSponsor,
+    preRegistrationNotes: cleanString(payload.preRegistrationNotes || sourceProspect?.preRegistrationNotes, 4000),
+    sourceMatrixProspectKey: sourceProspect ? sourceMatrixProspectKey : "",
     createdAt,
     createdBy: actor
   };
 
   const key = `${REGISTRATION_INVITE_PREFIXES[type]}${code}`;
   await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  if (sourceProspect) {
+    await env.MOJO_SUMMITS_SETUP_STATE.delete(sourceMatrixProspectKey);
+  }
   const invite = normalizeInviteCode(key, record);
   await upsertContactFromInviteRecord(env, invite, `${type}-invite`, actor);
   return invite;
