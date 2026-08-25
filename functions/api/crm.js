@@ -15,6 +15,14 @@ import {
 import {
   upsertRegistrationContact
 } from "../_registration-crm.js";
+import {
+  crmD1Available,
+  crmD1Primary,
+  deleteCrmD1Record,
+  listCrmD1Keys,
+  readCrmD1Json,
+  writeCrmD1Json
+} from "../_crm-d1.js";
 
 const registrantTypes = {
   contacts: {
@@ -208,6 +216,43 @@ const builtInDirectoryStarterTopics = [
   ["database-companies", "Database"]
 ];
 const builtInDirectoryStarterPageCount = 50;
+const CRM_D1_KV_BACKFILL_PREFIXES = [
+  "crm:contact:",
+  "crm:member-registrant:",
+  "crm:guest-registrant:",
+  "crm:partner-registrant:",
+  "member-registration:",
+  "guest-registration:",
+  "partner-registration:",
+  REGISTRATION_INVITE_PREFIXES.member,
+  REGISTRATION_INVITE_PREFIXES.guest,
+  PARTNER_INVITE_PREFIX,
+  GUEST_MATRIX_PROSPECT_PREFIX,
+  PARTNER_MATRIX_PROSPECT_PREFIX,
+  PARTNER_PROSPECT_COMPANY_PREFIX,
+  PARTNER_PROSPECT_PERSON_PREFIX,
+  PARTNER_PROSPECT_AUDIT_PREFIX,
+  PARTNER_PROSPECT_DEBUG_PREFIX,
+  PARTNER_PROSPECT_SOURCE_PREFIX,
+  EMAIL_LOG_PREFIX,
+  REGISTRATION_DEBUG_PREFIX,
+  PHONE_VERIFICATION_DEBUG_PREFIX,
+  "crm:company:",
+  "partner-company:",
+  "member-company:",
+  "guest-company:"
+];
+const CRM_D1_R2_BACKFILL_PREFIXES = [
+  `${R2_REGISTRATION_PREFIX}/member/`,
+  `${R2_REGISTRATION_PREFIX}/guest/`,
+  `${R2_REGISTRATION_PREFIX}/partner/`,
+  `${OVERFLOW_REGISTRATION_PREFIX}/member/`,
+  `${OVERFLOW_REGISTRATION_PREFIX}/guest/`,
+  `${OVERFLOW_REGISTRATION_PREFIX}/partner/`,
+  `${R2_INVITE_USAGE_PREFIX}/member/`,
+  `${R2_INVITE_USAGE_PREFIX}/guest/`,
+  `${R2_INVITE_USAGE_PREFIX}/partner/`
+];
 const builtInDirectoryStarterSources = builtInDirectoryStarterTopics.flatMap(([slug, label]) =>
   Array.from({ length: builtInDirectoryStarterPageCount }, (_, index) => {
     const page = index + 1;
@@ -1809,8 +1854,11 @@ function contactStatusFromRegistration(value) {
 }
 
 async function listKeys(env, prefix) {
-  const keys = [];
+  const d1Keys = await listCrmD1Keys(env, prefix).catch(() => []);
+  if (crmD1Primary(env)) return d1Keys;
+  const keys = [...d1Keys];
   let cursor;
+  if (!env.MOJO_SUMMITS_SETUP_STATE?.list || !prefix) return [...new Set(keys)];
 
   do {
     const result = await env.MOJO_SUMMITS_SETUP_STATE.list({
@@ -1822,13 +1870,149 @@ async function listKeys(env, prefix) {
     cursor = result.list_complete ? undefined : result.cursor;
   } while (cursor);
 
-  return keys;
+  return [...new Set(keys)];
+}
+
+async function readSetupJson(env, key) {
+  const d1Record = await readCrmD1Json(env, key).catch(() => null);
+  if (d1Record) return d1Record;
+  if (crmD1Primary(env) || !env.MOJO_SUMMITS_SETUP_STATE?.get) return null;
+  return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null) || null;
+}
+
+async function writeSetupJson(env, key, record) {
+  await writeCrmD1Json(env, key, record).catch(() => false);
+  if (!crmD1Primary(env) && env.MOJO_SUMMITS_SETUP_STATE?.put) {
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  }
+}
+
+async function deleteSetupRecord(env, key) {
+  await deleteCrmD1Record(env, key).catch(() => false);
+  if (!crmD1Primary(env) && env.MOJO_SUMMITS_SETUP_STATE?.delete) {
+    await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+  }
+}
+
+function allowedCrmD1BackfillPrefixes(source = "") {
+  return source === "r2" ? CRM_D1_R2_BACKFILL_PREFIXES : CRM_D1_KV_BACKFILL_PREFIXES;
+}
+
+function assertCrmD1BackfillPrefix(source = "", prefix = "") {
+  const cleanPrefix = cleanString(prefix, 500);
+  const allowed = allowedCrmD1BackfillPrefixes(source);
+  if (!cleanPrefix || !allowed.includes(cleanPrefix)) {
+    const error = new Error("Choose one of the allowed CRM D1 backfill prefixes.");
+    error.status = 400;
+    error.allowedPrefixes = allowed;
+    throw error;
+  }
+  return cleanPrefix;
+}
+
+function d1KeyForR2Backfill(objectKey = "", record = {}) {
+  const cleanKey = safeObjectKey(objectKey);
+  if (cleanKey.startsWith(`${R2_INVITE_USAGE_PREFIX}/`)) return cleanKey;
+
+  const match = cleanKey.match(/^(?:crm|crm-overflow)\/registrations\/([^/]+)\//);
+  if (!match) return cleanKey;
+
+  const type = cleanType(match[1]);
+  const config = registrantTypes[type];
+  const createdAt = cleanString(record.createdAt || record.registeredAt || record.submittedAt, 120);
+  const id = cleanString(record.id || record.registrationId, 240) || safeFileSegment(cleanKey.split("/").pop()?.replace(/\.json$/i, ""), "registration");
+  if (!createdAt || !id) return cleanKey;
+  return `${config.crmPrefix}${createdAt}:${id}`;
+}
+
+async function backfillCrmD1FromKv(env, prefix, cursor, limit) {
+  if (!env.MOJO_SUMMITS_SETUP_STATE?.list || !env.MOJO_SUMMITS_SETUP_STATE?.get) {
+    const error = new Error("Legacy CRM KV storage is not configured.");
+    error.status = 500;
+    throw error;
+  }
+
+  const result = await env.MOJO_SUMMITS_SETUP_STATE.list({ prefix, cursor, limit });
+  let written = 0;
+  for (const entry of result.keys || []) {
+    const key = cleanString(entry.name, 600);
+    if (!key) continue;
+    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    if (!record || typeof record !== "object") continue;
+    if (await writeCrmD1Json(env, key, record).catch(() => false)) written += 1;
+  }
+
+  return {
+    processed: (result.keys || []).length,
+    written,
+    cursor: result.list_complete ? "" : cleanString(result.cursor, 1000),
+    listComplete: result.list_complete === true
+  };
+}
+
+async function backfillCrmD1FromR2(env, prefix, cursor, limit) {
+  if (!env.MOJO_SUMMITS_STORAGE?.list || !env.MOJO_SUMMITS_STORAGE?.get) {
+    const error = new Error("Legacy CRM R2 storage is not configured.");
+    error.status = 500;
+    throw error;
+  }
+
+  const result = await env.MOJO_SUMMITS_STORAGE.list({ prefix, cursor, limit });
+  let written = 0;
+  for (const object of result.objects || []) {
+    const objectKey = safeObjectKey(object.key);
+    if (!objectKey) continue;
+    const stored = await env.MOJO_SUMMITS_STORAGE.get(objectKey).catch(() => null);
+    const record = stored ? await stored.json().catch(() => null) : null;
+    if (!record || typeof record !== "object") continue;
+    const d1Key = d1KeyForR2Backfill(objectKey, record);
+    if (await writeCrmD1Json(env, d1Key, { ...record, legacyR2Key: objectKey }).catch(() => false)) written += 1;
+  }
+
+  return {
+    processed: (result.objects || []).length,
+    written,
+    cursor: result.truncated ? cleanString(result.cursor, 1000) : "",
+    listComplete: result.truncated !== true
+  };
+}
+
+async function backfillCrmD1(env, payload = {}) {
+  if (!crmD1Available(env)) {
+    const error = new Error("CRM D1 database is not configured.");
+    error.status = 500;
+    throw error;
+  }
+
+  const source = cleanString(payload.source, 20).toLowerCase() === "r2" ? "r2" : "kv";
+  if (!payload.prefix) {
+    return {
+      ok: true,
+      source,
+      allowedPrefixes: allowedCrmD1BackfillPrefixes(source)
+    };
+  }
+
+  const prefix = assertCrmD1BackfillPrefix(source, payload.prefix);
+  const cursor = cleanString(payload.cursor, 1000) || undefined;
+  const limit = Math.min(Math.max(Number.parseInt(payload.limit, 10) || 100, 1), 200);
+  const result = source === "r2"
+    ? await backfillCrmD1FromR2(env, prefix, cursor, limit)
+    : await backfillCrmD1FromKv(env, prefix, cursor, limit);
+
+  return {
+    ok: true,
+    source,
+    prefix,
+    limit,
+    ...result
+  };
 }
 
 async function readRecords(env, keys) {
   const records = await Promise.all(
     keys.map(async (key) => {
-      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      const record = await readSetupJson(env, key);
       return record ? normalizeRecord(key, record) : null;
     })
   );
@@ -1839,7 +2023,7 @@ async function readRecords(env, keys) {
 async function readContactRecords(env, keys) {
   const records = await Promise.all(
     keys.map(async (key) => {
-      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      const record = await readSetupJson(env, key);
       return record ? normalizeContactRecord(key, record) : null;
     })
   );
@@ -1848,6 +2032,7 @@ async function readContactRecords(env, keys) {
 }
 
 async function r2Registrants(env, type = "member") {
+  if (crmD1Primary(env)) return [];
   if (!env.MOJO_SUMMITS_STORAGE?.list || !env.MOJO_SUMMITS_STORAGE?.get) return [];
   const keys = [];
   const prefixes = [
@@ -1907,6 +2092,9 @@ function normalizeInviteUsageRecord(key, record = {}, type = "guest") {
 }
 
 async function r2InviteUsages(env, type = "member") {
+  const d1Keys = await listCrmD1Keys(env, `${R2_INVITE_USAGE_PREFIX}/${cleanType(type)}/`).catch(() => []);
+  const d1Records = await Promise.all(d1Keys.map(async (key) => normalizeInviteUsageRecord(key, await readCrmD1Json(env, key), type)));
+  if (crmD1Primary(env)) return d1Records.filter(Boolean);
   if (!env.MOJO_SUMMITS_STORAGE?.list || !env.MOJO_SUMMITS_STORAGE?.get) return [];
   const keys = [];
   const prefix = `${R2_INVITE_USAGE_PREFIX}/${cleanType(type)}/`;
@@ -1927,7 +2115,7 @@ async function r2InviteUsages(env, type = "member") {
     })
   );
 
-  return records.filter(Boolean);
+  return [...d1Records, ...records].filter(Boolean);
 }
 
 async function deleteR2RegistrantsForEmail(env, email) {
@@ -2201,7 +2389,7 @@ async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invi
   };
   const now = new Date().toISOString();
   const nextEvent = contact.events?.[0] || {};
-  await env.MOJO_SUMMITS_SETUP_STATE.put(contact.key, JSON.stringify({
+  await writeSetupJson(env, contact.key, {
     ...mergedExisting,
     id: contact.id,
     email: contact.email,
@@ -2217,8 +2405,8 @@ async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invi
     updatedAt: now,
     updatedBy: actor || "crm",
     events: mergeContactEventList(mergedExisting?.events, nextEvent)
-  }));
-  await Promise.all(aliasKeys.map((key) => env.MOJO_SUMMITS_SETUP_STATE.delete(key).catch(() => null)));
+  });
+  await Promise.all(aliasKeys.map((key) => deleteSetupRecord(env, key).catch(() => null)));
   return {
     contactKey: contact.key,
     contactId: contact.id,
@@ -2369,7 +2557,7 @@ function normalizeEmailLogEntry(key, record = {}) {
 }
 
 async function readRawRecord(env, key) {
-  return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+  return readSetupJson(env, key);
 }
 
 function prospectCompanyId(record = {}) {
@@ -2603,12 +2791,12 @@ async function findProspectCompany(env, payload = {}, options = {}) {
 async function writeProspectAudit(env, companyId, entry = {}) {
   const now = new Date().toISOString();
   const id = `${companyId}:${now}:${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${PARTNER_PROSPECT_AUDIT_PREFIX}${id}`, JSON.stringify({
+  await writeSetupJson(env, `${PARTNER_PROSPECT_AUDIT_PREFIX}${id}`, {
     id,
     companyId,
     createdAt: now,
     ...entry
-  }));
+  });
 }
 
 async function writeProspectDebug(env, runId = "", entry = {}) {
@@ -2622,7 +2810,7 @@ async function writeProspectDebug(env, runId = "", entry = {}) {
     rejected: Array.isArray(entry.rejected) ? entry.rejected.slice(0, 40) : [],
     skipped: Array.isArray(entry.skipped) ? entry.skipped.slice(0, 40) : []
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${PARTNER_PROSPECT_DEBUG_PREFIX}${id}`, JSON.stringify(record));
+  await writeSetupJson(env, `${PARTNER_PROSPECT_DEBUG_PREFIX}${id}`, record);
   return record;
 }
 
@@ -2715,7 +2903,7 @@ async function saveProspectSource(env, payload = {}, actor = "") {
     updatedAt: now,
     updatedBy: actor || "crm"
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  await writeSetupJson(env, key, record);
   return normalizeProspectSource(key, record);
 }
 
@@ -2810,7 +2998,7 @@ async function saveProspectCompany(env, payload = {}, actor = "", options = {}) 
       ].slice(-50)
       : (Array.isArray(previous?.scoreAudit) ? previous.scoreAudit : [])
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+  await writeSetupJson(env, key, next);
   if (scoreChanged) await writeProspectAudit(env, companyId, { actor, action: "score-override", from: previous?.partnerScoreOverride ?? "", to: normalized.partnerScoreOverride });
   return normalizeProspectCompany(key, next, people, config.weights);
 }
@@ -2869,7 +3057,7 @@ async function saveDiscoveredProspectCompany(env, payload = {}, actor = "", conf
     processingStage: normalized.processingStage,
     processingStatus: normalized.processingStatus
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+  await writeSetupJson(env, key, next);
   return normalizeProspectCompany(key, next, [], activeConfig.weights);
 }
 
@@ -2887,7 +3075,7 @@ async function recalculateProspectCompanyRecord(env, key, record = {}, weights =
     updatedAt: now,
     updatedBy: actor || cleanString(record.updatedBy, 180) || "crm"
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+  await writeSetupJson(env, key, next);
   return normalizeProspectCompany(key, next, people, weights);
 }
 
@@ -2900,7 +3088,7 @@ async function savePartnerScoreConfig(env, payload = {}, actor = "") {
     updatedAt: now,
     updatedBy: actor || "crm"
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(PARTNER_PROSPECT_SCORE_CONFIG_KEY, JSON.stringify(record));
+  await writeSetupJson(env, PARTNER_PROSPECT_SCORE_CONFIG_KEY, record);
 
   const keys = await listKeys(env, PARTNER_PROSPECT_COMPANY_PREFIX);
   let recalculated = 0;
@@ -2986,7 +3174,7 @@ async function reviewProspectCompany(env, payload = {}, actor = "") {
     partnerPriority: priorityBand(normalized.partnerScore),
     partnerStatus: cleanString(merged.partnerStatus) || normalized.partnerStatus
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify(next));
+  await writeSetupJson(env, company.key, next);
   await writeProspectAudit(env, company.companyId, {
     actor,
     action: "human-review",
@@ -3032,7 +3220,7 @@ async function saveProspectPeopleSearchMission(env, payload = {}, actor = "") {
     partnerPriority: normalized.partnerPriority,
     partnerStatus: cleanString(record.partnerStatus) || normalized.partnerStatus
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify(next));
+  await writeSetupJson(env, company.key, next);
   await writeProspectAudit(env, company.companyId, {
     actor,
     action: "manual-people-search",
@@ -3096,15 +3284,15 @@ async function saveProspectPerson(env, payload = {}, actor = "") {
     updatedAt: now,
     updatedBy: actor || "crm"
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  await writeSetupJson(env, key, record);
   const existingCompany = await readRawRecord(env, company.key);
-  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+  await writeSetupJson(env, company.key, {
     ...(existingCompany || {}),
     processingStage: "READY FOR OUTREACH",
     processingStatus: "READY FOR OUTREACH",
     updatedAt: now,
     updatedBy: actor || "crm"
-  }));
+  });
   return normalizeProspectPerson(key, record);
 }
 
@@ -3116,14 +3304,14 @@ async function analyzeProspectWebsite(env, payload = {}, actor = "") {
   const config = await partnerScoreConfig(env);
   const now = new Date().toISOString();
   const existing = await readRawRecord(env, company.key);
-  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+  await writeSetupJson(env, company.key, {
     ...(existing || {}),
     processingStage: "WEBSITE ANALYSIS",
     processingStatus: "RUNNING",
     processingError: "",
     updatedAt: now,
     updatedBy: actor || "crm"
-  }));
+  });
 
   try {
     const { html } = await fetchPublicHtml(targetUrl);
@@ -3165,24 +3353,24 @@ async function analyzeProspectWebsite(env, payload = {}, actor = "") {
       updatedBy: actor || "crm"
     };
     const normalized = normalizeProspectCompany(company.key, record, await prospectPeople(env, company.companyId), config.weights);
-    await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+    await writeSetupJson(env, company.key, {
       ...record,
       partnerScore: normalized.partnerScore,
       partnerPriority: normalized.partnerPriority,
       partnerStatus: cleanString(record.partnerStatus) || normalized.partnerStatus
-    }));
+    });
     await writeProspectAudit(env, company.companyId, { actor, action: "website-analysis", url: targetUrl, isAiVendor: classification.isAiVendor });
     return normalizeProspectCompany(company.key, await readRawRecord(env, company.key), await prospectPeople(env, company.companyId), config.weights);
   } catch (error) {
     const failed = await readRawRecord(env, company.key);
-    await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+    await writeSetupJson(env, company.key, {
       ...(failed || {}),
       processingStage: "WEBSITE ANALYSIS",
       processingStatus: "FAILED",
       processingError: cleanString(error.message || "Website analysis failed.", 1000),
       updatedAt: new Date().toISOString(),
       updatedBy: actor || "crm"
-    }));
+    });
     throw error;
   }
 }
@@ -3360,7 +3548,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       if (candidateId) seenCompanyIds.add(candidateId);
       if (saved.length >= targetNewCompanies) break;
     }
-    await env.MOJO_SUMMITS_SETUP_STATE.put(source.key, JSON.stringify({
+    await writeSetupJson(env, source.key, {
       ...source,
       lastRunAt: now,
       lastRunBy: actor || "crm",
@@ -3371,7 +3559,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       taggedExistingCount: Number(source.taggedExistingCount || 0) + taggedExisting,
       updatedAt: now,
       updatedBy: actor || "crm"
-    }));
+    });
     await writeProspectAudit(env, companySlug(sourceName) || "source-discovery", {
       actor,
       action: "source-discovery",
@@ -3411,7 +3599,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       skipped: debug.skipped
     };
   } catch (error) {
-    await env.MOJO_SUMMITS_SETUP_STATE.put(source.key, JSON.stringify({
+    await writeSetupJson(env, source.key, {
       ...source,
       lastRunAt: now,
       lastRunBy: actor || "crm",
@@ -3419,7 +3607,7 @@ async function runSourceDiscovery(env, payload = {}, actor = "") {
       lastRunError: cleanString(error.message || "Discovery source failed.", 1000),
       updatedAt: now,
       updatedBy: actor || "crm"
-    }));
+    });
     await writeProspectDebug(env, debugRunId, {
       actor,
       action: "source-discovery",
@@ -3802,17 +3990,17 @@ async function recordProspectOutreach(env, payload = {}, actor = "") {
     updatedAt: now,
     updatedBy: actor || "crm"
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  await writeSetupJson(env, key, record);
   const companyKey = `${PARTNER_PROSPECT_COMPANY_PREFIX}${cleanString(existing.companyId, 180)}`;
   const company = await readRawRecord(env, companyKey);
   if (company) {
-    await env.MOJO_SUMMITS_SETUP_STATE.put(companyKey, JSON.stringify({
+    await writeSetupJson(env, companyKey, {
       ...company,
       partnerStatus: ["Vendor Universe", "Partner Target", "Ready For Outreach"].includes(cleanString(company.partnerStatus)) ? "In Outreach" : company.partnerStatus,
       lastContactAt: now,
       updatedAt: now,
       updatedBy: actor || "crm"
-    }));
+    });
   }
   await writeProspectAudit(env, existing.companyId, { actor, action: "outreach", personKey: key, outreachAction: action });
   return normalizeProspectPerson(key, record);
@@ -3823,14 +4011,14 @@ async function retryProspectStage(env, payload = {}, actor = "") {
   if (!company) throw new Error("Prospect company was not found.");
   const existing = await readRawRecord(env, company.key);
   const now = new Date().toISOString();
-  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+  await writeSetupJson(env, company.key, {
     ...(existing || {}),
     processingStatus: "DISCOVERED",
     processingError: "",
     retryCount: Number(existing?.retryCount || 0) + 1,
     updatedAt: now,
     updatedBy: actor || "crm"
-  }));
+  });
   await writeProspectAudit(env, company.companyId, { actor, action: "retry-stage", stage: company.processingStage });
 }
 
@@ -3863,7 +4051,7 @@ async function convertProspectCompany(env, payload = {}, actor = "") {
       updatedBy: actor || "crm"
     });
   }
-  await env.MOJO_SUMMITS_SETUP_STATE.put(companyKey, JSON.stringify({
+  await writeSetupJson(env, companyKey, {
     ...(existingCompany || {}),
     organizationName: cleanString(existingCompany?.organizationName || company.companyName, 240),
     company: company.companyName,
@@ -3874,9 +4062,9 @@ async function convertProspectCompany(env, payload = {}, actor = "") {
     source: cleanString(existingCompany?.source) || "Partner Prospecting",
     updatedAt: now,
     updatedBy: actor || "crm"
-  }));
+  });
   const existingProspect = await readRawRecord(env, company.key);
-  await env.MOJO_SUMMITS_SETUP_STATE.put(company.key, JSON.stringify({
+  await writeSetupJson(env, company.key, {
     ...(existingProspect || {}),
     partnerStatus: "Partner Candidate",
     convertedPartnerKey: companyKey,
@@ -3884,7 +4072,7 @@ async function convertProspectCompany(env, payload = {}, actor = "") {
     convertedBy: actor || "crm",
     updatedAt: now,
     updatedBy: actor || "crm"
-  }));
+  });
   await writeProspectAudit(env, company.companyId, { actor, action: "convert-to-partner-candidate", partnerKey: companyKey });
   return { companyKey };
 }
@@ -4141,7 +4329,7 @@ async function ensureCrmRecord(env, row, type = "member") {
     ...row,
     crmType: config.crmType
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+  await writeSetupJson(env, key, next);
   return { key, row: normalizeRecord(key, next) };
 }
 
@@ -4285,7 +4473,7 @@ async function partnerInviteCodes(env) {
   const keys = await listKeys(env, PARTNER_INVITE_PREFIX);
   const rows = await Promise.all(
     keys.map(async (key) => {
-      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      const record = await readSetupJson(env, key);
       return record ? normalizeInviteCode(key, record) : null;
     })
   );
@@ -4357,7 +4545,7 @@ async function registrationInviteCodes(env) {
       const keys = await listKeys(env, prefix);
       return Promise.all(
         keys.map(async (key) => {
-          const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+          const record = await readSetupJson(env, key);
           return record ? normalizeInviteCode(key, { ...record, type: record.type || type }) : null;
         })
       );
@@ -4464,7 +4652,7 @@ async function findGuestMatrixProspectForInvite(env, invite = {}) {
 
   const keys = await listKeys(env, GUEST_MATRIX_PROSPECT_PREFIX);
   for (const key of keys) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const record = await readSetupJson(env, key);
     if (!record) continue;
     const prospect = normalizeGuestMatrixProspect(key, record, "guest");
     const prospectEmail = cleanString(prospect.intendedGuestEmail || prospect.invitedEmail || prospect.guestEmail || prospect.email, 240).toLowerCase();
@@ -4482,7 +4670,7 @@ async function guestMatrixProspects(env) {
   const keys = await listKeys(env, GUEST_MATRIX_PROSPECT_PREFIX);
   const rows = await Promise.all(
     keys.map(async (key) => {
-      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      const record = await readSetupJson(env, key);
       return record ? normalizeGuestMatrixProspect(key, record, "guest") : null;
     })
   );
@@ -4493,7 +4681,7 @@ async function partnerMatrixProspects(env) {
   const keys = await listKeys(env, PARTNER_MATRIX_PROSPECT_PREFIX);
   const rows = await Promise.all(
     keys.map(async (key) => {
-      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      const record = await readSetupJson(env, key);
       return record ? normalizeGuestMatrixProspect(key, record, "partner") : null;
     })
   );
@@ -4696,7 +4884,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     updatedAt: createdAt,
     updatedBy: actor
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(nextRecord));
+  await writeSetupJson(env, key, nextRecord);
   const prospect = normalizeGuestMatrixProspect(key, nextRecord, prospectType);
   await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
   return prospect;
@@ -4706,7 +4894,7 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   const key = cleanString(payload.key, 500);
   const prospectType = key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner" : "guest";
   if (!key || (!key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) && !key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX))) throw new Error("Tracked person was not found.");
-  const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+  const existing = await readSetupJson(env, key);
   if (!existing) throw new Error("Tracked person was not found.");
   const field = cleanString(payload.field, 80);
   const next = { ...existing };
@@ -4732,7 +4920,7 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   }
   next.updatedAt = new Date().toISOString();
   next.updatedBy = actor;
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+  await writeSetupJson(env, key, next);
   const prospect = normalizeGuestMatrixProspect(key, next, prospectType);
   await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
   return prospect;
@@ -4742,9 +4930,9 @@ async function deleteGuestMatrixProspect(env, payload = {}) {
   const key = cleanString(payload.key, 500);
   const isPartnerProspect = key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX);
   if (!key || (!key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) && !isPartnerProspect)) throw new Error("Tracked person was not found.");
-  const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+  const existing = await readSetupJson(env, key);
   if (!existing) throw new Error("Tracked person was not found.");
-  await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+  await deleteSetupRecord(env, key);
   return normalizeGuestMatrixProspect(key, existing, isPartnerProspect ? "partner" : "guest");
 }
 
@@ -4765,7 +4953,7 @@ async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteV
     );
     if (!row) continue;
     const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+    await writeSetupJson(env, key, {
       ...crmRow,
       key: undefined,
       crmType: registrantTypes[type].crmType,
@@ -4773,7 +4961,7 @@ async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteV
       registrationNotes: note,
       crmUpdatedAt: now,
       crmUpdatedBy: actor
-    }));
+    });
     return true;
   }
 
@@ -4814,14 +5002,14 @@ async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue =
     if (!row) continue;
     const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
     const roleUpdate = registrationRoleUpdate(roleValue, type, crmRow);
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+    await writeSetupJson(env, key, {
       ...crmRow,
       ...roleUpdate,
       key: undefined,
       crmType: registrantTypes[type].crmType,
       crmUpdatedAt: now,
       crmUpdatedBy: actor
-    }));
+    });
     return true;
   }
 
@@ -4841,7 +5029,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       key.startsWith(REGISTRATION_INVITE_PREFIXES.guest) ||
       key.startsWith(REGISTRATION_INVITE_PREFIXES.member);
     if (!allowedPrefix) continue;
-    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const existing = await readSetupJson(env, key);
     if (!existing) continue;
     const next = { ...existing };
     if (Object.prototype.hasOwnProperty.call(change, "linkedinConnection")) {
@@ -4887,7 +5075,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     }
     next.updatedAt = now;
     next.updatedBy = actor;
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+    await writeSetupJson(env, key, next);
     const normalized = key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)
       ? normalizeGuestMatrixProspect(key, next, "partner")
       : key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)
@@ -4911,7 +5099,7 @@ function eventTime(value) {
 }
 
 async function upcomingEvents(env) {
-  const stored = await env.MOJO_SUMMITS_SETUP_STATE.get(EVENT_INDEX_KEY, "json").catch(() => []);
+  const stored = await readSetupJson(env, EVENT_INDEX_KEY).catch(() => []);
   const rows = Array.isArray(stored) ? stored : [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -4946,7 +5134,7 @@ async function codeExists(env, code) {
     `member-invite:${code}`
   ];
   for (const key of keys) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const record = await readSetupJson(env, key);
     if (record) return true;
   }
   return false;
@@ -4966,7 +5154,7 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
 
   let sourceMatrixProspectKey = cleanString(payload.sourceMatrixProspectKey, 500);
   const sourceMatrixProspect = sourceMatrixProspectKey.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)
-    ? await env.MOJO_SUMMITS_SETUP_STATE.get(sourceMatrixProspectKey, "json").catch(() => null)
+    ? await readSetupJson(env, sourceMatrixProspectKey)
     : null;
   let sourceProspect = sourceMatrixProspect
     ? normalizeGuestMatrixProspect(sourceMatrixProspectKey, sourceMatrixProspect, "guest")
@@ -5072,9 +5260,9 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
   };
 
   const key = `${REGISTRATION_INVITE_PREFIXES[type]}${code}`;
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  await writeSetupJson(env, key, record);
   if (sourceProspect) {
-    await env.MOJO_SUMMITS_SETUP_STATE.delete(sourceMatrixProspectKey);
+    await deleteSetupRecord(env, sourceMatrixProspectKey);
   }
   const invite = normalizeInviteCode(key, record);
   await upsertContactFromInviteRecord(env, invite, `${type}-invite`, actor);
@@ -5121,7 +5309,7 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   };
 
   const key = `${PARTNER_INVITE_PREFIX}${code}`;
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  await writeSetupJson(env, key, record);
   const invite = normalizeInviteCode(key, record);
   await upsertContactFromInviteRecord(env, invite, "partner-invite", actor);
   return invite;
@@ -5143,9 +5331,9 @@ async function deleteInviteCode(env, payload = {}) {
   ].filter(Boolean);
 
   for (const candidate of candidates) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(candidate, "json").catch(() => null);
+    const record = await readSetupJson(env, candidate);
     if (record) {
-      await env.MOJO_SUMMITS_SETUP_STATE.delete(candidate);
+      await deleteSetupRecord(env, candidate);
       return { deleted: candidate };
     }
   }
@@ -5167,7 +5355,7 @@ async function findInviteCodeRecord(env, payload = {}) {
   ].filter(Boolean);
 
   for (const candidate of candidates) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(candidate, "json").catch(() => null);
+    const record = await readSetupJson(env, candidate);
     if (record) return normalizeInviteCode(candidate, record);
   }
 
@@ -5180,7 +5368,7 @@ async function updateRegistrationInviteShow(env, payload = {}, actor = "") {
     throw new Error("This invite has already been used. Update the registrant event details instead.");
   }
 
-  const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(invite.key, "json").catch(() => null);
+  const existing = await readSetupJson(env, invite.key);
   if (!existing) throw new Error("Invite link was not found.");
 
   const role = cleanGuestRegistrationType(existing.guestRegistrationType || existing.registrationRole || invite.guestRegistrationType || invite.registrationRole);
@@ -5203,7 +5391,7 @@ async function updateRegistrationInviteShow(env, payload = {}, actor = "") {
     updatedAt: now,
     updatedBy: actor
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(invite.key, JSON.stringify(next));
+  await writeSetupJson(env, invite.key, next);
   const updatedInvite = normalizeInviteCode(invite.key, next);
   await upsertContactFromInviteRecord(env, updatedInvite, `${updatedInvite.type || "guest"}-invite`, actor);
   return updatedInvite;
@@ -5498,10 +5686,10 @@ async function sendInviteReminderEmail(env, payload = {}, origin = "") {
 }
 
 async function logGuestRegistrationEmail(env, entry = {}) {
-  if (!env.MOJO_SUMMITS_SETUP_STATE?.put) return;
+  if (!env.MOJO_SUMMITS_SETUP_STATE?.put && !crmD1Available(env)) return;
   const now = new Date().toISOString();
   const id = `${now}:${crypto.randomUUID()}`;
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${EMAIL_LOG_PREFIX}${id}`, JSON.stringify({
+  await writeSetupJson(env, `${EMAIL_LOG_PREFIX}${id}`, {
     id,
     createdAt: now,
     type: cleanString(entry.type, 80) || "guest-registration",
@@ -5517,7 +5705,7 @@ async function logGuestRegistrationEmail(env, entry = {}) {
     actor: cleanString(entry.actor, 240),
     messageId: cleanString(entry.messageId, 240),
     error: cleanString(entry.error, 500)
-  }));
+  });
 }
 
 async function removeEmailFromCompanyContacts(env, email, actor = "") {
@@ -5534,12 +5722,12 @@ async function removeEmailFromCompanyContacts(env, email, actor = "") {
     if (!record || !Array.isArray(record.contacts)) continue;
     const nextContacts = record.contacts.filter((entry) => cleanString(entry?.email).toLowerCase() !== email);
     if (nextContacts.length === record.contacts.length) continue;
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+    await writeSetupJson(env, key, {
       ...record,
       contacts: nextContacts,
       updatedAt: new Date().toISOString(),
       updatedBy: actor || "crm"
-    }));
+    });
     deletedFromCompanies.push(key);
   }
 
@@ -5556,9 +5744,9 @@ async function deleteDerivedContactSources(env, contactKey = "") {
     if (derivedContact?.key !== requestedKey) return;
     const sourceKey = cleanString(row.key, 500);
     if (!sourceKey) return;
-    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(sourceKey, "json").catch(() => null);
+    const existing = await readSetupJson(env, sourceKey);
     if (!existing) return;
-    await env.MOJO_SUMMITS_SETUP_STATE.delete(sourceKey);
+    await deleteSetupRecord(env, sourceKey);
     deletedSourceKeys.push(sourceKey);
   };
 
@@ -5585,7 +5773,7 @@ async function deleteContact(env, payload = {}, actor = "") {
       ? `${registrantTypes.contacts.crmPrefix}${requestedEmail}`
       : "";
   const existingContact = directContactKey
-    ? await env.MOJO_SUMMITS_SETUP_STATE.get(directContactKey, "json").catch(() => null)
+    ? await readSetupJson(env, directContactKey)
     : null;
   const existingEmail = cleanString(existingContact?.email, 180).toLowerCase();
   const email = isEmail(requestedEmail)
@@ -5599,13 +5787,13 @@ async function deleteContact(env, payload = {}, actor = "") {
 
   const deletedKeys = [];
   const primaryContactKey = directContactKey || `${registrantTypes.contacts.crmPrefix}${email}`;
-  await env.MOJO_SUMMITS_SETUP_STATE.delete(primaryContactKey);
+  await deleteSetupRecord(env, primaryContactKey);
   deletedKeys.push(primaryContactKey);
 
   if (email) {
     const emailContactKey = `${registrantTypes.contacts.crmPrefix}${email}`;
     if (emailContactKey !== primaryContactKey) {
-      await env.MOJO_SUMMITS_SETUP_STATE.delete(emailContactKey);
+      await deleteSetupRecord(env, emailContactKey);
       deletedKeys.push(emailContactKey);
     }
   }
@@ -5620,7 +5808,7 @@ async function deleteContact(env, payload = {}, actor = "") {
       for (const key of keys) {
         const record = await readRawRecord(env, key);
         if (cleanString(record?.email).toLowerCase() !== email) continue;
-        await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+        await deleteSetupRecord(env, key);
         deletedKeys.push(key);
       }
     }
@@ -5676,17 +5864,17 @@ async function removeContactEventForRegistrant(env, row = {}, actor = "") {
     cleanString(existing.source).toLowerCase().includes("registration");
 
   if (canDeleteContact) {
-    await env.MOJO_SUMMITS_SETUP_STATE.delete(contactKey);
+    await deleteSetupRecord(env, contactKey);
     return { contactKey, removedEvents, contactDeleted: true };
   }
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(contactKey, JSON.stringify({
+  await writeSetupJson(env, contactKey, {
     ...existing,
     events: nextEvents,
     updatedAt: now,
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
-  }));
+  });
 
   return { contactKey, removedEvents, contactDeleted: false };
 }
@@ -5724,7 +5912,7 @@ async function deleteGuestRegistrant(env, payload = {}, actor = "") {
   for (const candidateKey of kvKeys) {
     const record = await readRawRecord(env, candidateKey);
     if (!record || !matchesRow(candidateKey, record)) continue;
-    await env.MOJO_SUMMITS_SETUP_STATE.delete(candidateKey);
+    await deleteSetupRecord(env, candidateKey);
     deletedKeys.push(candidateKey);
   }
 
@@ -5797,7 +5985,7 @@ async function updateContact(env, payload = {}, actor = "") {
     throw new Error("Enter a valid LinkedIn profile URL.");
   }
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+  await writeSetupJson(env, key, {
     ...(existing || {}),
     id: email,
     email,
@@ -5838,8 +6026,8 @@ async function updateContact(env, payload = {}, actor = "") {
     crmNotes: cleanString(payload.crmNotes),
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
-  }));
-  if (currentKey !== key && currentEmail) await env.MOJO_SUMMITS_SETUP_STATE.delete(currentKey);
+  });
+  if (currentKey !== key && currentEmail) await deleteSetupRecord(env, currentKey);
 }
 
 async function serveContactPhoto(request, env) {
@@ -5909,7 +6097,7 @@ async function uploadContactPhoto(request, env, form, actor = "") {
 
   const key = `${registrantTypes.contacts.crmPrefix}${email}`;
   const existing = await readRawRecord(env, key);
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+  await writeSetupJson(env, key, {
     ...(existing || {}),
     id: email,
     email,
@@ -5920,7 +6108,7 @@ async function uploadContactPhoto(request, env, form, actor = "") {
     photoKey,
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
-  }));
+  });
 
   const rows = await contacts(env);
   return json({
@@ -5965,7 +6153,7 @@ async function addContactActivity(env, payload = {}, actor = "") {
     .map(normalizeActivity)
     .slice(0, 100);
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+  await writeSetupJson(env, key, {
     ...(existing || {}),
     id: email,
     email,
@@ -5978,7 +6166,7 @@ async function addContactActivity(env, payload = {}, actor = "") {
     nextActionDueDate: cleanString(payload.dueDate || payload.nextActionDueDate || existing?.nextActionDueDate, 40),
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
-  }));
+  });
 }
 
 async function createManualPartner(env, payload = {}, actor = "") {
@@ -6042,7 +6230,7 @@ async function createManualPartner(env, payload = {}, actor = "") {
       source: "manual-partner"
     };
 
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+    await writeSetupJson(env, key, record);
     await upsertPartnerContactProfile(env, record, actor);
     records.push(normalizeRecord(key, record));
   }
@@ -6098,14 +6286,14 @@ async function syncRegistrationAttendance(env, email, targetEvent, attended, act
       if (!record || cleanString(record.email).toLowerCase() !== email) continue;
       if (!contactEventMatches(record, targetEvent)) continue;
 
-      await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+      await writeSetupJson(env, key, {
         ...record,
         attended,
         attendanceStatus: attended ? "attended" : "not_attended",
         attendedAt: attended ? (cleanString(record.attendedAt) || now) : "",
         attendanceUpdatedAt: now,
         attendanceUpdatedBy: actor || "crm"
-      }));
+      });
     }
   }
 }
@@ -6132,13 +6320,13 @@ async function syncContactEventAttendance(env, email, targetEvent, attended, act
   });
   if (!matched) return;
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+  await writeSetupJson(env, key, {
     ...existing,
     events: nextEvents,
     updatedAt: now,
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
-  }));
+  });
 }
 
 async function updateContactEventAttendance(env, payload = {}, actor = "") {
@@ -6189,7 +6377,7 @@ async function updateContactEventAttendance(env, payload = {}, actor = "") {
 
   if (!matched) throw new Error("Contact event was not found.");
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+  await writeSetupJson(env, key, {
     ...(existing || {}),
     id: email,
     email,
@@ -6200,7 +6388,7 @@ async function updateContactEventAttendance(env, payload = {}, actor = "") {
     updatedAt: now,
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
-  }));
+  });
 
   await syncRegistrationAttendance(env, email, targetEvent, attended, actor, now);
 }
@@ -6247,7 +6435,7 @@ async function updateRegistrantEventAttendance(env, payload = {}, actor = "") {
     crmUpdatedBy: actor || "crm"
   };
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(crmKey, JSON.stringify(next));
+  await writeSetupJson(env, crmKey, next);
   await syncContactEventAttendance(env, cleanString(next.email || row.email).toLowerCase(), targetEvent, attended, actor, now);
 }
 
@@ -6340,7 +6528,7 @@ async function updateContactEventRole(env, payload = {}, actor = "") {
   }
 
   const existingName = cleanString(existing?.name);
-  await env.MOJO_SUMMITS_SETUP_STATE.put(targetContact.key, JSON.stringify({
+  await writeSetupJson(env, targetContact.key, {
     ...(existing || {}),
     id: cleanString(existing?.id) || targetContact.email || contactRecordIdFromIdentity(targetContact.identity) || targetContact.key,
     email: targetContact.email || cleanString(existing?.email).toLowerCase(),
@@ -6351,7 +6539,7 @@ async function updateContactEventRole(env, payload = {}, actor = "") {
     updatedAt: now,
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
-  }));
+  });
 }
 
 function companySlug(value) {
@@ -6415,15 +6603,15 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
       updatedAt: now,
       updatedBy: actor || "crm"
     };
-    const existingContact = await env.MOJO_SUMMITS_SETUP_STATE.get(contactKey, "json").catch(() => null);
-    await env.MOJO_SUMMITS_SETUP_STATE.put(contactKey, JSON.stringify({
+    const existingContact = await readSetupJson(env, contactKey);
+    await writeSetupJson(env, contactKey, {
       ...(existingContact || {}),
       ...profileContact,
       createdAt: cleanString(existingContact?.createdAt) || cleanString(row.createdAt) || now,
       events: Array.isArray(existingContact?.events) ? existingContact.events : []
-    }));
+    });
 
-    const existingCompany = await env.MOJO_SUMMITS_SETUP_STATE.get(companyKey, "json").catch(() => null);
+    const existingCompany = await readSetupJson(env, companyKey);
     const contacts = Array.isArray(existingCompany?.contacts) ? existingCompany.contacts : [];
     const contactMap = new Map(contacts.map((entry) => [
       cleanString(entry?.email).toLowerCase() || cleanString(entry?.name),
@@ -6433,7 +6621,7 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
       ...(contactMap.get(email) || {}),
       ...profileContact
     });
-    await env.MOJO_SUMMITS_SETUP_STATE.put(companyKey, JSON.stringify({
+    await writeSetupJson(env, companyKey, {
       ...(existingCompany || {}),
       organizationName: cleanString(existingCompany?.organizationName || existingCompany?.company || company),
       company,
@@ -6444,7 +6632,7 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
       contacts: [...contactMap.values()],
       updatedAt: now,
       updatedBy: actor || "crm"
-    }));
+    });
     return { contactId: email, contactKey, companyKey: crmCompanyKey, profileKey: companyKey };
   }
 
@@ -6460,7 +6648,7 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
     updatedBy: actor || "crm"
   });
 
-  const existingCompany = await env.MOJO_SUMMITS_SETUP_STATE.get(companyKey, "json").catch(() => null);
+  const existingCompany = await readSetupJson(env, companyKey);
   const companyRecord = {
     ...(existingCompany || {}),
     organizationName: cleanString(existingCompany?.organizationName || company, 240),
@@ -6471,7 +6659,7 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
     updatedBy: actor || "crm"
   };
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(companyKey, JSON.stringify(companyRecord));
+  await writeSetupJson(env, companyKey, companyRecord);
   return { ...refs, companyKey };
 }
 
@@ -6486,7 +6674,7 @@ export async function onRequestGet({ request, env, data }) {
   const access = requireCrmAccess(data);
   if (access.response) return access.response;
 
-  if (!env.MOJO_SUMMITS_SETUP_STATE) {
+  if (!env.MOJO_SUMMITS_SETUP_STATE && !crmD1Available(env)) {
     return json({ error: "CRM storage is not configured." }, { status: 500 });
   }
 
@@ -6742,7 +6930,7 @@ async function createMemberPassword(env, payload = {}, actor = "") {
     crmUpdatedBy: actor
   };
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(crmKey, JSON.stringify(next));
+  await writeSetupJson(env, crmKey, next);
   return {
     record: normalizeRecord(crmKey, next),
     password
@@ -6792,7 +6980,7 @@ async function createPartnerPassword(env, payload = {}, actor = "") {
     crmUpdatedBy: actor
   };
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(crmKey, JSON.stringify(next));
+  await writeSetupJson(env, crmKey, next);
   return {
     record: normalizeRecord(crmKey, next),
     password
@@ -6803,7 +6991,7 @@ export async function onRequestPost({ request, env, data }) {
   const access = requireCrmAccess(data);
   if (access.response) return access.response;
 
-  if (!env.MOJO_SUMMITS_SETUP_STATE) {
+  if (!env.MOJO_SUMMITS_SETUP_STATE && !crmD1Available(env)) {
     return json({ error: "CRM storage is not configured." }, { status: 500 });
   }
 
@@ -6822,6 +7010,20 @@ export async function onRequestPost({ request, env, data }) {
   }
 
   const payload = await request.json().catch(() => null);
+  if (payload?.action === "backfill-crm-d1") {
+    try {
+      return json(await backfillCrmD1(env, payload));
+    } catch (error) {
+      return json(
+        {
+          error: error.message || "CRM D1 backfill could not run.",
+          allowedPrefixes: error.allowedPrefixes || undefined
+        },
+        { status: error.status || 500 }
+      );
+    }
+  }
+
   if (payload?.action === "save-partner-prospect-company") {
     try {
       const company = await saveProspectCompany(env, payload, access.email);
@@ -7361,7 +7563,7 @@ export async function onRequestPost({ request, env, data }) {
     try {
       const key = cleanString(payload.key, 500);
       if (!key || !key.startsWith(PARTNER_INVITE_PREFIX)) throw new Error("Partner registration link was not found.");
-      const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      const existing = await readSetupJson(env, key);
       if (!existing) throw new Error("Partner registration link was not found.");
       const now = new Date().toISOString();
       const next = {
@@ -7373,7 +7575,7 @@ export async function onRequestPost({ request, env, data }) {
         updatedAt: now,
         updatedBy: access.email
       };
-      await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(next));
+      await writeSetupJson(env, key, next);
       await upsertContactFromInviteRecord(env, normalizeInviteCode(key, next), "partner-invite", access.email);
       const rows = await partnerRegistrationLinkRows(env);
       return json({
@@ -7426,15 +7628,15 @@ export async function onRequestPost({ request, env, data }) {
           messageId: result.messageId
         });
         const reminderSentAt = new Date().toISOString();
-        const existingInvite = await env.MOJO_SUMMITS_SETUP_STATE.get(invite.key, "json").catch(() => null);
+        const existingInvite = await readSetupJson(env, invite.key);
         if (existingInvite) {
-          await env.MOJO_SUMMITS_SETUP_STATE.put(invite.key, JSON.stringify({
+          await writeSetupJson(env, invite.key, {
             ...existingInvite,
             registrationRequestStatus: "reminder-sent",
             reminderSentAt,
             updatedAt: reminderSentAt,
             updatedBy: access.email
-          }));
+          });
         }
       } catch (error) {
         await logGuestRegistrationEmail(env, {
@@ -7671,7 +7873,7 @@ export async function onRequestPost({ request, env, data }) {
     crmUpdatedBy: access.email
   };
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(crmKey, JSON.stringify(next));
+  await writeSetupJson(env, crmKey, next);
   if (type === "partner") {
     const previousEmail = cleanString(crmRow.email).toLowerCase();
     const nextEmail = cleanString(next.email).toLowerCase();
@@ -7679,7 +7881,7 @@ export async function onRequestPost({ request, env, data }) {
     const nextCompany = cleanString(next.partnerCompany || next.company);
     if (previousEmail && (previousEmail !== nextEmail || companySlug(previousCompany) !== companySlug(nextCompany))) {
       await removeEmailFromCompanyContacts(env, previousEmail, access.email);
-      if (previousEmail !== nextEmail) await env.MOJO_SUMMITS_SETUP_STATE.delete(`crm:contact:${previousEmail}`);
+      if (previousEmail !== nextEmail) await deleteSetupRecord(env, `crm:contact:${previousEmail}`);
     }
     const normalizedNext = normalizeRecord(crmKey, next);
     await upsertPartnerContactProfile(env, normalizedNext, access.email);
