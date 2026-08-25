@@ -203,7 +203,7 @@
       </div>
       <div class="metric">
         <strong id="recipientCount">0</strong>
-        <span>verified numbers</span>
+        <span id="recipientMetricLabel">verified numbers</span>
       </div>
     </section>
 
@@ -220,6 +220,7 @@
         <div class="field">
           <label for="messageType">Message type</label>
           <select id="messageType" name="type">
+            <option value="reply-test">Reply test: Scott, Angel, Miller</option>
             <option value="event-reminder">Upcoming event reminder</option>
             <option value="additional-event-notice">Additional event notice</option>
           </select>
@@ -266,6 +267,7 @@
   <script>
     const api = "/api/sms-notifications";
     const recipientCount = document.querySelector("#recipientCount");
+    const recipientMetricLabel = document.querySelector("#recipientMetricLabel");
     const recipientList = document.querySelector("#recipientList");
     const resultList = document.querySelector("#resultList");
     const notice = document.querySelector("#notice");
@@ -309,7 +311,10 @@
     function renderRecipients(payload) {
       const recipients = payload.recipients || [];
       recipientCount.textContent = recipients.length;
-      lastNotice.textContent = payload.summary?.lastAdditionalNoticeAt
+      recipientMetricLabel.textContent = messageType.value === "reply-test" ? "test numbers" : "verified numbers";
+      lastNotice.textContent = messageType.value === "reply-test"
+        ? "Reply test sends only to Scott, Angel, and Miller."
+        : payload.summary?.lastAdditionalNoticeAt
         ? `Last monthly event notice: ${new Date(payload.summary.lastAdditionalNoticeAt).toLocaleString()}`
         : "No monthly event notice has been recorded.";
       recipientList.innerHTML = recipients.length
@@ -318,7 +323,7 @@
               <strong>${escapeHtml(recipient.maskedPhone)}</strong>
               <span>${escapeHtml(recipient.name || recipient.email || (recipient.sources || []).join(", "))}</span>
               ${recipient.company ? `<span>${escapeHtml(recipient.company)}</span>` : ""}
-              <span>${recipient.lastVerifiedAt ? `Verified ${escapeHtml(new Date(recipient.lastVerifiedAt).toLocaleString())}` : "Verified phone"}</span>
+              <span>${messageType.value === "reply-test" ? "Internal reply test" : recipient.lastVerifiedAt ? `Verified ${escapeHtml(new Date(recipient.lastVerifiedAt).toLocaleString())}` : "Verified phone"}</span>
             </div>
           `).join("")
         : "<p>No verified phone numbers are available yet.</p>";
@@ -338,6 +343,20 @@
     }
 
     function renderRegistrants(payload) {
+      if (messageType.value === "reply-test") {
+        const recipients = payload.recipients || [];
+        eventRosterSummary.textContent = `${recipients.length} internal reply test ${recipients.length === 1 ? "number" : "numbers"} loaded.`;
+        registrantList.innerHTML = recipients.length
+          ? recipients.map((recipient) => `
+              <div class="row">
+                <strong>${escapeHtml(recipient.name || recipient.maskedPhone || "Reply test recipient")}</strong>
+                <span>${escapeHtml(recipient.role || "SMS reply test")}</span>
+                <span>${escapeHtml(recipient.maskedPhone || "Test phone")} | replies should email Scott and Angel</span>
+              </div>
+            `).join("")
+          : "<p>No reply test phone numbers are configured.</p>";
+        return;
+      }
       if (messageType.value !== "event-reminder") {
         const recipients = payload.recipients || [];
         eventRosterSummary.textContent = recipients.length
@@ -376,10 +395,19 @@
     function syncModeUi() {
       const isEventReminder = messageType.value === "event-reminder";
       eventField.style.display = isEventReminder ? "grid" : "none";
-      rosterEyebrow.textContent = isEventReminder ? "Registered for event" : "Verified phone numbers";
-      confirmCopy.textContent = isEventReminder
-        ? "I understand this will send to verified phone numbers for the selected event."
-        : "I understand this will send to every verified phone number listed for MOJO AI Summits registrations.";
+      rosterEyebrow.textContent = messageType.value === "reply-test"
+        ? "Reply test numbers"
+        : isEventReminder ? "Registered for event" : "Verified phone numbers";
+      confirmCopy.textContent = messageType.value === "reply-test"
+        ? "I understand this will send only to Scott, Angel, and Miller for reply testing."
+        : isEventReminder
+          ? "I understand this will send to verified phone numbers for the selected event."
+          : "I understand this will send to every verified phone number listed for MOJO AI Summits registrations.";
+      if (messageType.value === "reply-test") {
+        eventRosterSummary.textContent = "Reply testing uses the internal test numbers only.";
+        registrantList.innerHTML = "<p>Refresh recipients to review the reply test numbers.</p>";
+        return;
+      }
       if (!isEventReminder) {
         eventRosterSummary.textContent = "Additional event notices are not limited to one event.";
         registrantList.innerHTML = "<p>Switch to Upcoming event reminder and select an event to review registrants.</p>";
@@ -431,7 +459,9 @@
         return;
       }
       if (!confirmSend.checked) {
-        setNotice(messageType.value === "event-reminder"
+        setNotice(messageType.value === "reply-test"
+          ? "Confirm that you want to send the reply test to Scott, Angel, and Miller."
+          : messageType.value === "event-reminder"
           ? "Confirm that you want to send to verified phone numbers for the selected event."
           : "Confirm that you want to send to all verified phone numbers.",
         "error");

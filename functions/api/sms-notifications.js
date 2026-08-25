@@ -26,6 +26,11 @@ const r2RegistrationPrefixes = [
 const additionalNoticeKey = "sms:notifications:last-additional-event-notice";
 const additionalNoticeCooldownMs = 30 * 24 * 60 * 60 * 1000;
 const encoder = new TextEncoder();
+const replyTestRecipients = [
+  { name: "Scott", phone: "+17192446690", role: "SMS reply test" },
+  { name: "Angel", phone: "+12142328324", role: "SMS reply test" },
+  { name: "Miller", phone: "+19728049401", role: "SMS reply test" }
+];
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -472,8 +477,22 @@ async function collectEventRecipients(env, eventKey) {
   return [...map.values()].sort((a, b) => String(a.name || a.email || a.maskedPhone).localeCompare(String(b.name || b.email || b.maskedPhone)));
 }
 
+function collectReplyTestRecipients() {
+  const map = new Map();
+  for (const recipient of replyTestRecipients) {
+    addRecipient(map, recipient.phone, {
+      source: "reply-test",
+      name: recipient.name,
+      role: recipient.role
+    });
+  }
+  return [...map.values()];
+}
+
 function notificationType(value) {
-  return value === "additional-event-notice" ? "additional-event-notice" : "event-reminder";
+  if (value === "additional-event-notice") return "additional-event-notice";
+  if (value === "reply-test") return "reply-test";
+  return "event-reminder";
 }
 
 function finalMessage(message) {
@@ -503,9 +522,11 @@ async function sendNotification(env, payload, actor) {
   if (message.length < 12) throw new Error("Message is required.");
   if (message.length > 1300) throw new Error("Message is too long.");
 
-  const recipients = type === "event-reminder"
-    ? await collectEventRecipients(env, eventKey)
-    : await collectVerifiedRecipients(env);
+  const recipients = type === "reply-test"
+    ? collectReplyTestRecipients()
+    : type === "event-reminder"
+      ? await collectEventRecipients(env, eventKey)
+      : await collectVerifiedRecipients(env);
   if (!recipients.length) throw new Error("No verified phone numbers are available.");
 
   const now = new Date().toISOString();
@@ -557,11 +578,13 @@ export async function onRequestGet({ request, env, data }) {
   const selectedRegistrations = type === "event-reminder" && eventKey
     ? registrationsForEvent(registrations, eventKey)
     : [];
-  const recipients = type === "event-reminder"
-    ? eventKey
-      ? await collectEventRecipients(env, eventKey)
-      : []
-    : await collectVerifiedRecipients(env);
+  const recipients = type === "reply-test"
+    ? collectReplyTestRecipients()
+    : type === "event-reminder"
+      ? eventKey
+        ? await collectEventRecipients(env, eventKey)
+        : []
+      : await collectVerifiedRecipients(env);
   const lastAdditionalNotice = await env.MOJO_SUMMITS_SETUP_STATE.get(additionalNoticeKey, "json").catch(() => null);
   return json({
     ok: true,
