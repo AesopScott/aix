@@ -961,9 +961,9 @@
         verifyCodeRow.classList.add('show');
         setMessage(phoneMessage, 'Code sent. Enter the SMS code to confirm this phone number.', 'success');
       } else {
-        verificationStatus.value = 'unverified';
+        verificationStatus.value = data.status || 'pending_sms_setup';
         verifyCodeRow.classList.remove('show');
-        setMessage(phoneMessage, data.message || 'SMS verification is not available yet. Try again after the SMS service is configured.', 'error');
+        setMessage(phoneMessage, data.message || 'SMS verification is pending configuration. Your registration can still be submitted for manual confirmation.', data.status === 'verified' ? 'success' : 'error');
       }
     } catch (error) {
       verificationStatus.value = 'unverified';
