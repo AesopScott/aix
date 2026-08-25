@@ -4617,9 +4617,10 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     linkedinProfileUrl,
     linkedinUrl: linkedinProfileUrl,
     enrichmentSource: cleanString(record?.enrichmentSource, 120),
-    crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.guestStatus || record?.registrationStatus, "pending-engagement"),
-    guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.crmStatus || record?.registrationStatus, "pending-engagement"),
-    registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.guestStatus, "pending-engagement"),
+    crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.partnerStatus || record?.guestStatus || record?.registrationStatus, "pending-engagement"),
+    guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.partnerStatus || record?.crmStatus || record?.registrationStatus, "pending-engagement"),
+    partnerStatus: prospectType === "partner" ? cleanGuestRegistrationLifecycleStatus(record?.partnerStatus || record?.crmStatus || record?.registrationStatus || record?.guestStatus, "pending-engagement") : "",
+    registrationStatus: cleanGuestRegistrationLifecycleStatus(record?.registrationStatus || record?.crmStatus || record?.partnerStatus || record?.guestStatus, "pending-engagement"),
     matrixInterestRating: cleanStarRating(record?.matrixInterestRating ?? record?.participationInterestRating ?? record?.interestRating, 1),
     potentialSponsor: prospectType === "guest" && (record?.potentialSponsor === true || record?.isPotentialSponsor === true || record?.sponsorProspect === true),
     preRegistrationNotes: cleanPreRegistrationNotes(record),
@@ -4850,9 +4851,10 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     linkedinProfileUrl,
     linkedinUrl: linkedinProfileUrl,
     enrichmentSource: cleanString(enrichment.enrichmentSource || (linkedinProfileUrl ? "linkedin-profile-url" : ""), 120),
-    crmStatus: cleanGuestRegistrationLifecycleStatus(payload.crmStatus || payload.guestStatus || payload.registrationStatus, "pending-engagement"),
-    guestStatus: cleanGuestRegistrationLifecycleStatus(payload.guestStatus || payload.crmStatus || payload.registrationStatus, "pending-engagement"),
-    registrationStatus: cleanGuestRegistrationLifecycleStatus(payload.registrationStatus || payload.guestStatus || payload.crmStatus, "pending-engagement"),
+    crmStatus: cleanGuestRegistrationLifecycleStatus(payload.crmStatus || payload.partnerStatus || payload.guestStatus || payload.registrationStatus, "pending-engagement"),
+    guestStatus: cleanGuestRegistrationLifecycleStatus(payload.guestStatus || payload.partnerStatus || payload.crmStatus || payload.registrationStatus, "pending-engagement"),
+    partnerStatus: prospectType === "partner" ? cleanGuestRegistrationLifecycleStatus(payload.partnerStatus || payload.crmStatus || payload.registrationStatus || payload.guestStatus, "pending-engagement") : "",
+    registrationStatus: cleanGuestRegistrationLifecycleStatus(payload.registrationStatus || payload.partnerStatus || payload.guestStatus || payload.crmStatus, "pending-engagement"),
     guestRegistrationType,
     partnerRegistrationType: prospectType === "partner" ? guestRegistrationType : "",
     registrationRole: guestRegistrationType,
@@ -4902,10 +4904,11 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.linkedinConnectionStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
   } else if (field === "registrationRequest") {
     next.registrationRequestStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixRegistrationRequestStatuses, existing.registrationRequestStatus || "not-sent");
-  } else if (field === "guestStatus") {
-    const status = cleanGuestRegistrationLifecycleStatus(payload.value, existing.crmStatus || existing.guestStatus || "pending-engagement");
+  } else if (field === "guestStatus" || field === "partnerStatus") {
+    const status = cleanGuestRegistrationLifecycleStatus(payload.value, existing.crmStatus || existing.partnerStatus || existing.guestStatus || "pending-engagement");
     next.crmStatus = status;
     next.guestStatus = status;
+    if (prospectType === "partner") next.partnerStatus = status;
     next.registrationStatus = status;
   } else if (field === "matrixInterestRating") {
     next.matrixInterestRating = cleanStarRating(payload.value, existing.matrixInterestRating || 1);
@@ -5038,10 +5041,11 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     if (Object.prototype.hasOwnProperty.call(change, "registrationRequest")) {
       next.registrationRequestStatus = cleanGuestMatrixOption(change.registrationRequest, allowedGuestMatrixRegistrationRequestStatuses, existing.registrationRequestStatus || "not-sent");
     }
-    if (Object.prototype.hasOwnProperty.call(change, "guestStatus")) {
-      const status = cleanGuestRegistrationLifecycleStatus(change.guestStatus, existing.crmStatus || existing.guestStatus || "pending-engagement");
+    if (Object.prototype.hasOwnProperty.call(change, "guestStatus") || Object.prototype.hasOwnProperty.call(change, "partnerStatus")) {
+      const status = cleanGuestRegistrationLifecycleStatus(change.partnerStatus ?? change.guestStatus, existing.crmStatus || existing.partnerStatus || existing.guestStatus || "pending-engagement");
       next.crmStatus = status;
       next.guestStatus = status;
+      if (key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)) next.partnerStatus = status;
       next.registrationStatus = status;
     }
     if (Object.prototype.hasOwnProperty.call(change, "registrationRole")) {
@@ -7477,7 +7481,7 @@ export async function onRequestPost({ request, env, data }) {
     }
   }
 
-  if (payload?.action === "save-guest-matrix-statuses") {
+  if (payload?.action === "save-guest-matrix-statuses" || payload?.action === "save-partner-matrix-statuses") {
     try {
       const result = await saveGuestMatrixStatuses(env, payload, access.email);
       return json({
@@ -7490,25 +7494,27 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
-      return json({ error: error.message || "Guest Matrix changes could not be saved." }, { status: 500 });
+      return json({ error: error.message || "Matrix changes could not be saved." }, { status: 500 });
     }
   }
 
-  if (payload?.action === "update-guest-matrix-prospect") {
+  if (payload?.action === "update-guest-matrix-prospect" || payload?.action === "update-partner-matrix-prospect") {
     try {
       const prospect = await updateGuestMatrixProspect(env, payload, access.email);
+      const partnerProspect = prospect.type === "partner-matrix-prospect";
       return json({
         ok: true,
         prospect,
-        guestMatrixProspects: [prospect]
+        guestMatrixProspects: partnerProspect ? await guestMatrixProspects(env) : [prospect],
+        partnerMatrixProspects: partnerProspect ? [prospect] : await partnerMatrixProspects(env)
       });
     } catch (error) {
       const status = /not found/i.test(error.message || "") ? 404 : 400;
-      return json({ error: error.message || "Tracked person could not be updated." }, { status });
+      return json({ error: error.message || "Tracked matrix record could not be updated." }, { status });
     }
   }
 
-  if (payload?.action === "delete-guest-matrix-prospect") {
+  if (payload?.action === "delete-guest-matrix-prospect" || payload?.action === "delete-partner-matrix-prospect") {
     try {
       const deleted = await deleteGuestMatrixProspect(env, payload);
       return json({

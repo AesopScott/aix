@@ -3441,6 +3441,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return isPartnerMatrix() ? "Partner" : "Guest";
     }
 
+    function matrixDataPrefix() {
+      return isPartnerMatrix() ? "partner" : "guest";
+    }
+
+    function matrixDatasetValue(element, suffix = "") {
+      return element?.dataset?.[`partnerMatrix${suffix}`] || element?.dataset?.[`guestMatrix${suffix}`] || "";
+    }
+
     function qrCodeUrl(value, size = 180) {
       const width = `${size}x${size}`;
       return `https://api.qrserver.com/v1/create-qr-code/?size=${encodeURIComponent(width)}&margin=8&data=${encodeURIComponent(value || "")}`;
@@ -3602,9 +3610,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function guestMatrixRegistrationStatus(invite = {}) {
       const draft = guestMatrixDraft(invite);
       const raw = normalizedMatrixValue(firstCleanValue(
+        isPartnerMatrix() ? draft.partnerStatus : "",
         draft.guestStatus,
+        isPartnerMatrix() ? invite.partnerStatus : "",
         draft.crmStatus,
         draft.registrationStatus,
+        invite.partnerStatus,
         invite.guestStatus,
         invite.crmStatus,
         invite.registrationStatus,
@@ -4202,7 +4213,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (guestMatrixTitle) guestMatrixTitle.textContent = isPartnerMatrix() ? "Partner engagement matrix" : "Guest engagement matrix";
       if (guestMatrixDescription) {
         guestMatrixDescription.textContent = isPartnerMatrix()
-          ? "Review tracked partners by event, unassigned pipeline stage, and guest registration status."
+          ? "Review tracked partners by event, unassigned pipeline stage, and partner registration status."
           : "Review tracked guests by event, unassigned pipeline stage, and guest registration status.";
       }
       const rows = guestMatrixRows();
@@ -4235,6 +4246,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       });
       guestMatrixList.innerHTML = [...groups.values()].map((groupRows) => {
         const first = groupRows[0];
+        const dataPrefix = matrixDataPrefix();
         const registered = groupRows.filter((row) => row.registered).length;
         const pending = groupRows.filter((row) => row.registrationStatus === "pending-engagement").length;
         const contacted = groupRows.filter((row) => row.registrationStatus === "contacted").length;
@@ -4263,8 +4275,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                     <th>${isPartnerMatrix() ? "Partner" : "Guest"}</th>
                     <th>Role</th>
                     <th>Interest</th>
-                    <th>Potential Sponsor</th>
-                    <th>Guest Status</th>
+                    <th>${isPartnerMatrix() ? "Partner Type" : "Potential Sponsor"}</th>
+                    <th>${isPartnerMatrix() ? "Partner Status" : "Guest Status"}</th>
                     <th>Created</th>
                     <th>Future Events</th>
                     <th>Notes</th>
@@ -4283,12 +4295,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                             ${row.email ? `<span>${escapeHtml(row.email)}</span>` : '<span>No email recorded</span>'}
                             ${row.linkedinProfileUrl ? `<a href="${escapeHtml(row.linkedinProfileUrl)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}
                           </div>
-                          ${row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Remove tracked ${escapeHtml(matrixEntityLabel())}" aria-label="Remove tracked ${escapeHtml(matrixEntityLabel())} ${escapeHtml(row.name)}" data-delete-guest-matrix-prospect-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-prospect-label="${escapeHtml(row.name || row.email || row.invite.key)}">${trashIconMarkup()}</button>` : ""}
-                          ${!row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Delete invite record" aria-label="Delete invite record for ${escapeHtml(row.name)}" data-delete-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-delete-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}">${trashIconMarkup()}</button>` : ""}
+                          ${row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Remove tracked ${escapeHtml(matrixEntityLabel())}" aria-label="Remove tracked ${escapeHtml(matrixEntityLabel())} ${escapeHtml(row.name)}" data-delete-${dataPrefix}-matrix-prospect-key="${escapeHtml(row.invite.key)}" data-delete-${dataPrefix}-matrix-prospect-label="${escapeHtml(row.name || row.email || row.invite.key)}">${trashIconMarkup()}</button>` : ""}
+                          ${!row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Delete invite record" aria-label="Delete invite record for ${escapeHtml(row.name)}" data-delete-${dataPrefix}-matrix-invite-key="${escapeHtml(row.invite.key)}" data-delete-${dataPrefix}-matrix-invite-type="${escapeHtml(row.invite.type || matrixEntityLabel())}">${trashIconMarkup()}</button>` : ""}
                         </div>
                       </td>
                       <td>
-                        <select class="matrix-select" data-guest-matrix-field="registrationRole" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Role for ${escapeHtml(row.name)}">
+                        <select class="matrix-select" data-${dataPrefix}-matrix-field="registrationRole" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Role for ${escapeHtml(row.name)}">
                           ${matrixOptionList(guestMatrixRoleOptions(row), row.roleValue || "guest")}
                         </select>
                         ${row.registeredShowLabel
@@ -4299,7 +4311,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                         ${starRatingMarkup({
                           options: matrixInterestRatingOptions,
                           value: row.matrixInterestRating,
-                          scope: "guest-matrix",
+                          scope: `${dataPrefix}-matrix`,
                           field: "matrixInterestRating",
                           id: row.id,
                           key: row.invite.key || "",
@@ -4310,13 +4322,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       <td>
                         ${isPartnerMatrix() ? '<span class="matrix-muted">Partner</span>' : `
                           <label class="matrix-checkbox">
-                            <input type="checkbox" data-guest-matrix-field="potentialSponsor" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" ${row.potentialSponsor ? "checked" : ""} aria-label="Potential Sponsor for ${escapeHtml(row.name)}">
+                            <input type="checkbox" data-${dataPrefix}-matrix-field="potentialSponsor" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" ${row.potentialSponsor ? "checked" : ""} aria-label="Potential Sponsor for ${escapeHtml(row.name)}">
                             Potential Sponsor
                           </label>
                         `}
                       </td>
                       <td>
-                        <select class="matrix-select ${guestMatrixStageClass(row.registrationStatus)}" data-guest-matrix-field="guestStatus" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Guest status for ${escapeHtml(row.name)}">
+                        <select class="matrix-select ${guestMatrixStageClass(row.registrationStatus)}" data-${dataPrefix}-matrix-field="${isPartnerMatrix() ? "partnerStatus" : "guestStatus"}" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="${isPartnerMatrix() ? "Partner" : "Guest"} status for ${escapeHtml(row.name)}">
                           ${matrixOptionList(guestMatrixRegistrationStatusOptions, row.registrationStatus)}
                         </select>
                         <div class="matrix-muted">${escapeHtml(guestMatrixRegistrationDetail(row))}</div>
@@ -4326,14 +4338,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       </td>
                       <td>${guestMatrixFutureEventsMarkup(row.futureEvents)}</td>
                       <td>
-                        <textarea class="matrix-notes" data-guest-matrix-field="${escapeHtml(row.notesField || "preRegistrationNotes")}" data-guest-matrix-id="${escapeHtml(row.id)}" data-guest-matrix-key="${escapeHtml(row.invite.key || "")}" data-guest-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" placeholder="${row.notesField === "eventNotes" ? "Event notes" : "Pre-registration notes"}" aria-label="${row.notesField === "eventNotes" ? "Event notes" : "Pre-registration notes"} for ${escapeHtml(row.name)}">${escapeHtml(row.notes || "")}</textarea>
+                        <textarea class="matrix-notes" data-${dataPrefix}-matrix-field="${escapeHtml(row.notesField || "preRegistrationNotes")}" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" placeholder="${row.notesField === "eventNotes" ? "Event notes" : "Pre-registration notes"}" aria-label="${row.notesField === "eventNotes" ? "Event notes" : "Pre-registration notes"} for ${escapeHtml(row.name)}">${escapeHtml(row.notes || "")}</textarea>
                       </td>
                       <td>${escapeHtml(row.invitedBy)}</td>
                       <td>
                         ${row.matrixOnly ? '<span class="pill warn">No invite link yet</span>' : `<code>${escapeHtml(row.code || "No code")}</code>`}
-                        <div class="matrix-muted">${row.matrixOnly ? "Create one when this person is ready for an invite." : escapeHtml(row.url || "Tracked before invite")}</div>
+                        <div class="matrix-muted">${row.matrixOnly ? `Create one when this ${isPartnerMatrix() ? "partner" : "person"} is ready for an invite.` : escapeHtml(row.url || "Tracked before invite")}</div>
                         <div class="guest-matrix-actions">
-                          ${row.matrixOnly ? `<button class="compact secondary" type="button" data-create-guest-matrix-invite-id="${escapeHtml(row.id)}">Create one</button>` : ""}
+                          ${row.matrixOnly ? `<button class="compact secondary" type="button" data-create-${dataPrefix}-matrix-invite-id="${escapeHtml(row.id)}">Create one</button>` : ""}
                           ${!isPartnerMatrix() && !row.matrixOnly && row.invite.key ? `<button class="compact secondary" type="button" data-reminder-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-reminder-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}" ${row.email ? "" : "disabled title=\"No email address on file for this invite\""}>Reminder Email</button>` : ""}
                         </div>
                       </td>
@@ -7346,8 +7358,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function queueGuestMatrixChange(select) {
-      const id = select.dataset.guestMatrixId;
-      const field = select.dataset.guestMatrixField;
+      const id = matrixDatasetValue(select, "Id");
+      const field = matrixDatasetValue(select, "Field");
       if (!id || !field) return;
       const value = select.type === "checkbox" ? Boolean(select.checked) : select.value;
       guestMatrixDrafts[id] = {
@@ -7357,8 +7369,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       guestMatrixPendingChanges[id] = {
         ...(guestMatrixPendingChanges[id] || {}),
         id,
-        key: select.dataset.guestMatrixKey || "",
-        kind: select.dataset.guestMatrixKind || "invite",
+        key: matrixDatasetValue(select, "Key"),
+        kind: matrixDatasetValue(select, "Kind") || "invite",
         [field]: value
       };
       saveGuestMatrixDrafts();
@@ -7382,14 +7394,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         setNotice("Contact guest star rating staged. Click Save Contact Changes to persist it.", "ok");
         return true;
       }
-      if (scope === "guest-matrix") {
+      if (scope === "guest-matrix" || scope === "partner-matrix") {
         queueGuestMatrixChange({
           value,
           dataset: {
-            guestMatrixId: button.dataset.starRatingId || "",
-            guestMatrixKey: button.dataset.starRatingKey || "",
-            guestMatrixKind: button.dataset.starRatingKind || "invite",
-            guestMatrixField: field
+            [`${matrixDataPrefix()}MatrixId`]: button.dataset.starRatingId || "",
+            [`${matrixDataPrefix()}MatrixKey`]: button.dataset.starRatingKey || "",
+            [`${matrixDataPrefix()}MatrixKind`]: button.dataset.starRatingKind || "invite",
+            [`${matrixDataPrefix()}MatrixField`]: field
           }
         });
         renderGuestMatrix();
@@ -7412,7 +7424,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            action: "save-guest-matrix-statuses",
+            action: isPartnerMatrix() ? "save-partner-matrix-statuses" : "save-guest-matrix-statuses",
             matrixType: matrixMode(),
             changes
           })
@@ -7522,7 +7534,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            action: "delete-guest-matrix-prospect",
+            action: isPartnerMatrix() ? "delete-partner-matrix-prospect" : "delete-guest-matrix-prospect",
             key
           })
         }).then(readJson);
@@ -8343,7 +8355,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     updateGuestMatrixAddShowOptions();
 
     guestMatrixList.addEventListener("change", (event) => {
-      const select = event.target.closest("[data-guest-matrix-field]");
+      const select = event.target.closest("[data-guest-matrix-field], [data-partner-matrix-field]");
       if (!select) return;
       queueGuestMatrixChange(select);
       renderGuestMatrix();
@@ -8351,7 +8363,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     guestMatrixList.addEventListener("input", (event) => {
-      const input = event.target.closest("textarea[data-guest-matrix-field]");
+      const input = event.target.closest("textarea[data-guest-matrix-field], textarea[data-partner-matrix-field]");
       if (!input) return;
       queueGuestMatrixChange(input);
     });
@@ -8360,9 +8372,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const starButton = event.target.closest("[data-star-rating-scope]");
       if (starButton && stageStarRating(starButton)) return;
 
-      const createInviteButton = event.target.closest("[data-create-guest-matrix-invite-id]");
+      const createInviteButton = event.target.closest("[data-create-guest-matrix-invite-id], [data-create-partner-matrix-invite-id]");
       if (createInviteButton) {
-        const row = guestMatrixRows().find((candidate) => candidate.id === createInviteButton.dataset.createGuestMatrixInviteId);
+        const createInviteId = createInviteButton.dataset.createPartnerMatrixInviteId || createInviteButton.dataset.createGuestMatrixInviteId;
+        const row = guestMatrixRows().find((candidate) => candidate.id === createInviteId);
         if (row) prefillInviteFromGuestMatrixRow(row);
         return;
       }
@@ -8374,16 +8387,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         );
         return;
       }
-      const prospectButton = event.target.closest("[data-delete-guest-matrix-prospect-key]");
+      const prospectButton = event.target.closest("[data-delete-guest-matrix-prospect-key], [data-delete-partner-matrix-prospect-key]");
       if (prospectButton) {
         await deleteGuestMatrixProspect(
-          prospectButton.dataset.deleteGuestMatrixProspectKey,
-          prospectButton.dataset.deleteGuestMatrixProspectLabel
+          prospectButton.dataset.deletePartnerMatrixProspectKey || prospectButton.dataset.deleteGuestMatrixProspectKey,
+          prospectButton.dataset.deletePartnerMatrixProspectLabel || prospectButton.dataset.deleteGuestMatrixProspectLabel
         );
         return;
       }
-      const button = event.target.closest("[data-delete-guest-matrix-invite-key]");
-      if (button) await deleteInviteLink(button.dataset.deleteGuestMatrixInviteKey, button.dataset.deleteGuestMatrixInviteType || "guest");
+      const button = event.target.closest("[data-delete-guest-matrix-invite-key], [data-delete-partner-matrix-invite-key]");
+      if (button) {
+        await deleteInviteLink(
+          button.dataset.deletePartnerMatrixInviteKey || button.dataset.deleteGuestMatrixInviteKey,
+          button.dataset.deletePartnerMatrixInviteType || button.dataset.deleteGuestMatrixInviteType || matrixEntityLabel()
+        );
+      }
     });
 
     function manualPartnerContactRows() {
