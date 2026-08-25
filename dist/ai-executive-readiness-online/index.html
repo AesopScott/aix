@@ -65,8 +65,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 .guest-card:after{content:"";position:absolute;inset:auto 0 0 0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,230,255,.72),transparent)}
 .guest-card.is-placeholder{background:linear-gradient(180deg,rgba(10,15,30,.58),rgba(10,15,30,.38));border-style:dashed}
 .guest-card.is-placeholder h3{color:rgba(255,255,255,.74)}
-.guest-photo{height:160px;flex:0 0 160px;margin:-18px -18px 18px;background:rgba(5,9,19,.72);border-bottom:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
-.guest-photo img{width:100%;height:100%;object-fit:cover;filter:saturate(.9) contrast(1.05)}
+.guest-photo{position:relative;height:clamp(230px,24vw,280px);flex:0 0 clamp(230px,24vw,280px);margin:-18px -18px 18px;background:linear-gradient(180deg,rgba(5,9,19,.86),rgba(10,15,30,.72));border-bottom:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
+.guest-photo img{display:block}
+.guest-photo-fill{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(18px) saturate(.78) contrast(1.02);opacity:.28;transform:scale(1.08)}
+.guest-photo-primary{position:relative;z-index:1;width:100%;height:100%;object-fit:contain;object-position:var(--guest-photo-position,center top);filter:saturate(.94) contrast(1.04);transform:var(--guest-photo-transform,none);transform-origin:center center}
+.guest-photo-primary.is-framed-portrait{object-fit:cover;object-position:center center;filter:none;transform:none}
 .guest-initials{width:74px;height:74px;border:1px solid rgba(0,230,255,.58);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-family:Orbitron,sans-serif;font-weight:800;letter-spacing:.08em;background:radial-gradient(circle,rgba(0,230,255,.16),rgba(22,102,255,.08));box-shadow:0 0 28px rgba(0,230,255,.18)}
 .guest-card.is-placeholder .guest-initials{border-style:dashed;color:rgba(0,230,255,.66);background:rgba(0,230,255,.045);box-shadow:none}
 .guest-card h3{font-family:Space Grotesk,sans-serif;font-size:22px;line-height:1.2}
@@ -77,6 +80,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 .slot-action{width:100%;min-height:44px;flex:0 0 auto;margin-top:18px;border:1px solid rgba(0,230,255,.58);border-radius:4px;background:rgba(0,230,255,.08);color:var(--cyan);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
 .slot-action:hover{background:var(--cyan);border-color:var(--cyan);color:#031018}
 .guest-source{display:inline-flex;margin-bottom:16px;padding:7px 10px;border:1px solid rgba(0,230,255,.28);border-radius:999px;color:var(--cyan);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+.show-lineups{display:grid;gap:38px}
+.show-lineup{display:grid;gap:18px}
+.show-lineup-head{display:flex;align-items:end;justify-content:space-between;gap:22px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.show-lineup-head h3{margin-top:10px;font-family:Space Grotesk,sans-serif;font-size:26px;line-height:1.15}
+.show-lineup-head p{max-width:520px;color:var(--muted);font-size:14px;line-height:1.65}
+.show-count{min-width:96px;text-align:right}
+.show-count strong{display:block;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:30px;line-height:1}
+.show-count span{display:block;margin-top:8px;color:var(--muted);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
 .speaker-count{display:grid;grid-template-columns:minmax(120px,.28fr) repeat(3,minmax(0,1fr));gap:1px;margin-bottom:20px;background:var(--line);border:1px solid var(--line)}
 .speaker-count div{min-height:86px;padding:18px;background:rgba(10,15,30,.82)}
 .speaker-count strong{display:block;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:28px;line-height:1}
@@ -93,7 +104,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 .slot-modal[hidden]{display:none}.slot-modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:22px;background:rgba(5,9,19,.78);backdrop-filter:blur(14px)}.slot-dialog{width:min(640px,100%);max-height:calc(100vh - 44px);overflow:auto;padding:26px;background:linear-gradient(180deg,rgba(27,35,51,.98),rgba(10,15,30,.98));border:1px solid rgba(0,230,255,.34);border-radius:8px;box-shadow:0 24px 90px rgba(0,0,0,.58)}.slot-dialog-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}.slot-dialog h3{font-family:Fraunces,serif;font-size:32px;line-height:1.05}.slot-dialog p{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.6}.slot-close{width:38px;height:38px;border:1px solid var(--line);border-radius:4px;background:rgba(10,15,30,.7);color:var(--white);font-size:22px;line-height:1;cursor:pointer}.slot-form{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.slot-form label{display:grid;gap:7px;color:var(--muted);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.slot-form input,.slot-form textarea{width:100%;border:1px solid var(--line);border-radius:4px;background:rgba(5,9,19,.76);color:var(--white);font:500 15px/1.4 Inter,sans-serif;padding:12px}.slot-form textarea{min-height:104px;resize:vertical}.slot-wide{grid-column:1/-1}.slot-submit{min-height:46px;border:1px solid var(--cyan);border-radius:4px;background:var(--cyan);color:#031018;font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer}.slot-message{min-height:20px;color:var(--cyan);font-size:13px;line-height:1.5}.slot-message.is-error{color:#ffb6c1}
 @media (max-width:980px){.guest-grid{grid-template-columns:repeat(2,1fr)}}@media (max-width:720px){.guest-grid{grid-template-columns:1fr}}
 @media (max-width:860px){.speaker-count{grid-template-columns:repeat(2,1fr)}}@media (max-width:560px){.speaker-count{grid-template-columns:1fr}}
-@media (max-width:760px){.registered-head{display:grid}.registered-row{grid-template-columns:1fr}}
+@media (max-width:760px){.registered-head,.show-lineup-head{display:grid}.registered-row{grid-template-columns:1fr}.show-count{text-align:left}}
 @media (max-width:620px){.slot-form{grid-template-columns:1fr}.slot-dialog h3{font-size:28px}}
 </style>
 </head>
@@ -108,23 +119,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <span class="eyebrow">Friday 04 Sep 2026 | 1:00 PM-2:30 PM Central</span>
+          <span class="eyebrow">Friday 04 Sep 2026 | 10:00 AM and 1:00 PM Central</span>
           <h1>AI Executive Readiness</h1><span class="cohort-badge">Cohort: Business Enablement</span>
           <p class="hero-copy">Nine executives come together in a moderated virtual roundtable to establish the leadership baseline for AI adoption, value, operating ownership, and risk.</p>
           <div class="hero-actions"><a class="btn-primary" href="../book/">Request Executive Invitation</a><a class="btn-ghost" href="#topics">Review Discussion Topics</a></div>
         </div>
         <aside class="event-panel" aria-label="AI Executive Readiness event summary">
-          <div class="date-card"><span>Friday</span><strong>04</strong><span>Sep 2026</span><span>1:00 PM CT</span></div>
+          <div class="date-card"><span>Friday</span><strong>04</strong><span>Sep 2026</span><span>10:00 AM + 1:00 PM CT</span></div>
           <div class="seat-count" aria-label="Nine executive seats"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
           <img class="boardroom" src="/assets/boardroom-transparent.png" alt="Executive boardroom table with seats">
           <div class="panel-caption"><span><strong>9</strong> executive seats</span><span>Moderated roundtable</span></div>
         </aside>
       </div>
     </section>
-    <section aria-label="Event facts"><div class="metric-band"><div class="metric"><strong>90</strong><span>Minutes from 1:00 PM to 2:30 PM Central</span></div><div class="metric"><strong>08</strong><span>Moderated readiness questions</span></div><div class="metric"><strong>09</strong><span>Executives in the room</span></div><div class="metric"><strong>01</strong><span>Invite path into the cohort</span></div></div></section>
+    <section aria-label="Event facts"><div class="metric-band"><div class="metric"><strong>02</strong><span>Featured lineups at 10:00 AM and 1:00 PM Central</span></div><div class="metric"><strong>08</strong><span>Moderated readiness questions</span></div><div class="metric"><strong>09</strong><span>Featured seats per show</span></div><div class="metric"><strong>01</strong><span>Invite path into the cohort</span></div></div></section>
     <section class="section-pad" id="format"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Operating format</span><h2>A working room for leaders who own the AI decision.</h2></div><p>This is not a passive webinar. The session is designed to surface what leaders are actually seeing, where decisions are stuck, and which operating questions deserve deeper summit work.</p></div><div class="format-grid"><article class="format-card"><span>Stage 01</span><h3>Executive Framing Keynote</h3><p>A concise opening view of national AI adoption momentum, business pressure, and the leadership questions executives need to settle.</p></article><article class="format-card"><span>Stage 02</span><h3>Readiness Diagnostic Discussion</h3><p>Moderated prompts let each executive compare adoption posture, governance maturity, measurement gaps, and risk tolerance.</p></article><article class="format-card"><span>Stage 03</span><h3>Summit Cohort Invitation Path</h3><p>Qualified participants can be routed into the fall series, member nominations, executive research briefs, and 2027 summit planning.</p></article></div></div></section>
     <section class="room-section"><div class="wrap room-inner"><div><span class="eyebrow">The room</span><h2>Small enough for candor. Senior enough to matter.</h2><p class="room-copy">The point is not to agree on a slogan about AI. The point is to compare where leadership teams are moving, where they are hesitating, who has real ownership, and how trust is being earned with employees, customers, boards, and regulators.</p></div><dl class="rules"><div><dt>Audience</dt><dd>Executives and senior operators accountable for AI strategy, business value, risk, technology, data, or workforce adoption.</dd></div><div><dt>Access</dt><dd>Invitation-only, capped at nine executive participants for a moderated exchange rather than broadcast attendance.</dd></div><div><dt>Outcome</dt><dd>A clearer readiness baseline and a path into the MOJO AI Summits cohort for deeper peer work.</dd></div></dl></div></section>
-    <section class="section-pad" id="featured-guests"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Featured guests</span><h2>Meet the leaders helping shape the conversation.</h2></div><p>As featured guests are confirmed, this page will highlight the public details they have approved to share: name, role, organization, industry, and photo when available.</p></div><div class="speaker-count" aria-label="Featured guest count"><div><strong id="speakerCount">0/9</strong><span>Featured guests confirmed</span></div><div><strong>6</strong><span>Executive featured guests</span></div><div><strong>1</strong><span>Author featured guest</span></div><div><strong>2</strong><span>Partner featured guests</span></div></div><span class="guest-source" id="guestSource">Featured guest lineup</span><div class="guest-grid" id="featuredGuestGrid" aria-live="polite"></div><div class="registered-guests" id="registeredGuests"><div class="registered-head"><div><span class="eyebrow">Registered guests</span><h3>Confirmed participants</h3></div><p>The public list reflects only the details each guest has approved for this event.</p></div><div class="registered-list" id="registeredGuestList" aria-live="polite"></div></div></div></section>
+    <section class="section-pad" id="featured-guests"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Featured guests</span><h2>Meet the leaders helping shape each show.</h2></div><p>Featured guest, featured author, and featured sponsor profiles are separated by show time. Regular registrants stay in the confirmed participant list.</p></div><div class="speaker-count" aria-label="Featured lineup count"><div><strong id="featuredTotalCount">0/18</strong><span>Featured seats filled</span></div><div><strong>10:00</strong><span>Morning featured lineup</span></div><div><strong>1:00</strong><span>Afternoon featured lineup</span></div><div><strong>9</strong><span>Featured seats per show</span></div></div><div class="show-lineups" id="featuredShowLineups" aria-live="polite"></div><div class="registered-guests" id="registeredGuests"><div class="registered-head"><div><span class="eyebrow">Registered guests</span><h3>Confirmed participants</h3></div><p>The public list reflects only the details each guest has approved for this event.</p></div><div class="registered-list" id="registeredGuestList" aria-live="polite"></div></div></div></section>
     <section class="section-pad" id="topics"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Moderated prompts</span><h2>The questions every AI leadership team is already carrying.</h2></div><p>The discussion is built around eight live questions. Each one is designed to expose operating reality, not produce generic optimism.</p></div><div class="topic-grid">
       <article class="topic"><span class="topic-number">01</span><div><h3>Are we still advancing AI adoption?</h3><p>Are organizations moving forward, stalled, or regressing nationally, and what forces explain the change?</p></div></article>
       <article class="topic"><span class="topic-number">02</span><div><h3>Are we moving away from frontier models?</h3><p>If teams are shifting toward smaller, specialized, open, private, or embedded models, how fast is it happening and at what risk?</p></div></article>
@@ -141,16 +152,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   <footer><div class="wrap"><span>© 2026 MOJO AI Summits. Executive AI events.</span><a href="../briefs/">Executive AI Intelligence Briefs</a></div></footer>
 <script>
 (() => {
-  const grid = document.querySelector("#featuredGuestGrid");
-  const source = document.querySelector("#guestSource");
-  const speakerCount = document.querySelector("#speakerCount");
+  const showLineups = document.querySelector("#featuredShowLineups");
+  const featuredTotalCount = document.querySelector("#featuredTotalCount");
   const registeredList = document.querySelector("#registeredGuestList");
-  if (!grid || !source) return;
+  if (!showLineups) return;
   const eventDetails = {
     slug: "ai-executive-readiness",
     title: "AI Executive Readiness",
-    date: "Friday, September 4, 2026, 1:00 PM-2:30 PM Central"
+    date: "Friday, September 4, 2026"
   };
+  const showDefinitions = [
+    { id: "morning", title: "10:00 AM featured lineup", time: "10:00 am - 11:30 am CT", note: "Featured guests, authors, and sponsors registered for the morning show." },
+    { id: "afternoon", title: "1:00 PM featured lineup", time: "1:00 pm - 2:30 pm CT", note: "Featured guests, authors, and sponsors registered for the afternoon show." }
+  ];
   const placeholderSlots = [
     { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E1", note: "Executive featured guest to be announced." },
     { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E2", note: "Executive featured guest to be announced." },
@@ -159,10 +173,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E5", note: "Executive featured guest to be announced." },
     { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E6", note: "Executive featured guest to be announced." },
     { displayName: "Author featured guest", slotType: "featured-author", roleLabel: "Author guest", industry: "Author perspective", title: "To be announced", company: "Author profile to be announced", initials: "AU", note: "Author featured guest to be announced." },
-    { displayName: "Partner featured guest", slotType: "featured-partner", roleLabel: "Partner guest", industry: "Partner perspective", title: "To be announced", company: "Partner organization to be announced", initials: "P1", note: "Partner featured guest to be announced." },
-    { displayName: "Partner featured guest", slotType: "featured-partner", roleLabel: "Partner guest", industry: "Partner perspective", title: "To be announced", company: "Partner organization to be announced", initials: "P2", note: "Partner featured guest to be announced." }
+    { displayName: "Featured sponsor", slotType: "featured-partner", roleLabel: "Featured sponsor", industry: "Sponsor perspective", title: "To be announced", company: "Sponsor organization to be announced", initials: "S1", note: "Featured sponsor to be announced." },
+    { displayName: "Featured sponsor", slotType: "featured-partner", roleLabel: "Featured sponsor", industry: "Sponsor perspective", title: "To be announced", company: "Sponsor organization to be announced", initials: "S2", note: "Featured sponsor to be announced." }
   ];
-  let currentSlots = [];
+  const currentSlotsByShow = {};
   let activeSlot = null;
   function escapeHtml(value) {
     return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
@@ -171,15 +185,67 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const parts = String(name || "Guest").split(/\s+/).filter(Boolean);
     return parts.slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "AI";
   }
+  function portraitSlug(name) {
+    return String(name || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+  const framedPortraits = new Set([
+    "cynthia-dixon",
+    "imran-jan",
+    "jess-j-montgomery",
+    "lokesh-mathur",
+    "mathew-schroeder",
+    "mike-madero"
+  ]);
+  function framedPortraitUrl(guest) {
+    const slug = portraitSlug(guest.displayName);
+    return framedPortraits.has(slug) ? `/assets/featured-portraits/${slug}.png` : "";
+  }
   function renderPhoto(guest) {
+    const framedPortrait = framedPortraitUrl(guest);
+    if (framedPortrait) {
+      const alt = guest.displayName ? `${guest.displayName} MOJO AI Summits featured guest portrait` : "MOJO AI Summits featured guest portrait";
+      return `<img class="guest-photo-primary is-framed-portrait" src="${escapeHtml(framedPortrait)}" alt="${escapeHtml(alt)}" loading="lazy">`;
+    }
     if (guest.photoUrl) {
       const alt = guest.displayName ? `${guest.displayName} photo` : "Featured guest photo";
-      return `<img src="${escapeHtml(guest.photoUrl)}" alt="${escapeHtml(alt)}" loading="lazy">`;
+      const src = escapeHtml(guest.photoUrl);
+      const style = photoTuneStyle(guest);
+      return `<img class="guest-photo-fill" src="${src}" alt="" aria-hidden="true" loading="lazy"><img class="guest-photo-primary" src="${src}" alt="${escapeHtml(alt)}" loading="lazy"${style}>`;
     }
     return `<span class="guest-initials" aria-hidden="true">${escapeHtml(guest.initials || initials(guest.displayName))}</span>`;
   }
+  function photoTuneStyle(guest) {
+    const name = String(guest.displayName || "").toLowerCase();
+    if (name.includes("mathew schroeder") || name.includes("matt schroeder")) {
+      return ' style="--guest-photo-position:center center;--guest-photo-transform:translateY(-9%) scale(1.16)"';
+    }
+    return "";
+  }
   function renderMeta(label, value, fallback) {
     return `<span><strong>${escapeHtml(label)}</strong>${escapeHtml(value || fallback)}</span>`;
+  }
+  function slotRole(value) {
+    return String(value || "").toLowerCase().replace(/[-_]+/g, " ");
+  }
+  function guestSlotType(guest = {}) {
+    const role = slotRole(guest.roleLabel || guest.registrationRole || guest.guestRegistrationType || guest.slotType);
+    if (role.includes("author")) return "featured-author";
+    if (role.includes("partner") || role.includes("sponsor")) return "featured-partner";
+    return "featured-guest";
+  }
+  function placeGuestsInSlots(guests = []) {
+    const slots = placeholderSlots.map((slot) => ({ ...slot, isPlaceholder: true }));
+    guests.slice(0, 9).forEach((guest) => {
+      const preferredType = guestSlotType(guest);
+      let index = slots.findIndex((slot) => slot.isPlaceholder && slot.slotType === preferredType);
+      if (index < 0) index = slots.findIndex((slot) => slot.isPlaceholder);
+      if (index < 0) return;
+      slots[index] = { ...placeholderSlots[index], ...guest, slotType: placeholderSlots[index].slotType, isPlaceholder: false };
+    });
+    return slots;
   }
   function renderRegisteredGuests(guests = []) {
     if (!registeredList) return;
@@ -251,12 +317,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !slotModal.hidden) closeSlotModal();
   });
-  function openSlotRequest(index) {
-    activeSlot = currentSlots[index];
+  function openSlotRequest(showId, index) {
+    activeSlot = (currentSlotsByShow[showId] || [])[index];
     if (!activeSlot) return;
     slotForm.reset();
     slotTitle.textContent = `Request ${slotLabel(activeSlot)}`;
-    slotIntro.textContent = `${eventDetails.title} | ${eventDetails.date}`;
+    slotIntro.textContent = `${eventDetails.title} | ${eventDetails.date} | ${activeSlot.eventShowTime || ""}`;
     slotMessage.textContent = "";
     slotMessage.classList.remove("is-error");
     slotModal.hidden = false;
@@ -278,7 +344,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       sourcePage: window.location.pathname,
       eventSlug: eventDetails.slug,
       eventTitle: eventDetails.title,
-      eventDate: eventDetails.date,
+      eventDate: `${eventDetails.date} | ${activeSlot.eventShowTime || ""}`.trim(),
+      eventShowId: activeSlot.eventShowId,
+      eventShowTime: activeSlot.eventShowTime,
       slotType: activeSlot.slotType,
       slotLabel: activeSlot.displayName,
       slotCode: activeSlot.slotCode || activeSlot.initials
@@ -308,16 +376,36 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
   }
   slotForm.addEventListener("submit", submitSlotRequest);
-  function renderGuests(guests, label) {
-    const filledGuests = guests.slice(0, 9).map((guest, index) => ({ ...placeholderSlots[index], ...guest }));
-    const visibleSlots = [
-      ...filledGuests,
-      ...placeholderSlots.slice(filledGuests.length, 9).map((slot) => ({ ...slot, isPlaceholder: true }))
-    ];
-    currentSlots = visibleSlots;
-    source.textContent = label;
-    if (speakerCount) speakerCount.textContent = `${filledGuests.length}/9`;
-    grid.innerHTML = visibleSlots.map((guest, index) => `
+  function showLineupById(payload, showId) {
+    const byShow = payload && typeof payload.featuredGuestsByShow === "object" ? payload.featuredGuestsByShow : null;
+    if (byShow && Array.isArray(byShow[showId])) return byShow[showId];
+    const flatGuests = Array.isArray(payload?.featuredGuests) ? payload.featuredGuests : [];
+    return flatGuests.filter((guest) => {
+      const guestShow = String(guest.eventShowId || "").toLowerCase();
+      if (!guestShow) return showId === "afternoon";
+      return guestShow === "both" || guestShow === showId;
+    });
+  }
+  function renderShow(show, guests = []) {
+    const visibleSlots = placeGuestsInSlots(guests).map((slot) => ({
+      ...slot,
+      eventShowId: show.id,
+      eventShowTime: show.time
+    }));
+    const filledGuests = visibleSlots.filter((guest) => !guest.isPlaceholder);
+    currentSlotsByShow[show.id] = visibleSlots;
+    return `
+      <section class="show-lineup" data-show-id="${escapeHtml(show.id)}">
+        <div class="show-lineup-head">
+          <div>
+            <span class="guest-source">${escapeHtml(show.title)}</span>
+            <h3>${escapeHtml(show.title)}</h3>
+            <p>${escapeHtml(show.note)}</p>
+          </div>
+          <div class="show-count"><strong>${filledGuests.length}/9</strong><span>Featured seats</span></div>
+        </div>
+        <div class="guest-grid" data-show-grid="${escapeHtml(show.id)}">
+          ${visibleSlots.map((guest, index) => `
       <article class="guest-card${guest.isPlaceholder ? " is-placeholder" : ""}">
         <div class="guest-photo">${renderPhoto(guest)}</div>
         <h3>${escapeHtml(guest.displayName || "Name pending")}</h3>
@@ -328,26 +416,37 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           ${renderMeta("Company", guest.company, guest.companyAllowed ? "Company pending" : "Company withheld")}
         </div>
         <p class="guest-note">${escapeHtml(guest.note || "Featured guest details will be updated as event information is confirmed.")}</p>
-        <button class="slot-action" type="button" data-slot-index="${index}">Request this slot</button>
+        <button class="slot-action" type="button" data-show-id="${escapeHtml(show.id)}" data-slot-index="${index}">Request this slot</button>
       </article>
-    `).join("");
-    grid.querySelectorAll(".slot-action").forEach((button) => {
-      button.addEventListener("click", () => openSlotRequest(Number(button.dataset.slotIndex)));
+    `).join("")}
+        </div>
+      </section>
+    `;
+  }
+  function renderShows(payload = {}) {
+    const showRows = showDefinitions.map((show) => {
+      const guests = showLineupById(payload, show.id);
+      return { show, guests };
+    });
+    const totalFilled = showRows.reduce((sum, row) => sum + placeGuestsInSlots(row.guests).filter((guest) => !guest.isPlaceholder).length, 0);
+    if (featuredTotalCount) featuredTotalCount.textContent = `${totalFilled}/18`;
+    showLineups.innerHTML = showRows.map((row) => renderShow(row.show, row.guests)).join("");
+    showLineups.querySelectorAll(".slot-action").forEach((button) => {
+      button.addEventListener("click", () => openSlotRequest(button.dataset.showId, Number(button.dataset.slotIndex)));
     });
   }
   async function loadGuests() {
-    renderGuests([], "Featured guest lineup");
+    renderShows({});
     renderRegisteredGuests([]);
     if (window.location.protocol === "file:") return;
     try {
       const response = await fetch("/api/virtual-events/ai-executive-readiness", { cache: "no-store" });
       const payload = await response.json();
-      const guests = Array.isArray(payload.featuredGuests) ? payload.featuredGuests : [];
       const registeredGuests = Array.isArray(payload.registeredGuests) ? payload.registeredGuests : [];
-      if (guests.length) renderGuests(guests, "Live lineup");
+      renderShows(payload);
       renderRegisteredGuests(registeredGuests);
     } catch (error) {
-      renderGuests([], "Featured guest lineup");
+      renderShows({});
       renderRegisteredGuests([]);
     }
   }

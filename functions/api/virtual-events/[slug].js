@@ -21,6 +21,10 @@ const r2RegistrantPrefixes = [
   ["guest", "crm-overflow/registrations/guest/"],
   ["partner", "crm-overflow/registrations/partner/"]
 ];
+const featuredShowLineups = [
+  { id: "morning", label: "10:00 AM featured lineup", time: "10:00 am - 11:30 am CT" },
+  { id: "afternoon", label: "1:00 PM featured lineup", time: "1:00 pm - 2:30 pm CT" }
+];
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -44,6 +48,40 @@ function publicZoom(zoom) {
 
 function cleanString(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+function cleanEventShowId(value, fallback = "") {
+  const normalized = cleanString(value, 80).toLowerCase().replace(/[\s_]+/g, "-");
+  if (["morning", "am", "10", "10am", "10-00", "10:00"].includes(normalized)) return "morning";
+  if (["afternoon", "pm", "1", "1pm", "13-00", "13:00", "1-00", "1:00"].includes(normalized)) return "afternoon";
+  if (["both", "all", "both-shows"].includes(normalized)) return "both";
+  return fallback;
+}
+
+function eventShowLabel(showId) {
+  return {
+    morning: "Morning show",
+    afternoon: "Afternoon show",
+    both: "Both shows"
+  }[cleanEventShowId(showId)] || "";
+}
+
+function eventShowTime(showId) {
+  return {
+    morning: "10:00 am - 11:30 am CT",
+    afternoon: "1:00 pm - 2:30 pm CT",
+    both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
+  }[cleanEventShowId(showId)] || "";
+}
+
+function registrantShowId(registrant = {}) {
+  return cleanEventShowId(registrant.eventShowId || registrant.showId || registrant.eventShow || registrant.show, "");
+}
+
+function registrantMatchesShow(registrant, showId) {
+  const cleanShow = cleanEventShowId(showId);
+  const registrantShow = registrantShowId(registrant);
+  return !registrantShow || registrantShow === "both" || registrantShow === cleanShow;
 }
 
 async function listKeys(env, prefix) {
@@ -100,9 +138,10 @@ function isFeaturedRegistrant(registrant = {}) {
     registrant.isFeaturedGuest ||
     registrant.isFeaturedMember ||
     registrant.isFeaturedAuthor ||
+    registrant.isFeaturedSponsor ||
     registrant.isPresenter ||
     registrant.isRoundtableLeader ||
-    ["featured-guest", "featured-author", "featured-partner", "presenter", "speaker", "roundtable-leader"].includes(role)
+    ["featured-guest", "featured-author", "featured-partner", "featured-sponsor", "presenter", "speaker", "roundtable-leader"].includes(role)
   );
 }
 
@@ -122,6 +161,9 @@ function publicFeaturedGuest(registrant, type) {
     title,
     industry,
     photoUrl,
+    eventShowId: registrantShowId(registrant),
+    eventShowLabel: eventShowLabel(registrantShowId(registrant)),
+    eventShowTime: eventShowTime(registrantShowId(registrant)),
     roleLabel: cleanString(
       registrant?.featuredGuestLabel ||
         registrant?.speakerLabel ||
@@ -218,16 +260,30 @@ async function eventRegistrants(env, event) {
   return [...map.values()];
 }
 
-async function featuredGuestsForEvent(env, event) {
-  return (await eventRegistrants(env, event))
+function featuredGuestsFromRegistrants(registrants) {
+  return registrants
     .filter(isFeaturedRegistrant)
     .map((registrant) => publicFeaturedGuest(registrant, registrant.type))
     .sort((left, right) => left.displayName.localeCompare(right.displayName))
     .slice(0, 9);
 }
 
-async function registeredGuestsForEvent(env, event) {
-  return (await eventRegistrants(env, event))
+function featuredGuestsByShowFromRegistrants(registrants) {
+  const featuredRegistrants = registrants
+    .filter(isFeaturedRegistrant)
+    .sort((left, right) => cleanString(left.name).localeCompare(cleanString(right.name)));
+
+  return featuredShowLineups.reduce((lineups, show) => {
+    lineups[show.id] = featuredRegistrants
+      .filter((registrant) => registrantMatchesShow(registrant, show.id))
+      .map((registrant) => publicFeaturedGuest(registrant, registrant.type))
+      .slice(0, 9);
+    return lineups;
+  }, {});
+}
+
+function registeredGuestsFromRegistrants(registrants) {
+  return registrants
     .filter((registrant) => !isFeaturedRegistrant(registrant))
     .map((registrant) => publicRegisteredGuest(registrant, registrant.type))
     .sort((left, right) => {
@@ -244,6 +300,7 @@ export async function onRequestGet({ env, params }) {
 
   const now = new Date();
   const publicEvent = publicVirtualEvent(event, now);
+  const registrants = await eventRegistrants(env, event);
   const storedZoom = await env.MOJO_SUMMITS_SETUP_STATE
     ?.get(zoomKey(event.slug), "json")
     .catch(() => null);
@@ -251,8 +308,10 @@ export async function onRequestGet({ env, params }) {
   return json({
     ok: true,
     event: publicEvent,
-    featuredGuests: await featuredGuestsForEvent(env, event),
-    registeredGuests: await registeredGuestsForEvent(env, event),
+    featuredGuests: featuredGuestsFromRegistrants(registrants),
+    featuredGuestsByShow: featuredGuestsByShowFromRegistrants(registrants),
+    featuredShowLineups,
+    registeredGuests: registeredGuestsFromRegistrants(registrants),
     zoomConfigured: Boolean(storedZoom?.joinUrl),
     zoom: publicEvent.locked ? null : publicZoom(storedZoom),
     message: publicEvent.locked

@@ -29,9 +29,15 @@ const memberContactEmail = "member@mojoaisummits.com";
 const defaultStaffNotificationEmails = [
   "angel@mojoaisummits.com",
   "scott@mojoaisummits.com",
-  "gina@mojoaisummits.com",
   "miller@mojoaisummits.com",
   "jodi@mojoaisummits.com"
+];
+const retiredRegistrationNotificationEmails = new Set([
+  "gina@mojoaisummits.com"
+]);
+const defaultRegistrationConfirmationCopyEmails = [
+  "angel@mojoaisummits.com",
+  "scott@mojoaisummits.com"
 ];
 const partnerStaffNotificationEmails = [
   "scott@mojoaisummits.com",
@@ -218,6 +224,27 @@ function splitEmailList(value) {
     .filter(isEmail);
 }
 
+function registrationNotificationEmails(emails = [], excludedEmails = []) {
+  const excluded = new Set([
+    ...retiredRegistrationNotificationEmails,
+    ...excludedEmails.map((email) => cleanString(email).toLowerCase()).filter(Boolean)
+  ]);
+  return [...new Set(emails.map((email) => cleanString(email).toLowerCase()).filter(isEmail))]
+    .filter((email) => !excluded.has(email));
+}
+
+function registrationConfirmationCopyRecipients(env = {}, registrantEmail = "") {
+  const configured = splitEmailList(
+    env.MOJO_REGISTRATION_CONFIRMATION_BCC ||
+      env.MOJO_REGISTRATION_CONFIRMATION_COPY_EMAILS ||
+      env.MOJO_GUEST_REGISTRATION_CONFIRMATION_COPY_EMAILS
+  );
+  return registrationNotificationEmails(
+    configured.length ? configured : defaultRegistrationConfirmationCopyEmails,
+    [registrantEmail]
+  ).map((address) => ({ address }));
+}
+
 function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanString(value).toLowerCase());
 }
@@ -293,6 +320,21 @@ function eventShowTime(showId) {
     afternoon: "1:00 pm - 2:30 pm CT",
     both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
   }[cleanEventShowId(showId)] || "";
+}
+
+function eventShowSchedule(showId) {
+  return {
+    morning: { startHour: 10, startMinute: 0, endHour: 11, endMinute: 30 },
+    afternoon: { startHour: 13, startMinute: 0, endHour: 14, endMinute: 30 },
+    both: { startHour: 10, startMinute: 0, endHour: 14, endMinute: 30 }
+  }[cleanEventShowId(showId)] || null;
+}
+
+function eventShowFromTime(value = "") {
+  const time = cleanString(value).toLowerCase();
+  if (/\b10(?::00)?\s*(a\.?m\.?|am)?\b/.test(time)) return "morning";
+  if (/\b1(?::00)?\s*(p\.?m\.?|pm)\b/.test(time) || /\b13:00\b/.test(time)) return "afternoon";
+  return "";
 }
 
 function eventShowKey(record = {}) {
@@ -706,6 +748,39 @@ function formatIcsDate(date) {
   ].join("");
 }
 
+function eventDateParts(value) {
+  const date = parseDate(value);
+  if (!date) return null;
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate()
+  };
+}
+
+function formatIcsCentralDateTime(parts, hour, minute) {
+  return [
+    String(parts.year).padStart(4, "0"),
+    String(parts.month).padStart(2, "0"),
+    String(parts.day).padStart(2, "0"),
+    "T",
+    String(hour).padStart(2, "0"),
+    String(minute).padStart(2, "0"),
+    "00"
+  ].join("");
+}
+
+function calendarShowTimedLines(registration = {}) {
+  const showId = eventShowKey(registration) || eventShowFromTime(registration.eventTime || registration.eventShowTime);
+  const schedule = eventShowSchedule(showId);
+  const parts = eventDateParts(registration.eventDate);
+  if (!schedule || !parts) return [];
+  return [
+    `DTSTART;TZID=America/Chicago:${formatIcsCentralDateTime(parts, schedule.startHour, schedule.startMinute)}`,
+    `DTEND;TZID=America/Chicago:${formatIcsCentralDateTime(parts, schedule.endHour, schedule.endMinute)}`
+  ];
+}
+
 function addUtcDays(date, days) {
   const next = new Date(date.getTime());
   next.setUTCDate(next.getUTCDate() + days);
@@ -737,42 +812,60 @@ function buildGuestCalendarInvite(registration = {}) {
   const start = parseDate(registration.eventStart);
   const end = parseDate(registration.eventEnd);
   const dateOnly = parseDate(registration.eventDate);
-  if (!start && !dateOnly) return "";
+  const fallbackTimedLines = start ? [] : calendarShowTimedLines(registration);
+  if (!start && !fallbackTimedLines.length && !dateOnly) return "";
   const uid = `${cleanString(registration.id) || crypto.randomUUID()}@mojoaisummits.com`;
   const timedLines = start
     ? [
         `DTSTART:${formatIcsDateTime(start)}`,
         `DTEND:${formatIcsDateTime(end && end > start ? end : new Date(start.getTime() + 60 * 60 * 1000))}`
       ]
+    : fallbackTimedLines.length
+      ? fallbackTimedLines
     : dateOnly
       ? [
           `DTSTART;VALUE=DATE:${formatIcsDate(dateOnly)}`,
           `DTEND;VALUE=DATE:${formatIcsDate(addUtcDays(dateOnly, 1))}`
         ]
       : [];
+  const registrantEmail = cleanString(registration.email).toLowerCase();
+  const registrantName = cleanString(registration.name) || registrantEmail || "Registrant";
 
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Mojo AI Summits//Guest Registration//EN",
+    "PRODID:-//Mojo AI Summits//Registration//EN",
     "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
+    "METHOD:REQUEST",
     "BEGIN:VEVENT",
     `UID:${icsEscape(uid)}`,
     `DTSTAMP:${formatIcsDateTime(new Date())}`,
     ...timedLines,
+    `ORGANIZER;CN=${icsEscape(guestConfirmationSenderName)}:mailto:${guestConfirmationSenderEmail}`,
+    ...(registrantEmail ? [`ATTENDEE;CN=${icsEscape(registrantName)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${registrantEmail}`] : []),
     `SUMMARY:${icsEscape(`Mojo AI Summits: ${details.name}`)}`,
     "LOCATION:Virtual event",
     `DESCRIPTION:${icsEscape(`Registration confirmed for ${details.name}. Event page: ${details.pageUrl}. ${details.accessText}`)}`,
     `URL:${icsEscape(details.pageUrl)}`,
+    "STATUS:CONFIRMED",
+    "SEQUENCE:0",
     "END:VEVENT",
     "END:VCALENDAR"
   ].join("\r\n");
 }
 
-function guestConfirmationText(registration = {}) {
+function registrationSupportContactEmail(type = "") {
+  return type === "member" ? memberContactEmail : guestContactEmail;
+}
+
+function registrationSupportTeamName(type = "") {
+  return type === "member" ? "Mojo AI Summits Member Team" : "Mojo AI Summits Guest Team";
+}
+
+function guestConfirmationText(registration = {}, type = "guest") {
   const details = eventDetails(registration);
   const name = cleanString(registration.name) || "there";
+  const supportContact = registrationSupportContactEmail(type);
   return [
     `Hi ${name},`,
     "",
@@ -793,7 +886,7 @@ function guestConfirmationText(registration = {}) {
     `Mojo AI Summits: ${briefsUrl}`,
     "Sample & previous briefs we have written with groups like the one you will be joining.",
     "",
-    `Questions? Contact ${guestContactEmail}. Existing members may contact ${memberContactEmail}.`,
+    `Questions? Contact ${supportContact}.`,
     "",
     guestConfirmationSenderName,
     "Director of Engagement",
@@ -802,9 +895,10 @@ function guestConfirmationText(registration = {}) {
   ].join("\n");
 }
 
-function guestConfirmationHtml(registration = {}) {
+function guestConfirmationHtml(registration = {}, type = "guest") {
   const details = eventDetails(registration);
   const name = cleanString(registration.name) || "there";
+  const supportContact = registrationSupportContactEmail(type);
   return `
     <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.55;max-width:680px">
       <p>Hi ${escapeHtml(name)},</p>
@@ -820,35 +914,43 @@ function guestConfirmationHtml(registration = {}) {
       <p>We are looking forward to having you join the conversation. A calendar invite is attached to this email.</p>
       <p><strong>Mojo AI Summits:</strong> <a href="${membershipUrl}">${membershipUrl}</a><br>Information about membership in the Mojo AI Summits Executive Research Council, including opportunities for paid engagements.</p>
       <p><strong>Mojo AI Summits:</strong> <a href="${briefsUrl}">${briefsUrl}</a><br>Sample &amp; previous briefs we have written with groups like the one you will be joining.</p>
-      <p>Questions? Contact <a href="mailto:${guestContactEmail}">${guestContactEmail}</a>. Existing members may contact <a href="mailto:${memberContactEmail}">${memberContactEmail}</a>.</p>
+      <p>Questions? Contact <a href="mailto:${supportContact}">${supportContact}</a>.</p>
       <p style="margin-top:24px">${guestConfirmationSenderName}<br>Director of Engagement<br><a href="mailto:${guestConfirmationSenderEmail}">${guestConfirmationSenderEmail}</a><br>214-232-8324</p>
     </div>
   `;
 }
 
-async function sendGuestRegistrationConfirmation(env, registration = {}) {
+async function sendRegistrationConfirmation(env, type = "guest", registration = {}) {
   if (!cleanString(registration.email)) return { attempted: false, sent: false, error: "Registrant email is missing." };
   const calendarInvite = buildGuestCalendarInvite(registration);
+  const confirmationCopies = registrationConfirmationCopyRecipients(env, registration.email);
+  const supportContact = registrationSupportContactEmail(type);
 
   await sendMicrosoftGraphMail(env, {
     sender: cleanString(env.MOJO_GUEST_REGISTRATION_EMAIL_SENDER || env.MOJO_INVITE_EMAIL_SENDER || guestConfirmationSenderEmail),
     to: [{ address: registration.email, name: registration.name }],
+    bcc: confirmationCopies,
     replyTo: [
-      { address: guestContactEmail, name: "Mojo AI Summits Guest Team" },
+      { address: supportContact, name: registrationSupportTeamName(type) },
       { address: guestConfirmationSenderEmail, name: guestConfirmationSenderName }
     ],
     subject: guestConfirmationSubject,
-    text: guestConfirmationText(registration),
-    html: guestConfirmationHtml(registration),
+    text: guestConfirmationText(registration, type),
+    html: guestConfirmationHtml(registration, type),
     attachments: calendarInvite ? [{
       name: "mojo-ai-summits-event.ics",
-      contentType: "text/calendar; method=PUBLISH; charset=utf-8",
+      contentType: "text/calendar; method=REQUEST; charset=utf-8",
       contentBytes: base64Encode(calendarInvite)
     }] : [],
     saveToSentItems: true
   });
 
-  return { attempted: true, sent: true };
+  return {
+    attempted: true,
+    sent: true,
+    calendarInviteAttached: Boolean(calendarInvite),
+    confirmationCopyCount: confirmationCopies.length
+  };
 }
 
 function staffNotificationRecipients(env = {}, type = "") {
@@ -861,7 +963,7 @@ function staffNotificationRecipients(env = {}, type = "") {
     ...(configured.length ? configured : defaultStaffNotificationEmails),
     ...(type === "partner" ? partnerStaffNotificationEmails : [])
   ];
-  return [...new Set(emails)].map((address) => ({ address }));
+  return registrationNotificationEmails(emails).map((address) => ({ address }));
 }
 
 function staffRegistrationSubject(type, registration = {}) {
@@ -1468,13 +1570,11 @@ export async function handlePublicRegistration({ request, env }, type) {
     const inviteUsageKey = await writeInviteUsage(env, type, registration.inviteCode, storedRecord);
     const kvRefs = await mirrorRegistrationToKv(env, type, storedRecord, config).catch(() => ({}));
     const registrationKeys = [d1RegistrationKey, r2RegistrationKey, kvRefs.kvRegistrationKey].filter(Boolean);
-    const confirmationEmail = type === "guest"
-      ? await sendGuestRegistrationConfirmation(env, storedRecord).catch((error) => ({
+    const confirmationEmail = await sendRegistrationConfirmation(env, type, storedRecord).catch((error) => ({
           attempted: true,
           sent: false,
-          error: cleanString(error?.message || "Guest confirmation email failed.")
-        }))
-      : { attempted: false, sent: false };
+          error: cleanString(error?.message || "Registration confirmation email failed.")
+        }));
     const staffNotificationEmail = await sendStaffRegistrationNotification(env, type, storedRecord).catch((error) => ({
       attempted: true,
       sent: false,
