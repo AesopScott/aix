@@ -560,6 +560,16 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/sms-notifications", "mojoaisummits.com/api/sms-notifications/*"]
   },
   {
+    id: "api-sms-inbound",
+    kind: "api",
+    group: "APIs",
+    label: "SMS Inbound API",
+    summary: "Receives signed AWS SNS inbound SMS reply events.",
+    mode: "public",
+    matches: [{ exact: "/api/sms-inbound" }, { prefix: "/api/sms-inbound/" }],
+    domains: ["mojoaisummits.com/api/sms-inbound", "mojoaisummits.com/api/sms-inbound/*"]
+  },
+  {
     id: "api-invite-request",
     kind: "api",
     group: "APIs",
