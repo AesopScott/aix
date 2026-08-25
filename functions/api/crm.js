@@ -160,8 +160,8 @@ const DEFAULT_UPCOMING_EVENTS = [
     format: "In person"
   }
 ];
-const allowedStatuses = new Set(["new", "pending-engagement", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
-const allowedGuestRegistrationLifecycleStatuses = new Set(["pending-engagement", "contacted", "confirmed", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
+const allowedStatuses = new Set(["new", "scott-engagement", "pending-engagement", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
+const allowedGuestRegistrationLifecycleStatuses = new Set(["scott-engagement", "pending-engagement", "contacted", "confirmed", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
 const allowedLifecycleStages = new Set(["guest", "featured-guest", "fellow", "contributing-fellow", "senior-fellow", "distinguished-fellow"]);
 const allowedRegistrationStatuses = new Set(["invited", "opened", "started", "confirmed", "declined", "canceled", "waitlisted"]);
 const allowedStrategicRoles = new Set(["attendee", "speaker", "moderator", "roundtable-leader", "research-contributor", "sponsor-representative", "partner"]);
@@ -619,6 +619,8 @@ function cleanStarRating(value, fallback = 1) {
 function cleanGuestRegistrationLifecycleStatus(value, fallback = "contacted") {
   const cleaned = cleanString(value, 120).toLowerCase();
   const aliases = {
+    "scott engagement": "scott-engagement",
+    scott_engagement: "scott-engagement",
     new: "pending-engagement",
     pending: "pending-engagement",
     "pending-angel": "pending-engagement",
@@ -660,7 +662,7 @@ function recordIsActualGuestOrMemberRegistrant(key = "", record = {}) {
 
 function actualRegistrantLifecycleStatus(key = "", record = {}) {
   const status = cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.status, "registered");
-  return ["pending-engagement", "contacted", "confirmed", "invited"].includes(status) ? "registered" : status;
+  return ["scott-engagement", "pending-engagement", "contacted", "confirmed", "invited"].includes(status) ? "registered" : status;
 }
 
 function splitName(name = "") {
@@ -1545,6 +1547,8 @@ function cleanInviteType(value) {
 
 function cleanGuestRegistrationType(value) {
   return {
+    "partner-candidate": "partner-candidate",
+    "partner candidate": "partner-candidate",
     "featured-partner": "featured-partner",
     "featured-guest": "featured-guest",
     "featured-member": "featured-member",
@@ -1568,6 +1572,7 @@ function cleanContactEventRole(value) {
   const raw = cleanString(value, 120).toLowerCase();
   const exact = cleanGuestRegistrationType(raw);
   if (exact !== "guest" || raw === "guest") return exact;
+  if (raw.includes("partner candidate")) return "partner-candidate";
   if (raw.includes("featured partner")) return "featured-partner";
   if (raw.includes("featured guest")) return "featured-guest";
   if (raw.includes("featured member")) return "featured-member";
@@ -1581,6 +1586,7 @@ function cleanContactEventRole(value) {
 
 function contactEventRoleLabel(value) {
   return {
+    "partner-candidate": "Partner Candidate",
     "featured-partner": "Featured Partner",
     "featured-guest": "Featured Guest",
     "featured-member": "Featured Member",
@@ -1598,7 +1604,7 @@ function contactEventStrategicRole(value) {
   if (role === "presenter") return "speaker";
   if (role === "roundtable-leader") return "roundtable-leader";
   if (role === "featured-author") return "research-contributor";
-  if (role === "partner" || role === "featured-partner") return "partner";
+  if (role === "partner-candidate" || role === "partner" || role === "featured-partner") return "partner";
   return "attendee";
 }
 
@@ -2161,7 +2167,11 @@ async function registrants(env, type = "member") {
 
 function roleLabelForRow(row = {}, type = "") {
   const role = cleanGuestRegistrationType(row.partnerRegistrationType || row.guestRegistrationType || row.registrationRole);
-  if (type === "partner") return role === "featured-partner" || row.isFeaturedPartner ? "Featured Partner" : "Partner Guest";
+  if (type === "partner") {
+    if (role === "featured-partner" || row.isFeaturedPartner) return "Featured Partner";
+    if (role === "partner-candidate") return "Partner Candidate";
+    return "Partner Guest";
+  }
   if (type === "member") return row.isFeaturedMember ? "Featured Member" : "Member";
   if (role === "presenter" || row.isPresenter) return "Presenter";
   if (role === "roundtable-leader" || row.isRoundtableLeader) return "Round Table Leader";
@@ -2313,7 +2323,7 @@ function contactFromInviteRecord(row = {}, source = "guest-invite") {
   const eventShowId = cleanEventShowId(row.eventShowId || row.showId || row.eventShow, "");
   const eventId = cleanString(row.eventId || `${row.eventSlug || row.eventName || source}:${eventShowId || row.code || row.id || ""}`, 200);
   const isPartner = source.includes("partner") || row.type === "partner" || row.type === "partner-matrix-prospect";
-  const registrationRole = cleanGuestRegistrationType(row.partnerRegistrationType || row.guestRegistrationType || row.registrationRole || (isPartner ? "partner" : row.type));
+  const registrationRole = cleanGuestRegistrationType(row.partnerRegistrationType || row.guestRegistrationType || row.registrationRole || (isPartner ? "partner-candidate" : row.type));
   const lifecycleStage = row.matrixOnly || row.type === "guest-matrix-prospect" || row.type === "partner-matrix-prospect" ? "prospect" : "invited";
   return normalizeContactRecord(key, {
     id: cleanEmail || cleanString(row.id || row.code || row.inviteCode || row.key),
@@ -4439,7 +4449,7 @@ async function enrichInviteUsage(env, invites, types = ["member", "guest", "part
       invite.code ? "invited" : "contacted"
     );
     const registrationStatus = registered
-      ? ["pending-engagement", "contacted", "confirmed", "invited"].includes(currentStatus) ? "registered" : currentStatus
+      ? ["scott-engagement", "pending-engagement", "contacted", "confirmed", "invited"].includes(currentStatus) ? "registered" : currentStatus
       : currentStatus === "registered" || currentStatus === "attended" ? invite.code ? "invited" : "contacted" : currentStatus;
     return {
       ...invite,
@@ -4525,7 +4535,7 @@ async function partnerRegistrationLinkRows(env) {
       eventShowLabel: registration?.eventShowLabel || invite.usedForShow || invite.eventShowLabel,
       eventShowTime: registration?.eventShowTime || invite.usedForTime || invite.eventShowTime,
       partnerRegistrationType: registration?.partnerRegistrationType || invite.partnerRegistrationType || invite.registrationRole,
-      registrationRole: registration?.registrationRole || invite.partnerRegistrationType || invite.registrationRole || "partner",
+      registrationRole: registration?.registrationRole || invite.partnerRegistrationType || invite.registrationRole || "partner-candidate",
       partnerTier: registration?.partnerTier || invite.partnerTier,
       partnerProductTypes: registration?.partnerProductTypes,
       partnerClientMessaging: registration?.partnerClientMessaging,
@@ -4564,7 +4574,7 @@ function matrixProspectRecordType(type = "guest") {
 }
 
 function matrixProspectRole(type = "guest", record = {}) {
-  const fallback = type === "partner" ? "partner" : "guest";
+  const fallback = type === "partner" ? "partner-candidate" : "guest";
   return cleanGuestRegistrationType(record?.partnerRegistrationType || record?.guestRegistrationType || record?.registrationRole || fallback);
 }
 
@@ -5284,7 +5294,7 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   }
   if (!code) throw new Error("Could not generate a unique partner invite code.");
 
-  const partnerRegistrationType = cleanGuestRegistrationType(payload.partnerRegistrationType || payload.registrationRole || "partner");
+  const partnerRegistrationType = cleanGuestRegistrationType(payload.partnerRegistrationType || payload.registrationRole || "partner-candidate");
   const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
   const eventShowId = requiresSingleShowRegistrationRole(partnerRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
   const eventTime = eventShowTime(eventShowId);
@@ -5411,8 +5421,9 @@ function partnerInviteRegistrationUrl(origin, invite) {
 }
 
 function partnerInviteRoleLabel(invite = {}) {
-  const role = cleanGuestRegistrationType(invite.partnerRegistrationType || invite.registrationRole || "partner");
+  const role = cleanGuestRegistrationType(invite.partnerRegistrationType || invite.registrationRole || "partner-candidate");
   if (role === "featured-partner") return "featured partner";
+  if (role === "partner-candidate") return "partner candidate";
   return "partner";
 }
 
