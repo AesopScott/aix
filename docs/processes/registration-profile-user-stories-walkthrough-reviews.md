@@ -69,6 +69,7 @@ As an invited prospective member, I want to unlock member registration with my s
 **Walkthrough review checks**
 
 - The access gate blocks the form until a valid code is provided.
+- `/member-registration/?preview=4321` unlocks the form for administrative review but blocks live submission and SMS verification calls.
 - The `MOJO_MEMBER_INVITE_CODES_STRICT=true` environment setting requires stored active member codes, not just any six-digit value.
 - The frontend blocks submission when phone status is `unverified` or `code_sent`.
 - A used member nomination link cannot unlock a second registration.

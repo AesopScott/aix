@@ -572,11 +572,18 @@
   const form = document.getElementById('memberRegistrationForm');
   const success = document.getElementById('registrationSuccess');
   const verificationStatus = document.getElementById('phoneVerificationStatus');
+  const adminPreviewCode = '4321';
+  let adminPreviewMode = false;
   let currentInviteRole = 'guest';
 
   function getInviteCode(){
     const params = new URLSearchParams(window.location.search);
     return (params.get('invite') || sessionStorage.getItem('mojoMemberInviteCode') || '').trim();
+  }
+
+  function getPreviewCode(){
+    const params = new URLSearchParams(window.location.search);
+    return (params.get('preview') || params.get('code') || '').trim();
   }
 
   function campaignAttributionFields(){
@@ -712,6 +719,17 @@
     }
   }
 
+  function unlockAdminPreview(){
+    adminPreviewMode = true;
+    configureShowOptions();
+    inviteInput.value = adminPreviewCode;
+    inviteBadge.textContent = 'Admin preview';
+    accessGate.classList.add('hide');
+    form.classList.remove('hide');
+    clearMessage(accessCodeMessage);
+    setMessage(formError, 'Admin preview mode. Generate a member nomination link for live registration submissions.', '');
+  }
+
   async function checkAndUnlock(code, options = {}){
     const normalized = normalizeCode(code);
     if (accessCodeInput) accessCodeInput.value = normalized;
@@ -746,8 +764,11 @@
   });
 
   const incomingInviteCode = getInviteCode();
+  const incomingPreviewCode = getPreviewCode();
   configureShowOptions();
-  if (incomingInviteCode) {
+  if (incomingPreviewCode === adminPreviewCode) {
+    unlockAdminPreview();
+  } else if (incomingInviteCode) {
     checkAndUnlock(incomingInviteCode);
   }
 
@@ -797,6 +818,10 @@
 
   sendCodeButton.addEventListener('click', async () => {
     clearMessage(formError);
+    if (adminPreviewMode) {
+      setMessage(phoneMessage, 'Admin preview mode cannot send SMS verification. Use a real member invite link for live testing.', 'error');
+      return;
+    }
     const phone = normalizePhone(phoneInput.value);
     if (!isLikelyPhone(phone)) {
       setMessage(phoneMessage, 'Enter a valid mobile phone number with country code, such as +1 or +44.', 'error');
@@ -831,6 +856,10 @@
 
   confirmCodeButton.addEventListener('click', async () => {
     clearMessage(formError);
+    if (adminPreviewMode) {
+      setMessage(phoneMessage, 'Admin preview mode cannot confirm SMS verification. Use a real member invite link for live testing.', 'error');
+      return;
+    }
     const code = phoneCodeInput.value.trim();
     if (!code) {
       setMessage(phoneMessage, 'Enter the SMS code to confirm your phone.', 'error');
@@ -859,6 +888,10 @@
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     clearMessage(formError);
+    if (adminPreviewMode) {
+      setMessage(formError, 'Admin preview mode cannot submit. Use a member nomination link to test live registration.', 'error');
+      return;
+    }
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
     payload.email = String(payload.email || '').trim();
