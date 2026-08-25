@@ -60,6 +60,8 @@ function normalizeRecipients(value) {
 export async function sendMicrosoftGraphMail(env = {}, options = {}) {
   const sender = cleanMailString(options.sender || env.MOJO_INVITE_EMAIL_SENDER);
   const toRecipients = normalizeRecipients(options.to);
+  const ccRecipients = normalizeRecipients(options.cc);
+  const bccRecipients = normalizeRecipients(options.bcc);
   if (!sender) throw new Error("Microsoft Graph sender mailbox is not configured.");
   if (!toRecipients.length) throw new Error("At least one email recipient is required.");
 
@@ -82,6 +84,8 @@ export async function sendMicrosoftGraphMail(env = {}, options = {}) {
       content: cleanMailContent(options.html || options.text)
     },
     toRecipients,
+    ...(ccRecipients.length ? { ccRecipients } : {}),
+    ...(bccRecipients.length ? { bccRecipients } : {}),
     ...(normalizeRecipients(options.replyTo).length ? { replyTo: normalizeRecipients(options.replyTo) } : {}),
     ...(attachments.length ? { attachments } : {})
   };
