@@ -148,6 +148,10 @@
     }
     .notice.ok { color: var(--ok); }
     .notice.error { color: var(--danger); }
+    .result-summary {
+      margin-top: 0.35rem;
+      font-size: 1.05rem;
+    }
 
     .recipient-list, .registrant-list, .result-list {
       display: grid;
@@ -236,7 +240,7 @@
           <textarea id="messageText" name="message" maxlength="1200" placeholder="MOJO AI Summits: Reminder text goes here."></textarea>
         </div>
         <div class="toolbar">
-          <span id="charCount">0 / 1200</span>
+          <span id="charCount">Message length: 0 / 1200</span>
           <button type="button" class="secondary" id="refreshButton">Refresh Recipients</button>
         </div>
         <label class="checkbox-row">
@@ -260,6 +264,7 @@
 
     <section class="panel">
       <p class="eyebrow">Send results</p>
+      <p class="notice result-summary" id="resultSummary" aria-live="polite">No SMS send has been run from this page yet.</p>
       <div class="result-list" id="resultList"></div>
     </section>
   </main>
@@ -269,6 +274,7 @@
     const recipientCount = document.querySelector("#recipientCount");
     const recipientMetricLabel = document.querySelector("#recipientMetricLabel");
     const recipientList = document.querySelector("#recipientList");
+    const resultSummary = document.querySelector("#resultSummary");
     const resultList = document.querySelector("#resultList");
     const notice = document.querySelector("#notice");
     const lastNotice = document.querySelector("#lastNotice");
@@ -433,8 +439,28 @@
         : "<p>No SMS send has been run from this page yet.</p>";
     }
 
-    async function loadRecipients() {
-      setNotice("Loading SMS recipient data...");
+    function sendTargetLabel(result = {}) {
+      if (result.type === "reply-test") return "Scott, Angel, and Miller";
+      if (result.type === "event-reminder") return result.eventName ? `the selected event, ${result.eventName}` : "the selected event";
+      return "all verified registration phone numbers";
+    }
+
+    function renderSendConfirmation(result = {}) {
+      const sentCount = result.sentCount || 0;
+      const failedCount = result.failedCount || 0;
+      const total = result.recipientCount || sentCount + failedCount;
+      const message = failedCount
+        ? `SMS partially sent: ${sentCount} of ${total} messages sent to ${sendTargetLabel(result)}; ${failedCount} failed.`
+        : `SMS sent: ${sentCount} of ${total} messages sent to ${sendTargetLabel(result)}.`;
+      const type = failedCount ? "error" : "ok";
+      resultSummary.textContent = message;
+      resultSummary.className = `notice result-summary ${type}`;
+      setNotice(message, type);
+    }
+
+    async function loadRecipients(options = {}) {
+      const quiet = Boolean(options.quiet);
+      if (!quiet) setNotice("Loading SMS recipient data...");
       try {
         const params = new URLSearchParams({ type: messageType.value });
         if (messageType.value === "event-reminder" && eventSelect.value) params.set("eventKey", eventSelect.value);
@@ -444,14 +470,14 @@
         renderRegistrants(payload);
         renderRecipients(payload);
         const warning = payload.summary?.registrationIndexWarning || "";
-        setNotice(warning || "SMS recipient data loaded.", warning ? "" : "ok");
+        if (!quiet || warning) setNotice(warning || "SMS recipient data loaded.", warning ? "" : "ok");
       } catch (error) {
         setNotice(error.message, "error");
       }
     }
 
     messageText.addEventListener("input", () => {
-      charCount.textContent = `${messageText.value.length} / 1200`;
+      charCount.textContent = `Message length: ${messageText.value.length} / 1200`;
     });
 
     refreshButton.addEventListener("click", loadRecipients);
@@ -490,9 +516,9 @@
         }).then(readJson);
         const result = payload.result || {};
         renderResults(result.results || []);
-        setNotice(`SMS complete: ${result.sentCount || 0} sent, ${result.failedCount || 0} failed.`, result.failedCount ? "error" : "ok");
+        renderSendConfirmation(result);
         confirmSend.checked = false;
-        await loadRecipients();
+        await loadRecipients({ quiet: true });
       } catch (error) {
         setNotice(error.message, "error");
       } finally {
