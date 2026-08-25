@@ -1,5 +1,9 @@
 # Repository Agent Instructions
 
+## Agent Identity
+
+Scott refers to Codex as `DaVinci` across sessions. Treat `DaVinci` as the assistant's working name in this repository and in ongoing AIX/Mojo collaboration.
+
 ## Aliases
 
 ### Deploy
