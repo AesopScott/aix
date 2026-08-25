@@ -3305,6 +3305,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const type = recordsTypeForView(view);
       const url = new URL(api, window.location.origin);
       url.searchParams.set("type", type);
+      if (["guest-matrix", "guest-invite-links", "create-guest-invite-links"].includes(view)) url.searchParams.set("matrix", "guest");
+      if (["partner-matrix", "partner-invite-links"].includes(view)) url.searchParams.set("matrix", "partner");
       if (view === "partner") url.searchParams.set("registrationLinks", "1");
       return url.toString();
     }
@@ -3929,8 +3931,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventName,
         eventMeta: guestMatrixEventMeta(invite),
         showKey,
-        showLabel: guestMatrixShowMeta(invite),
-        registeredShowLabel: guestMatrixRegisteredShowMeta(invite),
+        showLabel: isRegisteredRow ? "" : guestMatrixShowMeta(invite),
+        registeredShowLabel: isRegisteredRow ? guestMatrixRegisteredShowMeta(invite) : "",
         name: guestMatrixPersonName(invite),
         email,
         company: firstCleanValue(invite.company, invite.organization, invite.partnerCompany),
@@ -4031,6 +4033,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const secondary = primary === right ? left : right;
       const registrationStatus = bestMatrixValue(primary.registrationStatus, secondary.registrationStatus, ["attended", "registered", "confirmed", "invited", "contacted", "pending-engagement", "alternate", "declined", "bad-fit", "no-show"]);
       const futureEvents = mergeGuestMatrixFutureEvents(primary.futureEvents, secondary.futureEvents);
+      const registeredShowLabel = primary.registeredShowLabel || secondary.registeredShowLabel;
       const noteValues = [primary.notes, secondary.notes].map((value) => String(value || "").trim()).filter(Boolean);
       const notes = [...new Set(noteValues)].join("\n\n");
       return {
@@ -4041,8 +4044,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         title: firstCleanValue(primary.title, secondary.title),
         linkedinProfileUrl: firstCleanValue(primary.linkedinProfileUrl, secondary.linkedinProfileUrl),
         showKey: primary.showKey || secondary.showKey,
-        showLabel: primary.showLabel || secondary.showLabel,
-        registeredShowLabel: primary.registeredShowLabel || secondary.registeredShowLabel,
+        showLabel: registeredShowLabel ? "" : primary.showLabel || secondary.showLabel,
+        registeredShowLabel,
         roleKey: primary.roleKey || secondary.roleKey,
         role: primary.role || secondary.role,
         roleValue: primary.roleValue || secondary.roleValue,
@@ -4054,7 +4057,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         registrationStatus,
         matrixInterestRating: Math.max(starRatingValue(primary.matrixInterestRating, 1), starRatingValue(secondary.matrixInterestRating, 1)),
         potentialSponsor: primary.potentialSponsor || secondary.potentialSponsor,
-        registered: primary.registered || secondary.registered || registrationStatus === "registered",
+        registered: primary.registered || secondary.registered || ["registered", "attended"].includes(registrationStatus),
         futureEvents,
         notes,
         haystack: `${primary.haystack || ""} ${secondary.haystack || ""} ${notes} ${futureEvents.flatMap((event) => [event.status, event.eventName, event.eventDate, event.eventShow]).join(" ")}`.toLowerCase()
@@ -4289,7 +4292,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                           ${matrixOptionList(guestMatrixRoleOptions(row), row.roleValue || "guest")}
                         </select>
                         ${row.registeredShowLabel
-                          ? `<div class="matrix-muted">Registered for: ${escapeHtml(row.registeredShowLabel)}</div>`
+                          ? `<div class="matrix-muted">Registered: ${escapeHtml(row.registeredShowLabel)}</div>`
                           : row.showLabel ? `<div class="matrix-muted">Assigned: ${escapeHtml(row.showLabel)}</div>` : ""}
                       </td>
                       <td>
@@ -4560,10 +4563,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function isRegistrationInviteRegistered(invite) {
+      const status = String(invite.status || "").toLowerCase();
       if (invite.actualRegistrationRegistered === true || invite.registrationMatched === true) return true;
       if (invite.actualRegistrationRegistered === false || invite.registrationMatched === false) return false;
-      const status = String(invite.status || "").toLowerCase();
-      return status === "used" || status === "registered" || Boolean(invite.usedAt || invite.usedByName || invite.usedByEmail || invite.usedBy);
+      const hasConfirmedInviteUse = status === "used" && Boolean(invite.usedAt || invite.registrationId || invite.usedByName || invite.usedByEmail || invite.usedBy);
+      if (hasConfirmedInviteUse) return true;
+      return false;
     }
 
     function registrationInviteStatusFilterLabel(value = registrationInviteStatusFilter) {
@@ -7899,7 +7904,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     typeFilter.addEventListener("change", () => {
       const nextView = typeFilter.value === "partner" ? "partners-company" : typeFilter.value;
-      activeView = nextView || "contacts";
+      activeView = nextView || "guest-matrix";
       partnerCompanyPage = 1;
       loadCrm();
     });
