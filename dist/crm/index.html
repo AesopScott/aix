@@ -3986,6 +3986,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return keys;
     }
 
+    function guestMatrixRowsSharePerson(left = {}, right = {}) {
+      const leftKeys = new Set(guestMatrixPersonIdentityKeys(left));
+      if (!leftKeys.size) return false;
+      return guestMatrixPersonIdentityKeys(right).some((key) => leftKeys.has(key));
+    }
+
     function isUnassignedGuestMatrixRow(row = {}) {
       return row.eventName === "No event assigned" || row.eventKey === "no-event-assigned|";
     }
@@ -4089,7 +4095,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const targetIndex = mergedRows.findIndex((candidate, candidateIndex) => {
           if (candidateIndex === index || consumed.has(candidate.id)) return false;
           if (candidate.matrixOnly && isUnassignedGuestMatrixRow(candidate)) return false;
-          return guestMatrixPersonIdentityKeys(candidate).some((key) => sourceKeys.has(key));
+          return guestMatrixRowsSharePerson(row, candidate) ||
+            guestMatrixPersonIdentityKeys(candidate).some((key) => sourceKeys.has(key));
         });
         if (targetIndex < 0) return;
         mergedRows[targetIndex] = mergeGuestMatrixDuplicateRows(mergedRows[targetIndex], row);

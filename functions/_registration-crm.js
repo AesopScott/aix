@@ -178,6 +178,15 @@ function safeFileSegment(value, fallback = "file") {
     .slice(0, 80) || fallback;
 }
 
+function linkedInProfileIdentity(value = "") {
+  return cleanLinkedInProfileUrl(value).toLowerCase().replace(/\/+$/, "");
+}
+
+function linkedInContactKey(value = "") {
+  const identity = linkedInProfileIdentity(value);
+  return identity ? `crm:contact:linkedin:${safeFileSegment(identity, "profile")}` : "";
+}
+
 function registrationPhotoPublicUrl(key) {
   const cleanKey = cleanString(key);
   return cleanKey ? `/api/crm?photo=${encodeURIComponent(cleanKey)}` : "";
@@ -1129,15 +1138,15 @@ function contactRefsForRegistration(type, registration) {
   const email = cleanString(registration.email).toLowerCase();
   const company = cleanString(registration.partnerCompany || registration.company);
   const companySlug = slugify(company);
-  if (!email || !company || !companySlug) return {};
+  if (!email) return {};
 
-  const companyKey = `crm:company:${companySlug}`;
-  const partnerCompanyKey = `partner-company:${companySlug}`;
   return {
     contactId: email,
     contactKey: `crm:contact:${email}`,
-    companyKey,
-    profileKey: type === "partner" ? partnerCompanyKey : companyKey
+    ...(companySlug ? {
+      companyKey: `crm:company:${companySlug}`,
+      profileKey: type === "partner" ? `partner-company:${companySlug}` : `crm:company:${companySlug}`
+    } : {})
   };
 }
 
@@ -1186,13 +1195,15 @@ export async function upsertRegistrationContact(env, type, registration, config 
   const email = cleanString(registration.email).toLowerCase();
   const company = cleanString(registration.partnerCompany || registration.company);
   const companySlug = slugify(company);
-  if (!email || !company || !companySlug) return {};
+  if (!email) return {};
 
   const now = registration.createdAt || new Date().toISOString();
-  const companyKey = `crm:company:${companySlug}`;
-  const partnerCompanyKey = `partner-company:${companySlug}`;
+  const companyKey = companySlug ? `crm:company:${companySlug}` : "";
+  const partnerCompanyKey = companySlug ? `partner-company:${companySlug}` : "";
   const updatedBy = cleanString(config.updatedBy) || "registration";
   const nameParts = splitName(registration.name);
+  const emailContactKey = `crm:contact:${email}`;
+  const linkedinAliasKey = linkedInContactKey(registration.linkedinProfileUrl);
   const contact = {
     id: email,
     email,
@@ -1229,27 +1240,41 @@ export async function upsertRegistrationContact(env, type, registration, config 
     updatedAt: now,
     updatedBy
   };
-  const contactKeys = [`crm:contact:${email}`];
+  const emailExisting = await env.MOJO_SUMMITS_SETUP_STATE.get(emailContactKey, "json").catch(() => null);
+  const linkedinExisting = linkedinAliasKey && linkedinAliasKey !== emailContactKey
+    ? await env.MOJO_SUMMITS_SETUP_STATE.get(linkedinAliasKey, "json").catch(() => null)
+    : null;
+  const mergedExisting = {
+    ...(linkedinExisting || {}),
+    ...(emailExisting || {}),
+    events: [
+      ...(Array.isArray(linkedinExisting?.events) ? linkedinExisting.events : []),
+      ...(Array.isArray(emailExisting?.events) ? emailExisting.events : [])
+    ]
+  };
   const writeCompanyRollups = config.writeCompanyRollups === true || type === "partner";
-  const companyKeys = writeCompanyRollups
+  const companyKeys = writeCompanyRollups && companySlug
     ? type === "partner" ? [partnerCompanyKey] : [companyKey]
     : [];
 
-  for (const key of [...new Set(contactKeys)]) {
-    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
-      ...(existing || {}),
-      ...contact,
-      id: email,
-      name: contact.name || cleanString(existing?.name) || email,
-      photoUrl: contact.photoUrl || cleanString(existing?.photoUrl),
-      photoKey: contact.photoKey || cleanString(existing?.photoKey),
-      photoOriginalName: contact.photoOriginalName || cleanString(existing?.photoOriginalName),
-      photoUploadedAt: contact.photoUploadedAt || cleanString(existing?.photoUploadedAt),
-      source: cleanString(existing?.source) || contact.source,
-      createdAt: cleanString(existing?.createdAt) || now,
-      events: mergeContactEvents(existing?.events, type, registration, now)
-    }));
+  await env.MOJO_SUMMITS_SETUP_STATE.put(emailContactKey, JSON.stringify({
+    ...mergedExisting,
+    ...contact,
+    id: email,
+    name: contact.name || cleanString(mergedExisting?.name) || email,
+    company: contact.company || cleanString(mergedExisting?.company),
+    companyKey: contact.companyKey || cleanString(mergedExisting?.companyKey),
+    profileKey: contact.profileKey || cleanString(mergedExisting?.profileKey),
+    photoUrl: contact.photoUrl || cleanString(mergedExisting?.photoUrl),
+    photoKey: contact.photoKey || cleanString(mergedExisting?.photoKey),
+    photoOriginalName: contact.photoOriginalName || cleanString(mergedExisting?.photoOriginalName),
+    photoUploadedAt: contact.photoUploadedAt || cleanString(mergedExisting?.photoUploadedAt),
+    source: cleanString(mergedExisting?.source) || contact.source,
+    createdAt: cleanString(mergedExisting?.createdAt) || now,
+    events: mergeContactEvents(mergedExisting?.events, type, registration, now)
+  }));
+  if (linkedinAliasKey && linkedinAliasKey !== emailContactKey && linkedinExisting) {
+    await env.MOJO_SUMMITS_SETUP_STATE.delete(linkedinAliasKey);
   }
 
   for (const key of [...new Set(companyKeys)]) {
@@ -1279,9 +1304,11 @@ export async function upsertRegistrationContact(env, type, registration, config 
 
   return {
     contactId: email,
-    contactKey: `crm:contact:${email}`,
-    companyKey: `crm:company:${companySlug}`,
-    profileKey: type === "partner" ? partnerCompanyKey : `crm:company:${companySlug}`
+    contactKey: emailContactKey,
+    ...(companySlug ? {
+      companyKey,
+      profileKey: type === "partner" ? partnerCompanyKey : companyKey
+    } : {})
   };
 }
 
