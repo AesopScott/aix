@@ -4243,8 +4243,8 @@ async function enrichInviteUsage(env, invites, types = ["member", "guest", "part
   return invites.map((invite) => {
     const row = rows.find((entry) => registrationMatchesInvite(invite, entry));
     const usage = usageRows.find((entry) => inviteUsageMatchesInvite(invite, entry));
-    const inviteAlreadyUsed = cleanString(invite.status).toLowerCase() === "used" ||
-      Boolean(invite.usedAt || invite.usedByName || invite.usedByEmail || invite.usedBy);
+    const inviteAlreadyUsed = cleanString(invite.status).toLowerCase() === "used" &&
+      Boolean(invite.usedAt || invite.registrationId || invite.usedByName || invite.usedByEmail || invite.usedBy);
     const registered = Boolean(row || usage || inviteAlreadyUsed);
     const currentStatus = cleanGuestRegistrationLifecycleStatus(
       row?.crmStatus || usage?.registrationStatus || invite.crmStatus || invite.guestStatus || invite.registrationStatus,
@@ -6501,6 +6501,41 @@ export async function onRequestGet({ request, env, data }) {
   const type = cleanType(url.searchParams.get("type"));
   const config = registrantTypes[type];
   const isContacts = type === "contacts";
+  const matrixMode = cleanString(url.searchParams.get("matrix")).toLowerCase();
+  if (matrixMode === "guest") {
+    const registrationInviteRows = await registrationInviteCodes(env);
+    const guestProspectRows = await guestMatrixProspects(env);
+    return json({
+      ok: true,
+      type,
+      label: config.label,
+      section: config.section,
+      summary: { total: registrationInviteRows.length + guestProspectRows.length },
+      rows: [],
+      partnerInviteCodes: [],
+      registrationInviteCodes: registrationInviteRows,
+      guestMatrixProspects: guestProspectRows,
+      partnerMatrixProspects: [],
+      upcomingEvents: await upcomingEvents(env)
+    });
+  }
+  if (matrixMode === "partner") {
+    const partnerInviteRows = await partnerInviteCodes(env);
+    const partnerProspectRows = await partnerMatrixProspects(env);
+    return json({
+      ok: true,
+      type,
+      label: config.label,
+      section: config.section,
+      summary: { total: partnerInviteRows.length + partnerProspectRows.length },
+      rows: [],
+      partnerInviteCodes: partnerInviteRows,
+      registrationInviteCodes: [],
+      guestMatrixProspects: [],
+      partnerMatrixProspects: partnerProspectRows,
+      upcomingEvents: await upcomingEvents(env)
+    });
+  }
   const partnerRegistrationLinksOnly = type === "partner" && url.searchParams.get("registrationLinks") === "1";
   const rows = isContacts
     ? await contacts(env)
