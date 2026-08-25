@@ -8,6 +8,14 @@
       "id": "90f60403fcf2469987cec51bdc3cde72"
     }
   ],
+  "d1_databases": [
+    {
+      "binding": "MOJO_SUMMITS_DB",
+      "database_name": "mojo-ai-summits-crm",
+      "database_id": "051e7ac1-dc58-4f8f-9646-dd481c284e49",
+      "migrations_dir": "migrations/crm"
+    }
+  ],
   "r2_buckets": [
     {
       "binding": "MOJO_SUMMITS_STORAGE",

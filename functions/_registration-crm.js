@@ -1,4 +1,11 @@
 import { sendMicrosoftGraphMail } from "./_mail.js";
+import {
+  crmD1Available,
+  crmD1Primary,
+  readCrmD1Json,
+  writeCrmD1Json,
+  deleteCrmD1Record
+} from "./_crm-d1.js";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -588,7 +595,7 @@ function splitName(name = "") {
 
 async function writeRegistrationDebug(env, type, status, details = {}) {
   if (env?.MOJO_REGISTRATION_DEBUG_WRITES !== "true") return;
-  if (!env?.MOJO_SUMMITS_SETUP_STATE) return;
+  if (!env?.MOJO_SUMMITS_SETUP_STATE && !crmD1Available(env)) return;
   const createdAt = cleanString(details.createdAt) || new Date().toISOString();
   const id = cleanString(details.id) || crypto.randomUUID();
   const entry = {
@@ -624,10 +631,7 @@ async function writeRegistrationDebug(env, type, status, details = {}) {
     error: cleanString(details.error)
   };
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(
-    `crm:registration-debug:${createdAt}:${id}`,
-    JSON.stringify(entry)
-  ).catch(() => null);
+  await writeSetupJson(env, `crm:registration-debug:${createdAt}:${id}`, entry).catch(() => null);
 }
 
 function inviteMeta(inviteRecord) {
@@ -1004,11 +1008,32 @@ function codeKeys(type, code) {
   ];
 }
 
+async function readSetupJson(env, key) {
+  const d1Record = await readCrmD1Json(env, key).catch(() => null);
+  if (d1Record) return d1Record;
+  if (crmD1Primary(env) || !env.MOJO_SUMMITS_SETUP_STATE?.get) return null;
+  return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null) || null;
+}
+
+async function writeSetupJson(env, key, record) {
+  await writeCrmD1Json(env, key, record).catch(() => false);
+  if (!crmD1Primary(env) && env.MOJO_SUMMITS_SETUP_STATE?.put) {
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+  }
+}
+
+async function deleteSetupRecord(env, key) {
+  await deleteCrmD1Record(env, key).catch(() => false);
+  if (!crmD1Primary(env) && env.MOJO_SUMMITS_SETUP_STATE?.delete) {
+    await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+  }
+}
+
 async function readInviteCode(env, type, code) {
-  if (!env.MOJO_SUMMITS_SETUP_STATE) return null;
+  if (!env.MOJO_SUMMITS_SETUP_STATE && !crmD1Available(env)) return null;
 
   for (const key of codeKeys(type, code)) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const record = await readSetupJson(env, key);
     if (record) return { key, record };
   }
 
@@ -1028,8 +1053,12 @@ function inviteUsageObjectKey(type, code) {
 }
 
 async function readInviteUsage(env, type, code) {
+  const key = inviteUsageObjectKey(type, code);
+  const d1Record = await readCrmD1Json(env, key).catch(() => null);
+  if (d1Record) return d1Record;
+  if (crmD1Primary(env)) return null;
   if (!env.MOJO_SUMMITS_STORAGE?.get) return null;
-  const object = await env.MOJO_SUMMITS_STORAGE.get(inviteUsageObjectKey(type, code)).catch(() => null);
+  const object = await env.MOJO_SUMMITS_STORAGE.get(key).catch(() => null);
   return object ? object.json().catch(() => null) : null;
 }
 
@@ -1085,52 +1114,53 @@ async function markInviteCodeUsed(env, type, code, registration) {
   const inviteRecord = await readInviteCode(env, type, code);
   if (!inviteRecord) return;
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(
-    inviteRecord.key,
-    JSON.stringify({
-      ...inviteRecord.record,
-      type,
-      code,
-      status: "used",
-      usedAt: registration.createdAt,
-      usedBy: registration.name || registration.email,
-      usedByName: registration.name,
-      usedByEmail: registration.email,
-      registrationId: registration.id,
-      eventTime: registration.eventTime,
-      eventShowId: registration.eventShowId,
-      eventShowLabel: registration.eventShowLabel,
-      eventShowTime: registration.eventShowTime
-    })
-  );
+  await writeSetupJson(env, inviteRecord.key, {
+    ...inviteRecord.record,
+    type,
+    code,
+    status: "used",
+    usedAt: registration.createdAt,
+    usedBy: registration.name || registration.email,
+    usedByName: registration.name,
+    usedByEmail: registration.email,
+    registrationId: registration.id,
+    eventTime: registration.eventTime,
+    eventShowId: registration.eventShowId,
+    eventShowLabel: registration.eventShowLabel,
+    eventShowTime: registration.eventShowTime
+  });
 }
 
-async function markInviteCodeUsedInR2(env, type, code, registration) {
-  if (!env.MOJO_SUMMITS_STORAGE?.put) return null;
+async function writeInviteUsage(env, type, code, registration) {
   const key = inviteUsageObjectKey(type, code);
-  await env.MOJO_SUMMITS_STORAGE.put(
-    key,
-    JSON.stringify({
-      type,
-      code,
-      status: "used",
-      usedAt: registration.createdAt,
-      usedBy: registration.name || registration.email,
-      usedByName: registration.name,
-      usedByEmail: registration.email,
-      registrationId: registration.id,
-      eventName: registration.eventName,
-      eventDate: registration.eventDate,
-      eventTime: registration.eventTime,
-      eventShowId: registration.eventShowId,
-      eventShowLabel: registration.eventShowLabel,
-      eventShowTime: registration.eventShowTime
-    }),
-    {
-      httpMetadata: { contentType: "application/json; charset=utf-8" },
-      customMetadata: { area: "crm", kind: "invite-usage", type }
-    }
-  );
+  const record = {
+    type,
+    code,
+    status: "used",
+    usedAt: registration.createdAt,
+    usedBy: registration.name || registration.email,
+    usedByName: registration.name,
+    usedByEmail: registration.email,
+    registrationId: registration.id,
+    eventName: registration.eventName,
+    eventDate: registration.eventDate,
+    eventTime: registration.eventTime,
+    eventShowId: registration.eventShowId,
+    eventShowLabel: registration.eventShowLabel,
+    eventShowTime: registration.eventShowTime
+  };
+  const wroteD1 = await writeCrmD1Json(env, key, record).catch(() => false);
+  if (!crmD1Primary(env) && env.MOJO_SUMMITS_STORAGE?.put) {
+    await env.MOJO_SUMMITS_STORAGE.put(
+      key,
+      JSON.stringify(record),
+      {
+        httpMetadata: { contentType: "application/json; charset=utf-8" },
+        customMetadata: { area: "crm", kind: "invite-usage", type }
+      }
+    );
+  }
+  if (!wroteD1 && !env.MOJO_SUMMITS_STORAGE?.put) return null;
   return key;
 }
 
@@ -1173,6 +1203,18 @@ async function writeR2Registration(env, type, record, options = {}) {
   return key;
 }
 
+async function writeD1Registration(env, type, record, config = {}) {
+  if (!crmD1Available(env) || !record?.id) return null;
+  const createdAt = cleanString(record.createdAt) || new Date().toISOString();
+  const key = `${config.crmPrefix || `crm:${type}-registrant:`}${createdAt}:${record.id}`;
+  await writeCrmD1Json(env, key, {
+    ...record,
+    storage: "d1",
+    d1StoredAt: new Date().toISOString()
+  });
+  return key;
+}
+
 async function mirrorRegistrationToKv(env, type, record, config) {
   if (env?.MOJO_REGISTRATION_KV_MIRROR !== "true") return {};
 
@@ -1183,7 +1225,7 @@ async function mirrorRegistrationToKv(env, type, record, config) {
   };
   const registrationKey = `${config.crmPrefix}${record.createdAt}:${record.id}`;
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(registrationKey, JSON.stringify(storedRecord));
+  await writeSetupJson(env, registrationKey, storedRecord);
   await markInviteCodeUsed(env, type, record.inviteCode, storedRecord);
   return {
     ...contactRefs,
@@ -1240,9 +1282,9 @@ export async function upsertRegistrationContact(env, type, registration, config 
     updatedAt: now,
     updatedBy
   };
-  const emailExisting = await env.MOJO_SUMMITS_SETUP_STATE.get(emailContactKey, "json").catch(() => null);
+  const emailExisting = await readSetupJson(env, emailContactKey);
   const linkedinExisting = linkedinAliasKey && linkedinAliasKey !== emailContactKey
-    ? await env.MOJO_SUMMITS_SETUP_STATE.get(linkedinAliasKey, "json").catch(() => null)
+    ? await readSetupJson(env, linkedinAliasKey)
     : null;
   const mergedExisting = {
     ...(linkedinExisting || {}),
@@ -1257,7 +1299,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
     ? type === "partner" ? [partnerCompanyKey] : [companyKey]
     : [];
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(emailContactKey, JSON.stringify({
+  await writeSetupJson(env, emailContactKey, {
     ...mergedExisting,
     ...contact,
     id: email,
@@ -1272,13 +1314,13 @@ export async function upsertRegistrationContact(env, type, registration, config 
     source: cleanString(mergedExisting?.source) || contact.source,
     createdAt: cleanString(mergedExisting?.createdAt) || now,
     events: mergeContactEvents(mergedExisting?.events, type, registration, now)
-  }));
+  });
   if (linkedinAliasKey && linkedinAliasKey !== emailContactKey && linkedinExisting) {
-    await env.MOJO_SUMMITS_SETUP_STATE.delete(linkedinAliasKey);
+    await deleteSetupRecord(env, linkedinAliasKey);
   }
 
   for (const key of [...new Set(companyKeys)]) {
-    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const existing = await readSetupJson(env, key);
     const contacts = Array.isArray(existing?.contacts) ? existing.contacts : [];
     const contactMap = new Map(contacts.map((entry) => [
       cleanString(entry?.email).toLowerCase() || cleanString(entry?.name),
@@ -1291,7 +1333,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
       source: cleanString(previous.source) || contact.source
     });
 
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify({
+    await writeSetupJson(env, key, {
       ...(existing || {}),
       organizationName: cleanString(existing?.organizationName || existing?.company || company),
       company,
@@ -1299,7 +1341,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
       contacts: [...contactMap.values()],
       updatedAt: now,
       updatedBy
-    }));
+    });
   }
 
   return {
@@ -1327,11 +1369,11 @@ export async function handleInviteCodeValidation({ params, env }, type) {
 export async function handlePublicRegistration({ request, env }, type) {
   const config = registrationConfig[type];
   if (!config) return json({ error: "Registration type is not configured." }, { status: 500 });
-  if (!env.MOJO_SUMMITS_SETUP_STATE) {
+  if (!env.MOJO_SUMMITS_SETUP_STATE && !crmD1Available(env)) {
     return json({ error: "Registration invite storage is not configured." }, { status: 500 });
   }
-  if (!env.MOJO_SUMMITS_STORAGE) {
-    return json({ error: "Registration R2 storage is not configured." }, { status: 500 });
+  if (!env.MOJO_SUMMITS_STORAGE && !crmD1Available(env)) {
+    return json({ error: "Registration storage is not configured." }, { status: 500 });
   }
 
   const { payload, photoFile } = await readRegistrationRequest(request, type);
@@ -1412,15 +1454,20 @@ export async function handlePublicRegistration({ request, env }, type) {
       ? await storeRegistrationPhoto(env, type, record, photoFile)
       : {};
     Object.assign(record, photoRefs);
-    const contactRefs = contactRefsForRegistration(type, record);
+    const contactRefs = {
+      ...contactRefsForRegistration(type, record),
+      ...(crmD1Available(env) ? await upsertRegistrationContact(env, type, record, config).catch(() => ({})) : {})
+    };
     const storedRecord = {
       ...record,
       ...contactRefs
     };
-    const registrationKey = await writeR2Registration(env, type, storedRecord);
-    const inviteUsageKey = await markInviteCodeUsedInR2(env, type, registration.inviteCode, storedRecord);
+    const d1RegistrationKey = await writeD1Registration(env, type, storedRecord, config);
+    const r2RegistrationKey = crmD1Primary(env) ? null : await writeR2Registration(env, type, storedRecord);
+    const registrationKey = d1RegistrationKey || r2RegistrationKey;
+    const inviteUsageKey = await writeInviteUsage(env, type, registration.inviteCode, storedRecord);
     const kvRefs = await mirrorRegistrationToKv(env, type, storedRecord, config).catch(() => ({}));
-    const registrationKeys = [registrationKey, kvRefs.kvRegistrationKey].filter(Boolean);
+    const registrationKeys = [d1RegistrationKey, r2RegistrationKey, kvRefs.kvRegistrationKey].filter(Boolean);
     const confirmationEmail = type === "guest"
       ? await sendGuestRegistrationConfirmation(env, storedRecord).catch((error) => ({
           attempted: true,
@@ -1447,7 +1494,7 @@ export async function handlePublicRegistration({ request, env }, type) {
       ok: true,
       id,
       createdAt,
-      storage: "r2",
+      storage: d1RegistrationKey ? "d1" : "r2",
       confirmationEmail,
       staffNotificationEmail
     }, { status: 201 });
