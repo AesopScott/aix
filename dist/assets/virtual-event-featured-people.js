@@ -49,6 +49,10 @@
     return "Featured Guest";
   }
 
+  function roleClass(role) {
+    return String(role || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
   function cleanEventShowId(value, fallback = "") {
     const raw = String(value || "").trim().toLowerCase();
     const normalized = raw.replace(/[\s_]+/g, "-");
@@ -63,12 +67,19 @@
   }
 
   function featuredPhotoUrl(person = {}) {
-    return String(person.photoUrl || person.photoURL || person.photo || person.headshotUrl || person.bioImageUrl || person.profileImageUrl || "").trim();
+    const name = String(person.displayName || "").toLowerCase();
+    const url = String(person.photoUrl || person.photoURL || person.photo || person.headshotUrl || person.bioImageUrl || person.profileImageUrl || "").trim();
+    if ((name.includes("mathew schroeder") || name.includes("matt schroeder")) && url.includes("crm%2Fcontact-photos%2Fmatt-at-bsidesmedia.com")) {
+      return "https://mojoaisummits.com/api/crm?photo=crm%2Fregistration-photos%2Fguest%2Fmatt%2F2026-08-20T21-13-53-411Z-02f48a84-582d-49f0-a521-c666b9cf6fc2-33832.jpg";
+    }
+    return url;
   }
 
   function portraitTuneStyle(person = {}) {
     const name = String(person.displayName || "").toLowerCase();
-    if (name.includes("lokesh mathur")) return ' style="--mojo-head-position:center 24%;--mojo-head-transform:scale(1.78)"';
+    if (name.includes("imran jan")) return ' style="--mojo-head-position:center 44%;--mojo-head-transform:scale(1.24)"';
+    if (name.includes("lokesh mathur")) return ' style="--mojo-head-position:center 42%;--mojo-head-transform:scale(1.56)"';
+    if (name.includes("maman ibrahim")) return ' style="--mojo-head-position:center 48%;--mojo-head-transform:scale(1.04)"';
     if (name.includes("mathew schroeder") || name.includes("matt schroeder")) return ' style="--mojo-head-position:center 42%;--mojo-head-transform:scale(1.02)"';
     if (name.includes("mike madero")) return ' style="--mojo-head-position:center 30%;--mojo-head-transform:scale(1.28)"';
     return "";
@@ -85,7 +96,7 @@
         <div class="mojo-portrait-brand" aria-label="MOJO AI Summits"><strong>MOJO AI</strong><span>SUMMITS</span></div>
         <div class="mojo-portrait-person"><strong>${escapeHtml(name)}</strong>${titleMarkup}</div>
       </div>
-      <div class="mojo-portrait-role">${escapeHtml(role)}</div>
+      <div class="mojo-portrait-role is-${escapeHtml(roleClass(role))}">${escapeHtml(role)}</div>
       <div class="mojo-headshot-frame"><img src="${src}" alt="${escapeHtml(alt)}" loading="lazy"></div>
     </div>`;
   }
