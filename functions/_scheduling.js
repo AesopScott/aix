@@ -374,9 +374,9 @@ function oauthRedirectUri(request) {
 }
 
 function graphConfig(env) {
-  const tenantId = cleanText(env.MOJO_MS_TENANT_ID || env.MICROSOFT_TENANT_ID || env.MS_TENANT_ID, 160);
-  const clientId = cleanText(env.MOJO_MS_CLIENT_ID || env.MICROSOFT_CLIENT_ID || env.MS_CLIENT_ID, 160);
-  const clientSecret = String(env.MOJO_MS_CLIENT_SECRET || env.MICROSOFT_CLIENT_SECRET || env.MS_CLIENT_SECRET || "");
+  const tenantId = cleanText(env.MOJO_MS_TENANT_ID || env.MOJO_MAIL_TENANT_ID || env.MICROSOFT_TENANT_ID || env.MS_TENANT_ID, 160);
+  const clientId = cleanText(env.MOJO_MS_CLIENT_ID || env.MOJO_MAIL_CLIENT_ID || env.MICROSOFT_CLIENT_ID || env.MS_CLIENT_ID, 160);
+  const clientSecret = String(env.MOJO_MS_CLIENT_SECRET || env.MOJO_MAIL_CLIENT_SECRET || env.MICROSOFT_CLIENT_SECRET || env.MS_CLIENT_SECRET || "");
   return {
     tenantId,
     clientId,

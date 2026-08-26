@@ -947,10 +947,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (state.employee) await loadAvailability();
     }
 
-    async function loadAvailability() {
+    async function loadAvailability(options = {}) {
+      const preserveStatus = options.preserveStatus === true;
       state.slot = null;
       clearConfirmation();
-      setStatus("");
+      if (!preserveStatus) setStatus("");
       warningEl.classList.add("hidden");
       bookingForm.classList.add("hidden");
       slotsEl.innerHTML = '<div class="notice">Checking availability...</div>';
@@ -1037,7 +1038,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
       if (!response.ok) {
         setStatus(payload.error || "Unable to confirm booking.", "error");
-        await loadAvailability().catch(() => null);
+        await loadAvailability({ preserveStatus: true }).catch(() => null);
         return;
       }
 
