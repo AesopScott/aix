@@ -1,4 +1,9 @@
 import { sendMicrosoftGraphMail } from "../_mail.js";
+import {
+  listCrmStorageKeys,
+  readCrmStorageJson,
+  writeCrmStorageJson
+} from "../_crm-d1.js";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -243,14 +248,7 @@ async function verifySnsSignature(message) {
 }
 
 async function listKeys(env, prefix) {
-  const keys = [];
-  let cursor;
-  do {
-    const result = await env.MOJO_SUMMITS_SETUP_STATE.list({ prefix, cursor, limit: 1000 });
-    keys.push(...result.keys.map((entry) => entry.name));
-    cursor = result.list_complete ? undefined : result.cursor;
-  } while (cursor);
-  return keys;
+  return listCrmStorageKeys(env, prefix);
 }
 
 async function findMatchingContact(env, fromPhone) {
@@ -258,7 +256,7 @@ async function findMatchingContact(env, fromPhone) {
   if (!target) return null;
   const keys = await listKeys(env, "crm:contact:");
   for (const key of keys) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const record = await readCrmStorageJson(env, key);
     if (!record || phoneDigits(record.phone) !== target) continue;
     return {
       key,
@@ -296,7 +294,7 @@ async function appendContactActivity(env, contact, inbound) {
     crmUpdatedAt: now,
     crmUpdatedBy: "sms-inbound"
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(contact.key, JSON.stringify(updated));
+  await writeCrmStorageJson(env, contact.key, updated);
   return {
     key: contact.key,
     email: updated.email,

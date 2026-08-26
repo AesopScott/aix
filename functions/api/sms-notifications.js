@@ -1,3 +1,10 @@
+import {
+  crmD1Primary,
+  listCrmStorageKeys,
+  readCrmStorageJson,
+  writeCrmStorageJson
+} from "../_crm-d1.js";
+
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store"
@@ -252,23 +259,15 @@ function noteLookupWarning(warnings, source, prefix, error) {
 }
 
 async function listKeys(env, prefix, warnings) {
-  const keys = [];
-  let cursor;
-  do {
-    const result = await env.MOJO_SUMMITS_SETUP_STATE.list({ prefix, cursor, limit: 1000 }).catch((error) => {
-      noteLookupWarning(warnings, "kv", prefix, error);
-      console.warn(JSON.stringify({
-        event: "sms_notification_kv_list_failed",
-        prefix,
-        error: cleanString(error?.message || error, 240)
-      }));
-      return null;
-    });
-    if (!result) break;
-    keys.push(...result.keys.map((entry) => entry.name));
-    cursor = result.list_complete ? undefined : result.cursor;
-  } while (cursor);
-  return keys;
+  return listCrmStorageKeys(env, prefix).catch((error) => {
+    noteLookupWarning(warnings, "storage", prefix, error);
+    console.warn(JSON.stringify({
+      event: "sms_notification_storage_list_failed",
+      prefix,
+      error: cleanString(error?.message || error, 240)
+    }));
+    return [];
+  });
 }
 
 function addRecipient(map, phone, details = {}) {
@@ -327,14 +326,14 @@ async function collectRegistrations(env, warnings) {
 
   for (const prefix of registrationPrefixes) {
     for (const key of await listKeys(env, prefix, warnings)) {
-      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      const record = await readCrmStorageJson(env, key);
       if (!record) continue;
       const normalized = normalizeRegistration(key, record, prefix);
       map.set(normalized.id || key, normalized);
     }
   }
 
-  if (env.MOJO_SUMMITS_STORAGE?.list && env.MOJO_SUMMITS_STORAGE?.get) {
+  if (!crmD1Primary(env) && env.MOJO_SUMMITS_STORAGE?.list && env.MOJO_SUMMITS_STORAGE?.get) {
     for (const prefix of r2RegistrationPrefixes) {
       let cursor;
       do {
@@ -477,7 +476,7 @@ async function collectVerifiedRecipients(env) {
   }
 
   for (const key of await listKeys(env, verifiedPhonePrefix)) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const record = await readCrmStorageJson(env, key);
     if (record?.status === "verified") {
       addRecipient(map, record.phone, {
         source: "verified-phone-ledger",
@@ -489,7 +488,7 @@ async function collectVerifiedRecipients(env) {
   }
 
   for (const key of await listKeys(env, phoneDebugPrefix)) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const record = await readCrmStorageJson(env, key);
     if (record?.status === "verified" && record?.phone) {
       addRecipient(map, record.phone, {
         source: "phone-verification-debug",
@@ -501,7 +500,7 @@ async function collectVerifiedRecipients(env) {
 
   for (const prefix of registrationPrefixes) {
     for (const key of await listKeys(env, prefix)) {
-      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      const record = await readCrmStorageJson(env, key);
       if (record?.phoneVerificationStatus === "verified") {
         addRecipient(map, record.phone, {
           source: "verified-registration",
@@ -512,7 +511,7 @@ async function collectVerifiedRecipients(env) {
     }
   }
 
-  if (env.MOJO_SUMMITS_STORAGE?.list && env.MOJO_SUMMITS_STORAGE?.get) {
+  if (!crmD1Primary(env) && env.MOJO_SUMMITS_STORAGE?.list && env.MOJO_SUMMITS_STORAGE?.get) {
     for (const prefix of r2RegistrationPrefixes) {
       let cursor;
       do {
@@ -598,7 +597,7 @@ async function sendNotification(env, payload, actor) {
     throw new Error("Select an event before sending an upcoming event reminder.");
   }
   if (type === "additional-event-notice") {
-    const last = await env.MOJO_SUMMITS_SETUP_STATE.get(additionalNoticeKey, "json").catch(() => null);
+    const last = await readCrmStorageJson(env, additionalNoticeKey);
     if (last?.sentAt && Date.now() - Date.parse(last.sentAt) < additionalNoticeCooldownMs) {
       throw new Error("Additional event notices can only be sent once per month.");
     }
@@ -642,9 +641,9 @@ async function sendNotification(env, payload, actor) {
     failedCount,
     results
   };
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`sms:notification:${now}:${id}`, JSON.stringify(record));
+  await writeCrmStorageJson(env, `sms:notification:${now}:${id}`, record);
   if (type === "additional-event-notice" && sentCount) {
-    await env.MOJO_SUMMITS_SETUP_STATE.put(additionalNoticeKey, JSON.stringify({ sentAt: now, id, actor }));
+    await writeCrmStorageJson(env, additionalNoticeKey, { sentAt: now, id, actor });
   }
   return record;
 }
@@ -687,7 +686,7 @@ export async function onRequestGet({ request, env, data }) {
         ? collectEventRecipientsFromRegistrations(registrations, eventKey)
         : []
       : await collectVerifiedRecipients(env);
-  const lastAdditionalNotice = await env.MOJO_SUMMITS_SETUP_STATE.get(additionalNoticeKey, "json").catch(() => null);
+  const lastAdditionalNotice = await readCrmStorageJson(env, additionalNoticeKey);
   return json({
     ok: true,
     recipients,

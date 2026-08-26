@@ -1,3 +1,8 @@
+import {
+  readCrmStorageJson,
+  writeCrmStorageJson
+} from "../_crm-d1.js";
+
 const INDEX_KEY = "event-playbooks:index";
 const EVENT_PREFIX = "event-playbook:";
 const maxFieldLength = 4000;
@@ -79,7 +84,7 @@ function summaryFor(event) {
 }
 
 async function readIndex(env) {
-  const stored = await env.MOJO_SUMMITS_SETUP_STATE.get(INDEX_KEY, "json");
+  const stored = await readCrmStorageJson(env, INDEX_KEY);
   return Array.isArray(stored) ? stored : [];
 }
 
@@ -87,7 +92,7 @@ async function writeIndex(env, event) {
   const summary = summaryFor(event);
   const index = (await readIndex(env)).filter((item) => item?.slug !== event.slug);
   index.unshift(summary);
-  await env.MOJO_SUMMITS_SETUP_STATE.put(INDEX_KEY, JSON.stringify(index.slice(0, 200)));
+  await writeCrmStorageJson(env, INDEX_KEY, index.slice(0, 200));
   return index;
 }
 
@@ -102,7 +107,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Event title and date are required." }, { status: 400 });
   }
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${EVENT_PREFIX}${event.slug}`, JSON.stringify(event));
+  await writeCrmStorageJson(env, `${EVENT_PREFIX}${event.slug}`, event);
   const events = await writeIndex(env, event);
   return json({ event, events }, { status: 201 });
 }

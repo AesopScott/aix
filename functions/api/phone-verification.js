@@ -1,3 +1,9 @@
+import {
+  crmD1Primary,
+  readCrmStorageJson,
+  writeCrmStorageJson
+} from "../_crm-d1.js";
+
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store"
@@ -189,10 +195,10 @@ async function writePhoneDebug(env, stage, details = {}) {
 
   console.log("phone-verification", JSON.stringify(entry));
 
-  if (!env?.MOJO_SUMMITS_SETUP_STATE) return;
-  await env.MOJO_SUMMITS_SETUP_STATE.put(
+  await writeCrmStorageJson(
+    env,
     `${phoneDebugPrefix}:${entry.createdAt}:${entry.id}`,
-    JSON.stringify(entry),
+    entry,
     { expirationTtl: 7 * 24 * 60 * 60 }
   ).catch(() => null);
 }
@@ -341,16 +347,17 @@ async function publishSms(config, phone, message) {
 }
 
 async function upsertVerifiedPhone(env, phone, details = {}) {
-  if (!env?.MOJO_SUMMITS_STORAGE && !env?.MOJO_SUMMITS_SETUP_STATE) return;
+  if (!env?.MOJO_SUMMITS_STORAGE && !env?.MOJO_SUMMITS_SETUP_STATE && !env?.MOJO_SUMMITS_DB) return;
   const now = new Date().toISOString();
   const r2Key = verifiedPhoneObjectKey(phone);
   const kvKey = verifiedPhoneKey(phone);
-  const existingObject = env.MOJO_SUMMITS_STORAGE
+  const existingD1 = await readCrmStorageJson(env, kvKey);
+  const existingObject = !existingD1 && !crmD1Primary(env) && env.MOJO_SUMMITS_STORAGE
     ? await env.MOJO_SUMMITS_STORAGE.get(r2Key).catch(() => null)
     : null;
-  const existing = existingObject
+  const existing = existingD1 || (existingObject
     ? await existingObject.json().catch(() => null)
-    : await env.MOJO_SUMMITS_SETUP_STATE?.get(kvKey, "json").catch(() => null);
+    : null);
   const record = {
     ...(existing || {}),
     phone,
@@ -361,26 +368,26 @@ async function upsertVerifiedPhone(env, phone, details = {}) {
     source: cleanString(details.source || existing?.source) || "phone-verification"
   };
 
-  if (env.MOJO_SUMMITS_STORAGE?.put) {
+  await writeCrmStorageJson(env, kvKey, record);
+
+  if (!crmD1Primary(env) && env.MOJO_SUMMITS_STORAGE?.put) {
     await env.MOJO_SUMMITS_STORAGE.put(r2Key, JSON.stringify(record), {
       httpMetadata: { contentType: "application/json; charset=utf-8" },
       customMetadata: { area: "sms", kind: "verified-phone" }
     });
-    return;
   }
-
-  await env.MOJO_SUMMITS_SETUP_STATE.put(kvKey, JSON.stringify(record));
 }
 
 async function readVerifiedPhone(env, phone) {
   const r2Key = verifiedPhoneObjectKey(phone);
   const kvKey = verifiedPhoneKey(phone);
-  const existingObject = env?.MOJO_SUMMITS_STORAGE?.get
+  const existingD1 = await readCrmStorageJson(env, kvKey);
+  const existingObject = !existingD1 && !crmD1Primary(env) && env?.MOJO_SUMMITS_STORAGE?.get
     ? await env.MOJO_SUMMITS_STORAGE.get(r2Key).catch(() => null)
     : null;
-  const existing = existingObject
+  const existing = existingD1 || (existingObject
     ? await existingObject.json().catch(() => null)
-    : await env?.MOJO_SUMMITS_SETUP_STATE?.get(kvKey, "json").catch(() => null);
+    : null);
   return existing?.status === "verified" ? existing : null;
 }
 

@@ -163,7 +163,7 @@ const DEFAULT_UPCOMING_EVENTS = [
 const allowedStatuses = new Set(["new", "scott-engagement", "pending-engagement", "contacted", "confirmed", "accepted", "waitlist", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
 const allowedGuestRegistrationLifecycleStatuses = new Set(["scott-engagement", "pending-engagement", "contacted", "confirmed", "declined", "bad-fit", "invited", "registered", "alternate", "attended", "no-show"]);
 const allowedLifecycleStages = new Set(["guest", "featured-guest", "fellow", "contributing-fellow", "senior-fellow", "distinguished-fellow"]);
-const allowedRegistrationStatuses = new Set(["invited", "opened", "started", "confirmed", "declined", "canceled", "waitlisted"]);
+const allowedRegistrationStatuses = new Set(["invited", "opened", "started", "confirmed", "registered", "declined", "canceled", "waitlisted"]);
 const allowedStrategicRoles = new Set(["attendee", "speaker", "moderator", "roundtable-leader", "research-contributor", "sponsor-representative", "partner"]);
 const allowedNextActions = new Set(["none", "call", "send-invitation", "confirm-role", "follow-up", "introduce", "schedule-call", "send-brief", "membership-outreach", "partner-outreach"]);
 const allowedExecutiveFunctions = new Set(["", "ceo", "finance", "operations", "technology", "security", "ai-data", "strategy", "marketing-sales", "hr-people", "legal-compliance", "other"]);
@@ -237,6 +237,16 @@ const CRM_D1_KV_BACKFILL_PREFIXES = [
   EMAIL_LOG_PREFIX,
   REGISTRATION_DEBUG_PREFIX,
   PHONE_VERIFICATION_DEBUG_PREFIX,
+  "crm:fellowship-nomination:",
+  "event-playbooks:index",
+  "event-playbook:",
+  "invite-request:",
+  "sms:notification:",
+  "sms:notifications:",
+  "sms:inbound:",
+  "sms:opt-out:",
+  "sms:verified-phone:",
+  "virtual-event:",
   "crm:company:",
   "partner-company:",
   "member-company:",
@@ -1613,10 +1623,15 @@ function requiresSingleShowRegistrationRole(role) {
 }
 
 function cleanEventShowId(value, fallback = "both") {
-  const normalized = cleanString(value, 80).toLowerCase();
-  if (["morning", "am", "10", "10am", "10:00"].includes(normalized)) return "morning";
-  if (["afternoon", "pm", "1", "1pm", "13:00", "1:00"].includes(normalized)) return "afternoon";
-  if (["both", "all", "both-shows"].includes(normalized)) return "both";
+  const raw = cleanString(value, 80).toLowerCase();
+  const normalized = raw.replace(/[\s_]+/g, "-");
+  const compact = raw.replace(/[^a-z0-9]/g, "");
+  if (!raw) return fallback;
+  if (normalized.includes("morning") || compact.includes("10am") || compact.includes("1000am") || compact === "10") return "morning";
+  if (normalized.includes("afternoon") || compact.includes("1pm") || compact.includes("100pm") || compact.includes("1300") || compact === "1" || compact === "13") return "afternoon";
+  if (["am", "10", "10am", "1000", "1000am"].includes(compact)) return "morning";
+  if (["pm", "1", "1pm", "100", "100pm", "1300"].includes(compact)) return "afternoon";
+  if (["both", "all", "bothshows"].includes(compact)) return "both";
   return fallback;
 }
 
@@ -1782,6 +1797,7 @@ function normalizeContactRecord(key, record = {}) {
     email,
     phone: cleanString(record.phone),
     source: cleanString(record.source),
+    sourceMatrixProspectKey: cleanString(record.sourceMatrixProspectKey, 500),
     invitationSource: cleanString(record.invitationSource || record.source, 180),
     invitedBy: cleanString(record.invitedBy || record.inviter || record.invitedByName || latestEvent.invitedBy, 180),
     partnerProductTypes: cleanString(record.partnerProductTypes, 2000),
@@ -2151,7 +2167,7 @@ async function deleteR2RegistrantsForEmail(env, email) {
   return deletedKeys;
 }
 
-async function registrants(env, type = "member") {
+async function registrants(env, type = "member", options = {}) {
   const config = registrantTypes[cleanType(type)];
   const crmKeys = await listKeys(env, config.crmPrefix);
   const crmRows = await readRecords(env, crmKeys);
@@ -2161,8 +2177,11 @@ async function registrants(env, type = "member") {
   const legacyRows = (await readRecords(env, legacyKeys)).filter((row) => !ids.has(row.id));
   for (const row of legacyRows) ids.add(row.id);
   const r2Rows = (await r2Registrants(env, type)).filter((row) => !ids.has(row.id));
+  const rows = [...crmRows, ...legacyRows, ...r2Rows].filter((row) => {
+    return cleanType(type) !== "partner" || options.includeManualPartners === true || row.manualPartner !== true;
+  });
 
-  return [...crmRows, ...legacyRows, ...r2Rows].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return rows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
 function roleLabelForRow(row = {}, type = "") {
@@ -2290,11 +2309,22 @@ function contactMergeNameKey(value = "") {
     .replace(/[^a-z0-9]/g, "");
 }
 
+function pendingContactKeyForMatrixProspectKey(key = "") {
+  const cleanKey = cleanString(key, 500);
+  const isPartner = cleanKey.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX);
+  if (!isPartner && !cleanKey.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)) return "";
+  const id = cleanKey.split(":").filter(Boolean).pop();
+  if (!id) return "";
+  return `${registrantTypes.contacts.crmPrefix}pending:${isPartner ? "partner" : "guest"}-matrix-prospect:${safeFileSegment(id, "person")}`;
+}
+
 async function contactAliasKeysForInviteRecord(env, contact = {}) {
   const aliases = new Set();
   const linkedIn = linkedInProfileIdentity(contact.linkedinProfileUrl);
   const linkedinKey = linkedIn ? `${registrantTypes.contacts.crmPrefix}linkedin:${safeFileSegment(linkedIn, "profile")}` : "";
   if (linkedinKey && linkedinKey !== contact.key) aliases.add(linkedinKey);
+  const sourceMatrixContactKey = pendingContactKeyForMatrixProspectKey(contact.sourceMatrixProspectKey);
+  if (sourceMatrixContactKey && sourceMatrixContactKey !== contact.key) aliases.add(sourceMatrixContactKey);
 
   const targetNameKey = contactMergeNameKey(contact.name);
   if (!contact.email || targetNameKey.length < 6) return [...aliases];
@@ -2334,6 +2364,7 @@ function contactFromInviteRecord(row = {}, source = "guest-invite") {
     linkedinProfileUrl: cleanLinkedInProfileUrl(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl),
     invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
     source,
+    sourceMatrixProspectKey: cleanString(row.sourceMatrixProspectKey, 500),
     invitationSource: source,
     lifecycleStage,
     createdAt: cleanString(row.createdAt),
@@ -6214,7 +6245,7 @@ async function createManualPartner(env, payload = {}, actor = "") {
     seenEmails.add(contact.email);
   }
 
-  const existingRows = await registrants(env, "partner");
+  const existingRows = await registrants(env, "partner", { includeManualPartners: true });
   const records = [];
   for (const contact of contacts) {
     const existingManual = existingRows.find((row) =>
