@@ -455,6 +455,9 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
     eventShowLabel: cleanString(registration.eventShowLabel) || eventShowLabel(registration.eventShowId),
     eventShowTime: cleanString(registration.eventShowTime) || cleanString(registration.eventTime),
     inviteCode: cleanString(registration.inviteCode),
+    city: cleanString(registration.city, 120),
+    stateCountry: cleanString(registration.stateCountry || registration.state || registration.country, 120),
+    state: cleanString(registration.state || registration.stateCountry || registration.country, 120),
     intendedGuestName: cleanString(registration.intendedGuestName || registration.invitedName || registration.guestName),
     invitedName: cleanString(registration.invitedName || registration.intendedGuestName || registration.guestName),
     linkedinProfileUrl: cleanLinkedInProfileUrl(registration.linkedinProfileUrl),
@@ -539,6 +542,9 @@ function cleanPayload(payload, type = "") {
     company: cleanString(payload?.company),
     title: cleanString(payload?.title),
     industry: cleanString(payload?.industry),
+    city: cleanString(payload?.city, 120),
+    stateCountry: cleanString(payload?.stateCountry || payload?.state || payload?.country, 120),
+    state: cleanString(payload?.state || payload?.stateCountry || payload?.country, 120),
     email: cleanString(payload?.email).toLowerCase(),
     linkedinProfileUrl: cleanLinkedInProfileUrl(payload?.linkedinProfileUrl || payload?.linkedInProfileUrl || payload?.linkedinUrl || payload?.linkedInUrl),
     phone: cleanPhone(payload?.phone),
@@ -994,6 +1000,8 @@ function staffRegistrationRows(type, registration = {}) {
     ["Company", registration.company || registration.partnerCompany],
     ["Title", registration.title],
     ["Industry", registration.industry],
+    ["City", registration.city],
+    ["State / Country", registration.stateCountry || registration.state || registration.country],
     ["Ranked conversation questions", registration.eventQuestionRankingSummary],
     ["Brief photo", registration.photoUrl],
     ["Products sold", type === "partner" ? registration.partnerProductTypes : ""],
@@ -1093,6 +1101,8 @@ function validateRegistration(registration, type = "") {
   if (!registration.company) return "Company is required.";
   if (!registration.title) return "Title is required.";
   if (!registration.industry) return "Industry is required.";
+  if (type === "guest" && !registration.city) return "City is required.";
+  if (type === "guest" && !registration.stateCountry) return "State / country is required.";
   if (!registration.email) return "Email is required.";
   if (!isValidEmail(registration.email)) return "Enter a valid email address.";
   if (!registration.linkedinProfileUrl) return "LinkedIn profile URL is required.";
@@ -1367,6 +1377,9 @@ export async function upsertRegistrationContact(env, type, registration, config 
     companyKey,
     profileKey: type === "partner" ? partnerCompanyKey : companyKey,
     title: cleanString(registration.title),
+    city: cleanString(registration.city, 120),
+    stateCountry: cleanString(registration.stateCountry || registration.state || registration.country, 120),
+    state: cleanString(registration.state || registration.stateCountry || registration.country, 120),
     linkedinProfileUrl: cleanLinkedInProfileUrl(registration.linkedinProfileUrl),
     phone: cleanString(registration.phone),
     photoUrl: cleanString(registration.photoUrl),
@@ -1413,6 +1426,9 @@ export async function upsertRegistrationContact(env, type, registration, config 
     company: contact.company || cleanString(mergedExisting?.company),
     companyKey: contact.companyKey || cleanString(mergedExisting?.companyKey),
     profileKey: contact.profileKey || cleanString(mergedExisting?.profileKey),
+    city: contact.city || cleanString(mergedExisting?.city),
+    stateCountry: contact.stateCountry || cleanString(mergedExisting?.stateCountry || mergedExisting?.state || mergedExisting?.country),
+    state: contact.state || cleanString(mergedExisting?.state || mergedExisting?.stateCountry || mergedExisting?.country),
     photoUrl: contact.photoUrl || cleanString(mergedExisting?.photoUrl),
     photoKey: contact.photoKey || cleanString(mergedExisting?.photoKey),
     photoOriginalName: contact.photoOriginalName || cleanString(mergedExisting?.photoOriginalName),
