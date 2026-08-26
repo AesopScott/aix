@@ -1,3 +1,10 @@
+import {
+  deleteCrmStorageRecord,
+  listCrmStorageKeys,
+  readCrmStorageJson,
+  writeCrmStorageJson
+} from "../../_crm-d1.js";
+
 const INDEX_KEY = "event-playbooks:index";
 const EVENT_PREFIX = "event-playbook:";
 const maxFieldLength = 4000;
@@ -79,24 +86,11 @@ function summaryFor(event) {
 }
 
 async function listKeys(env, prefix) {
-  const keys = [];
-  let cursor;
-
-  do {
-    const result = await env.MOJO_SUMMITS_SETUP_STATE.list({
-      prefix,
-      cursor,
-      limit: 1000
-    });
-    keys.push(...result.keys.map((entry) => entry.name));
-    cursor = result.list_complete ? undefined : result.cursor;
-  } while (cursor);
-
-  return keys;
+  return listCrmStorageKeys(env, prefix);
 }
 
 async function readIndex(env) {
-  const stored = await env.MOJO_SUMMITS_SETUP_STATE.get(INDEX_KEY, "json");
+  const stored = await readCrmStorageJson(env, INDEX_KEY);
   return Array.isArray(stored) ? stored : [];
 }
 
@@ -104,7 +98,7 @@ async function writeIndex(env, event) {
   const summary = summaryFor(event);
   const index = (await readIndex(env)).filter((item) => item?.slug !== event.slug);
   index.unshift(summary);
-  await env.MOJO_SUMMITS_SETUP_STATE.put(INDEX_KEY, JSON.stringify(index.slice(0, 200)));
+  await writeCrmStorageJson(env, INDEX_KEY, index.slice(0, 200));
   return index;
 }
 
@@ -157,7 +151,7 @@ async function registrantsForEvent(env, event) {
       const keys = await listKeys(env, prefix);
       const rows = await Promise.all(
         keys.map(async (key) => {
-          const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+          const record = await readCrmStorageJson(env, key);
           return record && registrantMatchesEvent(record, event) ? publicRegistrant(record, type) : null;
         })
       );
@@ -170,7 +164,7 @@ async function registrantsForEvent(env, event) {
 
 export async function onRequestGet({ env, params }) {
   const slug = slugify(params.slug);
-  const event = await env.MOJO_SUMMITS_SETUP_STATE.get(`${EVENT_PREFIX}${slug}`, "json");
+  const event = await readCrmStorageJson(env, `${EVENT_PREFIX}${slug}`);
   if (!event) return json({ error: "Event playbook not found." }, { status: 404 });
   event.registrants = await registrantsForEvent(env, event);
   return json({ event });
@@ -183,15 +177,15 @@ export async function onRequestPut({ request, env, params }) {
     return json({ error: "Event title and date are required." }, { status: 400 });
   }
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`${EVENT_PREFIX}${event.slug}`, JSON.stringify(event));
+  await writeCrmStorageJson(env, `${EVENT_PREFIX}${event.slug}`, event);
   const events = await writeIndex(env, event);
   return json({ event, events });
 }
 
 export async function onRequestDelete({ env, params }) {
   const slug = slugify(params.slug);
-  await env.MOJO_SUMMITS_SETUP_STATE.delete(`${EVENT_PREFIX}${slug}`);
+  await deleteCrmStorageRecord(env, `${EVENT_PREFIX}${slug}`);
   const index = (await readIndex(env)).filter((item) => item?.slug !== slug);
-  await env.MOJO_SUMMITS_SETUP_STATE.put(INDEX_KEY, JSON.stringify(index.slice(0, 200)));
+  await writeCrmStorageJson(env, INDEX_KEY, index.slice(0, 200));
   return json({ deleted: slug, events: index });
 }

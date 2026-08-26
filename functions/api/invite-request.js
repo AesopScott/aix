@@ -1,4 +1,8 @@
 import { upsertRegistrationContact } from "../_registration-crm.js";
+import {
+  readCrmStorageJson,
+  writeCrmStorageJson
+} from "../_crm-d1.js";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -348,7 +352,7 @@ async function storePartnerCandidateContact(env, record) {
   });
 
   if (refs.contactKey) {
-    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(refs.contactKey, "json").catch(() => null);
+    const existing = await readCrmStorageJson(env, refs.contactKey);
     const events = Array.isArray(existing?.events)
       ? existing.events.map((event) => event.registrationId === record.id
         ? {
@@ -359,7 +363,7 @@ async function storePartnerCandidateContact(env, record) {
           }
         : event)
       : [];
-    await env.MOJO_SUMMITS_SETUP_STATE.put(refs.contactKey, JSON.stringify({
+    await writeCrmStorageJson(env, refs.contactKey, {
       ...(existing || {}),
       partnerTier: "Partner Candidate",
       contactStatus: "partner candidate",
@@ -367,24 +371,24 @@ async function storePartnerCandidateContact(env, record) {
       source: "partner-subscription-request",
       crmStatus: "new",
       events
-    }));
+    });
   }
 
   if (refs.profileKey) {
-    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(refs.profileKey, "json").catch(() => null);
+    const existing = await readCrmStorageJson(env, refs.profileKey);
     if (existing) {
       const contacts = Array.isArray(existing.contacts)
         ? existing.contacts.map((contact) => cleanString(contact?.email).toLowerCase() === record.email
           ? { ...contact, partnerTier: "Partner Candidate", registrationType: "Partner Candidate" }
           : contact)
         : [];
-      await env.MOJO_SUMMITS_SETUP_STATE.put(refs.profileKey, JSON.stringify({
+      await writeCrmStorageJson(env, refs.profileKey, {
         ...existing,
         tier: cleanString(existing.tier) || "Partner Candidate",
         contacts,
         updatedAt: record.createdAt,
         updatedBy: "partner-subscription-request"
-      }));
+      });
     }
   }
 
@@ -415,7 +419,7 @@ export async function onRequestPost({ request, env }) {
     ...inviteRequest
   };
 
-  await env.MOJO_SUMMITS_SETUP_STATE.put(`invite-request:${createdAt}:${id}`, JSON.stringify(record));
+  await writeCrmStorageJson(env, `invite-request:${createdAt}:${id}`, record);
   const contact = record.type === "partner-subscription"
     ? await storePartnerCandidateContact(env, record)
     : null;

@@ -44,16 +44,33 @@ function normalizeRecordForIndex(key = "", record = {}) {
     "crm:partner-matrix-prospect:": "partner-matrix-prospect",
     "crm:partner-prospect-company:": "partner-prospect-company",
     "crm:partner-prospect-person:": "partner-prospect-person",
+    "crm:partner-prospect-audit:": "partner-prospect-audit",
+    "crm:partner-prospect-debug:": "partner-prospect-debug",
     "crm:partner-prospect-source:": "partner-prospect-source",
+    "crm:company:": "company",
+    "partner-company:": "partner-company",
+    "member-company:": "member-company",
+    "guest-company:": "guest-company",
     "crm:email-log:": "email-log",
     "crm:registration-debug:": "registration-debug",
     "crm:phone-verification-debug:": "phone-verification-debug",
+    "crm:fellowship-nomination:": "fellowship-nomination",
+    "event-playbooks:index": "event-playbook-index",
+    "event-playbook:": "event-playbook",
+    "invite-request:": "invite-request",
+    "sms:notification:": "sms-notification",
+    "sms:notifications:": "sms-notification-state",
+    "sms:inbound:": "sms-inbound",
+    "sms:opt-out:": "sms-opt-out",
+    "sms:verified-phone:": "verified-phone",
+    "virtual-event:": "virtual-event-state",
     "crm/invite-usage/": "invite-usage",
     "crm/registrations/": "registration",
     "crm-overflow/registrations/": "registration-overflow"
   }).find(([candidate]) => key.startsWith(candidate));
 
-  const type = cleanString(record.type || record.crmType || prefix?.[1], 120);
+  const keyType = prefix?.[1] || "";
+  const type = cleanString(keyType || record.crmType || record.type, 120);
   return {
     namespace: prefix?.[1] || "crm",
     type,
@@ -149,4 +166,41 @@ export async function deleteCrmD1Record(env, key) {
   if (!db?.prepare || !cleanKey) return false;
   await db.prepare(`DELETE FROM ${crmD1Table} WHERE key = ?`).bind(cleanKey).run();
   return true;
+}
+
+export async function listCrmStorageKeys(env, prefix) {
+  const keys = await listCrmD1Keys(env, prefix).catch(() => []);
+  const store = env?.MOJO_SUMMITS_SETUP_STATE;
+  if (crmD1Primary(env) || !store?.list) return [...new Set(keys)];
+
+  let cursor;
+  do {
+    const result = await store.list({ prefix, cursor, limit: 1000 }).catch(() => null);
+    if (!result) break;
+    keys.push(...(result.keys || []).map((entry) => cleanString(entry.name)).filter(Boolean));
+    cursor = result.list_complete ? undefined : result.cursor;
+  } while (cursor);
+
+  return [...new Set(keys)];
+}
+
+export async function readCrmStorageJson(env, key) {
+  const d1Record = await readCrmD1Json(env, key).catch(() => null);
+  if (d1Record) return d1Record;
+  if (crmD1Primary(env) || !env?.MOJO_SUMMITS_SETUP_STATE?.get) return null;
+  return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null) || null;
+}
+
+export async function writeCrmStorageJson(env, key, record = {}, options = {}) {
+  await writeCrmD1Json(env, key, record).catch(() => false);
+  if (!crmD1Primary(env) && env?.MOJO_SUMMITS_SETUP_STATE?.put) {
+    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record || {}), options);
+  }
+}
+
+export async function deleteCrmStorageRecord(env, key) {
+  await deleteCrmD1Record(env, key).catch(() => false);
+  if (!crmD1Primary(env) && env?.MOJO_SUMMITS_SETUP_STATE?.delete) {
+    await env.MOJO_SUMMITS_SETUP_STATE.delete(key);
+  }
 }

@@ -43,23 +43,64 @@
   }
 
   function roleLabel(value) {
-    const raw = String(value || "Featured guest").trim();
-    return raw
-      .replace(/[-_]+/g, " ")
-      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    const raw = String(value || "Featured guest").trim().toLowerCase();
+    if (raw.includes("author")) return "Featured Author";
+    if (raw.includes("partner") || raw.includes("sponsor")) return "Featured Partner";
+    return "Featured Guest";
+  }
+
+  function cleanEventShowId(value, fallback = "") {
+    const raw = String(value || "").trim().toLowerCase();
+    const normalized = raw.replace(/[\s_]+/g, "-");
+    const compact = raw.replace(/[^a-z0-9]/g, "");
+    if (!raw) return fallback;
+    if (normalized.includes("morning") || compact.includes("10am") || compact.includes("1000am") || compact === "10") return "morning";
+    if (normalized.includes("afternoon") || compact.includes("1pm") || compact.includes("100pm") || compact.includes("1300") || compact === "1" || compact === "13") return "afternoon";
+    if (["am", "10", "10am", "1000", "1000am"].includes(compact)) return "morning";
+    if (["pm", "1", "1pm", "100", "100pm", "1300"].includes(compact)) return "afternoon";
+    if (["both", "all", "bothshows"].includes(compact)) return "both";
+    return fallback;
+  }
+
+  function featuredPhotoUrl(person = {}) {
+    return String(person.photoUrl || person.photoURL || person.photo || person.headshotUrl || person.bioImageUrl || person.profileImageUrl || "").trim();
+  }
+
+  function portraitTuneStyle(person = {}) {
+    const name = String(person.displayName || "").toLowerCase();
+    if (name.includes("lokesh mathur")) return ' style="--mojo-head-position:center 24%;--mojo-head-transform:scale(1.78)"';
+    if (name.includes("mathew schroeder") || name.includes("matt schroeder")) return ' style="--mojo-head-position:center 42%;--mojo-head-transform:scale(1.02)"';
+    if (name.includes("mike madero")) return ' style="--mojo-head-position:center 30%;--mojo-head-transform:scale(1.28)"';
+    return "";
+  }
+
+  function brandedPortraitMarkup(person, src, alt) {
+    const style = portraitTuneStyle(person);
+    const name = person.displayName || "Featured guest";
+    const role = roleLabel(person.roleLabel);
+    const title = role === "Featured Author" ? "" : person.title || "Title pending";
+    const titleMarkup = title ? `<span>${escapeHtml(title)}</span>` : "";
+    return `<div class="mojo-portrait-card"${style}>
+      <div class="mojo-portrait-top">
+        <div class="mojo-portrait-brand" aria-label="MOJO AI Summits"><strong>MOJO AI</strong><span>SUMMITS</span></div>
+        <div class="mojo-portrait-person"><strong>${escapeHtml(name)}</strong>${titleMarkup}</div>
+      </div>
+      <div class="mojo-portrait-role">${escapeHtml(role)}</div>
+      <div class="mojo-headshot-frame"><img src="${src}" alt="${escapeHtml(alt)}" loading="lazy"></div>
+    </div>`;
   }
 
   function photoMarkup(person) {
+    const photoUrl = featuredPhotoUrl(person);
+    if (photoUrl) {
+      const alt = person.displayName ? `${person.displayName} MOJO AI Summits featured guest portrait` : "MOJO AI Summits featured guest portrait";
+      const src = escapeHtml(photoUrl);
+      return brandedPortraitMarkup(person, src, alt);
+    }
     const framedPortrait = framedPortraitUrl(person);
     if (framedPortrait) {
       const alt = person.displayName ? `${person.displayName} MOJO AI Summits featured guest portrait` : "MOJO AI Summits featured guest portrait";
       return `<img class="featured-lineup-photo-primary is-framed-portrait" src="${escapeHtml(framedPortrait)}" alt="${escapeHtml(alt)}" loading="lazy">`;
-    }
-    if (person.photoUrl) {
-      const alt = person.displayName ? `${person.displayName} photo` : "Featured participant photo";
-      const src = escapeHtml(person.photoUrl);
-      const style = photoTuneStyle(person);
-      return `<img class="featured-lineup-photo-fill" src="${src}" alt="" aria-hidden="true" loading="lazy"><img class="featured-lineup-photo-primary" src="${src}" alt="${escapeHtml(alt)}" loading="lazy"${style}>`;
     }
     return `<span class="featured-lineup-initials" aria-hidden="true">${escapeHtml(initials(person.displayName))}</span>`;
   }
@@ -78,8 +119,8 @@
   }
 
   function guestMatchesShow(person, showId) {
-    const guestShow = String(person.eventShowId || "").toLowerCase();
-    if (!guestShow) return showId === "afternoon";
+    const guestShow = cleanEventShowId(person.eventShowId || person.eventShowLabel || person.eventShowTime || person.showId || person.show, "");
+    if (!guestShow) return false;
     return guestShow === "both" || guestShow === showId;
   }
 
@@ -91,20 +132,9 @@
   }
 
   function card(person) {
-    const company = person.companyAllowed && person.company ? person.company : "";
-    const industryFallback = person.companyAllowed ? "Industry pending" : "Company withheld";
     return `
       <article class="featured-lineup-card">
         <div class="featured-lineup-photo">${photoMarkup(person)}</div>
-        <div class="featured-lineup-body">
-          <span class="featured-lineup-role">${escapeHtml(roleLabel(person.roleLabel))}</span>
-          <h3>${escapeHtml(person.displayName || "Name pending")}</h3>
-          <div class="featured-lineup-meta">
-            ${meta("Title", person.title, "Title pending")}
-            ${meta(company ? "Company" : "Industry", company || person.industry, industryFallback)}
-          </div>
-          <p class="featured-lineup-note">Public details reflect the registration profile approved for this event.</p>
-        </div>
       </article>
     `;
   }
@@ -143,7 +173,7 @@
 
       const showRows = showDefinitions.map((show) => ({ show, guests: showLineupById(payload, show.id) }));
       const totalFeatured = showRows.reduce((sum, row) => sum + row.guests.length, 0);
-      const withPhotos = showRows.reduce((sum, row) => sum + row.guests.filter((guest) => guest.photoUrl).length, 0);
+      const withPhotos = showRows.reduce((sum, row) => sum + row.guests.filter((guest) => featuredPhotoUrl(guest)).length, 0);
       if (count) count.textContent = `${totalFeatured} featured across both shows${withPhotos ? `, ${withPhotos} with photos` : ""}`;
 
       grid.innerHTML = `<div class="featured-show-lineups">${showRows.map((row) => showSection(row.show, row.guests)).join("")}</div>`;

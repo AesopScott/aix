@@ -1,5 +1,11 @@
 import { getSessionUser } from "../_auth.js";
 import { json } from "../_access-control.js";
+import {
+  deleteCrmStorageRecord,
+  listCrmStorageKeys,
+  readCrmStorageJson,
+  writeCrmStorageJson
+} from "../_crm-d1.js";
 
 const MEMBER_PREFIX = "crm:member-registrant:";
 const MEMBER_LEGACY_PREFIX = "member-registration:";
@@ -109,21 +115,14 @@ function nextLevel(tier) {
 }
 
 async function listKeys(env, prefix) {
-  const keys = [];
-  let cursor;
-  do {
-    const result = await env.MOJO_SUMMITS_SETUP_STATE.list({ prefix, cursor, limit: 1000 });
-    keys.push(...result.keys.map((entry) => entry.name));
-    cursor = result.list_complete ? undefined : result.cursor;
-  } while (cursor);
-  return keys;
+  return listCrmStorageKeys(env, prefix);
 }
 
 async function recordsForPrefix(env, prefix) {
   const keys = await listKeys(env, prefix);
   const records = await Promise.all(
     keys.map(async (key) => {
-      const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+      const record = await readCrmStorageJson(env, key);
       return record ? { key, record } : null;
     })
   );
@@ -242,7 +241,7 @@ async function codeExists(env, code) {
     `member-invite:${code}`
   ];
   for (const key of keys) {
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const record = await readCrmStorageJson(env, key);
     if (record) return true;
   }
   return false;
@@ -351,12 +350,12 @@ async function deleteMemberOwnedInvite(env, email, payload = {}) {
     throw new Error("Invite link was not found.");
   }
 
-  const record = await env.MOJO_SUMMITS_SETUP_STATE.get(candidate, "json").catch(() => null);
+  const record = await readCrmStorageJson(env, candidate);
   if (!record || cleanEmail(record.createdByMemberEmail) !== email) {
     throw new Error("Invite link was not found.");
   }
 
-  await env.MOJO_SUMMITS_SETUP_STATE.delete(candidate);
+  await deleteCrmStorageRecord(env, candidate);
 }
 
 async function fellowshipNominations(env) {
@@ -597,14 +596,14 @@ export async function onRequestPost({ request, env }) {
   const createdAt = new Date().toISOString();
 
   if (action === "update-nomination-consent") {
-    const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(access.profile.key, "json").catch(() => null);
+    const existing = await readCrmStorageJson(env, access.profile.key);
     if (!existing) return json({ error: "Member profile record could not be updated." }, { status: 404 });
     const record = {
       ...existing,
       openToFellowshipNomination: Boolean(payload?.openToFellowshipNomination),
       fellowshipNominationConsentUpdatedAt: createdAt
     };
-    await env.MOJO_SUMMITS_SETUP_STATE.put(access.profile.key, JSON.stringify(record));
+    await writeCrmStorageJson(env, access.profile.key, record);
     return json({ ok: true, openToFellowshipNomination: record.openToFellowshipNomination });
   }
 
@@ -652,7 +651,7 @@ export async function onRequestPost({ request, env }) {
       votes: {}
     };
     const key = `${FELLOWSHIP_NOMINATION_PREFIX}${id}`;
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+    await writeCrmStorageJson(env, key, record);
     return json({ ok: true, nomination: { ...record, key } }, { status: 201 });
   }
 
@@ -661,7 +660,7 @@ export async function onRequestPost({ request, env }) {
     const vote = cleanString(payload?.vote, 10);
     if (!["yes", "no"].includes(vote)) return json({ error: "Vote must be yes or no." }, { status: 400 });
     const key = `${FELLOWSHIP_NOMINATION_PREFIX}${id}`;
-    const record = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+    const record = await readCrmStorageJson(env, key);
     if (!record || cleanString(record.status || "active") !== "active") {
       return json({ error: "Fellowship nomination is not open for voting." }, { status: 404 });
     }
@@ -675,7 +674,7 @@ export async function onRequestPost({ request, env }) {
       voterTier: access.profile.tier,
       votedAt: createdAt
     };
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+    await writeCrmStorageJson(env, key, record);
     return json({ ok: true });
   }
 
@@ -698,7 +697,7 @@ export async function onRequestPost({ request, env }) {
       intendedGuestEmail: cleanEmail(payload?.guestEmail)
     };
     const key = `${GUEST_INVITE_PREFIX}${code}`;
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+    await writeCrmStorageJson(env, key, record);
     return json({ ok: true, invite: publicInvite({ key, record }, request.url) }, { status: 201 });
   }
 
@@ -734,7 +733,7 @@ export async function onRequestPost({ request, env }) {
       nominationNote: cleanString(payload?.nominationNote, 1000)
     };
     const key = `${MEMBER_INVITE_PREFIX}${code}`;
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
+    await writeCrmStorageJson(env, key, record);
     return json({ ok: true, invite: publicInvite({ key, record }, request.url) }, { status: 201 });
   }
 

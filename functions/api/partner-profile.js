@@ -1,4 +1,8 @@
 import { getSessionUser } from "../_auth.js";
+import {
+  listCrmStorageKeys,
+  readCrmStorageJson
+} from "../_crm-d1.js";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -79,24 +83,11 @@ function companyFromRecord(record = {}) {
 }
 
 async function listKeys(env, prefix) {
-  const keys = [];
-  let cursor;
-
-  do {
-    const result = await env.MOJO_SUMMITS_SETUP_STATE.list({
-      prefix,
-      cursor,
-      limit: 1000
-    });
-    keys.push(...result.keys.map((entry) => entry.name));
-    cursor = result.list_complete ? undefined : result.cursor;
-  } while (cursor);
-
-  return keys;
+  return listCrmStorageKeys(env, prefix);
 }
 
 async function getJson(env, key) {
-  return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
+  return readCrmStorageJson(env, key);
 }
 
 async function recordsForPrefixes(env, prefixes) {

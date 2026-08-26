@@ -3,7 +3,9 @@ import {
   crmD1Available,
   crmD1Primary,
   readCrmD1Json,
+  readCrmStorageJson,
   writeCrmD1Json,
+  writeCrmStorageJson,
   deleteCrmD1Record
 } from "./_crm-d1.js";
 
@@ -301,10 +303,15 @@ function cleanOptionalRegistrationType(value) {
 }
 
 function cleanEventShowId(value, fallback = "") {
-  const normalized = cleanString(value).toLowerCase();
-  if (["morning", "am", "10", "10am", "10:00"].includes(normalized)) return "morning";
-  if (["afternoon", "pm", "1", "1pm", "13:00", "1:00"].includes(normalized)) return "afternoon";
-  if (["both", "all", "both-shows"].includes(normalized)) return "both";
+  const raw = cleanString(value).toLowerCase();
+  const normalized = raw.replace(/[\s_]+/g, "-");
+  const compact = raw.replace(/[^a-z0-9]/g, "");
+  if (!raw) return fallback;
+  if (normalized.includes("morning") || compact.includes("10am") || compact.includes("1000am") || compact === "10") return "morning";
+  if (normalized.includes("afternoon") || compact.includes("1pm") || compact.includes("100pm") || compact.includes("1300") || compact === "1" || compact === "13") return "afternoon";
+  if (["am", "10", "10am", "1000", "1000am"].includes(compact)) return "morning";
+  if (["pm", "1", "1pm", "100", "100pm", "1300"].includes(compact)) return "afternoon";
+  if (["both", "all", "bothshows"].includes(compact)) return "both";
   return fallback;
 }
 
@@ -1059,12 +1066,13 @@ async function sendStaffRegistrationNotification(env, type, registration = {}) {
 async function readVerifiedPhone(env, phone) {
   const r2Key = verifiedPhoneObjectKey(phone);
   const kvKey = verifiedPhoneKey(phone);
-  const existingObject = env?.MOJO_SUMMITS_STORAGE?.get
+  const existingD1 = await readCrmStorageJson(env, kvKey);
+  const existingObject = !existingD1 && !crmD1Primary(env) && env?.MOJO_SUMMITS_STORAGE?.get
     ? await env.MOJO_SUMMITS_STORAGE.get(r2Key).catch(() => null)
     : null;
-  const existing = existingObject
+  const existing = existingD1 || (existingObject
     ? await existingObject.json().catch(() => null)
-    : await env?.MOJO_SUMMITS_SETUP_STATE?.get(kvKey, "json").catch(() => null);
+    : null);
   return existing?.status === "verified" ? existing : null;
 }
 
@@ -1113,17 +1121,11 @@ function codeKeys(type, code) {
 }
 
 async function readSetupJson(env, key) {
-  const d1Record = await readCrmD1Json(env, key).catch(() => null);
-  if (d1Record) return d1Record;
-  if (crmD1Primary(env) || !env.MOJO_SUMMITS_SETUP_STATE?.get) return null;
-  return env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null) || null;
+  return readCrmStorageJson(env, key);
 }
 
 async function writeSetupJson(env, key, record) {
-  await writeCrmD1Json(env, key, record).catch(() => false);
-  if (!crmD1Primary(env) && env.MOJO_SUMMITS_SETUP_STATE?.put) {
-    await env.MOJO_SUMMITS_SETUP_STATE.put(key, JSON.stringify(record));
-  }
+  await writeCrmStorageJson(env, key, record);
 }
 
 async function deleteSetupRecord(env, key) {

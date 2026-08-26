@@ -61,15 +61,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 </style>
 <style>
 .guest-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.guest-card{position:relative;min-height:330px;padding:18px;background:linear-gradient(180deg,rgba(27,35,51,.76),rgba(10,15,30,.74));border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
-.guest-card:after{content:"";position:absolute;inset:auto 0 0 0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,230,255,.72),transparent)}
+.guest-card{position:relative;min-height:0;padding:0;background:linear-gradient(180deg,rgba(27,35,51,.76),rgba(10,15,30,.74));border:1px solid var(--line);border-radius:8px;overflow:hidden;display:block}
+.guest-card:after{display:none}
 .guest-card.is-placeholder{background:linear-gradient(180deg,rgba(10,15,30,.58),rgba(10,15,30,.38));border-style:dashed}
 .guest-card.is-placeholder h3{color:rgba(255,255,255,.74)}
-.guest-photo{position:relative;height:clamp(230px,24vw,280px);flex:0 0 clamp(230px,24vw,280px);margin:-18px -18px 18px;background:linear-gradient(180deg,rgba(5,9,19,.86),rgba(10,15,30,.72));border-bottom:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
+.guest-photo{position:relative;height:clamp(230px,24vw,280px);margin:0;background:linear-gradient(180deg,rgba(5,9,19,.86),rgba(10,15,30,.72));border-bottom:0;border-radius:8px;display:grid;place-items:center;overflow:hidden}
 .guest-photo img{display:block}
 .guest-photo-fill{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(18px) saturate(.78) contrast(1.02);opacity:.28;transform:scale(1.08)}
 .guest-photo-primary{position:relative;z-index:1;width:100%;height:100%;object-fit:contain;object-position:var(--guest-photo-position,center top);filter:saturate(.94) contrast(1.04);transform:var(--guest-photo-transform,none);transform-origin:center center}
 .guest-photo-primary.is-framed-portrait{object-fit:cover;object-position:center center;filter:none;transform:none}
+.mojo-portrait-card{position:relative;z-index:1;width:100%;height:100%;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:10px;align-items:center;padding:18px 22px;background:linear-gradient(135deg,rgba(22,102,255,.2),rgba(0,230,255,.06)),linear-gradient(180deg,rgba(10,15,30,.98),rgba(27,35,51,.92));overflow:hidden}
+.mojo-portrait-card:before{content:"";position:absolute;inset:8px;border:1px solid rgba(0,230,255,.4);border-radius:8px;pointer-events:none}
+.mojo-portrait-card:after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:72px 72px;opacity:.4;pointer-events:none}
+.mojo-portrait-top{position:relative;z-index:1;width:100%;display:grid;grid-template-columns:minmax(100px,.78fr) minmax(120px,1fr);gap:14px;align-items:start}
+.mojo-portrait-brand{min-width:0;text-transform:uppercase;line-height:1}.mojo-portrait-brand strong{display:block;width:max-content;max-width:100%;font-family:Space Grotesk,sans-serif;font-size:clamp(20px,2.3vw,27px);font-weight:900;letter-spacing:.06em;background:linear-gradient(90deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}.mojo-portrait-brand span{display:block;margin-top:4px;color:var(--white);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:800;letter-spacing:.38em}
+.mojo-portrait-person{min-width:0;text-align:right}.mojo-portrait-person strong{display:block;color:var(--white);font-family:Space Grotesk,sans-serif;font-size:clamp(15px,1.5vw,19px);font-weight:800;line-height:1.08}.mojo-portrait-person span{display:block;margin-top:5px;color:rgba(222,235,255,.76);font-size:10px;font-weight:700;line-height:1.25}
+.mojo-portrait-role{position:relative;z-index:1;justify-self:start;width:fit-content;max-width:100%;padding:6px 9px;border:1px solid rgba(0,230,255,.34);border-radius:4px;color:var(--cyan);background:rgba(0,230,255,.08);font-family:Space Grotesk,sans-serif;font-size:9px;font-weight:800;letter-spacing:.15em;line-height:1.2;text-transform:uppercase}
+.mojo-headshot-frame{position:relative;z-index:1;justify-self:center;align-self:center;width:min(50%,154px);aspect-ratio:1;border:4px solid var(--cyan);border-radius:999px;padding:5px;background:rgba(10,15,30,.88);box-shadow:0 0 0 2px rgba(22,102,255,.7),0 0 26px rgba(0,230,255,.25);overflow:hidden}
+.mojo-headshot-frame img{width:100%;height:100%;border-radius:999px;object-fit:cover;object-position:var(--mojo-head-position,center 28%);transform:var(--mojo-head-transform,scale(1.32));transform-origin:center center;filter:saturate(.96) contrast(1.03)}
 .guest-initials{width:74px;height:74px;border:1px solid rgba(0,230,255,.58);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-family:Orbitron,sans-serif;font-weight:800;letter-spacing:.08em;background:radial-gradient(circle,rgba(0,230,255,.16),rgba(22,102,255,.08));box-shadow:0 0 28px rgba(0,230,255,.18)}
 .guest-card.is-placeholder .guest-initials{border-style:dashed;color:rgba(0,230,255,.66);background:rgba(0,230,255,.045);box-shadow:none}
 .guest-card h3{font-family:Space Grotesk,sans-serif;font-size:22px;line-height:1.2}
@@ -77,8 +86,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 .guest-meta span{display:flex;gap:8px;align-items:flex-start}
 .guest-meta strong{min-width:72px;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
 .guest-note{margin-top:auto;min-height:38px;padding-top:14px;color:var(--dim);font-size:12px;line-height:1.55}
-.slot-action{width:100%;min-height:44px;flex:0 0 auto;margin-top:18px;border:1px solid rgba(0,230,255,.58);border-radius:4px;background:rgba(0,230,255,.08);color:var(--cyan);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
-.slot-action:hover{background:var(--cyan);border-color:var(--cyan);color:#031018}
 .guest-source{display:inline-flex;margin-bottom:16px;padding:7px 10px;border:1px solid rgba(0,230,255,.28);border-radius:999px;color:var(--cyan);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
 .show-lineups{display:grid;gap:38px}
 .show-lineup{display:grid;gap:18px}
@@ -92,20 +99,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 .speaker-count div{min-height:86px;padding:18px;background:rgba(10,15,30,.82)}
 .speaker-count strong{display:block;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:28px;line-height:1}
 .speaker-count span{display:block;margin-top:9px;color:var(--muted);font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:700;letter-spacing:.13em;line-height:1.45;text-transform:uppercase}
-.registered-guests{margin-top:34px;border-top:1px solid var(--line);padding-top:30px}
-.registered-head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:16px}
-.registered-head h3{font-family:Space Grotesk,sans-serif;font-size:22px;line-height:1.2}
-.registered-head p{max-width:520px;color:var(--muted);font-size:14px;line-height:1.6}
-.registered-list{display:grid;border:1px solid var(--line);background:var(--line)}
-.registered-row{display:grid;grid-template-columns:minmax(160px,.8fr) minmax(160px,.65fr) minmax(160px,.7fr);gap:1px;background:var(--line)}
-.registered-row span{min-height:54px;padding:14px 16px;background:rgba(10,15,30,.82);color:rgba(255,255,255,.84);font-size:14px;line-height:1.45}
-.registered-row strong{display:block;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
-.registered-empty{padding:18px;background:rgba(10,15,30,.82);color:var(--dim);font-size:13px;line-height:1.6}
-.slot-modal[hidden]{display:none}.slot-modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:22px;background:rgba(5,9,19,.78);backdrop-filter:blur(14px)}.slot-dialog{width:min(640px,100%);max-height:calc(100vh - 44px);overflow:auto;padding:26px;background:linear-gradient(180deg,rgba(27,35,51,.98),rgba(10,15,30,.98));border:1px solid rgba(0,230,255,.34);border-radius:8px;box-shadow:0 24px 90px rgba(0,0,0,.58)}.slot-dialog-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}.slot-dialog h3{font-family:Fraunces,serif;font-size:32px;line-height:1.05}.slot-dialog p{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.6}.slot-close{width:38px;height:38px;border:1px solid var(--line);border-radius:4px;background:rgba(10,15,30,.7);color:var(--white);font-size:22px;line-height:1;cursor:pointer}.slot-form{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.slot-form label{display:grid;gap:7px;color:var(--muted);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.slot-form input,.slot-form textarea{width:100%;border:1px solid var(--line);border-radius:4px;background:rgba(5,9,19,.76);color:var(--white);font:500 15px/1.4 Inter,sans-serif;padding:12px}.slot-form textarea{min-height:104px;resize:vertical}.slot-wide{grid-column:1/-1}.slot-submit{min-height:46px;border:1px solid var(--cyan);border-radius:4px;background:var(--cyan);color:#031018;font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer}.slot-message{min-height:20px;color:var(--cyan);font-size:13px;line-height:1.5}.slot-message.is-error{color:#ffb6c1}
 @media (max-width:980px){.guest-grid{grid-template-columns:repeat(2,1fr)}}@media (max-width:720px){.guest-grid{grid-template-columns:1fr}}
 @media (max-width:860px){.speaker-count{grid-template-columns:repeat(2,1fr)}}@media (max-width:560px){.speaker-count{grid-template-columns:1fr}}
 @media (max-width:760px){.registered-head,.show-lineup-head{display:grid}.registered-row{grid-template-columns:1fr}.show-count{text-align:left}}
-@media (max-width:620px){.slot-form{grid-template-columns:1fr}.slot-dialog h3{font-size:28px}}
 </style>
 </head>
 <body>
@@ -135,7 +131,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     <section aria-label="Event facts"><div class="metric-band"><div class="metric"><strong>02</strong><span>Featured lineups at 10:00 AM and 1:00 PM Central</span></div><div class="metric"><strong>08</strong><span>Moderated readiness questions</span></div><div class="metric"><strong>09</strong><span>Featured seats per show</span></div><div class="metric"><strong>01</strong><span>Invite path into the cohort</span></div></div></section>
     <section class="section-pad" id="format"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Operating format</span><h2>A working room for leaders who own the AI decision.</h2></div><p>This is not a passive webinar. The session is designed to surface what leaders are actually seeing, where decisions are stuck, and which operating questions deserve deeper summit work.</p></div><div class="format-grid"><article class="format-card"><span>Stage 01</span><h3>Executive Framing Keynote</h3><p>A concise opening view of national AI adoption momentum, business pressure, and the leadership questions executives need to settle.</p></article><article class="format-card"><span>Stage 02</span><h3>Readiness Diagnostic Discussion</h3><p>Moderated prompts let each executive compare adoption posture, governance maturity, measurement gaps, and risk tolerance.</p></article><article class="format-card"><span>Stage 03</span><h3>Summit Cohort Invitation Path</h3><p>Qualified participants can be routed into the fall series, member nominations, executive research briefs, and 2027 summit planning.</p></article></div></div></section>
     <section class="room-section"><div class="wrap room-inner"><div><span class="eyebrow">The room</span><h2>Small enough for candor. Senior enough to matter.</h2><p class="room-copy">The point is not to agree on a slogan about AI. The point is to compare where leadership teams are moving, where they are hesitating, who has real ownership, and how trust is being earned with employees, customers, boards, and regulators.</p></div><dl class="rules"><div><dt>Audience</dt><dd>Executives and senior operators accountable for AI strategy, business value, risk, technology, data, or workforce adoption.</dd></div><div><dt>Access</dt><dd>Invitation-only, capped at nine executive participants for a moderated exchange rather than broadcast attendance.</dd></div><div><dt>Outcome</dt><dd>A clearer readiness baseline and a path into the MOJO AI Summits cohort for deeper peer work.</dd></div></dl></div></section>
-    <section class="section-pad" id="featured-guests"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Featured guests</span><h2>Meet the leaders helping shape each show.</h2></div><p>Featured guest, featured author, and featured sponsor profiles are separated by show time. Regular registrants stay in the confirmed participant list.</p></div><div class="speaker-count" aria-label="Featured lineup count"><div><strong id="featuredTotalCount">0/18</strong><span>Featured seats filled</span></div><div><strong>10:00</strong><span>Morning featured lineup</span></div><div><strong>1:00</strong><span>Afternoon featured lineup</span></div><div><strong>9</strong><span>Featured seats per show</span></div></div><div class="show-lineups" id="featuredShowLineups" aria-live="polite"></div><div class="registered-guests" id="registeredGuests"><div class="registered-head"><div><span class="eyebrow">Registered guests</span><h3>Confirmed participants</h3></div><p>The public list reflects only the details each guest has approved for this event.</p></div><div class="registered-list" id="registeredGuestList" aria-live="polite"></div></div></div></section>
+    <section class="section-pad" id="featured-guests"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Featured guests</span><h2>Meet the leaders helping shape each show.</h2></div><p>Featured guest, featured author, and featured sponsor profiles are separated by show time.</p></div><div class="speaker-count" aria-label="Featured lineup count"><div><strong id="featuredTotalCount">0/18</strong><span>Featured seats filled</span></div><div><strong>10:00</strong><span>Morning featured lineup</span></div><div><strong>1:00</strong><span>Afternoon featured lineup</span></div><div><strong>9</strong><span>Featured seats per show</span></div></div><div class="show-lineups" id="featuredShowLineups" aria-live="polite"></div></div></section>
     <section class="section-pad" id="topics"><div class="wrap"><div class="section-head"><div><span class="eyebrow">Moderated prompts</span><h2>The questions every AI leadership team is already carrying.</h2></div><p>The discussion is built around eight live questions. Each one is designed to expose operating reality, not produce generic optimism.</p></div><div class="topic-grid">
       <article class="topic"><span class="topic-number">01</span><div><h3>Are we still advancing AI adoption?</h3><p>Are organizations moving forward, stalled, or regressing nationally, and what forces explain the change?</p></div></article>
       <article class="topic"><span class="topic-number">02</span><div><h3>Are we moving away from frontier models?</h3><p>If teams are shifting toward smaller, specialized, open, private, or embedded models, how fast is it happening and at what risk?</p></div></article>
@@ -154,7 +150,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 (() => {
   const showLineups = document.querySelector("#featuredShowLineups");
   const featuredTotalCount = document.querySelector("#featuredTotalCount");
-  const registeredList = document.querySelector("#registeredGuestList");
   if (!showLineups) return;
   const eventDetails = {
     slug: "ai-executive-readiness",
@@ -166,18 +161,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     { id: "afternoon", title: "1:00 PM featured lineup", time: "1:00 pm - 2:30 pm CT", note: "Featured guests, authors, and sponsors registered for the afternoon show." }
   ];
   const placeholderSlots = [
-    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E1", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E2", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E3", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E4", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E5", note: "Executive featured guest to be announced." },
-    { displayName: "Executive featured guest", slotType: "featured-guest", roleLabel: "Executive guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E6", note: "Executive featured guest to be announced." },
-    { displayName: "Author featured guest", slotType: "featured-author", roleLabel: "Author guest", industry: "Author perspective", title: "To be announced", company: "Author profile to be announced", initials: "AU", note: "Author featured guest to be announced." },
-    { displayName: "Featured sponsor", slotType: "featured-partner", roleLabel: "Featured sponsor", industry: "Sponsor perspective", title: "To be announced", company: "Sponsor organization to be announced", initials: "S1", note: "Featured sponsor to be announced." },
-    { displayName: "Featured sponsor", slotType: "featured-partner", roleLabel: "Featured sponsor", industry: "Sponsor perspective", title: "To be announced", company: "Sponsor organization to be announced", initials: "S2", note: "Featured sponsor to be announced." }
+    { displayName: "Featured guest", slotType: "featured-guest", roleLabel: "Featured Guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E1", note: "Featured guest to be announced." },
+    { displayName: "Featured guest", slotType: "featured-guest", roleLabel: "Featured Guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E2", note: "Featured guest to be announced." },
+    { displayName: "Featured guest", slotType: "featured-guest", roleLabel: "Featured Guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E3", note: "Featured guest to be announced." },
+    { displayName: "Featured guest", slotType: "featured-guest", roleLabel: "Featured Guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E4", note: "Featured guest to be announced." },
+    { displayName: "Featured guest", slotType: "featured-guest", roleLabel: "Featured Guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E5", note: "Featured guest to be announced." },
+    { displayName: "Featured guest", slotType: "featured-guest", roleLabel: "Featured Guest", industry: "Executive perspective", title: "To be announced", company: "Organization to be announced", initials: "E6", note: "Featured guest to be announced." },
+    { displayName: "Featured author", slotType: "featured-author", roleLabel: "Featured Author", industry: "Author perspective", title: "To be announced", company: "Author profile to be announced", initials: "AU", note: "Featured author to be announced." },
+    { displayName: "Featured partner", slotType: "featured-partner", roleLabel: "Featured Partner", industry: "Partner perspective", title: "To be announced", company: "Partner organization to be announced", initials: "P1", note: "Featured partner to be announced." },
+    { displayName: "Featured partner", slotType: "featured-partner", roleLabel: "Featured Partner", industry: "Partner perspective", title: "To be announced", company: "Partner organization to be announced", initials: "P2", note: "Featured partner to be announced." }
   ];
-  const currentSlotsByShow = {};
-  let activeSlot = null;
   function escapeHtml(value) {
     return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
   }
@@ -203,17 +196,48 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const slug = portraitSlug(guest.displayName);
     return framedPortraits.has(slug) ? `/assets/featured-portraits/${slug}.png` : "";
   }
+  function portraitRoleText(guest = {}) {
+    const raw = String(guest.roleLabel || guest.registrationRole || guest.guestRegistrationType || guest.slotType || "Featured guest").toLowerCase();
+    if (raw.includes("author")) return "Featured Author";
+    if (raw.includes("partner") || raw.includes("sponsor")) return "Featured Partner";
+    return "Featured Guest";
+  }
+  function featuredPhotoUrl(guest = {}) {
+    return String(guest.photoUrl || guest.photoURL || guest.photo || guest.headshotUrl || guest.bioImageUrl || guest.profileImageUrl || "").trim();
+  }
+  function portraitTuneStyle(guest = {}) {
+    const name = String(guest.displayName || "").toLowerCase();
+    if (name.includes("lokesh mathur")) return ' style="--mojo-head-position:center 24%;--mojo-head-transform:scale(1.78)"';
+    if (name.includes("mathew schroeder") || name.includes("matt schroeder")) return ' style="--mojo-head-position:center 42%;--mojo-head-transform:scale(1.02)"';
+    if (name.includes("mike madero")) return ' style="--mojo-head-position:center 30%;--mojo-head-transform:scale(1.28)"';
+    return "";
+  }
+  function brandedPortraitMarkup(guest, src, alt) {
+    const style = portraitTuneStyle(guest);
+    const name = guest.displayName || "Featured guest";
+    const role = portraitRoleText(guest);
+    const title = role === "Featured Author" ? "" : guest.title || "Title pending";
+    const titleMarkup = title ? `<span>${escapeHtml(title)}</span>` : "";
+    return `<div class="mojo-portrait-card"${style}>
+      <div class="mojo-portrait-top">
+        <div class="mojo-portrait-brand" aria-label="MOJO AI Summits"><strong>MOJO AI</strong><span>SUMMITS</span></div>
+        <div class="mojo-portrait-person"><strong>${escapeHtml(name)}</strong>${titleMarkup}</div>
+      </div>
+      <div class="mojo-portrait-role">${escapeHtml(role)}</div>
+      <div class="mojo-headshot-frame"><img src="${src}" alt="${escapeHtml(alt)}" loading="lazy"></div>
+    </div>`;
+  }
   function renderPhoto(guest) {
+    const photoUrl = featuredPhotoUrl(guest);
+    if (photoUrl) {
+      const alt = guest.displayName ? `${guest.displayName} MOJO AI Summits featured guest portrait` : "MOJO AI Summits featured guest portrait";
+      const src = escapeHtml(photoUrl);
+      return brandedPortraitMarkup(guest, src, alt);
+    }
     const framedPortrait = framedPortraitUrl(guest);
     if (framedPortrait) {
       const alt = guest.displayName ? `${guest.displayName} MOJO AI Summits featured guest portrait` : "MOJO AI Summits featured guest portrait";
       return `<img class="guest-photo-primary is-framed-portrait" src="${escapeHtml(framedPortrait)}" alt="${escapeHtml(alt)}" loading="lazy">`;
-    }
-    if (guest.photoUrl) {
-      const alt = guest.displayName ? `${guest.displayName} photo` : "Featured guest photo";
-      const src = escapeHtml(guest.photoUrl);
-      const style = photoTuneStyle(guest);
-      return `<img class="guest-photo-fill" src="${src}" alt="" aria-hidden="true" loading="lazy"><img class="guest-photo-primary" src="${src}" alt="${escapeHtml(alt)}" loading="lazy"${style}>`;
     }
     return `<span class="guest-initials" aria-hidden="true">${escapeHtml(guest.initials || initials(guest.displayName))}</span>`;
   }
@@ -224,15 +248,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
     return "";
   }
-  function renderMeta(label, value, fallback) {
-    return `<span><strong>${escapeHtml(label)}</strong>${escapeHtml(value || fallback)}</span>`;
-  }
   function slotRole(value) {
     return String(value || "").toLowerCase().replace(/[-_]+/g, " ");
   }
+  function cleanEventShowId(value, fallback = "") {
+    const raw = String(value || "").trim().toLowerCase();
+    const normalized = raw.replace(/[\s_]+/g, "-");
+    const compact = raw.replace(/[^a-z0-9]/g, "");
+    if (!raw) return fallback;
+    if (normalized.includes("morning") || compact.includes("10am") || compact.includes("1000am") || compact === "10") return "morning";
+    if (normalized.includes("afternoon") || compact.includes("1pm") || compact.includes("100pm") || compact.includes("1300") || compact === "1" || compact === "13") return "afternoon";
+    if (["am", "10", "10am", "1000", "1000am"].includes(compact)) return "morning";
+    if (["pm", "1", "1pm", "100", "100pm", "1300"].includes(compact)) return "afternoon";
+    if (["both", "all", "bothshows"].includes(compact)) return "both";
+    return fallback;
+  }
   function guestSlotType(guest = {}) {
     const role = slotRole(guest.roleLabel || guest.registrationRole || guest.guestRegistrationType || guest.slotType);
-    if (role.includes("author")) return "featured-author";
     if (role.includes("partner") || role.includes("sponsor")) return "featured-partner";
     return "featured-guest";
   }
@@ -247,142 +279,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
     return slots;
   }
-  function renderRegisteredGuests(guests = []) {
-    if (!registeredList) return;
-    const rows = Array.isArray(guests) ? guests.slice(0, 80) : [];
-    if (!rows.length) {
-      registeredList.innerHTML = `<div class="registered-empty">Registered guest list will appear here as event details are approved for public display.</div>`;
-      return;
-    }
-    registeredList.innerHTML = rows.map((guest) => {
-      const companyVisible = guest.companyAllowed && guest.company;
-      const primary = guest.displayName || "Name pending";
-      const secondary = guest.title || "Title pending";
-      const tertiaryLabel = companyVisible ? "Company" : "Industry";
-      const tertiary = companyVisible ? guest.company : (guest.industry || "Industry pending");
-      return `
-        <div class="registered-row">
-          <span><strong>Name</strong>${escapeHtml(primary)}</span>
-          <span><strong>Title</strong>${escapeHtml(secondary)}</span>
-          <span><strong>${escapeHtml(tertiaryLabel)}</strong>${escapeHtml(tertiary)}</span>
-        </div>
-      `;
-    }).join("");
-  }
-  function slotLabel(guest) {
-    const code = guest.slotCode || guest.initials || "";
-    return `${guest.displayName || "Featured guest"} ${code}`.trim();
-  }
-  function createSlotModal() {
-    const modal = document.createElement("div");
-    modal.className = "slot-modal";
-    modal.id = "slotRequestModal";
-    modal.hidden = true;
-    modal.innerHTML = `
-      <div class="slot-dialog" role="dialog" aria-modal="true" aria-labelledby="slotRequestTitle">
-        <div class="slot-dialog-head">
-          <div><h3 id="slotRequestTitle">Request this slot</h3><p id="slotRequestIntro">AI Executive Readiness</p></div>
-          <button class="slot-close" type="button" aria-label="Close request form">&times;</button>
-        </div>
-        <form class="slot-form" id="slotRequestForm">
-          <label>Full name<input name="name" autocomplete="name" required></label>
-          <label>Work email<input name="email" type="email" autocomplete="email" required></label>
-          <label>Company<input name="company" autocomplete="organization" required></label>
-          <label>Title<input name="title" autocomplete="organization-title" required></label>
-          <label class="slot-wide">LinkedIn profile<input name="linkedinProfileUrl" type="url" autocomplete="url" required></label>
-          <label class="slot-wide">Why this fit<textarea name="notes"></textarea></label>
-          <p class="slot-message slot-wide" id="slotRequestMessage" role="status"></p>
-          <button class="slot-submit slot-wide" type="submit">Send Request</button>
-        </form>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    return modal;
-  }
-  const slotModal = createSlotModal();
-  const slotForm = slotModal.querySelector("#slotRequestForm");
-  const slotTitle = slotModal.querySelector("#slotRequestTitle");
-  const slotIntro = slotModal.querySelector("#slotRequestIntro");
-  const slotMessage = slotModal.querySelector("#slotRequestMessage");
-  const closeSlotModal = () => {
-    slotModal.hidden = true;
-    activeSlot = null;
-    slotMessage.textContent = "";
-    slotMessage.classList.remove("is-error");
-  };
-  slotModal.querySelector(".slot-close").addEventListener("click", closeSlotModal);
-  slotModal.addEventListener("click", (event) => {
-    if (event.target === slotModal) closeSlotModal();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !slotModal.hidden) closeSlotModal();
-  });
-  function openSlotRequest(showId, index) {
-    activeSlot = (currentSlotsByShow[showId] || [])[index];
-    if (!activeSlot) return;
-    slotForm.reset();
-    slotTitle.textContent = `Request ${slotLabel(activeSlot)}`;
-    slotIntro.textContent = `${eventDetails.title} | ${eventDetails.date} | ${activeSlot.eventShowTime || ""}`;
-    slotMessage.textContent = "";
-    slotMessage.classList.remove("is-error");
-    slotModal.hidden = false;
-    slotForm.elements.name.focus();
-  }
-  async function submitSlotRequest(event) {
-    event.preventDefault();
-    if (!activeSlot) return;
-    const submitButton = slotForm.querySelector(".slot-submit");
-    const formData = new FormData(slotForm);
-    const payload = {
-      type: "featured-guest-slot",
-      name: formData.get("name"),
-      email: formData.get("email"),
-      company: formData.get("company"),
-      title: formData.get("title"),
-      linkedinProfileUrl: formData.get("linkedinProfileUrl"),
-      notes: formData.get("notes"),
-      sourcePage: window.location.pathname,
-      eventSlug: eventDetails.slug,
-      eventTitle: eventDetails.title,
-      eventDate: `${eventDetails.date} | ${activeSlot.eventShowTime || ""}`.trim(),
-      eventShowId: activeSlot.eventShowId,
-      eventShowTime: activeSlot.eventShowTime,
-      slotType: activeSlot.slotType,
-      slotLabel: activeSlot.displayName,
-      slotCode: activeSlot.slotCode || activeSlot.initials
-    };
-    if (window.location.protocol === "file:") {
-      slotMessage.textContent = "This request form is ready for the published page.";
-      return;
-    }
-    submitButton.disabled = true;
-    slotMessage.textContent = "Sending request...";
-    slotMessage.classList.remove("is-error");
-    try {
-      const response = await fetch("/api/invite-request", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || "Request could not be sent.");
-      slotMessage.textContent = "Request sent. The MOJO team will review the fit.";
-      slotForm.reset();
-    } catch (error) {
-      slotMessage.textContent = error.message || "Request could not be sent.";
-      slotMessage.classList.add("is-error");
-    } finally {
-      submitButton.disabled = false;
-    }
-  }
-  slotForm.addEventListener("submit", submitSlotRequest);
   function showLineupById(payload, showId) {
     const byShow = payload && typeof payload.featuredGuestsByShow === "object" ? payload.featuredGuestsByShow : null;
     if (byShow && Array.isArray(byShow[showId])) return byShow[showId];
     const flatGuests = Array.isArray(payload?.featuredGuests) ? payload.featuredGuests : [];
     return flatGuests.filter((guest) => {
-      const guestShow = String(guest.eventShowId || "").toLowerCase();
-      if (!guestShow) return showId === "afternoon";
+      const guestShow = cleanEventShowId(guest.eventShowId || guest.eventShowLabel || guest.eventShowTime || guest.showId || guest.show, "");
+      if (!guestShow) return false;
       return guestShow === "both" || guestShow === showId;
     });
   }
@@ -393,7 +296,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       eventShowTime: show.time
     }));
     const filledGuests = visibleSlots.filter((guest) => !guest.isPlaceholder);
-    currentSlotsByShow[show.id] = visibleSlots;
     return `
       <section class="show-lineup" data-show-id="${escapeHtml(show.id)}">
         <div class="show-lineup-head">
@@ -408,15 +310,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           ${visibleSlots.map((guest, index) => `
       <article class="guest-card${guest.isPlaceholder ? " is-placeholder" : ""}">
         <div class="guest-photo">${renderPhoto(guest)}</div>
-        <h3>${escapeHtml(guest.displayName || "Name pending")}</h3>
-        <div class="guest-meta">
-          ${renderMeta("Role", guest.roleLabel || "Featured guest", "Featured guest")}
-          ${renderMeta("Industry", guest.industry, "Industry pending")}
-          ${renderMeta("Title", guest.title, "Title pending")}
-          ${renderMeta("Company", guest.company, guest.companyAllowed ? "Company pending" : "Company withheld")}
-        </div>
-        <p class="guest-note">${escapeHtml(guest.note || "Featured guest details will be updated as event information is confirmed.")}</p>
-        <button class="slot-action" type="button" data-show-id="${escapeHtml(show.id)}" data-slot-index="${index}">Request this slot</button>
       </article>
     `).join("")}
         </div>
@@ -431,23 +324,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const totalFilled = showRows.reduce((sum, row) => sum + placeGuestsInSlots(row.guests).filter((guest) => !guest.isPlaceholder).length, 0);
     if (featuredTotalCount) featuredTotalCount.textContent = `${totalFilled}/18`;
     showLineups.innerHTML = showRows.map((row) => renderShow(row.show, row.guests)).join("");
-    showLineups.querySelectorAll(".slot-action").forEach((button) => {
-      button.addEventListener("click", () => openSlotRequest(button.dataset.showId, Number(button.dataset.slotIndex)));
-    });
   }
   async function loadGuests() {
     renderShows({});
-    renderRegisteredGuests([]);
     if (window.location.protocol === "file:") return;
     try {
       const response = await fetch("/api/virtual-events/ai-executive-readiness", { cache: "no-store" });
       const payload = await response.json();
-      const registeredGuests = Array.isArray(payload.registeredGuests) ? payload.registeredGuests : [];
       renderShows(payload);
-      renderRegisteredGuests(registeredGuests);
     } catch (error) {
       renderShows({});
-      renderRegisteredGuests([]);
     }
   }
   loadGuests();
