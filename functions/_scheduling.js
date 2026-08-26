@@ -1290,7 +1290,7 @@ export async function availability(env, query) {
   const dayEnd = zonedTimeToUtc(dateValue, employee.dayEnd, employee.timezone);
   const graph = graphConfig(env);
   let source = "local-rules";
-  let warning = graph.configured ? "" : "Microsoft Graph is not configured, so slots only reflect saved working hours.";
+  let warning = graph.configured ? "" : "Live calendar sync is limited, so slots only reflect saved working hours.";
   let busyIntervals = [];
 
   if (graph.configured) {
@@ -1304,7 +1304,7 @@ export async function availability(env, query) {
     const feedIntervals = await calendarFeedBusyIntervals(employee, dayStart, dayEnd);
     busyIntervals = [...busyIntervals, ...feedIntervals];
     source = graph.configured ? "microsoft-graph+calendar-feeds" : "calendar-feeds";
-    warning = graph.configured ? "" : "Microsoft Graph is not configured, so slots only reflect saved working hours and calendar feeds.";
+    warning = graph.configured ? "" : "Live calendar sync is limited, so slots only reflect saved working hours and calendar feeds.";
   }
 
   const connectionIntervals = await connectedCalendarBusyIntervals(env, employee, dayStart, dayEnd);
@@ -1484,9 +1484,6 @@ async function createGraphEvent(env, employee, meetingType, booking, start, end,
 
 export async function createBooking(env, input = {}) {
   const graph = graphConfig(env);
-  if (!graph.configured) {
-    return { response: json({ error: "Microsoft Graph scheduling credentials are not configured yet." }, { status: 503 }) };
-  }
   const zoom = zoomConfig(env);
   if (!zoom.configured) {
     return { response: json({ error: "Zoom scheduling credentials are not configured yet." }, { status: 503 }) };
@@ -1556,22 +1553,25 @@ export async function createBooking(env, input = {}) {
 
   try {
     const zoomMeeting = await createZoomMeeting(env, employee, meetingType, booking, start, end);
-    let event;
-    try {
-      event = await createGraphEvent(env, employee, meetingType, booking, start, end, zoomMeeting);
-    } catch (error) {
-      await deleteZoomMeeting(env, zoomMeeting.meetingId);
-      throw error;
+    let event = null;
+    if (graph.configured) {
+      try {
+        event = await createGraphEvent(env, employee, meetingType, booking, start, end, zoomMeeting);
+      } catch (error) {
+        await deleteZoomMeeting(env, zoomMeeting.meetingId);
+        throw error;
+      }
     }
     const record = {
       ...booking,
-      graphEventId: event.id || "",
-      graphWebLink: event.webLink || "",
+      graphEventId: event?.id || "",
+      graphWebLink: event?.webLink || "",
       zoomMeetingId: zoomMeeting.meetingId || "",
       zoomUserId: zoomMeeting.zoomUserId || employeeZoomUserId,
       zoomJoinUrl: zoomMeeting.joinUrl || "",
       zoomPasscode: zoomMeeting.passcode || "",
-      onlineMeetingUrl: zoomMeeting.joinUrl || ""
+      onlineMeetingUrl: zoomMeeting.joinUrl || "",
+      calendarInviteSent: Boolean(event?.id)
     };
 
     const dateKey = record.start.slice(0, 10);
@@ -1587,7 +1587,8 @@ export async function createBooking(env, input = {}) {
         end: record.end,
         timezone: record.timezone,
         guestTimeZone: record.guestTimeZone,
-        onlineMeetingUrl: record.onlineMeetingUrl
+        onlineMeetingUrl: record.onlineMeetingUrl,
+        calendarInviteSent: record.calendarInviteSent
       }
     };
   } finally {

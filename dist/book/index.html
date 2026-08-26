@@ -683,9 +683,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const employeeName = booking.employee?.name || state.employee?.name || "Mojo AI Summits";
       const meetingLabel = booking.meetingType?.label || state.meetingType?.label || "Meeting";
       const location = booking.onlineMeetingUrl ? "Zoom link included" : booking.meetingType?.location || "Zoom";
+      const calendarInviteSent = booking.calendarInviteSent !== false;
       confirmationEl.innerHTML = `
         <h2>Event booked.</h2>
-        <p>The calendar invitation is on its way.</p>
+        <p>${calendarInviteSent ? "The calendar invitation is on its way." : "Your booking is confirmed. Use the Zoom link below for the meeting."}</p>
         <div class="confirmation-details">
           <div class="confirmation-row"><span>Meeting</span><strong>${escapeHtml(meetingLabel)}</strong></div>
           <div class="confirmation-row"><span>Host</span><strong>${escapeHtml(employeeName)}</strong></div>
