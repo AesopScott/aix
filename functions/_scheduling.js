@@ -1284,7 +1284,7 @@ export async function availability(env, query) {
   employee = effectiveEmployeeForDate(employee, dateValue);
   const meetingType = employee.meetingTypes.find((type) => type.id === cleanSlug(query.type)) || employee.meetingTypes[0];
   const zoom = zoomConfig(env);
-  const employeeZoomUserId = zoom.configured ? zoomUserForEmployee(zoom, employee) : "";
+  const employeeZoomUserId = zoomUserForEmployee(zoom, employee);
 
   const dayStart = zonedTimeToUtc(dateValue, employee.dayStart, employee.timezone);
   const dayEnd = zonedTimeToUtc(dateValue, employee.dayEnd, employee.timezone);
@@ -1342,7 +1342,7 @@ export async function calendarFeedDiagnostics(env, query) {
   employee = effectiveEmployeeForDate(employee, dateValue);
   const meetingType = employee.meetingTypes.find((type) => type.id === cleanSlug(query.type)) || employee.meetingTypes[0];
   const zoom = zoomConfig(env);
-  const employeeZoomUserId = zoom.configured ? zoomUserForEmployee(zoom, employee) : "";
+  const employeeZoomUserId = zoomUserForEmployee(zoom, employee);
 
   const dayStart = zonedTimeToUtc(dateValue, employee.dayStart, employee.timezone);
   const dayEnd = zonedTimeToUtc(dateValue, employee.dayEnd, employee.timezone);
@@ -1485,9 +1485,6 @@ async function createGraphEvent(env, employee, meetingType, booking, start, end,
 export async function createBooking(env, input = {}) {
   const graph = graphConfig(env);
   const zoom = zoomConfig(env);
-  if (!zoom.configured) {
-    return { response: json({ error: "Zoom scheduling credentials are not configured yet." }, { status: 503 }) };
-  }
 
   let employee = await getEmployee(env, input.host || input.employee || input.slug);
   if (!employee || employee.active === false) {
@@ -1552,13 +1549,15 @@ export async function createBooking(env, input = {}) {
   };
 
   try {
-    const zoomMeeting = await createZoomMeeting(env, employee, meetingType, booking, start, end);
+    const zoomMeeting = zoom.configured
+      ? await createZoomMeeting(env, employee, meetingType, booking, start, end)
+      : null;
     let event = null;
     if (graph.configured) {
       try {
         event = await createGraphEvent(env, employee, meetingType, booking, start, end, zoomMeeting);
       } catch (error) {
-        await deleteZoomMeeting(env, zoomMeeting.meetingId);
+        await deleteZoomMeeting(env, zoomMeeting?.meetingId);
         throw error;
       }
     }
@@ -1566,12 +1565,13 @@ export async function createBooking(env, input = {}) {
       ...booking,
       graphEventId: event?.id || "",
       graphWebLink: event?.webLink || "",
-      zoomMeetingId: zoomMeeting.meetingId || "",
-      zoomUserId: zoomMeeting.zoomUserId || employeeZoomUserId,
-      zoomJoinUrl: zoomMeeting.joinUrl || "",
-      zoomPasscode: zoomMeeting.passcode || "",
-      onlineMeetingUrl: zoomMeeting.joinUrl || "",
-      calendarInviteSent: Boolean(event?.id)
+      zoomMeetingId: zoomMeeting?.meetingId || "",
+      zoomUserId: zoomMeeting?.zoomUserId || employeeZoomUserId,
+      zoomJoinUrl: zoomMeeting?.joinUrl || "",
+      zoomPasscode: zoomMeeting?.passcode || "",
+      onlineMeetingUrl: zoomMeeting?.joinUrl || "",
+      calendarInviteSent: Boolean(event?.id),
+      meetingDetailsPending: !zoomMeeting?.joinUrl
     };
 
     const dateKey = record.start.slice(0, 10);
@@ -1588,7 +1588,8 @@ export async function createBooking(env, input = {}) {
         timezone: record.timezone,
         guestTimeZone: record.guestTimeZone,
         onlineMeetingUrl: record.onlineMeetingUrl,
-        calendarInviteSent: record.calendarInviteSent
+        calendarInviteSent: record.calendarInviteSent,
+        meetingDetailsPending: record.meetingDetailsPending
       }
     };
   } finally {
