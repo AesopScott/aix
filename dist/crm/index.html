@@ -1925,6 +1925,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Status
           <select id="guestMatrixStatusFilter">
             <option value="all">All statuses</option>
+            <option value="scott-engagement">Scott's Engagement</option>
             <option value="pending-engagement">Pending Engagement</option>
             <option value="contacted">Contacted</option>
             <option value="confirmed">Confirmed</option>
@@ -2091,7 +2092,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Status
           <select id="manualPartnerStatus" name="crmStatus">
             <option value="new">New</option>
-            <option value="scott-engagement">Scott Engagement</option>
+            <option value="scott-engagement">Scott's Engagement</option>
             <option value="pending-engagement">Pending Engagement</option>
             <option value="contacted">Contacted</option>
             <option value="confirmed">Confirmed</option>
@@ -2297,6 +2298,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["declined", "Declined"]
     ];
     const guestRegistrationLifecycleOptions = [
+      ["scott-engagement", "Scott's Engagement"],
       ["pending-engagement", "Pending Engagement"],
       ["contacted", "Contacted"],
       ["confirmed", "Confirmed"],
@@ -2309,10 +2311,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["no-show", "No Show"]
     ];
     const guestRegistrationLifecycleValues = guestRegistrationLifecycleOptions.map(([value]) => value);
-    const partnerRegistrationLifecycleOptions = [
-      ["scott-engagement", "Scott Engagement"],
-      ...guestRegistrationLifecycleOptions
-    ];
+    const partnerRegistrationLifecycleOptions = guestRegistrationLifecycleOptions;
     const partnerRegistrationLifecycleValues = partnerRegistrationLifecycleOptions.map(([value]) => value);
     let activeView = "contacts";
     let registrationInviteStatusFilter = "all";
@@ -2645,7 +2644,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function statusLabel(value) {
       return {
-        "scott-engagement": "Scott Engagement",
+        "scott-engagement": "Scott's Engagement",
         "bad-fit": "Bad Fit",
         "no-show": "No Show",
         "do-not-contact": "Do Not Contact",
@@ -2661,6 +2660,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const raw = String(value || "").toLowerCase();
       const aliases = {
         "scott engagement": "scott-engagement",
+        "scott's engagement": "scott-engagement",
         scott_engagement: "scott-engagement",
         new: "pending-engagement",
         pending: "pending-engagement",
@@ -4233,7 +4233,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ["Event groups", new Set(rows.map((row) => row.eventKey)).size],
         [isPartnerMatrix() ? "Tracked partners" : "Tracked people", rows.length],
         ...(!isPartnerMatrix() ? [["Potential Sponsors", rows.filter((row) => row.potentialSponsor).length]] : []),
-        ...(isPartnerMatrix() ? [["Scott Engagement", rows.filter((row) => row.registrationStatus === "scott-engagement").length]] : []),
+        ["Scott's Engagement", rows.filter((row) => row.registrationStatus === "scott-engagement").length],
         ["Pending Engagement", rows.filter((row) => row.registrationStatus === "pending-engagement").length],
         ["Contacted", rows.filter((row) => row.registrationStatus === "contacted").length],
         ["Invited", rows.filter((row) => row.registrationStatus === "invited").length],
@@ -4442,7 +4442,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           ? guestRegistrationLifecycleOptions
           : [
               ["new", "New"],
-              ["scott-engagement", "Scott Engagement"],
+              ["scott-engagement", "Scott's Engagement"],
               ["contacted", "Contacted"],
               ["confirmed", "Confirmed"],
               ["accepted", "Accepted"],
