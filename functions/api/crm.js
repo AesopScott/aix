@@ -630,6 +630,7 @@ function cleanGuestRegistrationLifecycleStatus(value, fallback = "contacted") {
   const cleaned = cleanString(value, 120).toLowerCase();
   const aliases = {
     "scott engagement": "scott-engagement",
+    "scott's engagement": "scott-engagement",
     scott_engagement: "scott-engagement",
     new: "pending-engagement",
     pending: "pending-engagement",
@@ -1887,7 +1888,8 @@ async function listKeys(env, prefix) {
       prefix,
       cursor,
       limit: 1000
-    });
+    }).catch(() => null);
+    if (!result) break;
     keys.push(...result.keys.map((entry) => entry.name));
     cursor = result.list_complete ? undefined : result.cursor;
   } while (cursor);
@@ -4720,6 +4722,60 @@ async function guestMatrixProspects(env) {
   return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
+function guestRegistrationRowFromMatrixProspect(prospect = {}) {
+  const row = normalizeRecord(prospect.key, {
+    ...prospect,
+    id: prospect.id || prospect.key,
+    name: prospect.intendedGuestName || prospect.guestName || prospect.invitedName || prospect.intendedGuestEmail || "Name not recorded",
+    email: prospect.intendedGuestEmail || prospect.guestEmail || prospect.invitedEmail,
+    source: "guest-matrix-prospect",
+    crmStatus: prospect.crmStatus || prospect.guestStatus || prospect.registrationStatus || "pending-engagement",
+    guestStatus: prospect.guestStatus || prospect.crmStatus || prospect.registrationStatus || "pending-engagement",
+    registrationStatus: prospect.registrationStatus || prospect.crmStatus || prospect.guestStatus || "pending-engagement",
+    crmNotes: prospect.preRegistrationNotes,
+    eventNotes: prospect.preRegistrationNotes,
+    registrationNotes: prospect.preRegistrationNotes,
+    phoneVerificationStatus: "unverified"
+  });
+  return {
+    ...row,
+    guestStatus: prospect.guestStatus || row.crmStatus,
+    registrationStatus: prospect.registrationStatus || row.crmStatus,
+    matrixOnly: true
+  };
+}
+
+function guestRegistrationRowIdentity(row = {}) {
+  const person = cleanString(
+    row.email ||
+      row.intendedGuestEmail ||
+      row.invitedEmail ||
+      row.guestEmail ||
+      row.linkedinProfileUrl ||
+      row.name ||
+      row.id ||
+      row.key
+  ).toLowerCase();
+  const event = cleanString(row.eventSlug || row.eventName || row.eventId || "no-event").toLowerCase();
+  const show = cleanEventShowId(row.eventShowId || row.showId || row.eventShow, "");
+  return `${person}|${event}|${show}`;
+}
+
+async function guestRegistrationRows(env) {
+  const registrationRows = await registrants(env, "guest");
+  const seen = new Set(registrationRows.map(guestRegistrationRowIdentity));
+  const prospectRows = (await guestMatrixProspects(env))
+    .map(guestRegistrationRowFromMatrixProspect)
+    .filter((row) => {
+      const identity = guestRegistrationRowIdentity(row);
+      if (seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    });
+  return [...registrationRows, ...prospectRows]
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
 async function partnerMatrixProspects(env) {
   const keys = await listKeys(env, PARTNER_MATRIX_PROSPECT_PREFIX);
   const rows = await Promise.all(
@@ -6777,6 +6833,8 @@ export async function onRequestGet({ request, env, data }) {
     ? await contacts(env)
     : partnerRegistrationLinksOnly
       ? await partnerRegistrationLinkRows(env)
+      : type === "guest"
+        ? await guestRegistrationRows(env)
       : await registrants(env, type);
 
   if (url.searchParams.get("download") === "csv") {
@@ -7766,8 +7824,11 @@ export async function onRequestPost({ request, env, data }) {
 
   if (payload?.action === "delete-guest-registrant") {
     try {
-      const deleted = await deleteGuestRegistrant(env, payload, access.email);
-      const rows = await registrants(env, "guest");
+      const key = cleanString(payload?.key, 500);
+      const deleted = key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)
+        ? await deleteGuestMatrixProspect(env, payload)
+        : await deleteGuestRegistrant(env, payload, access.email);
+      const rows = await guestRegistrationRows(env);
       return json({
         ok: true,
         type: "guest",
@@ -7889,9 +7950,40 @@ export async function onRequestPost({ request, env, data }) {
 
   const type = cleanType(payload?.type);
   const key = cleanString(payload?.key);
-  const rows = await registrants(env, type);
+  const rows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type);
   const row = rows.find((entry) => entry.key === key || entry.id === key);
   if (!row) return json({ error: `${registrantTypes[type].label} registrant was not found.` }, { status: 404 });
+
+  if (type === "guest" && key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)) {
+    const crmStatus = cleanGuestRegistrationLifecycleStatus(payload?.crmStatus, row.crmStatus || "pending-engagement");
+    await updateGuestMatrixProspect(env, {
+      key,
+      field: "guestStatus",
+      value: crmStatus
+    }, access.email);
+    if (
+      Object.prototype.hasOwnProperty.call(payload || {}, "eventNotes") ||
+      Object.prototype.hasOwnProperty.call(payload || {}, "registrationNotes")
+    ) {
+      await updateGuestMatrixProspect(env, {
+        key,
+        field: "eventNotes",
+        value: payload?.eventNotes || payload?.registrationNotes || ""
+      }, access.email);
+    }
+    const nextRows = await guestRegistrationRows(env);
+    return json({
+      ok: true,
+      type,
+      label: registrantTypes[type].label,
+      summary: summarize(nextRows),
+      rows: nextRows,
+      partnerInviteCodes: await partnerInviteCodes(env),
+      registrationInviteCodes: await registrationInviteCodes(env),
+      guestMatrixProspects: await guestMatrixProspects(env),
+      upcomingEvents: await upcomingEvents(env)
+    });
+  }
 
   const { key: crmKey, row: crmRow } = await ensureCrmRecord(env, row, type);
   const crmStatus = type === "guest"
@@ -7957,6 +8049,8 @@ export async function onRequestPost({ request, env, data }) {
 
   const nextRows = type === "partner" && cleanBoolean(payload?.registrationLinks)
     ? await partnerRegistrationLinkRows(env)
+    : type === "guest"
+      ? await guestRegistrationRows(env)
     : await registrants(env, type);
   return json({
     ok: true,
