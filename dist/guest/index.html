@@ -559,6 +559,14 @@
               </select>
             </div>
             <div class="field">
+              <label for="city">City</label>
+              <input type="text" id="city" name="city" placeholder="City" autocomplete="address-level2" required>
+            </div>
+            <div class="field">
+              <label for="stateCountry">State / Country</label>
+              <input type="text" id="stateCountry" name="stateCountry" placeholder="State or country" autocomplete="address-level1" required>
+            </div>
+            <div class="field">
               <label for="email">Email</label>
               <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required>
             </div>
@@ -631,6 +639,8 @@
   const inviteInput = document.getElementById('inviteCode');
   const inviteBadge = document.getElementById('inviteBadge');
   const fullNameInput = document.getElementById('fullName');
+  const cityInput = document.getElementById('city');
+  const stateCountryInput = document.getElementById('stateCountry');
   const emailInput = document.getElementById('email');
   const linkedinProfileInput = document.getElementById('linkedinProfileUrl');
   const eventShowSelect = document.getElementById('eventShowId');
@@ -1006,10 +1016,14 @@
     clearMessage(formError);
     const formData = new FormData(form);
     const payload = Object.fromEntries([...formData.entries()].filter(([, value]) => typeof value === 'string'));
+    payload.city = String(payload.city || '').trim();
+    payload.stateCountry = String(payload.stateCountry || '').trim();
     payload.email = String(payload.email || '').trim();
     payload.linkedinProfileUrl = String(payload.linkedinProfileUrl || '').trim();
     payload.phone = normalizePhone(payload.phone);
     payload.phoneVerificationStatus = verificationStatus.value;
+    formData.set('city', payload.city);
+    formData.set('stateCountry', payload.stateCountry);
     formData.set('email', payload.email);
     formData.set('linkedinProfileUrl', payload.linkedinProfileUrl);
     formData.set('phone', payload.phone);
@@ -1023,6 +1037,16 @@
     if (!payload.phone) {
       setMessage(formError, 'Phone number is required.', 'error');
       phoneInput.focus();
+      return;
+    }
+    if (!payload.city) {
+      setMessage(formError, 'City is required.', 'error');
+      cityInput.focus();
+      return;
+    }
+    if (!payload.stateCountry) {
+      setMessage(formError, 'State / country is required.', 'error');
+      stateCountryInput.focus();
       return;
     }
     if (!payload.linkedinProfileUrl) {
