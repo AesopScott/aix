@@ -76,7 +76,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 .mojo-portrait-top{position:relative;z-index:1;width:100%;display:grid;grid-template-columns:minmax(100px,.78fr) minmax(120px,1fr);gap:14px;align-items:start}
 .mojo-portrait-brand{min-width:0;text-transform:uppercase;line-height:1}.mojo-portrait-brand strong{display:block;width:max-content;max-width:100%;font-family:Space Grotesk,sans-serif;font-size:clamp(20px,2.3vw,27px);font-weight:900;letter-spacing:.06em;background:linear-gradient(90deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}.mojo-portrait-brand span{display:block;margin-top:4px;color:var(--white);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:800;letter-spacing:.38em}
 .mojo-portrait-person{min-width:0;text-align:right}.mojo-portrait-person strong{display:block;color:var(--white);font-family:Space Grotesk,sans-serif;font-size:clamp(15px,1.5vw,19px);font-weight:800;line-height:1.08}.mojo-portrait-person span{display:block;margin-top:5px;color:rgba(222,235,255,.76);font-size:10px;font-weight:700;line-height:1.25}
-.mojo-portrait-role{position:relative;z-index:1;justify-self:start;width:fit-content;max-width:100%;padding:6px 9px;border:1px solid rgba(0,230,255,.34);border-radius:4px;color:var(--cyan);background:rgba(0,230,255,.08);font-family:Space Grotesk,sans-serif;font-size:9px;font-weight:800;letter-spacing:.15em;line-height:1.2;text-transform:uppercase}
+.mojo-portrait-role{position:relative;z-index:1;justify-self:start;width:fit-content;max-width:100%;padding:6px 9px;border:1px solid rgba(0,230,255,.34);border-radius:4px;color:var(--cyan);background:rgba(0,230,255,.08);font-family:Space Grotesk,sans-serif;font-size:9px;font-weight:800;letter-spacing:.15em;line-height:1.2;text-transform:uppercase}.mojo-portrait-role.is-featured-author{border-color:rgba(255,230,95,.85);color:#382f00;background:#fff2a8}
 .mojo-headshot-frame{position:relative;z-index:1;justify-self:center;align-self:center;width:min(50%,154px);aspect-ratio:1;border:4px solid var(--cyan);border-radius:999px;padding:5px;background:rgba(10,15,30,.88);box-shadow:0 0 0 2px rgba(22,102,255,.7),0 0 26px rgba(0,230,255,.25);overflow:hidden}
 .mojo-headshot-frame img{width:100%;height:100%;border-radius:999px;object-fit:cover;object-position:var(--mojo-head-position,center 28%);transform:var(--mojo-head-transform,scale(1.32));transform-origin:center center;filter:saturate(.96) contrast(1.03)}
 .guest-initials{width:74px;height:74px;border:1px solid rgba(0,230,255,.58);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-family:Orbitron,sans-serif;font-weight:800;letter-spacing:.08em;background:radial-gradient(circle,rgba(0,230,255,.16),rgba(22,102,255,.08));box-shadow:0 0 28px rgba(0,230,255,.18)}
@@ -202,12 +202,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     if (raw.includes("partner") || raw.includes("sponsor")) return "Featured Partner";
     return "Featured Guest";
   }
+  function portraitRoleClass(role) {
+    return String(role || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
   function featuredPhotoUrl(guest = {}) {
-    return String(guest.photoUrl || guest.photoURL || guest.photo || guest.headshotUrl || guest.bioImageUrl || guest.profileImageUrl || "").trim();
+    const name = String(guest.displayName || "").toLowerCase();
+    const url = String(guest.photoUrl || guest.photoURL || guest.photo || guest.headshotUrl || guest.bioImageUrl || guest.profileImageUrl || "").trim();
+    if ((name.includes("mathew schroeder") || name.includes("matt schroeder")) && url.includes("crm%2Fcontact-photos%2Fmatt-at-bsidesmedia.com")) {
+      return "https://mojoaisummits.com/api/crm?photo=crm%2Fregistration-photos%2Fguest%2Fmatt%2F2026-08-20T21-13-53-411Z-02f48a84-582d-49f0-a521-c666b9cf6fc2-33832.jpg";
+    }
+    return url;
   }
   function portraitTuneStyle(guest = {}) {
     const name = String(guest.displayName || "").toLowerCase();
-    if (name.includes("lokesh mathur")) return ' style="--mojo-head-position:center 24%;--mojo-head-transform:scale(1.78)"';
+    if (name.includes("imran jan")) return ' style="--mojo-head-position:center 44%;--mojo-head-transform:scale(1.24)"';
+    if (name.includes("lokesh mathur")) return ' style="--mojo-head-position:center 42%;--mojo-head-transform:scale(1.56)"';
+    if (name.includes("maman ibrahim")) return ' style="--mojo-head-position:center 48%;--mojo-head-transform:scale(1.04)"';
     if (name.includes("mathew schroeder") || name.includes("matt schroeder")) return ' style="--mojo-head-position:center 42%;--mojo-head-transform:scale(1.02)"';
     if (name.includes("mike madero")) return ' style="--mojo-head-position:center 30%;--mojo-head-transform:scale(1.28)"';
     return "";
@@ -223,7 +233,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <div class="mojo-portrait-brand" aria-label="MOJO AI Summits"><strong>MOJO AI</strong><span>SUMMITS</span></div>
         <div class="mojo-portrait-person"><strong>${escapeHtml(name)}</strong>${titleMarkup}</div>
       </div>
-      <div class="mojo-portrait-role">${escapeHtml(role)}</div>
+      <div class="mojo-portrait-role is-${escapeHtml(portraitRoleClass(role))}">${escapeHtml(role)}</div>
       <div class="mojo-headshot-frame"><img src="${src}" alt="${escapeHtml(alt)}" loading="lazy"></div>
     </div>`;
   }

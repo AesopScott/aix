@@ -341,6 +341,82 @@ function registrantIdentity(type, record = {}, fallback = "") {
   return [type, email || id || fallback, eventKey].filter(Boolean).join("|");
 }
 
+function submittedPhotoFields(record = {}) {
+  const photoKey = cleanString(record.photoKey, 500);
+  const photoUrl = cleanString(record.photoUrl || record.photoURL || record.photo, 500);
+  const sourceKey = cleanString(record.sourceKey, 500);
+  const hasSubmittedPhoto = Boolean(photoUrl) && (
+    photoKey.includes("/registration-photos/") ||
+    photoUrl.includes("/registration-photos/") ||
+    sourceKey.includes(":registrant:") ||
+    sourceKey.includes("/registrations/")
+  );
+
+  return hasSubmittedPhoto ? { photoKey, photoUrl } : null;
+}
+
+function featuredRoleFields(record = {}) {
+  const role = cleanFeaturedRole(
+    record.registrationRole ||
+      record.guestRegistrationType ||
+      record.partnerRegistrationType ||
+      record.contactEventRole ||
+      record.featuredGuestLabel ||
+      record.strategicRole ||
+      record.role,
+    120
+  );
+
+  if (!["featured-guest", "featured-author", "featured-partner", "featured-sponsor"].includes(role) && !isFeaturedRegistrant(record)) {
+    return null;
+  }
+
+  return {
+    registrationRole: role || record.registrationRole,
+    guestRegistrationType: role || record.guestRegistrationType,
+    contactEventRole: role || record.contactEventRole,
+    featuredGuestLabel: role || record.featuredGuestLabel,
+    isFeaturedGuest: role === "featured-guest" || record.isFeaturedGuest === true,
+    isFeaturedAuthor: role === "featured-author" || record.isFeaturedAuthor === true,
+    isFeaturedSponsor: (role === "featured-partner" || role === "featured-sponsor") || record.isFeaturedSponsor === true,
+    isFeaturedPartner: (role === "featured-partner" || role === "featured-sponsor") || record.isFeaturedPartner === true
+  };
+}
+
+function showFields(record = {}) {
+  const showId = registrantShowId(record);
+  if (!showId) return null;
+  return {
+    eventShowId: showId,
+    eventShowLabel: eventShowLabel(showId),
+    eventShowTime: eventShowTime(showId),
+    eventId: cleanString(record.eventId, 240),
+    eventTime: cleanString(record.eventTime, 120) || eventShowTime(showId)
+  };
+}
+
+function mergeRegistrantRecords(previous = {}, registrant = {}, type = "guest") {
+  const previousSubmittedPhoto = submittedPhotoFields(previous);
+  const previousFeaturedRole = featuredRoleFields(previous);
+  const previousShow = showFields(previous);
+  const next = { ...previous, ...registrant, type };
+
+  if (previousSubmittedPhoto && !submittedPhotoFields(registrant)) {
+    next.photoKey = previousSubmittedPhoto.photoKey || next.photoKey;
+    next.photoUrl = previousSubmittedPhoto.photoUrl || next.photoUrl;
+  }
+
+  if (previousFeaturedRole && !featuredRoleFields(registrant)) {
+    Object.assign(next, previousFeaturedRole);
+  }
+
+  if (previousShow && !showFields(registrant)) {
+    Object.assign(next, previousShow);
+  }
+
+  return next;
+}
+
 async function kvRegistrants(env) {
   const grouped = await Promise.all(kvRegistrantPrefixes.map(async ([type, prefix]) => {
     const keys = await listKeys(env, prefix);
@@ -440,7 +516,7 @@ async function eventRegistrants(env, event) {
     const type = cleanString(registrant.type, 40) || "guest";
     const key = registrantIdentity(type, registrant, registrant.sourceKey);
     const previous = map.get(key) || {};
-    map.set(key, { ...previous, ...registrant, type });
+    map.set(key, mergeRegistrantRecords(previous, registrant, type));
   }
 
   return [...map.values()];
