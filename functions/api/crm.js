@@ -4681,6 +4681,70 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
   };
 }
 
+function manualPartnerMatrixProspectKey(row = {}) {
+  const identity = cleanString(row.id || row.email || row.name || row.key, 240);
+  return `${PARTNER_MATRIX_PROSPECT_PREFIX}manual-partner:${safeFileSegment(identity, "partner")}`;
+}
+
+function manualPartnerMatchesMatrixProspect(row = {}, prospect = {}) {
+  const email = cleanString(row.email).toLowerCase();
+  const prospectEmail = cleanString(prospect.partnerContactEmail || prospect.intendedGuestEmail || prospect.email).toLowerCase();
+  if (email && prospectEmail && email === prospectEmail) return true;
+
+  const linkedin = cleanLinkedInProfileUrl(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl);
+  const prospectLinkedin = cleanLinkedInProfileUrl(prospect.linkedinProfileUrl || prospect.linkedInProfileUrl || prospect.linkedinUrl || prospect.linkedInUrl);
+  if (linkedin && prospectLinkedin && linkedin === prospectLinkedin) return true;
+
+  const nameKey = guestMatrixMergeNameKey(row.name);
+  const prospectNameKey = guestMatrixMergeNameKey(prospect.partnerContactName || prospect.intendedGuestName || prospect.name);
+  const company = cleanString(row.partnerCompany || row.company).toLowerCase();
+  const prospectCompany = cleanString(prospect.partnerCompany || prospect.company).toLowerCase();
+  return nameKey.length >= 6 && nameKey === prospectNameKey && (!company || !prospectCompany || company === prospectCompany);
+}
+
+async function upsertManualPartnerMatrixProspect(env, row = {}, actor = "crm") {
+  const key = manualPartnerMatrixProspectKey(row);
+  const existing = await readSetupJson(env, key).catch(() => null);
+  const now = new Date().toISOString();
+  const status = cleanGuestRegistrationLifecycleStatus(
+    row.registrationStatus || row.partnerStatus || row.crmStatus || existing?.registrationStatus || existing?.partnerStatus,
+    "pending-engagement"
+  );
+  const registrationRole = cleanGuestRegistrationType(row.partnerRegistrationType || row.registrationRole || existing?.partnerRegistrationType || "partner-candidate");
+  const next = {
+    ...(existing || {}),
+    id: cleanString(existing?.id || row.id, 200) || key,
+    source: "manual-partner",
+    manualPartnerSourceKey: cleanString(row.key, 500),
+    intendedGuestName: cleanString(row.name, 240),
+    intendedGuestEmail: cleanString(row.email, 240).toLowerCase(),
+    partnerContactName: cleanString(row.name, 240),
+    partnerContactEmail: cleanString(row.email, 240).toLowerCase(),
+    partnerCompany: cleanString(row.partnerCompany || row.company, 240),
+    company: cleanString(row.company || row.partnerCompany, 240),
+    title: cleanString(row.title, 240),
+    phone: cleanString(row.phone, 80),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl),
+    crmStatus: status,
+    guestStatus: status,
+    partnerStatus: status,
+    registrationStatus: status,
+    preRegistrationNotes: cleanString(row.preRegistrationNotes || row.matrixNotes || row.engagementNotes || row.crmNotes || existing?.preRegistrationNotes, 4000),
+    matrixInterestRating: cleanStarRating(row.matrixInterestRating ?? existing?.matrixInterestRating, 1),
+    partnerRegistrationType: registrationRole,
+    registrationRole,
+    invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy || existing?.invitedBy, 180),
+    createdAt: cleanString(existing?.createdAt || row.createdAt) || now,
+    createdBy: cleanString(existing?.createdBy || row.createdBy || actor),
+    updatedAt: now,
+    updatedBy: actor
+  };
+  await writeSetupJson(env, key, next);
+  const prospect = normalizeGuestMatrixProspect(key, next, "partner");
+  await upsertContactFromInviteRecord(env, prospect, "partner-matrix-prospect", actor);
+  return prospect;
+}
+
 function guestMatrixMergeNameKey(value = "") {
   return String(value || "")
     .trim()
@@ -4784,7 +4848,16 @@ async function partnerMatrixProspects(env) {
       return record ? normalizeGuestMatrixProspect(key, record, "partner") : null;
     })
   );
-  return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const prospects = rows.filter(Boolean);
+  const manualPartners = (await registrants(env, "partner", { includeManualPartners: true }))
+    .filter((row) => row.manualPartner === true);
+  const backfilled = [];
+  for (const row of manualPartners) {
+    if (prospects.some((prospect) => manualPartnerMatchesMatrixProspect(row, prospect))) continue;
+    const prospect = await upsertManualPartnerMatrixProspect(env, row, "crm-backfill").catch(() => null);
+    if (prospect) backfilled.push(prospect);
+  }
+  return [...prospects, ...backfilled].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
 function matrixPersonEnrichmentFromRecord(record = {}, linkedinProfileUrl = "", extra = {}) {
@@ -6335,6 +6408,7 @@ async function createManualPartner(env, payload = {}, actor = "") {
     };
 
     await writeSetupJson(env, key, record);
+    await upsertManualPartnerMatrixProspect(env, normalizeRecord(key, record), actor);
     await upsertPartnerContactProfile(env, record, actor);
     records.push(normalizeRecord(key, record));
   }
@@ -6829,13 +6903,14 @@ export async function onRequestGet({ request, env, data }) {
     });
   }
   const partnerRegistrationLinksOnly = type === "partner" && url.searchParams.get("registrationLinks") === "1";
+  const includeManualPartners = type === "partner" && url.searchParams.get("includeManualPartners") === "1";
   const rows = isContacts
     ? await contacts(env)
     : partnerRegistrationLinksOnly
       ? await partnerRegistrationLinkRows(env)
       : type === "guest"
         ? await guestRegistrationRows(env)
-      : await registrants(env, type);
+      : await registrants(env, type, { includeManualPartners });
 
   if (url.searchParams.get("download") === "csv") {
     const headings = isContacts
@@ -7781,7 +7856,7 @@ export async function onRequestPost({ request, env, data }) {
   if (payload?.action === "create-manual-partner") {
     try {
       const records = await createManualPartner(env, payload, access.email);
-      const rows = await registrants(env, "partner");
+      const rows = await registrants(env, "partner", { includeManualPartners: true });
       return json({
         ok: true,
         type: "partner",
@@ -7793,6 +7868,7 @@ export async function onRequestPost({ request, env, data }) {
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
         guestMatrixProspects: await guestMatrixProspects(env),
+        partnerMatrixProspects: await partnerMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
