@@ -1101,8 +1101,8 @@ function validateRegistration(registration, type = "") {
   if (!registration.company) return "Company is required.";
   if (!registration.title) return "Title is required.";
   if (!registration.industry) return "Industry is required.";
-  if (type === "guest" && !registration.city) return "City is required.";
-  if (type === "guest" && !registration.stateCountry) return "State / country is required.";
+  if (["guest", "partner"].includes(type) && !registration.city) return "City is required.";
+  if (["guest", "partner"].includes(type) && !registration.stateCountry) return "State / country is required.";
   if (!registration.email) return "Email is required.";
   if (!isValidEmail(registration.email)) return "Enter a valid email address.";
   if (!registration.linkedinProfileUrl) return "LinkedIn profile URL is required.";
@@ -1112,7 +1112,7 @@ function validateRegistration(registration, type = "") {
   if (!acceptedPhoneStatuses.has(registration.phoneVerificationStatus)) {
     return "Phone verification status is required.";
   }
-  if (type === "guest" && cleanQuestionRankings(registration.eventQuestionRankings).length !== 8) {
+  if (["guest", "partner"].includes(type) && cleanQuestionRankings(registration.eventQuestionRankings).length !== 8) {
     return "Rank each conversation question once, from 1 through 8.";
   }
   return "";
@@ -1371,7 +1371,8 @@ export async function upsertRegistrationContact(env, type, registration, config 
     invitedName: cleanString(registration.invitedName || registration.intendedGuestName || registration.guestName),
     intendedGuestName: cleanString(registration.intendedGuestName || registration.invitedName || registration.guestName),
     guestRegistrationType: cleanGuestRegistrationType(registration.guestRegistrationType || registration.registrationRole),
-    registrationRole: cleanGuestRegistrationType(registration.registrationRole || registration.guestRegistrationType),
+    partnerRegistrationType: cleanOptionalRegistrationType(registration.partnerRegistrationType || registration.registrationRole),
+    registrationRole: cleanGuestRegistrationType(registration.registrationRole || registration.partnerRegistrationType || registration.guestRegistrationType),
     company,
     companySlug,
     companyKey,
