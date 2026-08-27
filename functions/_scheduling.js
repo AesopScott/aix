@@ -1,4 +1,5 @@
 import { json } from "./_access-control.js";
+import { sendMicrosoftGraphMail } from "./_mail.js";
 
 const TEAM_INDEX_KEY = "scheduling:employees:index:v1";
 const EMPLOYEE_PREFIX = "scheduling:employee:";
@@ -25,6 +26,7 @@ const DEFAULT_MEETING_TYPE = {
   description: "A focused conversation with the Mojo team.",
   location: "Zoom"
 };
+const DEFAULT_BOOKING_EMAIL_SENDER = "hello@mojoaisummits.com";
 const DEFAULT_PHOTOS = {
   angel: "/assets/images/angel.png",
   charlie: "/assets/images/charlie.png",
@@ -171,6 +173,11 @@ function utcDateKey(date) {
   return date.toISOString().slice(0, 10);
 }
 
+function utcDateFromValue(value) {
+  const [year, month, day] = String(value || "").split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
 function addUtcDays(date, days) {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + days);
@@ -189,6 +196,10 @@ function bytesToBase64(bytes) {
     binary += String.fromCharCode(byte);
   });
   return btoa(binary);
+}
+
+function base64Encode(value) {
+  return bytesToBase64(new TextEncoder().encode(String(value || "")));
 }
 
 function base64ToBytes(value) {
@@ -431,6 +442,193 @@ function publicMeetingType(meetingType) {
   return {
     ...meetingType,
     location: /teams/i.test(meetingType?.location || "") ? "Zoom" : meetingType.location || "Zoom"
+  };
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function icsEscape(value) {
+  return cleanLongText(value, 4000)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+function formatIcsDateTime(date) {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function formatDateTimeRange(start, end, timeZone) {
+  const date = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(start);
+  const time = `${new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(start)} - ${new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short"
+  }).format(end)}`;
+  return { date, time };
+}
+
+function bookingConfirmationDetails(employee, meetingType, booking, start, end, zoomMeeting = null) {
+  const guestTimeZone = normalizeTimeZone(booking.guestTimeZone, "");
+  const hostRange = formatDateTimeRange(start, end, employee.timezone);
+  const guestRange = guestTimeZone ? formatDateTimeRange(start, end, guestTimeZone) : null;
+  const location = zoomMeeting?.joinUrl || meetingType.location || "Zoom";
+  const subject = `${meetingType.label} with ${employee.name}`;
+  return {
+    subject,
+    hostName: employee.name,
+    hostEmail: employee.email,
+    guestName: booking.guestName,
+    guestEmail: booking.guestEmail,
+    date: guestRange?.date || hostRange.date,
+    time: guestRange?.time || hostRange.time,
+    hostDate: hostRange.date,
+    hostTime: hostRange.time,
+    guestTimeZone,
+    location,
+    zoomJoinUrl: zoomMeeting?.joinUrl || "",
+    zoomPasscode: zoomMeeting?.passcode || "",
+    zoomMeetingId: zoomMeeting?.meetingId || "",
+    company: booking.company || "",
+    notes: booking.notes || ""
+  };
+}
+
+function bookingCalendarInvite(employee, meetingType, booking, start, end, zoomMeeting = null) {
+  const details = bookingConfirmationDetails(employee, meetingType, booking, start, end, zoomMeeting);
+  const description = [
+    "Booked through mojoaisummits.com.",
+    details.zoomJoinUrl ? `Zoom: ${details.zoomJoinUrl}` : "",
+    details.zoomPasscode ? `Zoom passcode: ${details.zoomPasscode}` : "",
+    details.zoomMeetingId ? `Zoom meeting ID: ${details.zoomMeetingId}` : "",
+    `Host: ${details.hostName} <${details.hostEmail}>`,
+    `Guest: ${details.guestName} <${details.guestEmail}>`,
+    details.guestTimeZone ? `Guest time zone: ${details.guestTimeZone}` : "",
+    details.company ? `Company: ${details.company}` : "",
+    details.notes ? `Notes: ${details.notes}` : ""
+  ].filter(Boolean).join("\n");
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Mojo AI Summits//Booking//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:REQUEST",
+    "BEGIN:VEVENT",
+    `UID:${icsEscape(`${booking.id}@mojoaisummits.com`)}`,
+    `DTSTAMP:${formatIcsDateTime(new Date())}`,
+    `DTSTART:${formatIcsDateTime(start)}`,
+    `DTEND:${formatIcsDateTime(end)}`,
+    `ORGANIZER;CN=${icsEscape(details.hostName)}:mailto:${details.hostEmail}`,
+    `ATTENDEE;CN=${icsEscape(details.guestName)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${details.guestEmail}`,
+    `SUMMARY:${icsEscape(details.subject)}`,
+    `LOCATION:${icsEscape(details.location)}`,
+    `DESCRIPTION:${icsEscape(description)}`,
+    details.zoomJoinUrl ? `URL:${icsEscape(details.zoomJoinUrl)}` : "",
+    "STATUS:CONFIRMED",
+    "SEQUENCE:0",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].filter(Boolean).join("\r\n");
+}
+
+function bookingConfirmationText(employee, meetingType, booking, start, end, zoomMeeting = null) {
+  const details = bookingConfirmationDetails(employee, meetingType, booking, start, end, zoomMeeting);
+  return [
+    `Hi ${details.guestName},`,
+    "",
+    `Your ${meetingType.label} with ${details.hostName} is confirmed.`,
+    "",
+    "Booking details",
+    `Date: ${details.date}`,
+    `Time: ${details.time}`,
+    details.guestTimeZone && details.hostTime !== details.time ? `Mojo time: ${details.hostDate}, ${details.hostTime}` : "",
+    `Host: ${details.hostName} <${details.hostEmail}>`,
+    `Location: ${details.location}`,
+    details.zoomJoinUrl ? `Zoom: ${details.zoomJoinUrl}` : "",
+    details.zoomPasscode ? `Zoom passcode: ${details.zoomPasscode}` : "",
+    details.zoomMeetingId ? `Zoom meeting ID: ${details.zoomMeetingId}` : "",
+    "",
+    "A calendar invite is attached to this email.",
+    "",
+    "Mojo AI Summits"
+  ].filter((line) => line !== "").join("\n");
+}
+
+function bookingConfirmationHtml(employee, meetingType, booking, start, end, zoomMeeting = null) {
+  const details = bookingConfirmationDetails(employee, meetingType, booking, start, end, zoomMeeting);
+  const rows = [
+    ["Date", details.date],
+    ["Time", details.time],
+    details.guestTimeZone && details.hostTime !== details.time ? ["Mojo time", `${details.hostDate}, ${details.hostTime}`] : null,
+    ["Host", `${details.hostName} <${details.hostEmail}>`],
+    ["Location", details.location],
+    details.zoomPasscode ? ["Zoom passcode", details.zoomPasscode] : null,
+    details.zoomMeetingId ? ["Zoom meeting ID", details.zoomMeetingId] : null
+  ].filter(Boolean).map(([label, value]) => {
+    const cleanValue = escapeHtml(value);
+    const renderedValue = /^https?:\/\//i.test(value)
+      ? `<a href="${cleanValue}">${cleanValue}</a>`
+      : cleanValue;
+    return `<tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb;width:130px">${escapeHtml(label)}</th><td style="padding:8px 10px;border:1px solid #d8dee9">${renderedValue}</td></tr>`;
+  }).join("");
+
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.55;max-width:680px">
+      <p>Hi ${escapeHtml(details.guestName)},</p>
+      <p>Your <strong>${escapeHtml(meetingType.label)}</strong> with <strong>${escapeHtml(details.hostName)}</strong> is confirmed.</p>
+      <table style="border-collapse:collapse;width:100%;margin:0 0 20px">
+        ${rows}
+      </table>
+      ${details.zoomJoinUrl ? `<p><a href="${escapeHtml(details.zoomJoinUrl)}">Open Zoom</a></p>` : ""}
+      <p>A calendar invite is attached to this email.</p>
+      <p style="margin-top:24px">Mojo AI Summits</p>
+    </div>
+  `;
+}
+
+async function sendBookingConfirmation(env, employee, meetingType, booking, start, end, zoomMeeting = null) {
+  const sender = cleanEmail(env.MOJO_BOOKING_EMAIL_SENDER || env.MOJO_SCHEDULING_EMAIL_SENDER || env.MOJO_INVITE_EMAIL_SENDER || employee.email || DEFAULT_BOOKING_EMAIL_SENDER);
+  const calendarInvite = bookingCalendarInvite(employee, meetingType, booking, start, end, zoomMeeting);
+  await sendMicrosoftGraphMail(env, {
+    sender,
+    to: [{ address: booking.guestEmail, name: booking.guestName }],
+    replyTo: [{ address: employee.email, name: employee.name }],
+    subject: `Confirmed: ${meetingType.label} with ${employee.name}`,
+    text: bookingConfirmationText(employee, meetingType, booking, start, end, zoomMeeting),
+    html: bookingConfirmationHtml(employee, meetingType, booking, start, end, zoomMeeting),
+    attachments: [{
+      name: "mojo-ai-summits-booking.ics",
+      contentType: "text/calendar; method=REQUEST; charset=utf-8",
+      contentBytes: base64Encode(calendarInvite)
+    }],
+    saveToSentItems: true
+  });
+
+  return {
+    attempted: true,
+    sent: true,
+    sender,
+    calendarInviteAttached: true
   };
 }
 
@@ -678,7 +876,8 @@ function weekdayIndex(dateValue, timeZone) {
 }
 
 function validDate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
+  return utcDateKey(utcDateFromValue(value)) === value;
 }
 
 function overlaps(leftStart, leftEnd, rightStart, rightEnd) {
@@ -1241,6 +1440,43 @@ async function hasSharedZoomConflict(env, start, end, zoomUserId = "") {
   return (await sharedZoomBusyIntervals(env, start, end, zoomUserId)).length > 0;
 }
 
+async function availabilityContext(env, employee, start, end, meetingType) {
+  const zoom = zoomConfig(env);
+  const employeeZoomUserId = zoomUserForEmployee(zoom, employee);
+  const graph = graphConfig(env);
+  let source = "local-rules";
+  let warning = graph.configured ? "" : "Live calendar sync is limited, so slots only reflect saved working hours.";
+  let busyIntervals = [];
+
+  if (graph.configured) {
+    const scheduleItems = await graphSchedule(env, employee, start, end, meetingType.durationMinutes);
+    busyIntervals = busyIntervalsFromSchedule(scheduleItems, employee);
+    source = "microsoft-graph";
+    warning = "";
+  }
+
+  if ((employee.busyCalendarUrls || []).length) {
+    const feedIntervals = await calendarFeedBusyIntervals(employee, start, end);
+    busyIntervals = [...busyIntervals, ...feedIntervals];
+    source = graph.configured ? "microsoft-graph+calendar-feeds" : "calendar-feeds";
+    warning = graph.configured ? "" : "Live calendar sync is limited, so slots only reflect saved working hours and calendar feeds.";
+  }
+
+  const connectionIntervals = await connectedCalendarBusyIntervals(env, employee, start, end);
+  if (connectionIntervals.length) {
+    busyIntervals = [...busyIntervals, ...connectionIntervals];
+    source = `${source}+connected-calendars`;
+  }
+
+  const sharedZoomIntervals = await sharedZoomBusyIntervals(env, start, end, employeeZoomUserId);
+  if (sharedZoomIntervals.length) {
+    busyIntervals = [...busyIntervals, ...sharedZoomIntervals];
+    source = `${source}+shared-zoom`;
+  }
+
+  return { source, warning, busyIntervals };
+}
+
 function buildCandidateSlots(employee, dateValue, meetingType, busyIntervals = []) {
   if (!employee.workingDays.includes(weekdayIndex(dateValue, employee.timezone))) return [];
 
@@ -1283,41 +1519,10 @@ export async function availability(env, query) {
   }
   employee = effectiveEmployeeForDate(employee, dateValue);
   const meetingType = employee.meetingTypes.find((type) => type.id === cleanSlug(query.type)) || employee.meetingTypes[0];
-  const zoom = zoomConfig(env);
-  const employeeZoomUserId = zoomUserForEmployee(zoom, employee);
 
   const dayStart = zonedTimeToUtc(dateValue, employee.dayStart, employee.timezone);
   const dayEnd = zonedTimeToUtc(dateValue, employee.dayEnd, employee.timezone);
-  const graph = graphConfig(env);
-  let source = "local-rules";
-  let warning = graph.configured ? "" : "Live calendar sync is limited, so slots only reflect saved working hours.";
-  let busyIntervals = [];
-
-  if (graph.configured) {
-    const scheduleItems = await graphSchedule(env, employee, dayStart, dayEnd, meetingType.durationMinutes);
-    busyIntervals = busyIntervalsFromSchedule(scheduleItems, employee);
-    source = "microsoft-graph";
-    warning = "";
-  }
-
-  if ((employee.busyCalendarUrls || []).length) {
-    const feedIntervals = await calendarFeedBusyIntervals(employee, dayStart, dayEnd);
-    busyIntervals = [...busyIntervals, ...feedIntervals];
-    source = graph.configured ? "microsoft-graph+calendar-feeds" : "calendar-feeds";
-    warning = graph.configured ? "" : "Live calendar sync is limited, so slots only reflect saved working hours and calendar feeds.";
-  }
-
-  const connectionIntervals = await connectedCalendarBusyIntervals(env, employee, dayStart, dayEnd);
-  if (connectionIntervals.length) {
-    busyIntervals = [...busyIntervals, ...connectionIntervals];
-    source = `${source}+connected-calendars`;
-  }
-
-  const sharedZoomIntervals = await sharedZoomBusyIntervals(env, dayStart, dayEnd, employeeZoomUserId);
-  if (sharedZoomIntervals.length) {
-    busyIntervals = [...busyIntervals, ...sharedZoomIntervals];
-    source = `${source}+shared-zoom`;
-  }
+  const { source, warning, busyIntervals } = await availabilityContext(env, employee, dayStart, dayEnd, meetingType);
 
   return {
     employee: publicEmployee(employee),
@@ -1326,6 +1531,64 @@ export async function availability(env, query) {
     source,
     warning,
     slots: buildCandidateSlots(employee, dateValue, meetingType, busyIntervals)
+  };
+}
+
+export async function availabilitySummary(env, query) {
+  const baseEmployee = await getEmployee(env, query.host || query.employee || query.slug);
+  if (!baseEmployee || baseEmployee.active === false) {
+    return { response: json({ error: "That employee booking page is not available." }, { status: 404 }) };
+  }
+
+  const startValue = String(query.start || "");
+  const endValue = String(query.end || startValue);
+  if (!validDate(startValue) || !validDate(endValue)) {
+    return { response: json({ error: "Choose a valid date range in YYYY-MM-DD format." }, { status: 400 }) };
+  }
+  if (startValue > endValue) {
+    return { response: json({ error: "The availability range start must be before the end date." }, { status: 400 }) };
+  }
+
+  const dates = [];
+  for (let cursor = utcDateFromValue(startValue); cursor <= utcDateFromValue(endValue); cursor = addUtcDays(cursor, 1)) {
+    dates.push(utcDateKey(cursor));
+    if (dates.length > 62) {
+      return { response: json({ error: "Availability summaries are limited to 62 days." }, { status: 400 }) };
+    }
+  }
+
+  const rangeEmployees = dates.map((date) => effectiveEmployeeForDate(baseEmployee, date));
+  const selectedType = cleanSlug(query.type);
+  const firstMeetingType = rangeEmployees[0].meetingTypes.find((type) => type.id === selectedType) || rangeEmployees[0].meetingTypes[0];
+  const starts = rangeEmployees.map((employee, index) =>
+    zonedTimeToUtc(dates[index], employee.dayStart, employee.timezone).getTime()
+  );
+  const ends = rangeEmployees.map((employee, index) =>
+    zonedTimeToUtc(dates[index], employee.dayEnd, employee.timezone).getTime()
+  );
+  const rangeStart = new Date(Math.min(...starts));
+  const rangeEnd = new Date(Math.max(...ends));
+  const { source, warning, busyIntervals } = await availabilityContext(env, baseEmployee, rangeStart, rangeEnd, firstMeetingType);
+
+  const days = dates.map((date, index) => {
+    const employee = rangeEmployees[index];
+    const meetingType = employee.meetingTypes.find((type) => type.id === selectedType) || employee.meetingTypes[0];
+    const slots = buildCandidateSlots(employee, date, meetingType, busyIntervals);
+    return {
+      date,
+      slotCount: slots.length,
+      slotStarts: slots.map((slot) => slot.start)
+    };
+  });
+
+  return {
+    employee: publicEmployee(baseEmployee),
+    meetingType: publicMeetingType(firstMeetingType),
+    start: startValue,
+    end: endValue,
+    source,
+    warning,
+    days
   };
 }
 
@@ -1561,16 +1824,30 @@ export async function createBooking(env, input = {}) {
         throw error;
       }
     }
+    let confirmationEmail = { attempted: false, sent: false, calendarInviteAttached: false };
+    try {
+      confirmationEmail = await sendBookingConfirmation(env, employee, meetingType, booking, start, end, zoomMeeting);
+    } catch (error) {
+      confirmationEmail = {
+        attempted: true,
+        sent: false,
+        calendarInviteAttached: false,
+        error: cleanText(error?.message || "Booking confirmation email failed.", 400)
+      };
+    }
     const record = {
       ...booking,
       graphEventId: event?.id || "",
       graphWebLink: event?.webLink || "",
+      graphCalendarEventCreated: Boolean(event?.id),
       zoomMeetingId: zoomMeeting?.meetingId || "",
       zoomUserId: zoomMeeting?.zoomUserId || employeeZoomUserId,
       zoomJoinUrl: zoomMeeting?.joinUrl || "",
       zoomPasscode: zoomMeeting?.passcode || "",
       onlineMeetingUrl: zoomMeeting?.joinUrl || "",
-      calendarInviteSent: Boolean(event?.id),
+      calendarInviteSent: confirmationEmail.sent === true && confirmationEmail.calendarInviteAttached === true,
+      confirmationEmailSent: confirmationEmail.sent === true,
+      confirmationEmailError: confirmationEmail.sent === false ? confirmationEmail.error || "" : "",
       meetingDetailsPending: !zoomMeeting?.joinUrl
     };
 
@@ -1589,6 +1866,7 @@ export async function createBooking(env, input = {}) {
         guestTimeZone: record.guestTimeZone,
         onlineMeetingUrl: record.onlineMeetingUrl,
         calendarInviteSent: record.calendarInviteSent,
+        confirmationEmailSent: record.confirmationEmailSent,
         meetingDetailsPending: record.meetingDetailsPending
       }
     };

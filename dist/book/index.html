@@ -361,9 +361,21 @@
       text-transform: none;
     }
 
+    .calendar-day.available {
+      border-color: rgba(0, 230, 255, 0.38);
+      color: var(--white);
+    }
+
     .calendar-day.active {
       color: var(--deep-navy);
       background: linear-gradient(90deg, var(--cyan), #7AF4FF);
+    }
+
+    .calendar-day:disabled {
+      border-color: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.28);
+      background: rgba(10, 15, 30, 0.42);
+      opacity: 1;
     }
 
     .calendar-day.outside {
@@ -588,6 +600,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       slot: null,
       directSlug: "",
       calendarCursor: null,
+      availabilityByDate: new Map(),
+      availabilityRangeKey: "",
+      calendarSummaryLoading: false,
       confirmedStarts: new Set(),
       confirmation: null
     };
@@ -684,11 +699,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const meetingLabel = booking.meetingType?.label || state.meetingType?.label || "Meeting";
       const meetingDetailsPending = booking.meetingDetailsPending === true || !booking.onlineMeetingUrl;
       const location = booking.onlineMeetingUrl ? "Zoom link included" : "Meeting details pending";
-      const calendarInviteSent = booking.calendarInviteSent !== false;
+      const confirmationEmailSent = booking.confirmationEmailSent === true;
       const confirmationMessage = meetingDetailsPending
         ? "Your booking is confirmed. The Mojo team will follow up with meeting details."
-        : calendarInviteSent
-          ? "The calendar invitation is on its way."
+        : confirmationEmailSent
+          ? "We emailed the schedule and calendar invite."
           : "Your booking is confirmed. Use the Zoom link below for the meeting.";
       confirmationEl.innerHTML = `
         <h2>Event booked.</h2>
@@ -752,6 +767,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return new Date(date.getFullYear(), date.getMonth() + amount, 1);
     }
 
+    function calendarRange() {
+      const selected = dateEl.value || todayValue();
+      const cursor = state.calendarCursor || new Date(dateFromValue(selected).getFullYear(), dateFromValue(selected).getMonth(), 1);
+      const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+      const gridStart = new Date(monthStart);
+      gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+      const gridEnd = new Date(gridStart);
+      gridEnd.setDate(gridStart.getDate() + 41);
+      return {
+        monthStart,
+        gridStart,
+        gridEnd,
+        start: dateValue(gridStart),
+        end: dateValue(gridEnd)
+      };
+    }
+
     function formatDateLabel(value) {
       return dateFromValue(value).toLocaleDateString("en-US", {
         weekday: "short",
@@ -784,14 +816,90 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    function resetCalendarSummary() {
+      state.availabilityByDate = new Map();
+      state.availabilityRangeKey = "";
+      state.calendarSummaryLoading = false;
+    }
+
+    function visibleSlotStartsForDate(value) {
+      const starts = state.availabilityByDate.get(value);
+      if (!Array.isArray(starts)) return [];
+      return starts.filter((start) => !state.confirmedStarts.has(start));
+    }
+
+    function hasVisibleSlotsForDate(value) {
+      return visibleSlotStartsForDate(value).length > 0;
+    }
+
+    async function loadCalendarSummary() {
+      if (!state.employee || !state.meetingType) {
+        resetCalendarSummary();
+        renderCalendar();
+        return;
+      }
+
+      const range = calendarRange();
+      const typeId = meetingTypeEl.value || state.meetingType.id;
+      const requestKey = [state.employee.slug, typeId, range.start, range.end].join("|");
+      if (state.availabilityRangeKey === requestKey) return;
+
+      state.availabilityByDate = new Map();
+      state.availabilityRangeKey = "";
+      state.calendarSummaryLoading = true;
+      renderCalendar();
+
+      const params = new URLSearchParams({
+        host: state.employee.slug,
+        type: typeId,
+        start: range.start,
+        end: range.end
+      });
+      let response;
+      let payload;
+      try {
+        response = await fetch(`/api/scheduling/availability?${params}`, { cache: "no-store" });
+        payload = await response.json();
+      } catch (error) {
+        const currentRange = calendarRange();
+        const currentKey = [state.employee?.slug, meetingTypeEl.value || state.meetingType?.id, currentRange.start, currentRange.end].join("|");
+        if (requestKey === currentKey) {
+          state.calendarSummaryLoading = false;
+          renderCalendar();
+        }
+        throw error;
+      }
+      if (!response.ok) {
+        const currentRange = calendarRange();
+        const currentKey = [state.employee?.slug, meetingTypeEl.value || state.meetingType?.id, currentRange.start, currentRange.end].join("|");
+        if (requestKey === currentKey) {
+          state.calendarSummaryLoading = false;
+          renderCalendar();
+        }
+        throw new Error(payload.error || "Unable to load calendar availability.");
+      }
+
+      const nextByDate = new Map();
+      (payload.days || []).forEach((day) => {
+        nextByDate.set(day.date, Array.isArray(day.slotStarts) ? day.slotStarts : []);
+      });
+
+      const currentRange = calendarRange();
+      const currentKey = [state.employee?.slug, meetingTypeEl.value || state.meetingType?.id, currentRange.start, currentRange.end].join("|");
+      if (requestKey !== currentKey) {
+        return;
+      }
+      state.availabilityByDate = nextByDate;
+      state.availabilityRangeKey = requestKey;
+      state.calendarSummaryLoading = false;
+      renderCalendar();
+    }
+
     function renderCalendar() {
       const selected = dateEl.value || todayValue();
       const today = todayValue();
       const max = maxDateValue();
-      const cursor = state.calendarCursor || new Date(dateFromValue(selected).getFullYear(), dateFromValue(selected).getMonth(), 1);
-      const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-      const gridStart = new Date(monthStart);
-      gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+      const { monthStart, gridStart } = calendarRange();
 
       calendarMonth.textContent = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
       calendarGrid.innerHTML = "";
@@ -806,17 +914,25 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const day = new Date(gridStart);
         day.setDate(gridStart.getDate() + index);
         const value = dateValue(day);
+        const availabilityKnown = state.availabilityByDate.has(value);
+        const selectable = value >= today && value <= max && availabilityKnown && hasVisibleSlotsForDate(value);
         const button = document.createElement("button");
         button.type = "button";
         button.className = [
           "calendar-day",
           "secondary",
+          selectable ? "available" : "",
           day.getMonth() !== monthStart.getMonth() ? "outside" : "",
-          value === selected ? "active" : ""
+          value === selected && selectable ? "active" : ""
         ].filter(Boolean).join(" ");
         button.textContent = String(day.getDate());
-        button.disabled = value < today || value > max;
+        button.disabled = !selectable;
         button.setAttribute("aria-label", formatDateLabel(value));
+        if (value >= today && value <= max && !availabilityKnown && state.calendarSummaryLoading) {
+          button.setAttribute("aria-label", `${formatDateLabel(value)} - checking availability`);
+        } else if (value >= today && value <= max && availabilityKnown && !hasVisibleSlotsForDate(value)) {
+          button.setAttribute("aria-label", `${formatDateLabel(value)} - no openings`);
+        }
         button.addEventListener("click", () => {
           setCalendarOpen(false);
           setSelectedDate(value);
@@ -881,10 +997,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       state.employee = state.employees.find((employee) => employee.slug === slug) || null;
       state.slot = null;
       clearConfirmation();
+      resetCalendarSummary();
       renderTeam();
       renderMeetingTypes();
       updateBookingCopy();
-      loadAvailability();
+      loadCalendarSummary().catch((error) => setStatus(error.message, "error"));
+      loadAvailability().catch((error) => setStatus(error.message, "error"));
     }
 
     function visibleSlots(slots) {
@@ -951,7 +1069,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       renderTeam();
       renderMeetingTypes();
       updateBookingCopy();
-      if (state.employee) await loadAvailability();
+      if (state.employee) await Promise.all([loadCalendarSummary(), loadAvailability()]);
     }
 
     async function loadAvailability(options = {}) {
@@ -984,11 +1102,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         warningEl.textContent = payload.warning;
         warningEl.classList.remove("hidden");
       }
+      state.availabilityByDate.set(dateEl.value, (payload.slots || []).map((slot) => slot.start));
+      renderCalendar();
       renderSlots(payload.slots || []);
     }
 
     meetingTypeEl.addEventListener("change", () => {
       state.meetingType = state.employee?.meetingTypes?.find((type) => type.id === meetingTypeEl.value) || null;
+      resetCalendarSummary();
+      loadCalendarSummary().catch((error) => setStatus(error.message, "error"));
       loadAvailability().catch((error) => setStatus(error.message, "error"));
     });
 
@@ -999,11 +1121,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     prevMonth.addEventListener("click", () => {
       state.calendarCursor = addMonths(state.calendarCursor || dateFromValue(dateEl.value || todayValue()), -1);
       renderCalendar();
+      loadCalendarSummary().catch((error) => setStatus(error.message, "error"));
     });
 
     nextMonth.addEventListener("click", () => {
       state.calendarCursor = addMonths(state.calendarCursor || dateFromValue(dateEl.value || todayValue()), 1);
       renderCalendar();
+      loadCalendarSummary().catch((error) => setStatus(error.message, "error"));
     });
 
     document.addEventListener("click", (event) => {
@@ -1054,6 +1178,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const booking = payload.booking || {};
       state.confirmedStarts.add(booking.start || state.slot.start);
       state.slot = null;
+      renderCalendar();
       slotsEl.innerHTML = "";
       warningEl.classList.add("hidden");
       setStatus("");
