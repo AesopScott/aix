@@ -2685,7 +2685,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <strong>${escapeHtml(role)} invite link generated.</strong>
           <p>${copied ? "The link was copied to your clipboard." : "Copy the link below, or open the Guest Invites page to review it."}</p>
           <p><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a></p>
-          <p>${escapeHtml(invite.intendedGuestName || invite.invitedName || invite.guestName || "Invited guest")} | ${escapeHtml(role)} | ${escapeHtml(eventDisplayLabel(invite))}</p>
+          <p>${escapeHtml(crmPersonName(invite, "Invited guest"))} | ${escapeHtml(role)} | ${escapeHtml(eventDisplayLabel(invite))}</p>
         </div>
         <div class="invite-result-actions">
           <button class="compact" type="button" data-copy-created-registration-invite="${escapeHtml(url)}">Copy Link</button>
@@ -3027,7 +3027,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function partnerCompanyNameFrom(record = {}) {
-      return firstCleanValue(record.partnerCompany, record.company, record.organization);
+      return crmCompanyName(record);
     }
 
     function eventAttendanceKey(event = {}) {
@@ -3627,7 +3627,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixRecordId(invite = {}) {
-      return String(invite.key || invite.code || invite.inviteCode || `${invite.eventSlug || invite.eventName || "event"}:${invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || invite.partnerContactEmail || invite.intendedGuestName || invite.invitedName || invite.guestName || invite.partnerContactName || ""}`);
+      return String(invite.key || invite.code || invite.inviteCode || `${invite.eventSlug || invite.eventName || "event"}:${crmPersonEmail(invite) || crmPersonName(invite, "")}`);
     }
 
     function guestMatrixDraft(invite = {}) {
@@ -3640,6 +3640,41 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (text) return text;
       }
       return "";
+    }
+
+    function crmPersonName(record = {}, fallback = "Name not recorded") {
+      return firstCleanValue(
+        record.name,
+        record.contactName,
+        record.intendedGuestName,
+        record.invitedName,
+        record.guestName,
+        record.partnerContactName,
+        record.usedByName,
+        record.partnerContactEmail,
+        fallback
+      );
+    }
+
+    function crmPersonEmail(record = {}) {
+      return firstCleanValue(
+        record.email,
+        record.contactEmail,
+        record.intendedGuestEmail,
+        record.invitedEmail,
+        record.guestEmail,
+        record.partnerContactEmail,
+        record.usedByEmail,
+        record.usedBy
+      );
+    }
+
+    function crmCompanyName(record = {}) {
+      return firstCleanValue(record.company, record.partnerCompany, record.organization, record.organizationName);
+    }
+
+    function crmPersonTitle(record = {}) {
+      return firstCleanValue(record.title, record.jobTitle, record.roleTitle, record.contactTitle);
     }
 
     function normalizedMatrixValue(value = "") {
@@ -3824,11 +3859,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixPersonName(invite = {}) {
-      return firstCleanValue(invite.intendedGuestName, invite.invitedName, invite.guestName, invite.partnerContactName, invite.usedByName, invite.partnerContactEmail, "Name not recorded");
+      return crmPersonName(invite);
     }
 
     function guestMatrixPersonEmail(invite = {}) {
-      return firstCleanValue(invite.intendedGuestEmail, invite.invitedEmail, invite.guestEmail, invite.partnerContactEmail, invite.usedByEmail, invite.usedBy);
+      return crmPersonEmail(invite);
     }
 
     function guestMatrixPersonLinkedIn(invite = {}) {
@@ -4072,8 +4107,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         registeredShowLabel: isRegisteredRow ? guestMatrixRegisteredShowMeta(invite) : "",
         name: guestMatrixPersonName(invite),
         email,
-        company: firstCleanValue(draft.company, draft.partnerCompany, invite.company, invite.organization, invite.partnerCompany),
-        title: firstCleanValue(invite.title, invite.jobTitle, invite.roleTitle),
+        company: firstCleanValue(draft.company, draft.partnerCompany, crmCompanyName(invite)),
+        title: crmPersonTitle(invite),
         linkedinProfileUrl: firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl),
         createdAt: firstCleanValue(invite.createdAt, invite.addedAt),
         updatedAt: firstCleanValue(invite.updatedAt, invite.crmUpdatedAt),
@@ -4098,10 +4133,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           guestMatrixPersonName(invite),
           email,
           firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl),
-          firstCleanValue(invite.title, invite.jobTitle, invite.roleTitle),
+          crmPersonTitle(invite),
           firstCleanValue(invite.createdAt, invite.addedAt),
           firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy),
-          firstCleanValue(invite.company, invite.organization, invite.partnerCompany),
+          crmCompanyName(invite),
           firstCleanValue(invite.code, invite.inviteCode),
           notes,
           role,
@@ -4651,7 +4686,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (selectedStatus !== "all" && statusFilter.value !== selectedStatus) statusFilter.value = "all";
 
       for (const row of state.rows || []) {
-        const company = String(row.company || row.partnerCompany || row.organization || "").trim();
+        const company = crmCompanyName(row);
         if (company) companies.set(filterKey(company), company);
 
         for (const event of rowEvents(row)) {
@@ -4777,12 +4812,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         invite.eventShowLabel,
         invite.eventShowTime,
         invite.eventSlug,
-        invite.intendedGuestName,
-        invite.invitedName,
-        invite.guestName,
-        invite.intendedGuestEmail,
-        invite.invitedEmail,
-        invite.guestEmail,
+        crmPersonName(invite),
+        crmPersonEmail(invite),
+        crmCompanyName(invite),
+        crmPersonTitle(invite),
         invite.invitedBy,
         invite.inviter,
         invite.invitedByName,
@@ -4802,7 +4835,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function registrationInviteAttachedName(invite) {
-      return String(invite.intendedGuestName || invite.invitedName || invite.guestName || invite.usedByName || "").trim();
+      return crmPersonName(invite, "");
     }
 
     function isRegistrationInviteRegistered(invite) {
@@ -4881,7 +4914,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const qrUrl = qrCodeUrl(url);
         const role = guestRegistrationTypeLabel(invite.partnerRegistrationType || invite.registrationRole || "partner-candidate");
         const invitedBy = invite.invitedBy || invite.inviter || invite.invitedByName || invite.createdBy || "Not recorded";
-        const partnerContact = invite.partnerContactName || invite.intendedGuestName || invite.invitedName || invite.guestName || "";
+        const partnerContact = crmPersonName(invite, "");
+        const partnerContactEmail = crmPersonEmail(invite);
+        const partnerCompany = crmCompanyName(invite);
         return `
           <div class="invite-row">
             <div class="invite-qr">
@@ -4890,8 +4925,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             </div>
             <div>
               <strong>${escapeHtml(invite.eventName || "Partner event invite")}</strong>
-              <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(inviteStatusText(invite))}${invite.partnerCompany ? ` | ${escapeHtml(invite.partnerCompany)}` : ""}</p>
-              ${partnerContact ? `<p>Partner contact: ${escapeHtml(partnerContact)}${invite.partnerContactEmail ? ` | ${escapeHtml(invite.partnerContactEmail)}` : ""}</p>` : ""}
+              <p>Registration code: <code>${escapeHtml(invite.code)}</code> | ${escapeHtml(role)} | ${escapeHtml(inviteStatusText(invite))}${partnerCompany ? ` | ${escapeHtml(partnerCompany)}` : ""}</p>
+              ${partnerContact ? `<p>Partner contact: ${escapeHtml(partnerContact)}${partnerContactEmail ? ` | ${escapeHtml(partnerContactEmail)}` : ""}</p>` : ""}
               <p>Invited by: ${escapeHtml(invitedBy)}</p>
               <p>Used by: ${escapeHtml(inviteUsedByText(invite))}</p>
               <p>Used for: ${escapeHtml(inviteUsedForText(invite))}</p>
@@ -4936,8 +4971,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const url = registrationInviteUrl(invite);
         const qrUrl = qrCodeUrl(url);
         const role = guestRegistrationTypeLabel(invite.guestRegistrationType || invite.registrationRole || invite.type);
-        const invitedName = invite.intendedGuestName || invite.invitedName || invite.guestName || "Name not recorded";
-        const invitedEmail = invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || "";
+        const invitedName = crmPersonName(invite);
+        const invitedEmail = crmPersonEmail(invite);
         const invitedBy = invite.invitedBy || invite.inviter || invite.invitedByName || invite.createdBy || "Not recorded";
         const inviteUsed = invite.status === "used" || Boolean(invite.usedBy || invite.usedByEmail || invite.usedByName);
         return `
@@ -4994,7 +5029,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return state.rows.filter((row) => {
         if (!rowHasEvent(row, eventValue)) return false;
         if (!contactHasRole(row, role)) return false;
-        if (company !== "all" && filterKey(row.company || row.partnerCompany || row.organization) !== company) return false;
+        if (company !== "all" && filterKey(crmCompanyName(row)) !== company) return false;
         if (!passesNumberThreshold(publicationCountForRow(row), publicationOperator, publicationThreshold)) return false;
         if (!passesNumberThreshold(row.attendedCount || 0, attendedOperator, attendedThreshold)) return false;
 
@@ -7693,6 +7728,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const guestRegistrationType = formData.get(partnerMode ? "partnerRegistrationType" : "guestRegistrationType") || (partnerMode ? "partner" : "guest");
       const selectedShowId = hasEvent ? eventShowId(formData.get("eventShowId") || guestMatrixAddShow?.value || "both") : "";
       const showId = hasEvent && isSingleShowRegistrationRole(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
+      const name = formData.get("intendedGuestName") || "";
+      const email = formData.get("intendedGuestEmail") || "";
+      const company = formData.get("company") || "";
+      const title = formData.get("title") || "";
       return {
         action: partnerMode ? "create-partner-matrix-prospect" : "create-guest-matrix-prospect",
         guestRegistrationType: partnerMode ? "" : guestRegistrationType,
@@ -7705,18 +7744,20 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventShowLabel: showId ? eventShowLabel(showId) : "",
         eventShowTime: showId ? eventShowTime(showId) : "",
         eventTime: showId ? eventShowTime(showId) : "",
-        partnerCompany: partnerMode ? formData.get("company") || "" : "",
-        company: formData.get("company") || "",
-        title: formData.get("title") || "",
-        jobTitle: formData.get("title") || "",
-        intendedGuestName: formData.get("intendedGuestName") || "",
-        intendedGuestEmail: formData.get("intendedGuestEmail") || "",
+        name,
+        email,
+        partnerCompany: partnerMode ? company : "",
+        company,
+        title,
+        jobTitle: title,
+        intendedGuestName: name,
+        intendedGuestEmail: email,
         linkedinProfileUrl: formData.get("linkedinProfileUrl") || "",
         linkedinUrl: formData.get("linkedinProfileUrl") || "",
         potentialSponsor: !partnerMode && formData.get("potentialSponsor") === "true",
         preRegistrationNotes: formData.get("preRegistrationNotes") || "",
-        partnerContactName: partnerMode ? formData.get("intendedGuestName") || "" : "",
-        partnerContactEmail: partnerMode ? formData.get("intendedGuestEmail") || "" : "",
+        partnerContactName: partnerMode ? name : "",
+        partnerContactEmail: partnerMode ? email : "",
         invitedBy: ""
       };
     }
@@ -7829,12 +7870,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ? invite.partnerRegistrationType || invite.registrationRole || ""
         : invite.guestRegistrationType || invite.registrationRole || invite.type || "");
       if (partnerMode) {
-        setFormFieldValue(form, '[name="partnerCompany"]', row.company || invite.partnerCompany || invite.company || "");
-        setFormFieldValue(form, '[name="partnerContactName"]', row.name || invite.partnerContactName || invite.intendedGuestName || "");
-        setFormFieldValue(form, '[name="partnerContactEmail"]', row.email || invite.partnerContactEmail || invite.intendedGuestEmail || "");
+        setFormFieldValue(form, '[name="partnerCompany"]', row.company || crmCompanyName(invite));
+        setFormFieldValue(form, '[name="partnerContactName"]', row.name || crmPersonName(invite, ""));
+        setFormFieldValue(form, '[name="partnerContactEmail"]', row.email || crmPersonEmail(invite));
       } else {
-        setFormFieldValue(form, '[name="intendedGuestName"]', row.name || invite.intendedGuestName || invite.invitedName || "");
-        setFormFieldValue(form, '[name="intendedGuestEmail"]', row.email || invite.intendedGuestEmail || invite.invitedEmail || "");
+        setFormFieldValue(form, '[name="intendedGuestName"]', row.name || crmPersonName(invite, ""));
+        setFormFieldValue(form, '[name="intendedGuestEmail"]', row.email || crmPersonEmail(invite));
         if (registrationInvitePotentialSponsor) registrationInvitePotentialSponsor.value = row.potentialSponsor ? "true" : "";
         if (registrationInviteSourceMatrixKey) registrationInviteSourceMatrixKey.value = row.matrixOnly ? row.invite?.key || row.key || "" : "";
       }
@@ -8753,9 +8794,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const partnerRegistrationType = formData.get("partnerRegistrationType") || "partner";
       const selectedShowId = eventShowId(formData.get("eventShowId") || partnerInviteShow?.value || "both");
       const showId = isSingleShowRegistrationRole(partnerRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
+      const name = formData.get("partnerContactName") || "";
+      const email = formData.get("partnerContactEmail") || "";
+      const company = formData.get("partnerCompany") || "";
       return {
         action: "create-partner-invite",
         ...Object.fromEntries(formData.entries()),
+        name,
+        email,
+        company,
         eventShowId: showId,
         eventShowLabel: eventShowLabel(showId),
         eventShowTime: eventShowTime(showId),
@@ -8831,13 +8878,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const guestRegistrationType = formData.get("type") || "guest";
       const selectedShowId = eventShowId(formData.get("eventShowId") || registrationInviteShow?.value || "both");
       const showId = isSingleShowRegistrationRole(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
+      const name = formData.get("intendedGuestName") || "";
+      const email = formData.get("intendedGuestEmail") || "";
       return {
         action: "create-registration-invite",
         type: "guest",
         guestRegistrationType,
         eventSlug: formData.get("eventSlug") || "",
-        intendedGuestName: formData.get("intendedGuestName") || "",
-        intendedGuestEmail: formData.get("intendedGuestEmail") || "",
+        name,
+        email,
+        intendedGuestName: name,
+        intendedGuestEmail: email,
         invitedBy: formData.get("invitedBy") || "",
         eventName: selected?.dataset.eventName || selected?.textContent?.split("|")[0]?.trim() || "",
         eventDate: selected?.dataset.eventDate || "",

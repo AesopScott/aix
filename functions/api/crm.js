@@ -1541,14 +1541,14 @@ function cleanBoolean(value) {
 }
 
 function invitePersonName(record = {}) {
-  const name = cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName || record?.partnerContactName);
+  const name = cleanString(record?.name || record?.contactName || record?.intendedGuestName || record?.invitedName || record?.guestName || record?.partnerContactName || record?.usedByName);
   return isEmail(name) ? "" : name;
 }
 
 function invitePersonEmail(record = {}) {
-  const email = cleanString(record?.intendedGuestEmail || record?.invitedEmail || record?.guestEmail || record?.partnerContactEmail).toLowerCase();
+  const email = cleanString(record?.email || record?.contactEmail || record?.intendedGuestEmail || record?.invitedEmail || record?.guestEmail || record?.partnerContactEmail || record?.usedByEmail || record?.usedBy).toLowerCase();
   if (isEmail(email)) return email;
-  const name = cleanString(record?.intendedGuestName || record?.invitedName || record?.guestName || record?.partnerContactName).toLowerCase();
+  const name = cleanString(record?.name || record?.contactName || record?.intendedGuestName || record?.invitedName || record?.guestName || record?.partnerContactName).toLowerCase();
   return isEmail(name) ? name : "";
 }
 
@@ -1678,11 +1678,11 @@ function normalizeRecord(key, record) {
     key,
     id: cleanString(record?.id) || key,
     createdAt,
-    name: cleanString(record?.name),
-    company: cleanString(record?.company),
-    title: cleanString(record?.title),
+    name: cleanString(record?.name || invitePersonName(record)),
+    company: cleanString(record?.company || record?.partnerCompany || record?.organization),
+    title: cleanString(record?.title || record?.jobTitle || record?.roleTitle || record?.contactTitle),
     industry: cleanString(record?.industry),
-    email: cleanString(record?.email).toLowerCase(),
+    email: cleanString(record?.email || invitePersonEmail(record)).toLowerCase(),
     phone: cleanString(record?.phone),
     photoUrl: cleanString(record?.photoUrl || record?.photoURL || record?.photo, 500),
     photoKey: safeObjectKey(record?.photoKey),
@@ -2295,7 +2295,7 @@ function contactFromRegistrant(row = {}, type = "") {
 }
 
 function contactKeyForInviteRecord(row = {}, source = "guest-invite") {
-  const email = cleanString(row.email || row.intendedGuestEmail || row.invitedEmail || row.guestEmail || row.partnerContactEmail || row.usedByEmail || row.usedBy).toLowerCase();
+  const email = invitePersonEmail(row);
   if (isEmail(email)) return `${registrantTypes.contacts.crmPrefix}${email}`;
   const linkedIn = linkedInProfileIdentity(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl);
   if (linkedIn) return `${registrantTypes.contacts.crmPrefix}linkedin:${safeFileSegment(linkedIn, "profile")}`;
@@ -2349,9 +2349,9 @@ async function contactAliasKeysForInviteRecord(env, contact = {}) {
 
 function contactFromInviteRecord(row = {}, source = "guest-invite") {
   const key = contactKeyForInviteRecord(row, source);
-  const email = cleanString(row.intendedGuestEmail || row.invitedEmail || row.guestEmail || row.partnerContactEmail || row.usedByEmail || row.usedBy).toLowerCase();
+  const email = invitePersonEmail(row);
   const cleanEmail = isEmail(email) ? email : "";
-  const name = cleanString(row.intendedGuestName || row.invitedName || row.guestName || row.partnerContactName || row.usedByName) || cleanEmail || "Name not recorded";
+  const name = invitePersonName(row) || cleanEmail || "Name not recorded";
   const eventShowId = cleanEventShowId(row.eventShowId || row.showId || row.eventShow, "");
   const eventId = cleanString(row.eventId || `${row.eventSlug || row.eventName || source}:${eventShowId || row.code || row.id || ""}`, 200);
   const isPartner = source.includes("partner") || row.type === "partner" || row.type === "partner-matrix-prospect";
@@ -2362,7 +2362,7 @@ function contactFromInviteRecord(row = {}, source = "guest-invite") {
     email: cleanEmail,
     name,
     company: cleanString(row.company || row.organization || row.partnerCompany),
-    title: cleanString(row.title),
+    title: cleanString(row.title || row.jobTitle || row.roleTitle || row.contactTitle),
     linkedinProfileUrl: cleanLinkedInProfileUrl(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl),
     invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
     source,
@@ -4378,10 +4378,16 @@ async function ensureCrmRecord(env, row, type = "member") {
 }
 
 function normalizeInviteCode(key, record) {
+  const name = invitePersonName(record);
+  const email = invitePersonEmail(record);
+  const company = cleanString(record?.company || record?.partnerCompany || record?.organization, 240);
+  const title = cleanString(record?.title || record?.jobTitle || record?.roleTitle || record?.contactTitle, 240);
+  const inviteType = cleanString(record?.type) || "partner";
+  const isPartnerInvite = inviteType === "partner" || Boolean(record?.partnerRegistrationType || record?.partnerCompany || record?.partnerContactName || record?.partnerContactEmail);
   return {
     key,
     code: cleanCode(record?.code) || key.split(":").pop(),
-    type: cleanString(record?.type) || "partner",
+    type: inviteType,
     status: cleanString(record?.status) || "active",
     eventId: cleanString(record?.eventId),
     eventSlug: cleanString(record?.eventSlug),
@@ -4391,11 +4397,16 @@ function normalizeInviteCode(key, record) {
     eventShowId: cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, ""),
     eventShowLabel: cleanString(record?.eventShowLabel) || (record?.eventShowId ? eventShowLabel(record.eventShowId) : ""),
     eventShowTime: cleanString(record?.eventShowTime) || cleanString(record?.eventTime),
-    intendedGuestName: invitePersonName(record),
-    intendedGuestEmail: invitePersonEmail(record),
-    invitedEmail: invitePersonEmail(record),
-    invitedName: invitePersonName(record),
-    guestName: invitePersonName(record),
+    name,
+    email,
+    company,
+    title,
+    jobTitle: title,
+    intendedGuestName: name,
+    intendedGuestEmail: email,
+    invitedEmail: email,
+    invitedName: name,
+    guestName: name,
     guestRegistrationType: cleanGuestRegistrationType(record?.guestRegistrationType || record?.registrationRole),
     partnerRegistrationType: cleanOptionalRegistrationType(record?.partnerRegistrationType || record?.registrationRole),
     registrationRole: cleanGuestRegistrationType(record?.registrationRole || record?.partnerRegistrationType || record?.guestRegistrationType),
@@ -4406,9 +4417,9 @@ function normalizeInviteCode(key, record) {
     linkedinConnectionStatus: cleanGuestMatrixOption(record?.linkedinConnectionStatus || record?.linkedInConnectionStatus || record?.connectionStatus, allowedGuestMatrixLinkedInStatuses, "unknown"),
     registrationRequestStatus: cleanGuestMatrixOption(record?.registrationRequestStatus || record?.inviteStage || record?.inviteStatus, allowedGuestMatrixRegistrationRequestStatuses, "not-sent"),
     matrixInterestRating: cleanStarRating(record?.matrixInterestRating ?? record?.participationInterestRating ?? record?.interestRating, 1),
-    partnerCompany: cleanString(record?.partnerCompany),
-    partnerContactName: cleanString(record?.partnerContactName || record?.intendedGuestName || record?.invitedName || record?.guestName),
-    partnerContactEmail: cleanString(record?.partnerContactEmail).toLowerCase(),
+    partnerCompany: isPartnerInvite ? cleanString(record?.partnerCompany || company) : "",
+    partnerContactName: isPartnerInvite ? name : "",
+    partnerContactEmail: isPartnerInvite ? email : "",
     partnerTier: cleanString(record?.partnerTier),
     invitedBy: cleanString(record?.invitedBy || record?.inviter || record?.invitedByName || record?.createdBy, 180),
     createdAt: cleanString(record?.createdAt),
@@ -4435,23 +4446,8 @@ function registrationMatchesInvite(invite = {}, row = {}) {
   const rowInviteCode = cleanCode(row.inviteCode || row.code);
   if (inviteCode && rowInviteCode && inviteCode === rowInviteCode) return true;
 
-  const inviteEmail = cleanString(
-    invite.usedByEmail ||
-    invite.usedBy ||
-    invite.intendedGuestEmail ||
-    invite.invitedEmail ||
-    invite.guestEmail ||
-    invite.partnerContactEmail
-  ).toLowerCase();
-  const rowEmail = cleanString(
-    row.email ||
-    row.usedByEmail ||
-    row.usedBy ||
-    row.intendedGuestEmail ||
-    row.invitedEmail ||
-    row.guestEmail ||
-    row.partnerContactEmail
-  ).toLowerCase();
+  const inviteEmail = invitePersonEmail(invite);
+  const rowEmail = invitePersonEmail(row);
   if (!inviteEmail || !rowEmail || inviteEmail !== rowEmail) return false;
 
   const inviteEvent = cleanString(invite.eventSlug || invite.eventName || invite.eventId || invite.eventDate).toLowerCase();
@@ -4630,6 +4626,8 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
   const intendedGuestName = isEmail(rawGuestName) ? "" : rawGuestName;
   const guestRegistrationType = matrixProspectRole(prospectType, record);
   const linkedinProfileUrl = cleanLinkedInProfileUrl(record?.linkedinProfileUrl || record?.linkedInProfileUrl || record?.linkedinUrl || record?.linkedInUrl);
+  const company = cleanString(record?.company || record?.partnerCompany || record?.organization, 240);
+  const title = cleanString(record?.title || record?.jobTitle || record?.roleTitle || record?.contactTitle, 240);
   const hasAssignedEvent = Boolean(cleanString(record?.eventSlug || record?.eventName || record?.eventId, 240));
   const rawShowId = hasAssignedEvent ? cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, "both") : "";
   const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
@@ -4647,6 +4645,8 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     eventShowId,
     eventShowLabel: cleanString(record?.eventShowLabel, 120) || (eventShowId ? eventShowLabel(eventShowId) : ""),
     eventShowTime: cleanString(record?.eventShowTime || record?.eventTime, 120) || (eventShowId ? eventShowTime(eventShowId) : ""),
+    name: intendedGuestName,
+    email: intendedGuestEmail,
     intendedGuestName,
     intendedGuestEmail,
     invitedEmail: intendedGuestEmail,
@@ -4655,9 +4655,10 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     guestName: intendedGuestName,
     partnerContactEmail: prospectType === "partner" ? intendedGuestEmail : "",
     partnerContactName: prospectType === "partner" ? intendedGuestName : "",
-    partnerCompany: prospectType === "partner" ? cleanString(record?.partnerCompany || record?.company, 240) : "",
-    company: cleanString(record?.company || record?.partnerCompany, 240),
-    title: cleanString(record?.title || record?.jobTitle || record?.roleTitle, 240),
+    partnerCompany: prospectType === "partner" ? company : "",
+    company,
+    title,
+    jobTitle: title,
     linkedinProfileUrl,
     linkedinUrl: linkedinProfileUrl,
     enrichmentSource: cleanString(record?.enrichmentSource, 120),
@@ -4754,9 +4755,9 @@ function guestMatrixMergeNameKey(value = "") {
 }
 
 async function findGuestMatrixProspectForInvite(env, invite = {}) {
-  const targetEmail = cleanString(invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || invite.email, 240).toLowerCase();
+  const targetEmail = invitePersonEmail(invite);
   const targetLinkedIn = cleanLinkedInProfileUrl(invite.linkedinProfileUrl || invite.linkedInProfileUrl || invite.linkedinUrl || invite.linkedInUrl);
-  const targetNameKey = guestMatrixMergeNameKey(invite.intendedGuestName || invite.invitedName || invite.guestName || invite.name);
+  const targetNameKey = guestMatrixMergeNameKey(invitePersonName(invite));
   if (!targetEmail && !targetLinkedIn && targetNameKey.length < 6) return null;
 
   const keys = await listKeys(env, GUEST_MATRIX_PROSPECT_PREFIX);
@@ -4764,9 +4765,9 @@ async function findGuestMatrixProspectForInvite(env, invite = {}) {
     const record = await readSetupJson(env, key);
     if (!record) continue;
     const prospect = normalizeGuestMatrixProspect(key, record, "guest");
-    const prospectEmail = cleanString(prospect.intendedGuestEmail || prospect.invitedEmail || prospect.guestEmail || prospect.email, 240).toLowerCase();
+    const prospectEmail = invitePersonEmail(prospect);
     const prospectLinkedIn = cleanLinkedInProfileUrl(prospect.linkedinProfileUrl || prospect.linkedinUrl);
-    const prospectNameKey = guestMatrixMergeNameKey(prospect.intendedGuestName || prospect.invitedName || prospect.guestName || prospect.name);
+    const prospectNameKey = guestMatrixMergeNameKey(invitePersonName(prospect));
     if (targetEmail && prospectEmail && targetEmail === prospectEmail) return { key, prospect };
     if (targetLinkedIn && prospectLinkedIn && targetLinkedIn === prospectLinkedIn) return { key, prospect };
     if (targetNameKey.length >= 6 && prospectNameKey.length >= 6 && targetNameKey === prospectNameKey) return { key, prospect };
@@ -4999,6 +5000,8 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     eventShowId,
     eventShowLabel: eventShowId ? eventShowLabel(eventShowId) : "",
     eventShowTime: eventTime,
+    name: intendedGuestName,
+    email: intendedGuestEmail,
     intendedGuestName,
     intendedGuestEmail,
     invitedEmail: intendedGuestEmail,
@@ -5010,6 +5013,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     partnerCompany: prospectType === "partner" ? cleanString(payload.partnerCompany || payload.company || enrichment.company, 240) : "",
     company: cleanString(payload.company || payload.partnerCompany || enrichment.company, 240),
     title: cleanString(payload.title || payload.jobTitle || enrichment.title, 240),
+    jobTitle: cleanString(payload.jobTitle || payload.title || enrichment.title, 240),
     linkedinProfileUrl,
     linkedinUrl: linkedinProfileUrl,
     enrichmentSource: cleanString(enrichment.enrichmentSource || (linkedinProfileUrl ? "linkedin-profile-url" : ""), 120),
@@ -5109,7 +5113,7 @@ async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteV
   const note = cleanString(noteValue, 4000);
   const inviteCode = cleanCode(record.code || record.inviteCode);
   const registrationId = cleanString(record.registrationId);
-  const email = cleanString(record.usedByEmail || record.usedBy || record.intendedGuestEmail || record.invitedEmail || record.guestEmail || record.partnerContactEmail).toLowerCase();
+  const email = invitePersonEmail(record);
   const typeCandidates = record.type === "partner" || record.partnerContactEmail
     ? ["partner"]
     : ["guest", "member"];
@@ -5157,7 +5161,7 @@ function registrationRoleUpdate(roleValue = "", type = "guest", existing = {}) {
 async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue = "", actor = "", now = new Date().toISOString()) {
   const inviteCode = cleanCode(record.code || record.inviteCode);
   const registrationId = cleanString(record.registrationId);
-  const email = cleanString(record.usedByEmail || record.usedBy || record.intendedGuestEmail || record.invitedEmail || record.guestEmail || record.partnerContactEmail).toLowerCase();
+  const email = invitePersonEmail(record);
   const typeCandidates = record.type === "partner" || record.partnerContactEmail
     ? ["partner"]
     : ["guest", "member"];
@@ -5407,6 +5411,8 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     jobTitle: cleanString(payload.jobTitle || payload.title || sourceProspect?.title, 240),
     linkedinProfileUrl,
     linkedinUrl: linkedinProfileUrl,
+    name: intendedGuestName,
+    email: intendedGuestEmail,
     intendedGuestName,
     intendedGuestEmail,
     invitedEmail: intendedGuestEmail,
@@ -5462,6 +5468,9 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   const eventShowId = requiresSingleShowRegistrationRole(partnerRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
   const eventTime = eventShowTime(eventShowId);
   const createdAt = new Date().toISOString();
+  const name = cleanString(payload.partnerContactName || payload.intendedGuestName || payload.invitedName || payload.name, 240);
+  const email = cleanString(payload.partnerContactEmail || payload.intendedGuestEmail || payload.invitedEmail || payload.email, 240).toLowerCase();
+  const company = cleanString(payload.partnerCompany || payload.company, 240);
   const record = {
     type: "partner",
     code,
@@ -5475,9 +5484,12 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
     eventShowLabel: eventShowLabel(eventShowId),
     eventShowTime: eventTime,
     invitedBy: cleanString(payload.invitedBy || payload.inviter || payload.invitedByName || actor, 180),
-    partnerCompany: cleanString(payload.partnerCompany, 240),
-    partnerContactName: cleanString(payload.partnerContactName || payload.intendedGuestName || payload.invitedName || payload.name, 240),
-    partnerContactEmail: cleanString(payload.partnerContactEmail).toLowerCase(),
+    name,
+    email,
+    company,
+    partnerCompany: company,
+    partnerContactName: name,
+    partnerContactEmail: email,
     partnerTier: cleanString(payload.partnerTier, 120),
     partnerRegistrationType,
     registrationRole: partnerRegistrationType,
@@ -5601,7 +5613,7 @@ function escapeHtml(value = "") {
 }
 
 function inviteReminderFirstName(invite) {
-  const name = cleanString(invite.intendedGuestName || invite.invitedName || invite.guestName, 240);
+  const name = invitePersonName(invite);
   if (!name) return "there";
   return name.split(/\s+/)[0];
 }
@@ -5754,7 +5766,7 @@ function inviteInvitationHtml({ firstName, eventName, eventDate, eventTime, regi
 }
 
 async function sendInviteInvitationEmail(env, invite, origin = "") {
-  const toEmail = cleanString(invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail, 240).toLowerCase();
+  const toEmail = invitePersonEmail(invite);
   if (!isEmail(toEmail)) throw new Error("Enter a valid email address before sending the invitation.");
 
   const eventName = cleanString(invite.eventName, 240) || "our upcoming event";
@@ -5817,7 +5829,7 @@ function partnerInviteInvitationHtml({ eventName, eventDate, eventTime, registra
 }
 
 async function sendPartnerInviteInvitationEmail(env, invite, origin = "") {
-  const toEmail = cleanString(invite.partnerContactEmail || invite.partnerEmail || invite.invitedEmail || invite.email, 240).toLowerCase();
+  const toEmail = invitePersonEmail(invite) || cleanString(invite.partnerEmail, 240).toLowerCase();
   if (!isEmail(toEmail)) throw new Error("Enter a valid partner email address before sending the invitation.");
 
   const eventName = cleanString(invite.eventName, 240) || "our upcoming event";
@@ -5841,7 +5853,7 @@ async function sendPartnerInviteInvitationEmail(env, invite, origin = "") {
 
 async function sendInviteReminderEmail(env, payload = {}, origin = "") {
   const invite = await findInviteCodeRecord(env, payload);
-  const toEmail = cleanString(invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail, 240).toLowerCase();
+  const toEmail = invitePersonEmail(invite);
   if (!isEmail(toEmail)) throw new Error("This invite does not have a valid email address on file.");
 
   const eventName = cleanString(invite.eventName, 240) || "your upcoming event";
@@ -7568,10 +7580,11 @@ export async function onRequestPost({ request, env, data }) {
       let emailMessageId = "";
       if (sendEmail) {
         const origin = new URL(request.url).origin;
+        const inviteEmail = invitePersonEmail(invite);
         await logGuestRegistrationEmail(env, {
           type: "guest-registration-invitation",
           status: "attempted",
-          to: invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail,
+          to: inviteEmail,
           cc: guestInviteEmailCc,
           subject: `You’re Invited: ${invite.eventName || "Mojo AI Summits"}`,
           inviteKey: invite.key,
@@ -7602,7 +7615,7 @@ export async function onRequestPost({ request, env, data }) {
           await logGuestRegistrationEmail(env, {
             type: "guest-registration-invitation",
             status: "failed",
-            to: invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail,
+            to: inviteEmail,
             cc: guestInviteEmailCc,
             subject: `You’re Invited: ${invite.eventName || "Mojo AI Summits"}`,
             inviteKey: invite.key,
@@ -7789,10 +7802,11 @@ export async function onRequestPost({ request, env, data }) {
     try {
       const origin = new URL(request.url).origin;
       const invite = await findInviteCodeRecord(env, payload);
+      const inviteEmail = invitePersonEmail(invite);
       await logGuestRegistrationEmail(env, {
         type: "guest-registration-reminder",
         status: "attempted",
-        to: invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail,
+        to: inviteEmail,
         cc: guestInviteEmailCc,
         subject: `Reminder: complete your registration for ${invite.eventName || "Mojo AI Summits"}`,
         inviteKey: invite.key,
@@ -7832,7 +7846,7 @@ export async function onRequestPost({ request, env, data }) {
         await logGuestRegistrationEmail(env, {
           type: "guest-registration-reminder",
           status: "failed",
-          to: invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail,
+          to: inviteEmail,
           cc: guestInviteEmailCc,
           subject: `Reminder: complete your registration for ${invite.eventName || "Mojo AI Summits"}`,
           inviteKey: invite.key,
