@@ -4848,16 +4848,7 @@ async function partnerMatrixProspects(env) {
       return record ? normalizeGuestMatrixProspect(key, record, "partner") : null;
     })
   );
-  const prospects = rows.filter(Boolean);
-  const manualPartners = (await registrants(env, "partner", { includeManualPartners: true }))
-    .filter((row) => row.manualPartner === true);
-  const backfilled = [];
-  for (const row of manualPartners) {
-    if (prospects.some((prospect) => manualPartnerMatchesMatrixProspect(row, prospect))) continue;
-    const prospect = await upsertManualPartnerMatrixProspect(env, row, "crm-backfill").catch(() => null);
-    if (prospect) backfilled.push(prospect);
-  }
-  return [...prospects, ...backfilled].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
 function matrixPersonEnrichmentFromRecord(record = {}, linkedinProfileUrl = "", extra = {}) {
@@ -5087,6 +5078,10 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.potentialSponsor = prospectType === "guest" && payload.value === true;
   } else if (field === "registrationRole") {
     Object.assign(next, registrationRoleUpdate(payload.value, prospectType, existing));
+  } else if (field === "company" || field === "partnerCompany") {
+    const company = cleanString(payload.value, 240);
+    next.company = company;
+    if (prospectType === "partner") next.partnerCompany = company;
   } else if (field === "preRegistrationNotes" || field === "eventNotes") {
     next.preRegistrationNotes = cleanString(payload.value, 4000);
   } else {
@@ -5231,6 +5226,13 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.isFeaturedAuthor = roleUpdate.isFeaturedAuthor;
       next.isFeaturedPartner = roleUpdate.isFeaturedPartner;
       await updateRegistrantRoleForMatrixChange(env, next, roleUpdate.registrationRole, actor, now);
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "company") || Object.prototype.hasOwnProperty.call(change, "partnerCompany")) {
+      const company = cleanString(change.partnerCompany ?? change.company, 240);
+      next.company = company;
+      if (key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)) {
+        next.partnerCompany = company;
+      }
     }
     if (Object.prototype.hasOwnProperty.call(change, "matrixInterestRating")) {
       next.matrixInterestRating = cleanStarRating(change.matrixInterestRating, existing.matrixInterestRating || 1);
@@ -6868,6 +6870,7 @@ export async function onRequestGet({ request, env, data }) {
   const config = registrantTypes[type];
   const isContacts = type === "contacts";
   const matrixMode = cleanString(url.searchParams.get("matrix")).toLowerCase();
+  const includeSideList = (name) => ["1", "true", "yes"].includes(cleanString(url.searchParams.get(name)).toLowerCase());
   if (matrixMode === "guest") {
     const registrationInviteRows = await registrationInviteCodes(env);
     const guestProspectRows = await guestMatrixProspects(env);
@@ -7065,11 +7068,11 @@ export async function onRequestGet({ request, env, data }) {
     section: config.section,
     summary: isContacts ? summarizeContacts(rows) : summarize(rows),
     rows,
-    partnerInviteCodes: await partnerInviteCodes(env),
-    registrationInviteCodes: await registrationInviteCodes(env),
-    guestMatrixProspects: await guestMatrixProspects(env),
-    partnerMatrixProspects: await partnerMatrixProspects(env),
-    upcomingEvents: await upcomingEvents(env)
+    partnerInviteCodes: includeSideList("includePartnerInvites") ? await partnerInviteCodes(env) : [],
+    registrationInviteCodes: includeSideList("includeRegistrationInvites") ? await registrationInviteCodes(env) : [],
+    guestMatrixProspects: includeSideList("includeGuestMatrixProspects") ? await guestMatrixProspects(env) : [],
+    partnerMatrixProspects: includeSideList("includePartnerMatrixProspects") ? await partnerMatrixProspects(env) : [],
+    upcomingEvents: includeSideList("includeUpcomingEvents") ? await upcomingEvents(env) : []
   });
 }
 
