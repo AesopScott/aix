@@ -2,7 +2,21 @@
   "name": "mojo-ai-summits",
   "pages_build_output_dir": "./dist",
   "compatibility_date": "2026-07-25",
-  "keep_vars": true,
+  "secrets": {
+    "required": [
+      "MOJO_CALENDAR_TOKEN_KEY",
+      "MOJO_MAIL_CLIENT_ID",
+      "MOJO_MAIL_CLIENT_SECRET",
+      "MOJO_MAIL_TENANT_ID",
+      "MOJO_MS_CLIENT_ID",
+      "MOJO_MS_CLIENT_SECRET",
+      "MOJO_MS_TENANT_ID",
+      "RESEND_API_KEY",
+      "ZOOM_ACCOUNT_ID",
+      "ZOOM_CLIENT_ID",
+      "ZOOM_CLIENT_SECRET"
+    ]
+  },
   "kv_namespaces": [
     {
       "binding": "MOJO_SUMMITS_SETUP_STATE",
