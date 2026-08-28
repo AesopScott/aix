@@ -109,3 +109,58 @@ export async function sendMicrosoftGraphMail(env = {}, options = {}) {
 
   return { ok: true, sender };
 }
+
+function resendAddresses(value) {
+  return normalizeRecipients(value).map((entry) => entry.emailAddress.address);
+}
+
+export async function sendResendMail(env = {}, options = {}) {
+  const apiKey = cleanMailString(env.RESEND_API_KEY, 400);
+  if (!apiKey) throw new Error("Resend is not configured (missing RESEND_API_KEY).");
+
+  const sender = cleanMailString(env.MOJO_RESEND_FROM || options.sender || env.MOJO_INVITE_EMAIL_SENDER);
+  const toRecipients = resendAddresses(options.to);
+  const ccRecipients = resendAddresses(options.cc);
+  const bccRecipients = resendAddresses(options.bcc);
+  const replyToRecipients = resendAddresses(options.replyTo);
+  if (!sender) throw new Error("Resend sender mailbox is not configured.");
+  if (!toRecipients.length) throw new Error("At least one email recipient is required.");
+
+  const attachments = Array.isArray(options.attachments)
+    ? options.attachments
+      .filter((attachment) => cleanMailString(attachment?.name) && cleanMailContent(attachment?.contentBytes))
+      .map((attachment) => ({
+        filename: cleanMailString(attachment.name),
+        content: cleanMailContent(attachment.contentBytes),
+        ...(cleanMailString(attachment.contentType) ? { content_type: cleanMailString(attachment.contentType) } : {})
+      }))
+    : [];
+
+  const payload = {
+    from: sender,
+    to: toRecipients,
+    subject: cleanMailString(options.subject),
+    ...(cleanMailContent(options.html) ? { html: cleanMailContent(options.html) } : {}),
+    ...(cleanMailContent(options.text) ? { text: cleanMailContent(options.text) } : {}),
+    ...(ccRecipients.length ? { cc: ccRecipients } : {}),
+    ...(bccRecipients.length ? { bcc: bccRecipients } : {}),
+    ...(replyToRecipients.length ? { reply_to: replyToRecipients } : {}),
+    ...(attachments.length ? { attachments } : {})
+  };
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body?.message || "Resend could not send the email.");
+  }
+
+  return { ok: true, sender, id: body.id || "" };
+}

@@ -1,5 +1,5 @@
 import { json } from "./_access-control.js";
-import { sendMicrosoftGraphMail } from "./_mail.js";
+import { sendMicrosoftGraphMail, sendResendMail } from "./_mail.js";
 
 const TEAM_INDEX_KEY = "scheduling:employees:index:v1";
 const EMPLOYEE_PREFIX = "scheduling:employee:";
@@ -630,7 +630,7 @@ async function sendBookingConfirmation(env, employee, meetingType, booking, star
     .map(cleanEmail)
     .filter((email) => email && email !== booking.guestEmail && email !== employee.email))]
     .map((email) => ({ address: email, name: email }));
-  await sendMicrosoftGraphMail(env, {
+  const message = {
     sender,
     to: [{ address: booking.guestEmail, name: booking.guestName }],
     cc: hostRecipients,
@@ -645,12 +645,23 @@ async function sendBookingConfirmation(env, employee, meetingType, booking, star
       contentBytes: base64Encode(calendarInvite)
     }],
     saveToSentItems: true
-  });
+  };
+  let provider = "microsoft-graph";
+  let graphError = "";
+  try {
+    await sendMicrosoftGraphMail(env, message);
+  } catch (error) {
+    graphError = cleanText(error?.message || "Microsoft Graph booking confirmation failed.", 400);
+    await sendResendMail(env, message);
+    provider = "resend";
+  }
 
   return {
     attempted: true,
     sent: true,
     sender,
+    provider,
+    graphError,
     hostRecipients: hostRecipients.map((recipient) => recipient.address),
     mirrorRecipients: mirrorRecipients.map((recipient) => recipient.address),
     calendarInviteAttached: true
@@ -1872,6 +1883,8 @@ export async function createBooking(env, input = {}) {
       calendarInviteSent: confirmationEmail.sent === true && confirmationEmail.calendarInviteAttached === true,
       confirmationEmailSent: confirmationEmail.sent === true,
       confirmationEmailError: confirmationEmail.sent === false ? confirmationEmail.error || "" : "",
+      confirmationEmailProvider: confirmationEmail.provider || "",
+      confirmationEmailGraphError: confirmationEmail.graphError || "",
       hostNotificationRecipients: confirmationEmail.hostRecipients || [],
       mirrorNotificationRecipients: confirmationEmail.mirrorRecipients || [],
       meetingDetailsPending: !zoomMeeting?.joinUrl
