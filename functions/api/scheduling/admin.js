@@ -1,6 +1,7 @@
 import { json } from "../../_access-control.js";
 import { canManageAccess, getSessionUser } from "../../_auth.js";
 import {
+  delegatedGraphConfig,
   graphConfig,
   listPublicCalendarConnections,
   listEmployees,
@@ -32,6 +33,7 @@ export async function onRequestGet({ request, env, data }) {
 
   const employees = await listEmployees(env, { includeInactive: true });
   const graph = graphConfig(env);
+  const delegatedGraph = delegatedGraphConfig(env);
   const employeePayloads = await Promise.all(employees.map(async (employee) => ({
       ...publicEmployee(employee),
       email: employee.email,
@@ -53,6 +55,7 @@ export async function onRequestGet({ request, env, data }) {
   return json({
     ok: true,
     graphConfigured: graph.configured,
+    delegatedCalendarOAuthConfigured: delegatedGraph.configured,
     employees: employeePayloads
   });
 }

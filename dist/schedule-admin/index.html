@@ -523,7 +523,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   </main>
 
   <script>
-    const SCHEDULING_ADMIN_BUILD = "2026.08.02.1-feed-diagnostics";
+    const SCHEDULING_ADMIN_BUILD = "2026.08.28.1-calendar-oauth-config-state";
     const employeesEl = document.querySelector("#employees");
     const graphStatusEl = document.querySelector("#graphStatus");
     const buildStampEl = document.querySelector("#buildStamp");
@@ -542,6 +542,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     let selectedSlug = "";
     let authEmailDrafts = [""];
     let feedUrlDrafts = [""];
+    let delegatedCalendarOAuthConfigured = false;
 
     if (buildStampEl) {
       buildStampEl.textContent = `Build ${SCHEDULING_ADMIN_BUILD} · JS ready`;
@@ -760,9 +761,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           syncAuthenticatedCalendarField();
           const valid = isValidEmail(normalizedEmail);
           const authUrl = valid && slug ? authUrlFor(slug, normalizedEmail) : "";
-          urlEl.textContent = authUrl || "Enter an email to generate the read URL.";
+          urlEl.textContent = delegatedCalendarOAuthConfigured
+            ? authUrl || "Enter an email to generate the read URL."
+            : "Microsoft calendar OAuth is not configured. Use a published calendar feed below.";
           button.textContent = connections.has(normalizedEmail) ? "Reconnect" : "Connect";
-          button.disabled = !slug || !valid;
+          button.disabled = !delegatedCalendarOAuthConfigured || !slug || !valid;
         };
 
         emailEl.addEventListener("input", updateRow);
@@ -774,6 +777,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           }
           if (!isValidEmail(normalizedEmail)) {
             setStatus("Enter a valid calendar email before connecting.", "error");
+            return;
+          }
+          if (!delegatedCalendarOAuthConfigured) {
+            setStatus("Microsoft calendar OAuth is not configured yet. Use a published calendar feed URL for busy-time reads.", "error");
             return;
           }
           window.open(authUrlFor(slug, normalizedEmail), "_blank", "noopener,noreferrer");
@@ -957,8 +964,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const payload = await readApiPayload(response, "Unable to load scheduling admin.");
       if (!response.ok) throw new Error(payload.error || "Unable to load scheduling admin.");
       employees = payload.employees || [];
+      delegatedCalendarOAuthConfigured = payload.delegatedCalendarOAuthConfigured === true;
       graphStatusEl.textContent = payload.graphConfigured
-        ? "Microsoft Graph is configured."
+        ? delegatedCalendarOAuthConfigured
+          ? "Microsoft Graph and delegated calendar OAuth are configured."
+          : "Microsoft Graph is configured. Delegated calendar OAuth is not configured yet."
         : "Microsoft Graph credentials are not configured yet.";
       renderEmployees();
       if (employees[0]) loadEmployee(employees[0].slug);
@@ -1036,6 +1046,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (calendarStatus === "connected") setStatus("Authenticated calendar connected.", "ok");
         if (calendarStatus === "expired") setStatus("Calendar connection expired before Microsoft returned. Try again.", "error");
         if (calendarStatus === "denied") setStatus("Calendar connection was cancelled.", "error");
+        if (calendarStatus === "not-configured") setStatus("Microsoft calendar OAuth is not configured yet. Use a published calendar feed URL for busy-time reads.", "error");
         if (calendarStatus === "mismatch") setStatus(`Microsoft returned ${actualCalendar || "a different account"} instead of ${expectedCalendar || "the requested account"}.`, "error");
       })
       .catch((error) => {
