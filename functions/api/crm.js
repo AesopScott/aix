@@ -4105,8 +4105,6 @@ async function convertProspectCompany(env, payload = {}, actor = "") {
       company: company.companyName,
       companySlug: slug,
       title: person.title,
-      companyLogoUrl: cleanString(existingCompany?.companyLogoUrl, 500),
-      companyLogoKey: safeObjectKey(existingCompany?.companyLogoKey),
       source: "Partner Prospecting",
       updatedAt: now,
       updatedBy: actor || "crm"
@@ -4117,10 +4115,6 @@ async function convertProspectCompany(env, payload = {}, actor = "") {
     organizationName: cleanString(existingCompany?.organizationName || company.companyName, 240),
     company: company.companyName,
     companySlug: slug,
-    companyLogoUrl: cleanString(existingCompany?.companyLogoUrl, 500),
-    companyLogoKey: safeObjectKey(existingCompany?.companyLogoKey),
-    companyLogoOriginalName: cleanString(existingCompany?.companyLogoOriginalName),
-    companyLogoUploadedAt: cleanString(existingCompany?.companyLogoUploadedAt),
     tier: "Partner Candidate",
     status: "partner-candidate",
     contacts: [...contactMap.values()],
@@ -6812,6 +6806,10 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
       profileKey: companyKey,
       title: cleanString(row.title),
       phone: cleanString(row.phone),
+      companyLogoUrl: cleanString(row.companyLogoUrl || row.partnerCompanyLogoUrl || row.logoUrl, 500),
+      companyLogoKey: safeObjectKey(row.companyLogoKey || row.partnerCompanyLogoKey || row.logoKey),
+      companyLogoOriginalName: cleanString(row.companyLogoOriginalName || row.partnerCompanyLogoOriginalName),
+      companyLogoUploadedAt: cleanString(row.companyLogoUploadedAt || row.partnerCompanyLogoUploadedAt),
       partnerProductTypes: cleanString(row.partnerProductTypes, 2000),
       partnerClientMessaging: cleanString(row.partnerClientMessaging, 4000),
       registrationId: cleanString(row.id),
@@ -6845,6 +6843,10 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
       organizationName: cleanString(existingCompany?.organizationName || existingCompany?.company || company),
       company,
       companySlug: slug,
+      companyLogoUrl: cleanString(row.companyLogoUrl || row.partnerCompanyLogoUrl || row.logoUrl || existingCompany?.companyLogoUrl, 500),
+      companyLogoKey: safeObjectKey(row.companyLogoKey || row.partnerCompanyLogoKey || row.logoKey || existingCompany?.companyLogoKey),
+      companyLogoOriginalName: cleanString(row.companyLogoOriginalName || row.partnerCompanyLogoOriginalName || existingCompany?.companyLogoOriginalName),
+      companyLogoUploadedAt: cleanString(row.companyLogoUploadedAt || row.partnerCompanyLogoUploadedAt || existingCompany?.companyLogoUploadedAt),
       tier: cleanString(row.partnerTier || existingCompany?.tier, 120),
       status: cleanString(row.crmStatus || existingCompany?.status, 80) || "new",
       crmNotes: cleanString(row.crmNotes || existingCompany?.crmNotes),
@@ -6873,6 +6875,10 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
     organizationName: cleanString(existingCompany?.organizationName || company, 240),
     company,
     companySlug: slug,
+    companyLogoUrl: cleanString(row.companyLogoUrl || row.partnerCompanyLogoUrl || row.logoUrl || existingCompany?.companyLogoUrl, 500),
+    companyLogoKey: safeObjectKey(row.companyLogoKey || row.partnerCompanyLogoKey || row.logoKey || existingCompany?.companyLogoKey),
+    companyLogoOriginalName: cleanString(row.companyLogoOriginalName || row.partnerCompanyLogoOriginalName || existingCompany?.companyLogoOriginalName),
+    companyLogoUploadedAt: cleanString(row.companyLogoUploadedAt || row.partnerCompanyLogoUploadedAt || existingCompany?.companyLogoUploadedAt),
     tier: cleanString(row.partnerTier || existingCompany?.tier, 120),
     updatedAt: now,
     updatedBy: actor || "crm"
@@ -6930,13 +6936,16 @@ export async function onRequestGet({ request, env, data }) {
   if (matrixMode === "partner") {
     const partnerInviteRows = await partnerInviteCodes(env);
     const partnerProspectRows = await partnerMatrixProspects(env);
+    const manualPartnerRows = includeSideList("includeManualPartners")
+      ? (await registrants(env, "partner", { includeManualPartners: true })).filter((row) => row.manualPartner === true)
+      : [];
     return json({
       ok: true,
       type,
       label: config.label,
       section: config.section,
       summary: { total: partnerInviteRows.length + partnerProspectRows.length },
-      rows: [],
+      rows: manualPartnerRows,
       partnerInviteCodes: partnerInviteRows,
       registrationInviteCodes: [],
       guestMatrixProspects: [],
