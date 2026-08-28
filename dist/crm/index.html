@@ -912,21 +912,28 @@
     }
 
     .invite-grid-actions {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(11rem, 1fr));
       gap: 0.6rem;
       align-items: stretch;
+      grid-column: 1 / -1;
+      width: 100%;
+      min-width: 0;
     }
 
     .invite-grid-actions button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: auto;
-      flex: 1;
+      width: 100%;
+      min-width: 0;
       min-height: 3.45rem;
+      padding: 0.75rem 0.8rem;
       line-height: 1.2;
       text-align: center;
       white-space: normal;
+      overflow-wrap: anywhere;
+      letter-spacing: 0.02em;
     }
 
     .manual-partner-grid {
@@ -1507,7 +1514,23 @@
     .invite-actions {
       display: grid;
       gap: 0.45rem;
-      min-width: 8.5rem;
+      width: 10.75rem;
+      min-width: 10.75rem;
+    }
+
+    .invite-actions button,
+    .invite-actions .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 2.5rem;
+      padding: 0.62rem 0.75rem;
+      line-height: 1.15;
+      text-align: center;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      letter-spacing: 0.02em;
     }
 
     .invite-show-edit {
@@ -1598,9 +1621,11 @@
     }
 
     .invite-result-actions {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
       gap: 0.65rem;
+      align-items: stretch;
+      min-width: 0;
     }
 
     .company-row td {
@@ -1667,6 +1692,12 @@
       header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-add-form, .guest-matrix-controls, .guest-matrix-summary { grid-template-columns: 1fr; }
       .partner-add-contact-form .span-2 { grid-column: auto; }
       .invite-qr { width: 100%; justify-items: start; }
+      .invite-grid-actions { grid-template-columns: 1fr; }
+      .invite-actions {
+        width: 100%;
+        min-width: 0;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+      }
       .side-nav { position: static; }
       .crm-content .hero, .view-section { grid-column: 1; }
     }
@@ -5061,6 +5092,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.invitedBy,
           row.partnerProductTypes,
           row.partnerClientMessaging,
+          row.partnerLinkedInPromotionText,
           row.relationshipOwner,
           row.lifecycleStage,
           row.lastContactDate,
@@ -5080,6 +5112,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.partnerTier,
           row.partnerProductTypes,
           row.partnerClientMessaging,
+          row.partnerLinkedInPromotionText,
           row.crmNotes
         ].some((value) => String(value || "").toLowerCase().includes(search));
       });
@@ -6536,6 +6569,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                   ${row.industry ? `<br><span>${escapeHtml(row.industry)}</span>` : ""}
                   ${row.partnerProductTypes ? `<br><span>Products: ${escapeHtml(row.partnerProductTypes)}</span>` : ""}
                   ${row.partnerClientMessaging ? `<br><span>Messaging: ${escapeHtml(row.partnerClientMessaging)}</span>` : ""}
+                  ${row.partnerLinkedInPromotionText ? `<br><span>LinkedIn promo: ${escapeHtml(row.partnerLinkedInPromotionText)}</span>` : ""}
                 </td>
                 <td>
                   <div class="partner-edit-stack">
@@ -6610,6 +6644,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             ${row.city || row.stateCountry || row.state || row.country ? `<br><span>${escapeHtml([row.city, row.stateCountry || row.state || row.country].filter(Boolean).join(", "))}</span>` : ""}
             ${row.partnerProductTypes ? `<br><span>Products: ${escapeHtml(row.partnerProductTypes)}</span>` : ""}
             ${row.partnerClientMessaging ? `<br><span>Messaging: ${escapeHtml(row.partnerClientMessaging)}</span>` : ""}
+            ${row.partnerLinkedInPromotionText ? `<br><span>LinkedIn promo: ${escapeHtml(row.partnerLinkedInPromotionText)}</span>` : ""}
             ${row.companyLogoUrl ? `<br><a href="${escapeHtml(row.companyLogoUrl)}" target="_blank" rel="noopener">Company logo</a>` : ""}
           </td>
           <td>

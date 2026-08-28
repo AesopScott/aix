@@ -1724,6 +1724,7 @@ function normalizeRecord(key, record) {
     partnerTier: cleanString(record?.partnerTier),
     partnerProductTypes: cleanString(record?.partnerProductTypes, 2000),
     partnerClientMessaging: cleanString(record?.partnerClientMessaging, 4000),
+    partnerLinkedInPromotionText: cleanString(record?.partnerLinkedInPromotionText || record?.partnerPromotionText || record?.partnerHypeText, 4000),
     partnerPassword: cleanString(record?.partnerPassword, 120),
     partnerPasswordGeneratedAt: cleanString(record?.partnerPasswordGeneratedAt),
     partnerPasswordGeneratedBy: cleanString(record?.partnerPasswordGeneratedBy),
@@ -1819,6 +1820,7 @@ function normalizeContactRecord(key, record = {}) {
     invitedBy: cleanString(record.invitedBy || record.inviter || record.invitedByName || latestEvent.invitedBy, 180),
     partnerProductTypes: cleanString(record.partnerProductTypes, 2000),
     partnerClientMessaging: cleanString(record.partnerClientMessaging, 4000),
+    partnerLinkedInPromotionText: cleanString(record.partnerLinkedInPromotionText || record.partnerPromotionText || record.partnerHypeText, 4000),
     relationshipOwner: cleanString(record.relationshipOwner, 180),
     lifecycleStage: cleanAllowed(record.lifecycleStage, allowedLifecycleStages, "guest"),
     contactGuestRating: cleanStarRating(record.contactGuestRating ?? record.guestRelationshipRating ?? record.guestRating, 1),
@@ -2295,7 +2297,8 @@ function contactFromRegistrant(row = {}, type = "") {
     invitedBy: cleanString(row.invitedBy || row.inviter || row.invitedByName || row.createdBy, 180),
     ...(type === "partner" ? {
       partnerProductTypes: cleanString(row.partnerProductTypes, 2000),
-      partnerClientMessaging: cleanString(row.partnerClientMessaging, 4000)
+      partnerClientMessaging: cleanString(row.partnerClientMessaging, 4000),
+      partnerLinkedInPromotionText: cleanString(row.partnerLinkedInPromotionText || row.partnerPromotionText || row.partnerHypeText, 4000)
     } : {}),
     source: cleanString(row.source || `${type}-registration`),
     registrationId: cleanString(row.id),
@@ -4625,6 +4628,7 @@ async function partnerRegistrationLinkRows(env) {
       partnerTier: registration?.partnerTier || invite.partnerTier,
       partnerProductTypes: registration?.partnerProductTypes,
       partnerClientMessaging: registration?.partnerClientMessaging,
+      partnerLinkedInPromotionText: registration?.partnerLinkedInPromotionText,
       attended: registration?.attended === true,
       attendanceStatus: registration?.attendanceStatus,
       crmStatus,
@@ -5755,8 +5759,8 @@ function inviteReminderHtml({ firstName, eventName, eventDate, eventTime, regist
 }
 
 async function sendResendEmail(env, { to, subject, html, text, replyTo, cc = [] }) {
-  const apiKey = cleanString(env.RESEND_API_KEY, 400);
-  if (!apiKey) throw new Error("Resend is not configured (missing RESEND_API_KEY).");
+  const apiKey = cleanString(env.RESEND_API_KEY || env.MOJO_RESEND_API_KEY, 400);
+  if (!apiKey) throw new Error("Resend is not configured (missing RESEND_API_KEY or MOJO_RESEND_API_KEY).");
 
   const from = cleanString(env.MOJO_RESEND_FROM, 200) || "Angel Mosley <angel@mojoaisummits.com>";
   const ccList = cleanEmailList(cc, [to]);
@@ -6257,6 +6261,7 @@ async function updateContact(env, payload = {}, actor = "") {
     title: cleanString(payload.title ?? existing?.title, 180),
     phone: cleanString(payload.phone ?? existing?.phone, 80),
     linkedinProfileUrl,
+    partnerLinkedInPromotionText: cleanString(payload.partnerLinkedInPromotionText ?? payload.partnerPromotionText ?? payload.partnerHypeText ?? existing?.partnerLinkedInPromotionText, 4000),
     source: cleanString(existing?.source) || "crm-contact-overlay",
     createdAt: cleanString(existing?.createdAt) || now,
     photoUrl: cleanString(payload.photoUrl ?? payload.photoURL ?? payload.photo ?? existing?.photoUrl, 500),
@@ -6868,6 +6873,7 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
       companyLogoUploadedAt: cleanString(row.companyLogoUploadedAt || row.partnerCompanyLogoUploadedAt),
       partnerProductTypes: cleanString(row.partnerProductTypes, 2000),
       partnerClientMessaging: cleanString(row.partnerClientMessaging, 4000),
+      partnerLinkedInPromotionText: cleanString(row.partnerLinkedInPromotionText || row.partnerPromotionText || row.partnerHypeText, 4000),
       registrationId: cleanString(row.id),
       registrationType: "partner",
       source: "Partner CRM",
@@ -6904,6 +6910,7 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
       companyLogoOriginalName: cleanString(row.companyLogoOriginalName || row.partnerCompanyLogoOriginalName || existingCompany?.companyLogoOriginalName),
       companyLogoUploadedAt: cleanString(row.companyLogoUploadedAt || row.partnerCompanyLogoUploadedAt || existingCompany?.companyLogoUploadedAt),
       tier: cleanString(row.partnerTier || existingCompany?.tier, 120),
+      partnerLinkedInPromotionText: cleanString(row.partnerLinkedInPromotionText || row.partnerPromotionText || row.partnerHypeText || existingCompany?.partnerLinkedInPromotionText, 4000),
       status: cleanString(row.crmStatus || existingCompany?.status, 80) || "new",
       crmNotes: cleanString(row.crmNotes || existingCompany?.crmNotes),
       contacts: [...contactMap.values()],
@@ -7050,6 +7057,7 @@ export async function onRequestGet({ request, env, data }) {
         "Topic Interests",
         "Partner Products Sold",
         "Partner Client Messaging",
+        "Partner LinkedIn Promotion Text",
         "Last Updated",
         "Latest Registration",
         "Latest Event",
@@ -7077,6 +7085,7 @@ export async function onRequestGet({ request, env, data }) {
         "Partner Tier",
         "Partner Products Sold",
         "Partner Client Messaging",
+        "Partner LinkedIn Promotion Text",
         "Phone Verification",
         "Presenter",
         "Round Table Leader",
@@ -7116,6 +7125,7 @@ export async function onRequestGet({ request, env, data }) {
         (row.topicInterests || []).join("; "),
         row.partnerProductTypes,
         row.partnerClientMessaging,
+        row.partnerLinkedInPromotionText,
         row.updatedAt,
         row.latestRegisteredAt,
         row.latestEventName,
@@ -7143,6 +7153,7 @@ export async function onRequestGet({ request, env, data }) {
         row.partnerTier,
         row.partnerProductTypes,
         row.partnerClientMessaging,
+        row.partnerLinkedInPromotionText,
         row.phoneVerificationStatus,
         row.isPresenter ? "Yes" : "No",
         row.isRoundtableLeader ? "Yes" : "No",

@@ -486,6 +486,9 @@ function contactEventEntry(type, registration = {}, previous = {}, now = "") {
     attendanceNotes: cleanString(previous.attendanceNotes),
     eventQuestionRankings: cleanQuestionRankings(registration.eventQuestionRankings),
     eventQuestionRankingSummary: cleanString(registration.eventQuestionRankingSummary),
+    partnerLinkedInPromotionText: type === "partner"
+      ? cleanString(registration.partnerLinkedInPromotionText || previous.partnerLinkedInPromotionText, 4000)
+      : cleanString(previous.partnerLinkedInPromotionText, 4000),
     campaignAttribution: cleanCampaignAttribution(registration.campaignAttribution || registration),
     updatedAt: now
   };
@@ -567,6 +570,9 @@ function cleanPayload(payload, type = "") {
     registrationNotes: eventNotes,
     partnerProductTypes: type === "partner" ? cleanString(payload?.partnerProductTypes, 2000) : "",
     partnerClientMessaging: type === "partner" ? cleanString(payload?.partnerClientMessaging, 4000) : "",
+    partnerLinkedInPromotionText: type === "partner"
+      ? cleanString(payload?.partnerLinkedInPromotionText || payload?.partnerPromotionText || payload?.partnerHypeText, 4000)
+      : "",
     publicationUseName: cleanBoolean(payload?.publicationUseName),
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany),
     campaignAttribution: cleanCampaignAttribution(payload)
@@ -1118,6 +1124,7 @@ function staffRegistrationRows(type, registration = {}) {
     ["Company logo", type === "partner" ? registration.companyLogoUrl : ""],
     ["Products sold", type === "partner" ? registration.partnerProductTypes : ""],
     ["Typical client messaging", type === "partner" ? registration.partnerClientMessaging : ""],
+    ["LinkedIn promotion / hype copy", type === "partner" ? registration.partnerLinkedInPromotionText : ""],
     ["Event", details.name],
     ["Date", details.date],
     ["Time", details.time],
@@ -1505,7 +1512,8 @@ export async function upsertRegistrationContact(env, type, registration, config 
     companyLogoUploadedAt: cleanString(registration.companyLogoUploadedAt),
     ...(type === "partner" ? {
       partnerProductTypes: cleanString(registration.partnerProductTypes, 2000),
-      partnerClientMessaging: cleanString(registration.partnerClientMessaging, 4000)
+      partnerClientMessaging: cleanString(registration.partnerClientMessaging, 4000),
+      partnerLinkedInPromotionText: cleanString(registration.partnerLinkedInPromotionText, 4000)
     } : {}),
     eventQuestionRankings: cleanQuestionRankings(registration.eventQuestionRankings),
     eventQuestionRankingSummary: cleanString(registration.eventQuestionRankingSummary),
@@ -1554,6 +1562,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
     companyLogoKey: contact.companyLogoKey || cleanString(mergedExisting?.companyLogoKey),
     companyLogoOriginalName: contact.companyLogoOriginalName || cleanString(mergedExisting?.companyLogoOriginalName),
     companyLogoUploadedAt: contact.companyLogoUploadedAt || cleanString(mergedExisting?.companyLogoUploadedAt),
+    partnerLinkedInPromotionText: contact.partnerLinkedInPromotionText || cleanString(mergedExisting?.partnerLinkedInPromotionText),
     source: cleanString(mergedExisting?.source) || contact.source,
     createdAt: cleanString(mergedExisting?.createdAt) || now,
     events: mergeContactEvents(mergedExisting?.events, type, registration, now)
@@ -1573,6 +1582,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
     contactMap.set(email, {
       ...previous,
       ...contact,
+      partnerLinkedInPromotionText: contact.partnerLinkedInPromotionText || cleanString(previous.partnerLinkedInPromotionText),
       source: cleanString(previous.source) || contact.source
     });
 
@@ -1585,6 +1595,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
       companyLogoKey: contact.companyLogoKey || cleanString(existing?.companyLogoKey),
       companyLogoOriginalName: contact.companyLogoOriginalName || cleanString(existing?.companyLogoOriginalName),
       companyLogoUploadedAt: contact.companyLogoUploadedAt || cleanString(existing?.companyLogoUploadedAt),
+      partnerLinkedInPromotionText: contact.partnerLinkedInPromotionText || cleanString(existing?.partnerLinkedInPromotionText),
       contacts: [...contactMap.values()],
       updatedAt: now,
       updatedBy
