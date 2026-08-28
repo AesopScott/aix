@@ -3416,6 +3416,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         url.searchParams.set("includePartnerInvites", "1");
         url.searchParams.set("includePartnerMatrixProspects", "1");
         url.searchParams.set("includeUpcomingEvents", "1");
+        url.searchParams.set("includeManualPartners", "1");
       }
       return url.toString();
     }
@@ -4628,11 +4629,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function partnerCompanyOptionRecords() {
-      return [
-        ...(state.rows || []),
-        ...(state.partnerInviteCodes || []),
-        ...(state.partnerMatrixProspects || [])
-      ];
+      return (state.rows || []).filter((row) =>
+        row.manualPartner === true && row.email && partnerCompanyNameFrom(row)
+      );
     }
 
     function syncPartnerInviteCompanyOptions() {
@@ -4649,10 +4648,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           .sort((left, right) => left[1].localeCompare(right[1]))
           .map(([, company]) => optionMarkup(company, company, current))
       ].join("");
-      if (current && ![...partnerInviteCompany.options].some((option) => option.value === current)) {
-        partnerInviteCompany.insertAdjacentHTML("beforeend", optionMarkup(current, current, current));
-        partnerInviteCompany.value = current;
-      }
+      if (current && companies.has(filterKey(current))) partnerInviteCompany.value = current;
     }
 
     function recordStatusFilterOptions(type = state.type, selectedValue = "all") {
