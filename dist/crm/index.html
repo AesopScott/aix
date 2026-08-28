@@ -344,6 +344,15 @@
       display: none;
     }
 
+    #guestMatrixSave {
+      position: fixed;
+      right: 1rem;
+      bottom: 2rem;
+      width: min(21rem, calc(100vw - 2rem));
+      z-index: 75;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+    }
+
     .record-type-field { display: none; }
 
     .threshold-field {
@@ -1688,7 +1697,8 @@
     @media (max-width: 980px) {
       main { padding: 1rem 0.5rem 3rem; }
       .table-scroll-proxy { left: 0.5rem; width: calc(100vw - 1rem); }
-      #contactSaveAllButton { right: 0.5rem; bottom: 1.75rem; width: calc(100vw - 1rem); }
+      #contactSaveAllButton,
+      #guestMatrixSave { right: 0.5rem; bottom: 1.75rem; width: calc(100vw - 1rem); }
       header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-add-form, .guest-matrix-controls, .guest-matrix-summary { grid-template-columns: 1fr; }
       .partner-add-contact-form .span-2 { grid-column: auto; }
       .invite-qr { width: 100%; justify-items: start; }
@@ -4660,8 +4670,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function partnerCompanyOptionRecords() {
-      return (state.rows || []).filter((row) =>
-        row.manualPartner === true && row.email && partnerCompanyNameFrom(row)
+      const records = [
+        ...(state.rows || []),
+        ...(state.partnerMatrixProspects || []),
+        ...(state.partnerInviteCodes || [])
+      ];
+      return records.filter((row) =>
+        crmPersonEmail(row) &&
+        partnerCompanyNameFrom(row) &&
+        (
+          row.manualPartner === true ||
+          row.matrixOnly === true ||
+          row.type === "partner" ||
+          row.type === "partner-matrix-prospect" ||
+          row.partnerRegistrationType ||
+          row.partnerContactEmail
+        )
       );
     }
 
