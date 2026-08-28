@@ -8,6 +8,7 @@ import {
   writeCrmStorageJson,
   deleteCrmD1Record
 } from "./_crm-d1.js";
+import { zoomKey } from "./_virtual-events.js";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -795,17 +796,67 @@ function eventPageUrl(registration = {}) {
   return virtualSeriesUrl;
 }
 
+function registrationAccessLink(registration = {}) {
+  return cleanString(
+    registration.eventAccessLink ||
+      registration.accessLink ||
+      registration.joinUrl ||
+      registration.zoomUrl ||
+      registration.zoomJoinUrl,
+    1000
+  );
+}
+
+function eventAccessSlug(registration = {}) {
+  const explicit = cleanString(registration.eventSlug, 240);
+  if (explicit) return explicit;
+  const eventId = cleanString(registration.eventId, 240);
+  if (eventId) return eventId.split(":")[0].trim();
+  return cleanString(registration.eventName, 240);
+}
+
+export async function registrationWithVirtualEventAccess(env, registration = {}) {
+  const existingAccess = registrationAccessLink(registration);
+  if (existingAccess) {
+    const accessLink = absoluteMojoUrl(existingAccess);
+    return {
+      ...registration,
+      eventAccessLink: accessLink,
+      zoomJoinUrl: accessLink
+    };
+  }
+
+  const slug = eventAccessSlug(registration);
+  if (!slug) return registration;
+
+  const storedZoom = await readCrmStorageJson(env, zoomKey(slug)).catch(() => null);
+  const joinUrl = cleanString(storedZoom?.joinUrl, 1000);
+  if (!joinUrl) return registration;
+
+  const accessLink = absoluteMojoUrl(joinUrl);
+  return {
+    ...registration,
+    eventAccessLink: accessLink,
+    zoomJoinUrl: accessLink,
+    eventAccessHydratedFromVirtualEvent: true,
+    eventZoomMeetingId: cleanString(storedZoom?.meetingId, 120),
+    eventZoomPasscode: cleanString(storedZoom?.passcode, 120)
+  };
+}
+
 function eventDetails(registration = {}) {
   const name = cleanString(registration.eventName) || "Mojo AI Summits event";
   const date = cleanString(registration.eventDate) || "To be announced";
   const time = cleanString(registration.eventTime) || "1:00 p.m. Central";
-  const access = cleanString(registration.eventAccessLink);
+  const access = registrationAccessLink(registration);
+  const accessText = access ? absoluteMojoUrl(access) : "Event access details will be sent before the session.";
   return {
     name,
     date,
     time,
     pageUrl: eventPageUrl(registration),
-    accessText: access ? absoluteMojoUrl(access) : "Event access details will be sent before the session."
+    accessText,
+    accessUrl: /^https?:\/\//i.test(accessText) ? accessText : ""
   };
 }
 
@@ -917,9 +968,9 @@ function buildGuestCalendarInvite(registration = {}) {
     `ORGANIZER;CN=${icsEscape(guestConfirmationSenderName)}:mailto:${guestConfirmationSenderEmail}`,
     ...(registrantEmail ? [`ATTENDEE;CN=${icsEscape(registrantName)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${registrantEmail}`] : []),
     `SUMMARY:${icsEscape(`Mojo AI Summits: ${details.name}`)}`,
-    "LOCATION:Virtual event",
-    `DESCRIPTION:${icsEscape(`Registration confirmed for ${details.name}. Event page: ${details.pageUrl}. ${details.accessText}`)}`,
-    `URL:${icsEscape(details.pageUrl)}`,
+    `LOCATION:${icsEscape(details.accessUrl || "Virtual event")}`,
+    `DESCRIPTION:${icsEscape(`Registration confirmed for ${details.name}. Event page: ${details.pageUrl}. Access: ${details.accessText}`)}`,
+    `URL:${icsEscape(details.accessUrl || details.pageUrl)}`,
     "STATUS:CONFIRMED",
     "SEQUENCE:0",
     "END:VEVENT",
@@ -993,23 +1044,24 @@ function guestConfirmationHtml(registration = {}, type = "guest") {
   `;
 }
 
-async function sendRegistrationConfirmation(env, type = "guest", registration = {}) {
+export async function sendRegistrationConfirmation(env, type = "guest", registration = {}) {
   if (!cleanString(registration.email)) return { attempted: false, sent: false, error: "Registrant email is missing." };
-  const calendarInvite = buildGuestCalendarInvite(registration);
-  const confirmationCopies = registrationConfirmationCopyRecipients(env, registration.email);
+  const deliveryRegistration = await registrationWithVirtualEventAccess(env, registration);
+  const calendarInvite = buildGuestCalendarInvite(deliveryRegistration);
+  const confirmationCopies = registrationConfirmationCopyRecipients(env, deliveryRegistration.email);
   const supportContact = registrationSupportContactEmail(type);
 
   await sendMicrosoftGraphMail(env, {
     sender: cleanString(env.MOJO_GUEST_REGISTRATION_EMAIL_SENDER || env.MOJO_INVITE_EMAIL_SENDER || guestConfirmationSenderEmail),
-    to: [{ address: registration.email, name: registration.name }],
+    to: [{ address: deliveryRegistration.email, name: deliveryRegistration.name }],
     bcc: confirmationCopies,
     replyTo: [
       { address: supportContact, name: registrationSupportTeamName(type) },
       { address: guestConfirmationSenderEmail, name: guestConfirmationSenderName }
     ],
     subject: guestConfirmationSubject,
-    text: guestConfirmationText(registration, type),
-    html: guestConfirmationHtml(registration, type),
+    text: guestConfirmationText(deliveryRegistration, type),
+    html: guestConfirmationHtml(deliveryRegistration, type),
     attachments: calendarInvite ? [{
       name: "mojo-ai-summits-event.ics",
       contentType: "text/calendar; method=REQUEST; charset=utf-8",
@@ -1022,6 +1074,7 @@ async function sendRegistrationConfirmation(env, type = "guest", registration = 
     attempted: true,
     sent: true,
     calendarInviteAttached: Boolean(calendarInvite),
+    zoomAccessAttached: Boolean(registrationAccessLink(deliveryRegistration)),
     confirmationCopyCount: confirmationCopies.length
   };
 }
@@ -1662,12 +1715,13 @@ export async function handlePublicRegistration({ request, env }, type) {
       ? await storeRegistrationCompanyLogo(env, type, record, companyLogoFile)
       : {};
     Object.assign(record, photoRefs, logoRefs);
+    const accessRecord = await registrationWithVirtualEventAccess(env, record);
     const contactRefs = {
-      ...contactRefsForRegistration(type, record),
-      ...(crmD1Available(env) ? await upsertRegistrationContact(env, type, record, config).catch(() => ({})) : {})
+      ...contactRefsForRegistration(type, accessRecord),
+      ...(crmD1Available(env) ? await upsertRegistrationContact(env, type, accessRecord, config).catch(() => ({})) : {})
     };
     const storedRecord = {
-      ...record,
+      ...accessRecord,
       ...contactRefs
     };
     const d1RegistrationKey = await writeD1Registration(env, type, storedRecord, config);
