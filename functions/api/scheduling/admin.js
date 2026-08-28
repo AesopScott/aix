@@ -7,6 +7,7 @@ import {
   listEmployees,
   publicEmployee,
   requireStore,
+  retryFailedBookingConfirmations,
   saveEmployee
 } from "../../_scheduling.js";
 
@@ -83,6 +84,11 @@ export async function onRequestPost({ request, env, data }) {
   }
 
   try {
+    if (input.action === "retry-booking-confirmations") {
+      const result = await retryFailedBookingConfirmations(env, input);
+      return json(result);
+    }
+
     const employee = await saveEmployee(env, input, access.user.email);
     return json({ ok: true, employee });
   } catch (error) {
