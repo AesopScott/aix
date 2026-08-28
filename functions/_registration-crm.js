@@ -18,11 +18,13 @@ const maxFieldLength = 2000;
 const acceptedPhoneStatuses = new Set(["verified"]);
 const registrationObjectPrefix = "crm/registrations";
 const registrationPhotoObjectPrefix = "crm/registration-photos";
+const registrationCompanyLogoObjectPrefix = "crm/registration-company-logos";
 const inviteUsageObjectPrefix = "crm/invite-usage";
 const verifiedPhonePrefix = "sms:verified-phone:";
 const verifiedPhoneObjectPrefix = "sms/verified-phones";
 const maxRegistrationPhotoBytes = 6 * 1024 * 1024;
 const allowedRegistrationPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const allowedRegistrationLogoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const guestConfirmationSubject = "Your Mojo AI Summits registration is confirmed";
 const guestConfirmationSenderName = "Angel Mosley";
 const guestConfirmationSenderEmail = "Angel@mojoaisummits.com";
@@ -213,6 +215,14 @@ function registrationPhotoObjectKey(type, registration, file) {
   const idSegment = safeFileSegment(registration.id, crypto.randomUUID());
   const nameSegment = safeFileSegment(file?.name, "brief-photo");
   return `${registrationPhotoObjectPrefix}/${safeFileSegment(type, "registration")}/${emailSegment}/${createdAt}-${idSegment}-${nameSegment}`;
+}
+
+function registrationCompanyLogoObjectKey(type, registration, file) {
+  const createdAt = cleanString(registration.createdAt).replace(/[:.]/g, "-") || Date.now().toString();
+  const companySegment = safeFileSegment(registration.partnerCompany || registration.company, "company");
+  const idSegment = safeFileSegment(registration.id, crypto.randomUUID());
+  const nameSegment = safeFileSegment(file?.name, "company-logo");
+  return `${registrationCompanyLogoObjectPrefix}/${safeFileSegment(type, "registration")}/${companySegment}/${createdAt}-${idSegment}-${nameSegment}`;
 }
 
 function isImageFile(file) {
@@ -568,13 +578,17 @@ async function readRegistrationRequest(request, type = "") {
     const form = await request.formData();
     return {
       payload: Object.fromEntries([...form.entries()].filter(([, value]) => typeof value === "string")),
-      photoFile: form.get("briefPhoto") || form.get("photo") || form.get("headshot")
+      photoFile: form.get("briefPhoto") || form.get("photo") || form.get("headshot"),
+      companyLogoFile: type === "partner"
+        ? form.get("companyLogo") || form.get("partnerCompanyLogo") || form.get("logo")
+        : null
     };
   }
 
   return {
     payload: await request.json().catch(() => null),
-    photoFile: null
+    photoFile: null,
+    companyLogoFile: null
   };
 }
 
@@ -592,6 +606,22 @@ function validateRegistrationPhoto(file) {
   }
   if (Number(file.size || 0) > maxRegistrationPhotoBytes) {
     return "Upload a brief picture smaller than 6 MB.";
+  }
+  return "";
+}
+
+function hasRegistrationCompanyLogoFile(file) {
+  return Boolean(file && typeof file === "object" && typeof file.arrayBuffer === "function" && cleanString(file.name));
+}
+
+function validateRegistrationCompanyLogo(file) {
+  if (!hasRegistrationCompanyLogoFile(file)) return "";
+  const type = cleanString(file.type).toLowerCase();
+  if (!allowedRegistrationLogoTypes.has(type)) {
+    return "Upload the company logo as a JPG, PNG, or WebP image.";
+  }
+  if (Number(file.size || 0) > maxRegistrationPhotoBytes) {
+    return "Upload a company logo smaller than 6 MB.";
   }
   return "";
 }
@@ -640,6 +670,34 @@ async function storeRegistrationPhoto(env, type, registration, file) {
     photoContentType: cleanString(file.type).toLowerCase(),
     photoSize: Number(file.size || 0),
     photoUploadedAt: new Date().toISOString()
+  };
+}
+
+async function storeRegistrationCompanyLogo(env, type, registration, file) {
+  const error = validateRegistrationCompanyLogo(file);
+  if (error) throw new Error(error);
+  const key = registrationCompanyLogoObjectKey(type, registration, file);
+  await env.MOJO_SUMMITS_STORAGE.put(key, await file.arrayBuffer(), {
+    httpMetadata: {
+      contentType: cleanString(file.type).toLowerCase(),
+      contentDisposition: `inline; filename="${safeFileSegment(file.name, "company-logo")}"`
+    },
+    customMetadata: {
+      area: "crm",
+      kind: "registration-company-logo",
+      type,
+      registrationId: cleanString(registration.id),
+      email: cleanString(registration.email).toLowerCase(),
+      company: cleanString(registration.partnerCompany || registration.company)
+    }
+  });
+  return {
+    companyLogoKey: key,
+    companyLogoUrl: registrationPhotoPublicUrl(key),
+    companyLogoOriginalName: cleanString(file.name),
+    companyLogoContentType: cleanString(file.type).toLowerCase(),
+    companyLogoSize: Number(file.size || 0),
+    companyLogoUploadedAt: new Date().toISOString()
   };
 }
 
@@ -1004,6 +1062,7 @@ function staffRegistrationRows(type, registration = {}) {
     ["State / Country", registration.stateCountry || registration.state || registration.country],
     ["Ranked conversation questions", registration.eventQuestionRankingSummary],
     ["Brief photo", registration.photoUrl],
+    ["Company logo", type === "partner" ? registration.companyLogoUrl : ""],
     ["Products sold", type === "partner" ? registration.partnerProductTypes : ""],
     ["Typical client messaging", type === "partner" ? registration.partnerClientMessaging : ""],
     ["Event", details.name],
@@ -1387,6 +1446,10 @@ export async function upsertRegistrationContact(env, type, registration, config 
     photoKey: cleanString(registration.photoKey),
     photoOriginalName: cleanString(registration.photoOriginalName),
     photoUploadedAt: cleanString(registration.photoUploadedAt),
+    companyLogoUrl: cleanString(registration.companyLogoUrl),
+    companyLogoKey: cleanString(registration.companyLogoKey),
+    companyLogoOriginalName: cleanString(registration.companyLogoOriginalName),
+    companyLogoUploadedAt: cleanString(registration.companyLogoUploadedAt),
     ...(type === "partner" ? {
       partnerProductTypes: cleanString(registration.partnerProductTypes, 2000),
       partnerClientMessaging: cleanString(registration.partnerClientMessaging, 4000)
@@ -1434,6 +1497,10 @@ export async function upsertRegistrationContact(env, type, registration, config 
     photoKey: contact.photoKey || cleanString(mergedExisting?.photoKey),
     photoOriginalName: contact.photoOriginalName || cleanString(mergedExisting?.photoOriginalName),
     photoUploadedAt: contact.photoUploadedAt || cleanString(mergedExisting?.photoUploadedAt),
+    companyLogoUrl: contact.companyLogoUrl || cleanString(mergedExisting?.companyLogoUrl),
+    companyLogoKey: contact.companyLogoKey || cleanString(mergedExisting?.companyLogoKey),
+    companyLogoOriginalName: contact.companyLogoOriginalName || cleanString(mergedExisting?.companyLogoOriginalName),
+    companyLogoUploadedAt: contact.companyLogoUploadedAt || cleanString(mergedExisting?.companyLogoUploadedAt),
     source: cleanString(mergedExisting?.source) || contact.source,
     createdAt: cleanString(mergedExisting?.createdAt) || now,
     events: mergeContactEvents(mergedExisting?.events, type, registration, now)
@@ -1461,6 +1528,10 @@ export async function upsertRegistrationContact(env, type, registration, config 
       organizationName: cleanString(existing?.organizationName || existing?.company || company),
       company,
       companySlug,
+      companyLogoUrl: contact.companyLogoUrl || cleanString(existing?.companyLogoUrl),
+      companyLogoKey: contact.companyLogoKey || cleanString(existing?.companyLogoKey),
+      companyLogoOriginalName: contact.companyLogoOriginalName || cleanString(existing?.companyLogoOriginalName),
+      companyLogoUploadedAt: contact.companyLogoUploadedAt || cleanString(existing?.companyLogoUploadedAt),
       contacts: [...contactMap.values()],
       updatedAt: now,
       updatedBy
@@ -1499,7 +1570,7 @@ export async function handlePublicRegistration({ request, env }, type) {
     return json({ error: "Registration storage is not configured." }, { status: 500 });
   }
 
-  const { payload, photoFile } = await readRegistrationRequest(request, type);
+  const { payload, photoFile, companyLogoFile } = await readRegistrationRequest(request, type);
   let registration = normalizeRegistrationForType(type, cleanPayload(payload, type));
   registration = await applyServerPhoneVerification(env, registration);
   const debugBase = {
@@ -1552,6 +1623,17 @@ export async function handlePublicRegistration({ request, env }, type) {
         return json({ error: photoError }, { status: 400 });
       }
     }
+    if (hasRegistrationCompanyLogoFile(companyLogoFile)) {
+      const logoError = validateRegistrationCompanyLogo(companyLogoFile);
+      if (logoError) {
+        await writeRegistrationDebug(env, type, "rejected", {
+          ...debugBase,
+          stage: "company-logo-validation",
+          error: logoError
+        });
+        return json({ error: logoError }, { status: 400 });
+      }
+    }
     const selectedShow = resolveRegistrationShow(registration, invite);
 
     const createdAt = new Date().toISOString();
@@ -1576,7 +1658,10 @@ export async function handlePublicRegistration({ request, env }, type) {
     const photoRefs = hasRegistrationPhotoFile(photoFile)
       ? await storeRegistrationPhoto(env, type, record, photoFile)
       : {};
-    Object.assign(record, photoRefs);
+    const logoRefs = hasRegistrationCompanyLogoFile(companyLogoFile)
+      ? await storeRegistrationCompanyLogo(env, type, record, companyLogoFile)
+      : {};
+    Object.assign(record, photoRefs, logoRefs);
     const contactRefs = {
       ...contactRefsForRegistration(type, record),
       ...(crmD1Available(env) ? await upsertRegistrationContact(env, type, record, config).catch(() => ({})) : {})

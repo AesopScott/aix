@@ -636,6 +636,11 @@
               <p class="file-help">Featured partners upload a picture suitable for inclusion in MOJO AI Summits briefs. JPG, PNG, or WebP, up to 6 MB.</p>
             </div>
             <div class="field full">
+              <label for="companyLogo">Company logo</label>
+              <input type="file" id="companyLogo" name="companyLogo" accept="image/jpeg,image/png,image/webp">
+              <p class="file-help">Upload a company logo for partner materials. JPG, PNG, or WebP, up to 6 MB.</p>
+            </div>
+            <div class="field full">
               <label for="partnerProductTypes">Products sold</label>
               <textarea id="partnerProductTypes" name="partnerProductTypes" placeholder="Describe the product categories, services, or solutions your company sells to clients." rows="4" required></textarea>
             </div>
@@ -690,6 +695,7 @@
   const eventShowSelect = document.getElementById('eventShowId');
   const briefPhotoField = document.getElementById('briefPhotoField');
   const briefPhotoInput = document.getElementById('briefPhoto');
+  const companyLogoInput = document.getElementById('companyLogo');
   const phoneInput = document.getElementById('phone');
   const sendCodeButton = document.getElementById('sendCodeButton');
   const verifyCodeRow = document.getElementById('verifyCodeRow');
@@ -1039,6 +1045,18 @@
     return '';
   }
 
+  function selectedCompanyLogo(){
+    return companyLogoInput.files && companyLogoInput.files[0] ? companyLogoInput.files[0] : null;
+  }
+
+  async function validateCompanyLogo(){
+    const file = selectedCompanyLogo();
+    if (!file) return '';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return 'Upload the company logo as a JPG, PNG, or WebP image.';
+    if (file.size > 6 * 1024 * 1024) return 'Upload a company logo smaller than 6 MB.';
+    return '';
+  }
+
   sendCodeButton.addEventListener('click', async () => {
     clearMessage(formError);
     const phone = normalizePhone(phoneInput.value);
@@ -1146,6 +1164,12 @@
     if (photoError) {
       setMessage(formError, photoError, 'error');
       briefPhotoInput.focus();
+      return;
+    }
+    const logoError = await validateCompanyLogo();
+    if (logoError) {
+      setMessage(formError, logoError, 'error');
+      companyLogoInput.focus();
       return;
     }
     const selectedShow = normalizeEventShow(payload.eventShowId, '');

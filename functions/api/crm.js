@@ -74,6 +74,7 @@ const OVERFLOW_REGISTRATION_PREFIX = "crm-overflow/registrations";
 const R2_INVITE_USAGE_PREFIX = "crm/invite-usage";
 const CONTACT_PHOTO_PREFIX = "crm/contact-photos";
 const REGISTRATION_PHOTO_PREFIX = "crm/registration-photos";
+const REGISTRATION_COMPANY_LOGO_PREFIX = "crm/registration-company-logos";
 const PARTNER_PROSPECT_COMPANY_PREFIX = "crm:partner-prospect-company:";
 const PARTNER_PROSPECT_PERSON_PREFIX = "crm:partner-prospect-person:";
 const PARTNER_PROSPECT_AUDIT_PREFIX = "crm:partner-prospect-audit:";
@@ -1690,6 +1691,12 @@ function normalizeRecord(key, record) {
     photoContentType: cleanString(record?.photoContentType),
     photoSize: Number.isFinite(Number(record?.photoSize)) ? Number(record.photoSize) : 0,
     photoUploadedAt: cleanString(record?.photoUploadedAt),
+    companyLogoUrl: cleanString(record?.companyLogoUrl || record?.partnerCompanyLogoUrl || record?.logoUrl, 500),
+    companyLogoKey: safeObjectKey(record?.companyLogoKey || record?.partnerCompanyLogoKey || record?.logoKey),
+    companyLogoOriginalName: cleanString(record?.companyLogoOriginalName || record?.partnerCompanyLogoOriginalName),
+    companyLogoContentType: cleanString(record?.companyLogoContentType || record?.partnerCompanyLogoContentType),
+    companyLogoSize: Number.isFinite(Number(record?.companyLogoSize)) ? Number(record.companyLogoSize) : 0,
+    companyLogoUploadedAt: cleanString(record?.companyLogoUploadedAt || record?.partnerCompanyLogoUploadedAt),
     inviteCode: cleanString(record?.inviteCode),
     invitedBy: cleanString(record?.invitedBy || record?.inviter || record?.invitedByName || record?.createdBy, 180),
     phoneVerificationStatus: cleanString(record?.phoneVerificationStatus) || "unverified",
@@ -1786,6 +1793,10 @@ function normalizeContactRecord(key, record = {}) {
     linkedinProfileUrl: cleanLinkedInProfileUrl(record.linkedinProfileUrl || record.linkedInProfileUrl || record.linkedinUrl || record.linkedInUrl),
     photoUrl: cleanString(record.photoUrl || record.photoURL || record.photo, 500),
     photoKey: safeObjectKey(record.photoKey),
+    companyLogoUrl: cleanString(record.companyLogoUrl || record.partnerCompanyLogoUrl || record.logoUrl, 500),
+    companyLogoKey: safeObjectKey(record.companyLogoKey || record.partnerCompanyLogoKey || record.logoKey),
+    companyLogoOriginalName: cleanString(record.companyLogoOriginalName || record.partnerCompanyLogoOriginalName),
+    companyLogoUploadedAt: cleanString(record.companyLogoUploadedAt || record.partnerCompanyLogoUploadedAt),
     bio: cleanString(record.bio || record.biography, 4000),
     executiveFunction: cleanAllowed(record.executiveFunction, allowedExecutiveFunctions, ""),
     industry: cleanString(record.industry),
@@ -2509,6 +2520,10 @@ function mergeContactRows(storedRows, derivedRows) {
       linkedinProfileUrl: cleanLinkedInProfileUrl(row.linkedinProfileUrl) || cleanLinkedInProfileUrl(previous.linkedinProfileUrl),
       photoUrl: cleanString(row.photoUrl) || cleanString(previous.photoUrl),
       photoKey: safeObjectKey(row.photoKey) || safeObjectKey(previous.photoKey),
+      companyLogoUrl: cleanString(row.companyLogoUrl || row.partnerCompanyLogoUrl || row.logoUrl) || cleanString(previous.companyLogoUrl || previous.partnerCompanyLogoUrl || previous.logoUrl),
+      companyLogoKey: safeObjectKey(row.companyLogoKey || row.partnerCompanyLogoKey || row.logoKey) || safeObjectKey(previous.companyLogoKey || previous.partnerCompanyLogoKey || previous.logoKey),
+      companyLogoOriginalName: cleanString(row.companyLogoOriginalName || row.partnerCompanyLogoOriginalName) || cleanString(previous.companyLogoOriginalName || previous.partnerCompanyLogoOriginalName),
+      companyLogoUploadedAt: cleanString(row.companyLogoUploadedAt || row.partnerCompanyLogoUploadedAt) || cleanString(previous.companyLogoUploadedAt || previous.partnerCompanyLogoUploadedAt),
       bio: cleanString(row.bio) || cleanString(previous.bio),
       executiveFunction: cleanString(row.executiveFunction) || cleanString(previous.executiveFunction),
       industry: cleanString(row.industry) || cleanString(previous.industry),
@@ -4090,6 +4105,8 @@ async function convertProspectCompany(env, payload = {}, actor = "") {
       company: company.companyName,
       companySlug: slug,
       title: person.title,
+      companyLogoUrl: cleanString(existingCompany?.companyLogoUrl, 500),
+      companyLogoKey: safeObjectKey(existingCompany?.companyLogoKey),
       source: "Partner Prospecting",
       updatedAt: now,
       updatedBy: actor || "crm"
@@ -4100,6 +4117,10 @@ async function convertProspectCompany(env, payload = {}, actor = "") {
     organizationName: cleanString(existingCompany?.organizationName || company.companyName, 240),
     company: company.companyName,
     companySlug: slug,
+    companyLogoUrl: cleanString(existingCompany?.companyLogoUrl, 500),
+    companyLogoKey: safeObjectKey(existingCompany?.companyLogoKey),
+    companyLogoOriginalName: cleanString(existingCompany?.companyLogoOriginalName),
+    companyLogoUploadedAt: cleanString(existingCompany?.companyLogoUploadedAt),
     tier: "Partner Candidate",
     status: "partner-candidate",
     contacts: [...contactMap.values()],
@@ -6190,6 +6211,10 @@ async function updateContact(env, payload = {}, actor = "") {
     createdAt: cleanString(existing?.createdAt) || now,
     photoUrl: cleanString(payload.photoUrl ?? payload.photoURL ?? payload.photo ?? existing?.photoUrl, 500),
     photoKey: safeObjectKey(payload.photoKey ?? existing?.photoKey),
+    companyLogoUrl: cleanString(payload.companyLogoUrl ?? payload.partnerCompanyLogoUrl ?? payload.logoUrl ?? existing?.companyLogoUrl ?? existing?.partnerCompanyLogoUrl ?? existing?.logoUrl, 500),
+    companyLogoKey: safeObjectKey(payload.companyLogoKey ?? payload.partnerCompanyLogoKey ?? payload.logoKey ?? existing?.companyLogoKey ?? existing?.partnerCompanyLogoKey ?? existing?.logoKey),
+    companyLogoOriginalName: cleanString(payload.companyLogoOriginalName ?? payload.partnerCompanyLogoOriginalName ?? existing?.companyLogoOriginalName ?? existing?.partnerCompanyLogoOriginalName),
+    companyLogoUploadedAt: cleanString(payload.companyLogoUploadedAt ?? payload.partnerCompanyLogoUploadedAt ?? existing?.companyLogoUploadedAt ?? existing?.partnerCompanyLogoUploadedAt),
     bio: cleanString(payload.bio ?? payload.biography ?? existing?.bio, 4000),
     executiveFunction: cleanAllowed(payload.executiveFunction ?? existing?.executiveFunction, allowedExecutiveFunctions, ""),
     industry: cleanString(payload.industry ?? existing?.industry),
@@ -6227,7 +6252,9 @@ async function serveContactPhoto(request, env) {
   }
   const url = new URL(request.url);
   const key = safeObjectKey(url.searchParams.get("photo"));
-  const isAllowedPhotoKey = key.startsWith(`${CONTACT_PHOTO_PREFIX}/`) || key.startsWith(`${REGISTRATION_PHOTO_PREFIX}/`);
+  const isAllowedPhotoKey = key.startsWith(`${CONTACT_PHOTO_PREFIX}/`) ||
+    key.startsWith(`${REGISTRATION_PHOTO_PREFIX}/`) ||
+    key.startsWith(`${REGISTRATION_COMPANY_LOGO_PREFIX}/`);
   if (!key || !isAllowedPhotoKey) {
     return json({ error: "Contact photo was not found." }, { status: 404 });
   }
