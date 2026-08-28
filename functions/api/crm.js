@@ -2424,7 +2424,7 @@ function mergeContactEventList(existingEvents = [], nextEvent = {}) {
   return [nextEvent, ...events];
 }
 
-async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invite", actor = "") {
+async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invite", actor = "", options = {}) {
   const contact = contactFromInviteRecord(row, source);
   if (!contact?.key) return {};
   const existing = await readRawRecord(env, contact.key);
@@ -2443,13 +2443,19 @@ async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invi
   };
   const now = new Date().toISOString();
   const nextEvent = contact.events?.[0] || {};
+  const incomingCompany = cleanString(contact.company, 240);
+  const incomingTitle = cleanString(contact.title, 180);
+  const existingCompany = cleanString(mergedExisting?.company, 240);
+  const existingTitle = cleanString(mergedExisting?.title, 180);
+  const preferIncomingCompany = options.preferIncomingCompany === true && incomingCompany;
+  const preferIncomingTitle = options.preferIncomingTitle === true && incomingTitle;
   await writeSetupJson(env, contact.key, {
     ...mergedExisting,
     id: contact.id,
     email: contact.email,
     name: cleanString(mergedExisting?.name) && cleanString(mergedExisting?.name) !== "Name not recorded" ? cleanString(mergedExisting.name) : contact.name,
-    company: cleanString(mergedExisting?.company) || contact.company,
-    title: cleanString(mergedExisting?.title) || contact.title,
+    company: preferIncomingCompany ? incomingCompany : existingCompany || incomingCompany,
+    title: preferIncomingTitle ? incomingTitle : existingTitle || incomingTitle,
     linkedinProfileUrl: contact.linkedinProfileUrl || cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl),
     invitedBy: cleanString(contact.invitedBy) || cleanString(existing?.invitedBy, 180),
     source: cleanString(mergedExisting?.source) || contact.source,
@@ -4757,7 +4763,9 @@ async function upsertManualPartnerMatrixProspect(env, row = {}, actor = "crm") {
   };
   await writeSetupJson(env, key, next);
   const prospect = normalizeGuestMatrixProspect(key, next, "partner");
-  await upsertContactFromInviteRecord(env, prospect, "partner-matrix-prospect", actor);
+  await upsertContactFromInviteRecord(env, prospect, "partner-matrix-prospect", actor, {
+    preferIncomingCompany: Boolean(prospect.company || prospect.partnerCompany)
+  });
   return prospect;
 }
 
@@ -5069,7 +5077,9 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
   };
   await writeSetupJson(env, key, nextRecord);
   const prospect = normalizeGuestMatrixProspect(key, nextRecord, prospectType);
-  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
+  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor, {
+    preferIncomingCompany: Boolean(prospect.company || prospect.partnerCompany)
+  });
   return prospect;
 }
 
@@ -5080,6 +5090,7 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   const existing = await readSetupJson(env, key);
   if (!existing) throw new Error("Tracked person was not found.");
   const field = cleanString(payload.field, 80);
+  const hasCompanyChange = field === "company" || field === "partnerCompany";
   const next = { ...existing };
   if (field === "linkedinConnection") {
     next.linkedinConnectionStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
@@ -5110,7 +5121,9 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   next.updatedBy = actor;
   await writeSetupJson(env, key, next);
   const prospect = normalizeGuestMatrixProspect(key, next, prospectType);
-  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
+  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor, {
+    preferIncomingCompany: hasCompanyChange
+  });
   return prospect;
 }
 
@@ -5219,6 +5232,8 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     if (!allowedPrefix) continue;
     const existing = await readSetupJson(env, key);
     if (!existing) continue;
+    const hasCompanyChange = Object.prototype.hasOwnProperty.call(change, "company") ||
+      Object.prototype.hasOwnProperty.call(change, "partnerCompany");
     const next = { ...existing };
     if (Object.prototype.hasOwnProperty.call(change, "linkedinConnection")) {
       next.linkedinConnectionStatus = cleanGuestMatrixOption(change.linkedinConnection, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
@@ -5246,7 +5261,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.isFeaturedPartner = roleUpdate.isFeaturedPartner;
       await updateRegistrantRoleForMatrixChange(env, next, roleUpdate.registrationRole, actor, now);
     }
-    if (Object.prototype.hasOwnProperty.call(change, "company") || Object.prototype.hasOwnProperty.call(change, "partnerCompany")) {
+    if (hasCompanyChange) {
       const company = cleanString(change.partnerCompany ?? change.company, 240);
       next.company = company;
       if (key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)) {
@@ -5280,7 +5295,9 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     const source = key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)
       ? key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner-matrix-prospect" : "partner-invite"
       : key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) ? "guest-matrix-prospect" : `${normalized.type || "guest"}-invite`;
-    await upsertContactFromInviteRecord(env, normalized, source, actor);
+    await upsertContactFromInviteRecord(env, normalized, source, actor, {
+      preferIncomingCompany: hasCompanyChange
+    });
     updatedCount += 1;
   }
   return { updatedCount };
@@ -5463,7 +5480,9 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     await deleteSetupRecord(env, sourceMatrixProspectKey);
   }
   const invite = normalizeInviteCode(key, record);
-  await upsertContactFromInviteRecord(env, invite, `${type}-invite`, actor);
+  await upsertContactFromInviteRecord(env, invite, `${type}-invite`, actor, {
+    preferIncomingCompany: Boolean(record.company)
+  });
   return invite;
 }
 
@@ -5515,7 +5534,9 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   const key = `${PARTNER_INVITE_PREFIX}${code}`;
   await writeSetupJson(env, key, record);
   const invite = normalizeInviteCode(key, record);
-  await upsertContactFromInviteRecord(env, invite, "partner-invite", actor);
+  await upsertContactFromInviteRecord(env, invite, "partner-invite", actor, {
+    preferIncomingCompany: Boolean(company)
+  });
   return invite;
 }
 
@@ -6197,7 +6218,7 @@ async function updateContact(env, payload = {}, actor = "") {
     name,
     firstName,
     lastName,
-    company: cleanString(payload.company ?? existing?.company, 240),
+    company: cleanString(payload.company ?? payload.partnerCompany ?? existing?.company ?? existing?.partnerCompany, 240),
     title: cleanString(payload.title ?? existing?.title, 180),
     phone: cleanString(payload.phone ?? existing?.phone, 80),
     linkedinProfileUrl,

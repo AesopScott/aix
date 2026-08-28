@@ -7159,7 +7159,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         email: changes.email ?? existing.email ?? "",
         firstName: changes.firstName ?? existing.firstName ?? "",
         lastName: changes.lastName ?? existing.lastName ?? "",
-        company: changes.company ?? existing.company ?? "",
+        company: changes.company ?? existing.company ?? existing.partnerCompany ?? "",
         title: changes.title ?? existing.title ?? "",
         phone: changes.phone ?? existing.phone ?? "",
         linkedinProfileUrl: changes.linkedinProfileUrl ?? existing.linkedinProfileUrl ?? "",
