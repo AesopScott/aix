@@ -5050,6 +5050,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.company,
           row.title,
           row.photoUrl,
+          row.companyLogoUrl,
           row.bio,
           row.executiveFunction,
           row.industry,
@@ -6613,6 +6614,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             ${row.city || row.stateCountry || row.state || row.country ? `<br><span>${escapeHtml([row.city, row.stateCountry || row.state || row.country].filter(Boolean).join(", "))}</span>` : ""}
             ${row.partnerProductTypes ? `<br><span>Products: ${escapeHtml(row.partnerProductTypes)}</span>` : ""}
             ${row.partnerClientMessaging ? `<br><span>Messaging: ${escapeHtml(row.partnerClientMessaging)}</span>` : ""}
+            ${row.companyLogoUrl ? `<br><a href="${escapeHtml(row.companyLogoUrl)}" target="_blank" rel="noopener">Company logo</a>` : ""}
           </td>
           <td>
             <div class="contact-cell">
@@ -6621,6 +6623,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                 <span>${escapeHtml(row.phone)}</span>
                 ${row.linkedinProfileUrl ? `<br><a href="${escapeHtml(row.linkedinProfileUrl)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}
                 ${row.photoUrl ? `<br><a href="${escapeHtml(row.photoUrl)}" target="_blank" rel="noopener">Brief photo</a>` : state.type !== "contacts" && requiresBriefPhoto(row) ? '<br><span class="pill warn">Missing photo</span>' : ""}
+                ${row.companyLogoUrl ? `<br><a href="${escapeHtml(row.companyLogoUrl)}" target="_blank" rel="noopener">Company logo</a>` : ""}
               </div>
               ${state.type === "contacts" ? `<button class="icon-button" type="button" title="Delete contact" aria-label="Delete contact ${escapeHtml(row.email)}" data-delete-contact-key="${escapeHtml(row.key)}" data-delete-contact-email="${escapeHtml(row.email)}">${trashIconMarkup()}</button>` : ""}
               ${state.type === "guest" ? `<button class="icon-button" type="button" title="Delete guest registration" aria-label="Delete guest registration ${escapeHtml(row.name || row.email || row.key)}" data-delete-guest-registrant-key="${escapeHtml(row.key)}" data-delete-guest-registrant-label="${escapeHtml(row.name || row.email || row.key)}">${trashIconMarkup()}</button>` : ""}
