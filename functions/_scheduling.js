@@ -980,10 +980,6 @@ function zoomUserForBooking(config, booking) {
   return cleanText(booking.zoomUserId || config.userId, 200);
 }
 
-function isMissingZoomUser(payload) {
-  return Number(payload?.code) === 1001 || /user does not exist/i.test(payload?.message || "");
-}
-
 async function createZoomMeeting(env, employee, meetingType, booking, start, end) {
   const token = await zoomAccessToken(env);
   const config = zoomConfig(env);
@@ -1020,13 +1016,16 @@ async function createZoomMeeting(env, employee, meetingType, booking, start, end
     })
   });
 
-  let response = await createForUser(targetUserId);
-  let payload = await response.json().catch(() => ({}));
-  if (!response.ok && targetUserId !== config.userId && isMissingZoomUser(payload)) {
-    response = await createForUser(config.userId);
-    payload = await response.json().catch(() => ({}));
-  }
+  const response = await createForUser(targetUserId);
+  const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.message || "Zoom meeting creation failed.");
+  if (cleanEmail(payload.host_email) && cleanEmail(payload.host_email) !== cleanEmail(employee.email)) {
+    await fetch(`https://api.zoom.us/v2/meetings/${encodeURIComponent(payload.id)}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${token}` }
+    }).catch(() => null);
+    throw new Error("Zoom created the meeting under the wrong host.");
+  }
   return {
     meetingId: String(payload.id || ""),
     joinUrl: payload.join_url || "",
