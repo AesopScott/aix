@@ -13,6 +13,8 @@ import {
   writeAccessConfig
 } from "../_access-control.js";
 import {
+  registrationWithVirtualEventAccess,
+  sendRegistrationConfirmation,
   upsertRegistrationContact
 } from "../_registration-crm.js";
 import {
@@ -1705,6 +1707,9 @@ function normalizeRecord(key, record) {
     eventName: cleanString(record?.eventName),
     eventDate: cleanString(record?.eventDate),
     eventTime: cleanString(record?.eventTime),
+    eventAccessLink: cleanString(record?.eventAccessLink || record?.accessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
+    accessLink: cleanString(record?.accessLink || record?.eventAccessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
+    zoomJoinUrl: cleanString(record?.zoomJoinUrl || record?.eventAccessLink || record?.accessLink || record?.joinUrl || record?.zoomUrl, 1000),
     eventShowId: cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, ""),
     eventShowLabel: cleanString(record?.eventShowLabel) || (record?.eventShowId ? eventShowLabel(record.eventShowId) : ""),
     eventShowTime: cleanString(record?.eventShowTime) || cleanString(record?.eventTime),
@@ -2193,8 +2198,35 @@ async function registrants(env, type = "member", options = {}) {
   const rows = [...crmRows, ...legacyRows, ...r2Rows].filter((row) => {
     return cleanType(type) !== "partner" || options.includeManualPartners === true || row.manualPartner !== true;
   });
+  const hydratedRows = await hydrateRegistrationAccessRows(env, rows);
 
-  return rows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return hydratedRows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+async function hydrateRegistrationAccessRows(env, rows = []) {
+  return Promise.all((Array.isArray(rows) ? rows : []).map(async (row) => {
+    if (!row || typeof row !== "object") return row;
+    return registrationWithVirtualEventAccess(env, row).catch(() => row);
+  }));
+}
+
+function rowAccessLink(row = {}) {
+  return cleanString(row.eventAccessLink || row.accessLink || row.joinUrl || row.zoomUrl || row.zoomJoinUrl, 1000);
+}
+
+function rowEventSlug(row = {}) {
+  const slug = cleanString(row.eventSlug, 240);
+  if (slug) return slug;
+  const eventId = cleanString(row.eventId, 240);
+  if (eventId) return eventId.split(":")[0].trim();
+  return "";
+}
+
+function actualRegistrationRow(row = {}, type = "guest") {
+  if (row.matrixOnly) return false;
+  const config = registrantTypes[cleanType(type)];
+  const key = cleanString(row.key, 500);
+  return !key || key.startsWith(config.crmPrefix) || key.startsWith(config.legacyPrefix);
 }
 
 function roleLabelForRow(row = {}, type = "") {
@@ -4415,6 +4447,9 @@ function normalizeInviteCode(key, record) {
     eventName: cleanString(record?.eventName),
     eventDate: cleanString(record?.eventDate),
     eventTime: cleanString(record?.eventTime),
+    eventAccessLink: cleanString(record?.eventAccessLink || record?.accessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
+    accessLink: cleanString(record?.accessLink || record?.eventAccessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
+    zoomJoinUrl: cleanString(record?.zoomJoinUrl || record?.eventAccessLink || record?.accessLink || record?.joinUrl || record?.zoomUrl, 1000),
     eventShowId: cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, ""),
     eventShowLabel: cleanString(record?.eventShowLabel) || (record?.eventShowId ? eventShowLabel(record.eventShowId) : ""),
     eventShowTime: cleanString(record?.eventShowTime) || cleanString(record?.eventTime),
@@ -8078,6 +8113,125 @@ export async function onRequestPost({ request, env, data }) {
     }
   }
 
+  if (payload?.action === "resend-registration-confirmation") {
+    try {
+      const type = cleanType(payload.type);
+      const key = cleanString(payload.key);
+      const rows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type);
+      const row = rows.find((entry) => entry.key === key || entry.id === key);
+      if (!row) return json({ error: `${registrantTypes[type].label} registrant was not found.` }, { status: 404 });
+
+      const { key: crmKey, row: crmRow } = await ensureCrmRecord(env, row, type);
+      const deliveryRow = await registrationWithVirtualEventAccess(env, crmRow);
+      if (payload.requireAccess === true && !rowAccessLink(deliveryRow)) {
+        return json({ error: "This registration does not have a configured event Zoom/access link yet." }, { status: 409 });
+      }
+      const confirmationEmail = await sendRegistrationConfirmation(env, type, deliveryRow);
+      const now = new Date().toISOString();
+      await writeSetupJson(env, crmKey, {
+        ...deliveryRow,
+        key: undefined,
+        crmType: registrantTypes[type].crmType,
+        confirmationEmail,
+        confirmationResentAt: now,
+        crmUpdatedAt: now,
+        crmUpdatedBy: access.email
+      });
+
+      const nextRows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type);
+      return json({
+        ok: true,
+        type,
+        label: registrantTypes[type].label,
+        confirmationEmail,
+        rows: nextRows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      });
+    } catch (error) {
+      return json({ error: error.message || "Registration confirmation could not be resent." }, { status: 502 });
+    }
+  }
+
+  if (payload?.action === "resend-registration-confirmations") {
+    try {
+      const type = cleanType(payload.type);
+      const rawKeys = Array.isArray(payload.keys) ? payload.keys.map(cleanString).filter(Boolean) : [];
+      const keySet = new Set(rawKeys);
+      const eventSlug = cleanString(payload.eventSlug, 240);
+      const onlyMissingAccess = payload.onlyMissingAccess !== false;
+      const registeredOnly = payload.registeredOnly !== false;
+      const requireAccess = payload.requireAccess !== false;
+      const limit = Math.min(Math.max(Number(payload.limit) || 50, 1), 100);
+      const rows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type);
+      const candidates = rows.filter((row) => {
+        if (keySet.size && !keySet.has(row.key) && !keySet.has(row.id)) return false;
+        if (eventSlug && rowEventSlug(row) !== eventSlug) return false;
+        if (registeredOnly && !actualRegistrationRow(row, type)) return false;
+        if (onlyMissingAccess && rowAccessLink(row) && row.eventAccessHydratedFromVirtualEvent !== true) return false;
+        if (requireAccess && !rowAccessLink(row)) return false;
+        return cleanString(row.email);
+      }).slice(0, limit);
+
+      const results = [];
+      for (const row of candidates) {
+        try {
+          const { key: crmKey, row: crmRow } = await ensureCrmRecord(env, row, type);
+          const deliveryRow = await registrationWithVirtualEventAccess(env, crmRow);
+          const confirmationEmail = await sendRegistrationConfirmation(env, type, deliveryRow);
+          const now = new Date().toISOString();
+          await writeSetupJson(env, crmKey, {
+            ...deliveryRow,
+            key: undefined,
+            crmType: registrantTypes[type].crmType,
+            confirmationEmail,
+            confirmationResentAt: now,
+            crmUpdatedAt: now,
+            crmUpdatedBy: access.email
+          });
+          results.push({
+            ok: true,
+            key: crmKey,
+            id: deliveryRow.id,
+            name: deliveryRow.name,
+            email: deliveryRow.email,
+            zoomAccessAttached: confirmationEmail.zoomAccessAttached === true,
+            calendarInviteAttached: confirmationEmail.calendarInviteAttached === true
+          });
+        } catch (error) {
+          results.push({
+            ok: false,
+            key: row.key,
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            error: error.message || "Registration confirmation could not be resent."
+          });
+        }
+      }
+
+      const nextRows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type);
+      return json({
+        ok: results.every((entry) => entry.ok),
+        type,
+        label: registrantTypes[type].label,
+        attempted: results.length,
+        sent: results.filter((entry) => entry.ok).length,
+        failed: results.filter((entry) => !entry.ok).length,
+        results,
+        rows: nextRows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      }, { status: results.some((entry) => !entry.ok) ? 207 : 200 });
+    } catch (error) {
+      return json({ error: error.message || "Registration confirmations could not be resent." }, { status: 502 });
+    }
+  }
+
   if (payload?.action === "update-contact-event-role") {
     try {
       await updateContactEventRole(env, payload, access.email);
@@ -8165,6 +8319,8 @@ export async function onRequestPost({ request, env, data }) {
     crmNotes: type === "guest" ? cleanString(crmRow.crmNotes, 4000) : cleanString(payload?.crmNotes, 4000),
     eventNotes: type === "guest" ? eventNotes : cleanEventNotes(payload) || cleanEventNotes(crmRow),
     registrationNotes: type === "guest" ? eventNotes : cleanEventNotes(payload) || cleanEventNotes(crmRow),
+    eventAccessLink: cleanString(payload?.eventAccessLink || payload?.accessLink || payload?.zoomJoinUrl || crmRow.eventAccessLink, 1000),
+    zoomJoinUrl: cleanString(payload?.zoomJoinUrl || payload?.eventAccessLink || payload?.accessLink || crmRow.zoomJoinUrl, 1000),
     crmUpdatedAt: new Date().toISOString(),
     crmUpdatedBy: access.email
   };
