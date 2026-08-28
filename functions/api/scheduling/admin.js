@@ -17,6 +17,14 @@ function hasSchedulingAccess(user, data = {}) {
   );
 }
 
+function graphCredentialState(graph = {}) {
+  return {
+    tenantIdConfigured: Boolean(graph.tenantId),
+    clientIdConfigured: Boolean(graph.clientId),
+    clientSecretConfigured: Boolean(graph.clientSecret)
+  };
+}
+
 async function requireSchedulingAccess(request, env, data = {}) {
   const user = data?.auth?.email ? data.auth : await getSessionUser(request, env);
   if (!user) return { response: json({ error: "Sign in with a Mojo AI Summits account approved for scheduling." }, { status: 401 }) };
@@ -56,6 +64,8 @@ export async function onRequestGet({ request, env, data }) {
     ok: true,
     graphConfigured: graph.configured,
     delegatedCalendarOAuthConfigured: delegatedGraph.configured,
+    graphCredentials: graphCredentialState(graph),
+    delegatedCalendarOAuthCredentials: graphCredentialState(delegatedGraph),
     employees: employeePayloads
   });
 }

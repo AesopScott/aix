@@ -523,7 +523,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   </main>
 
   <script>
-    const SCHEDULING_ADMIN_BUILD = "2026.08.28.1-calendar-oauth-config-state";
+    const SCHEDULING_ADMIN_BUILD = "2026.08.28.2-calendar-config-diagnostics";
     const employeesEl = document.querySelector("#employees");
     const graphStatusEl = document.querySelector("#graphStatus");
     const buildStampEl = document.querySelector("#buildStamp");
@@ -556,6 +556,33 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function setFeedDiagnostics(message, kind = "") {
       calendarFeedDiagnosticsEl.textContent = message;
       calendarFeedDiagnosticsEl.className = `feed-diagnostics ${kind}`.trim();
+    }
+
+    function configuredLabels(state = {}) {
+      const missing = [];
+      if (state.tenantIdConfigured === false) missing.push("tenant");
+      if (state.clientIdConfigured === false) missing.push("client");
+      if (state.clientSecretConfigured === false) missing.push("secret");
+      return missing;
+    }
+
+    function microsoftCalendarStatusText(payload = {}) {
+      const graphMissing = configuredLabels(payload.graphCredentials || {});
+      const delegatedMissing = configuredLabels(payload.delegatedCalendarOAuthCredentials || {});
+      const graphReady = payload.graphConfigured === true;
+      const delegatedReady = payload.delegatedCalendarOAuthConfigured === true;
+      if (graphReady && delegatedReady) {
+        return "Microsoft calendar write/invite and external busy-read OAuth are configured.";
+      }
+      if (graphReady) {
+        return delegatedMissing.length
+          ? `Microsoft calendar write/invite is configured. External Microsoft busy-read OAuth is missing ${delegatedMissing.join(", ")} configuration; use published calendar feeds below.`
+          : "Microsoft calendar write/invite is configured. External Microsoft busy-read OAuth is not configured; use published calendar feeds below.";
+      }
+      if (graphMissing.length) {
+        return `Microsoft calendar write/invite is missing ${graphMissing.join(", ")} configuration. Bookings can still use saved hours, Zoom, and published calendar feeds where configured.`;
+      }
+      return "Microsoft calendar write/invite is not configured. Bookings can still use saved hours, Zoom, and published calendar feeds where configured.";
     }
 
     function localDateValue(date = new Date()) {
@@ -965,11 +992,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!response.ok) throw new Error(payload.error || "Unable to load scheduling admin.");
       employees = payload.employees || [];
       delegatedCalendarOAuthConfigured = payload.delegatedCalendarOAuthConfigured === true;
-      graphStatusEl.textContent = payload.graphConfigured
-        ? delegatedCalendarOAuthConfigured
-          ? "Microsoft Graph and delegated calendar OAuth are configured."
-          : "Microsoft Graph is configured. Delegated calendar OAuth is not configured yet."
-        : "Microsoft Graph credentials are not configured yet.";
+      graphStatusEl.textContent = microsoftCalendarStatusText(payload);
       renderEmployees();
       if (employees[0]) loadEmployee(employees[0].slug);
     }
