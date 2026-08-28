@@ -515,6 +515,20 @@ function bookingConfirmationDetails(employee, meetingType, booking, start, end, 
 
 function bookingCalendarInvite(employee, meetingType, booking, start, end, zoomMeeting = null) {
   const details = bookingConfirmationDetails(employee, meetingType, booking, start, end, zoomMeeting);
+  const attendeeEmails = new Set([booking.guestEmail]);
+  const attendeeLines = [
+    `ATTENDEE;CN=${icsEscape(details.guestName)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${details.guestEmail}`
+  ];
+  if (employee.email && !attendeeEmails.has(employee.email)) {
+    attendeeEmails.add(employee.email);
+    attendeeLines.push(`ATTENDEE;CN=${icsEscape(details.hostName)};ROLE=CHAIR;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${details.hostEmail}`);
+  }
+  for (const email of employee.mirrorInviteEmails || []) {
+    const clean = cleanEmail(email);
+    if (!clean || attendeeEmails.has(clean)) continue;
+    attendeeEmails.add(clean);
+    attendeeLines.push(`ATTENDEE;CN=${icsEscape(clean)};ROLE=OPT-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${clean}`);
+  }
   const description = [
     "Booked through mojoaisummits.com.",
     details.zoomJoinUrl ? `Zoom: ${details.zoomJoinUrl}` : "",
@@ -539,7 +553,7 @@ function bookingCalendarInvite(employee, meetingType, booking, start, end, zoomM
     `DTSTART:${formatIcsDateTime(start)}`,
     `DTEND:${formatIcsDateTime(end)}`,
     `ORGANIZER;CN=${icsEscape(details.hostName)}:mailto:${details.hostEmail}`,
-    `ATTENDEE;CN=${icsEscape(details.guestName)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${details.guestEmail}`,
+    ...attendeeLines,
     `SUMMARY:${icsEscape(details.subject)}`,
     `LOCATION:${icsEscape(details.location)}`,
     `DESCRIPTION:${icsEscape(description)}`,
@@ -609,9 +623,18 @@ function bookingConfirmationHtml(employee, meetingType, booking, start, end, zoo
 async function sendBookingConfirmation(env, employee, meetingType, booking, start, end, zoomMeeting = null) {
   const sender = cleanEmail(env.MOJO_BOOKING_EMAIL_SENDER || env.MOJO_SCHEDULING_EMAIL_SENDER || env.MOJO_INVITE_EMAIL_SENDER || employee.email || DEFAULT_BOOKING_EMAIL_SENDER);
   const calendarInvite = bookingCalendarInvite(employee, meetingType, booking, start, end, zoomMeeting);
+  const hostRecipients = employee.email && employee.email !== booking.guestEmail
+    ? [{ address: employee.email, name: employee.name }]
+    : [];
+  const mirrorRecipients = [...new Set((employee.mirrorInviteEmails || [])
+    .map(cleanEmail)
+    .filter((email) => email && email !== booking.guestEmail && email !== employee.email))]
+    .map((email) => ({ address: email, name: email }));
   await sendMicrosoftGraphMail(env, {
     sender,
     to: [{ address: booking.guestEmail, name: booking.guestName }],
+    cc: hostRecipients,
+    bcc: mirrorRecipients,
     replyTo: [{ address: employee.email, name: employee.name }],
     subject: `Confirmed: ${meetingType.label} with ${employee.name}`,
     text: bookingConfirmationText(employee, meetingType, booking, start, end, zoomMeeting),
@@ -628,6 +651,8 @@ async function sendBookingConfirmation(env, employee, meetingType, booking, star
     attempted: true,
     sent: true,
     sender,
+    hostRecipients: hostRecipients.map((recipient) => recipient.address),
+    mirrorRecipients: mirrorRecipients.map((recipient) => recipient.address),
     calendarInviteAttached: true
   };
 }
@@ -1848,6 +1873,8 @@ export async function createBooking(env, input = {}) {
       calendarInviteSent: confirmationEmail.sent === true && confirmationEmail.calendarInviteAttached === true,
       confirmationEmailSent: confirmationEmail.sent === true,
       confirmationEmailError: confirmationEmail.sent === false ? confirmationEmail.error || "" : "",
+      hostNotificationRecipients: confirmationEmail.hostRecipients || [],
+      mirrorNotificationRecipients: confirmationEmail.mirrorRecipients || [],
       meetingDetailsPending: !zoomMeeting?.joinUrl
     };
 
