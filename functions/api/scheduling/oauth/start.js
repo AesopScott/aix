@@ -23,5 +23,8 @@ export async function onRequestGet({ request, env, data }) {
     email: url.searchParams.get("email"),
     actor: user.email
   });
+  if (result.response?.status === 503 && !(request.headers.get("accept") || "").includes("application/json")) {
+    return Response.redirect(`${url.origin}/schedule-admin/?calendar=not-configured`, 302);
+  }
   return result.response || result;
 }

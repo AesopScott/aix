@@ -410,7 +410,7 @@ function zoomConfig(env) {
   };
 }
 
-function delegatedGraphConfig(env) {
+export function delegatedGraphConfig(env) {
   const base = graphConfig(env);
   return {
     tenantId: cleanText(env.MOJO_MS_DELEGATED_TENANT_ID || env.MICROSOFT_DELEGATED_TENANT_ID || "organizations", 160),
