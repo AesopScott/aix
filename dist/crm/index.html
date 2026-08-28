@@ -1215,6 +1215,12 @@
       line-height: 1.35;
     }
 
+    .matrix-field-stack {
+      display: grid;
+      gap: 0.35rem;
+      min-width: 13rem;
+    }
+
     .matrix-event-list {
       display: grid;
       gap: 0.35rem;
@@ -2124,7 +2130,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <button class="secondary" type="button" data-open-view="partner-matrix">Add Partner Before Invite</button>
         </div>
       </div>
-      <form class="invite-grid" id="partnerInviteForm">
+      <form class="invite-grid" id="partnerInviteForm" autocomplete="off" data-form-type="other" data-1p-ignore="true" data-lpignore="true" data-bwignore="true">
         <label>
           Event
           <select id="partnerInviteEvent" name="eventSlug" required>
@@ -2149,17 +2155,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         </label>
         <label>
           Partner company
-          <select id="partnerInviteCompany" name="partnerCompany">
+          <select id="partnerInviteCompany" name="partnerCompany" autocomplete="off" data-form-type="other" data-1p-ignore="true" data-lpignore="true" data-bwignore="true">
             <option value="">Select a partner company</option>
           </select>
         </label>
         <label>
           Partner contact
-          <input id="partnerInviteName" name="partnerContactName" placeholder="Partner contact name" autocomplete="name">
+          <input id="partnerInviteName" name="partnerContactName" placeholder="Partner contact name" autocomplete="off" data-form-type="other" data-1p-ignore="true" data-lpignore="true" data-bwignore="true">
         </label>
         <label>
           Partner email
-          <input id="partnerInviteEmail" name="partnerContactEmail" type="email" placeholder="partner@company.com">
+          <input id="partnerInviteEmail" name="partnerContactEmail" type="email" placeholder="partner@company.com" autocomplete="off" data-form-type="other" data-1p-ignore="true" data-lpignore="true" data-bwignore="true">
         </label>
         <label>
           Invited by
@@ -3610,6 +3616,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return isPartnerMatrix() ? "partner" : "guest";
     }
 
+    function matrixFieldAttributes(row = {}, field = "") {
+      const dataPrefix = matrixDataPrefix();
+      return `data-${dataPrefix}-matrix-field="${escapeHtml(field)}" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite?.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}"`;
+    }
+
+    function matrixTextInput(row = {}, field = "", value = "", placeholder = "", label = "", type = "text") {
+      return `<input class="matrix-input" type="${escapeHtml(type)}" ${matrixFieldAttributes(row, field)} value="${escapeHtml(value || "")}" placeholder="${escapeHtml(placeholder)}" aria-label="${escapeHtml(label || field)}">`;
+    }
+
     function matrixDatasetValue(element, suffix = "") {
       return element?.dataset?.[`partnerMatrix${suffix}`] || element?.dataset?.[`guestMatrix${suffix}`] || "";
     }
@@ -3674,6 +3689,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function guestMatrixDraft(invite = {}) {
       return guestMatrixDrafts[guestMatrixRecordId(invite)] || {};
+    }
+
+    function draftValue(draft = {}, field = "", fallback = "") {
+      return Object.prototype.hasOwnProperty.call(draft, field) ? String(draft[field] ?? "") : fallback;
     }
 
     function firstCleanValue(...values) {
@@ -4114,13 +4133,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function guestMatrixRowForInvite(invite = {}) {
       const id = guestMatrixRecordId(invite);
       const draft = guestMatrixDraft(invite);
+      const effectiveInvite = { ...invite, ...draft };
       const linkedinConnection = guestMatrixLinkedInConnection(invite);
       const registrationRequest = guestMatrixRegistrationRequest(invite);
       const registrationStatus = guestMatrixRegistrationStatus(invite);
-      const email = guestMatrixPersonEmail(invite);
-      const eventKey = guestMatrixEventKey(invite);
-      const eventName = guestMatrixEventLabel(invite);
-      const futureEvents = guestMatrixFutureEventsForPerson(invite);
+      const email = draftValue(draft, "email", guestMatrixPersonEmail(invite));
+      const eventKey = guestMatrixEventKey(effectiveInvite);
+      const eventName = guestMatrixEventLabel(effectiveInvite);
+      const eventMeta = guestMatrixEventMeta(effectiveInvite);
+      const futureEvents = guestMatrixFutureEventsForPerson(effectiveInvite);
       const partnerRow = isPartnerMatrix() || invite.type === "partner" || invite.type === "partner-matrix-prospect";
       const matrixOnly = invite.matrixOnly === true || invite.type === "guest-matrix-prospect" || invite.type === "partner-matrix-prospect";
       const rawRoleValue = normalizeRoleValue(draft.registrationRole ?? invite.registrationRole ?? invite.partnerRegistrationType ?? invite.guestRegistrationType ?? invite.type);
@@ -4128,7 +4149,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ? rawRoleValue === "featured-partner" ? "featured-partner" : "partner"
         : rawRoleValue;
       const role = guestRegistrationTypeLabel(roleValue);
-      const showKey = guestMatrixShowKey(invite);
+      const showKey = guestMatrixShowKey(effectiveInvite);
       const isRegisteredRow = registrationStatus === "registered" || registrationStatus === "attended";
       const eventNotes = firstCleanValue(draft.eventNotes, invite.eventNotes, invite.registrationNotes, isRegisteredRow ? invite.crmNotes : "");
       const preRegistrationNotes = firstCleanValue(draft.preRegistrationNotes, invite.preRegistrationNotes, invite.matrixNotes, invite.engagementNotes, invite.notes);
@@ -4143,18 +4164,21 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         partnerRow,
         eventKey,
         eventName,
-        eventMeta: guestMatrixEventMeta(invite),
+        eventMeta,
+        eventSlug: draftValue(draft, "eventSlug", firstCleanValue(invite.eventSlug)),
+        eventDate: draftValue(draft, "eventDate", firstCleanValue(invite.eventDate, invite.usedForDate)),
+        eventShowId: draftValue(draft, "eventShowId", firstCleanValue(invite.eventShowId, invite.showId, invite.eventShow)),
         showKey,
-        showLabel: isRegisteredRow ? "" : guestMatrixShowMeta(invite),
+        showLabel: isRegisteredRow ? "" : guestMatrixShowMeta(effectiveInvite),
         registeredShowLabel: isRegisteredRow ? guestMatrixRegisteredShowMeta(invite) : "",
-        name: guestMatrixPersonName(invite),
+        name: draftValue(draft, "name", guestMatrixPersonName(invite)),
         email,
-        company: firstCleanValue(draft.company, draft.partnerCompany, crmCompanyName(invite)),
-        title: crmPersonTitle(invite),
-        linkedinProfileUrl: firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl),
+        company: draftValue(draft, "company", draftValue(draft, "partnerCompany", crmCompanyName(invite))),
+        title: draftValue(draft, "title", crmPersonTitle(invite)),
+        linkedinProfileUrl: draftValue(draft, "linkedinProfileUrl", firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl)),
         createdAt: firstCleanValue(invite.createdAt, invite.addedAt),
         updatedAt: firstCleanValue(invite.updatedAt, invite.crmUpdatedAt),
-        invitedBy: firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy, "Not recorded"),
+        invitedBy: draftValue(draft, "invitedBy", firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy, "Not recorded")),
         role,
         roleValue,
         roleKey: normalizedMatrixValue(role),
@@ -4562,10 +4586,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                     <tr>
                       <td>
                         <div class="matrix-person-row">
-                          <div class="matrix-person">
-                            <strong>${escapeHtml(row.name)}</strong>
-                            ${row.title || (!isPartnerMatrix() && row.company) ? `<span>${escapeHtml([row.title, !isPartnerMatrix() ? row.company : ""].filter(Boolean).join(" | "))}</span>` : ""}
-                            ${row.email ? `<span>${escapeHtml(row.email)}</span>` : '<span>No email recorded</span>'}
+                          <div class="matrix-field-stack">
+                            ${matrixTextInput(row, "name", row.name, `${matrixEntityLabelTitle()} name`, `Name for ${row.name}`)}
+                            ${matrixTextInput(row, "title", row.title, "Title", `Title for ${row.name}`)}
+                            ${matrixTextInput(row, "email", row.email, "Email", `Email for ${row.name}`, "email")}
+                            ${!isPartnerMatrix() ? matrixTextInput(row, "company", row.company, "Company", `Company for ${row.name}`) : ""}
+                            ${matrixTextInput(row, "linkedinProfileUrl", row.linkedinProfileUrl, "LinkedIn URL", `LinkedIn URL for ${row.name}`, "url")}
                             ${row.linkedinProfileUrl ? `<a href="${escapeHtml(row.linkedinProfileUrl)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}
                           </div>
                           ${row.matrixOnly && row.invite.key ? `<button class="icon-button" type="button" title="Remove tracked ${escapeHtml(matrixEntityLabel())}" aria-label="Remove tracked ${escapeHtml(matrixEntityLabel())} ${escapeHtml(row.name)}" data-delete-${dataPrefix}-matrix-prospect-key="${escapeHtml(row.invite.key)}" data-delete-${dataPrefix}-matrix-prospect-label="${escapeHtml(row.name || row.email || row.invite.key)}">${trashIconMarkup()}</button>` : ""}
@@ -4574,16 +4600,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       </td>
                       ${isPartnerMatrix() ? `
                         <td>
-                          <input class="matrix-input" data-${dataPrefix}-matrix-field="company" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" value="${escapeHtml(row.company || "")}" placeholder="Company name" aria-label="Company for ${escapeHtml(row.name)}">
+                          ${matrixTextInput(row, "company", row.company, "Company name", `Company for ${row.name}`)}
                         </td>
                       ` : ""}
                       <td>
-                        <select class="matrix-select" data-${dataPrefix}-matrix-field="registrationRole" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Role for ${escapeHtml(row.name)}">
-                          ${matrixOptionList(guestMatrixRoleOptions(row), row.roleValue || "guest")}
-                        </select>
-                        ${row.registeredShowLabel
-                          ? `<div class="matrix-muted">Registered: ${escapeHtml(row.registeredShowLabel)}</div>`
-                          : row.showLabel ? `<div class="matrix-muted">Assigned: ${escapeHtml(row.showLabel)}</div>` : ""}
+                        <div class="matrix-field-stack">
+                          <select class="matrix-select" ${matrixFieldAttributes(row, "registrationRole")} aria-label="Role for ${escapeHtml(row.name)}">
+                            ${matrixOptionList(guestMatrixRoleOptions(row), row.roleValue || "guest")}
+                          </select>
+                          <select class="matrix-select" ${matrixFieldAttributes(row, "eventSlug")} aria-label="Event for ${escapeHtml(row.name)}">
+                            ${matrixEventOptionList(row)}
+                          </select>
+                          <select class="matrix-select" ${matrixFieldAttributes(row, "eventShowId")} aria-label="Show time for ${escapeHtml(row.name)}">
+                            ${matrixShowOptionList(row)}
+                          </select>
+                          ${row.registeredShowLabel
+                            ? `<div class="matrix-muted">Registered: ${escapeHtml(row.registeredShowLabel)}</div>`
+                            : row.showLabel ? `<div class="matrix-muted">Assigned: ${escapeHtml(row.showLabel)}</div>` : ""}
+                        </div>
                       </td>
                       <td>
                         ${starRatingMarkup({
@@ -4600,13 +4634,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       ${isPartnerMatrix() ? "" : `
                         <td>
                           <label class="matrix-checkbox">
-                              <input type="checkbox" data-${dataPrefix}-matrix-field="potentialSponsor" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" ${row.potentialSponsor ? "checked" : ""} aria-label="Potential Sponsor for ${escapeHtml(row.name)}">
+                              <input type="checkbox" ${matrixFieldAttributes(row, "potentialSponsor")} ${row.potentialSponsor ? "checked" : ""} aria-label="Potential Sponsor for ${escapeHtml(row.name)}">
                               Potential Sponsor
                             </label>
                         </td>
                       `}
                       <td>
-                        <select class="matrix-select ${guestMatrixStageClass(row.registrationStatus)}" data-${dataPrefix}-matrix-field="${isPartnerMatrix() ? "partnerStatus" : "guestStatus"}" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="${isPartnerMatrix() ? "Partner" : "Guest"} status for ${escapeHtml(row.name)}">
+                        <select class="matrix-select ${guestMatrixStageClass(row.registrationStatus)}" ${matrixFieldAttributes(row, isPartnerMatrix() ? "partnerStatus" : "guestStatus")} aria-label="${isPartnerMatrix() ? "Partner" : "Guest"} status for ${escapeHtml(row.name)}">
                           ${matrixOptionList(matrixRegistrationStatusOptions(), row.registrationStatus)}
                         </select>
                         <div class="matrix-muted">${escapeHtml(guestMatrixRegistrationDetail(row))}</div>
@@ -4618,7 +4652,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       <td>
                         <textarea class="matrix-notes" data-${dataPrefix}-matrix-field="${escapeHtml(row.notesField || "preRegistrationNotes")}" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" placeholder="${row.notesField === "eventNotes" ? "Event notes" : "Pre-registration notes"}" aria-label="${row.notesField === "eventNotes" ? "Event notes" : "Pre-registration notes"} for ${escapeHtml(row.name)}">${escapeHtml(row.notes || "")}</textarea>
                       </td>
-                      <td>${escapeHtml(row.invitedBy)}</td>
+                      <td>${matrixTextInput(row, "invitedBy", row.invitedBy, "Invited by", `Invited by for ${row.name}`)}</td>
                       <td>
                         ${row.matrixOnly ? '<span class="pill warn">No invite link yet</span>' : `<code>${escapeHtml(row.code || "No code")}</code>`}
                         <div class="matrix-muted">${row.matrixOnly ? `Create one when this ${isPartnerMatrix() ? "partner" : "person"} is ready for an invite.` : escapeHtml(row.url || "Tracked before invite")}</div>
@@ -4669,24 +4703,56 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return `<option value="${escapeHtml(value)}" ${value === selectedValue ? "selected" : ""}>${escapeHtml(label)}</option>`;
     }
 
+    function matrixEventOptionList(row = {}) {
+      const bySlug = new Map(fallbackMojoEvents.map((event) => [event.slug, event]));
+      for (const event of state.upcomingEvents || []) {
+        if (event?.slug && event?.title) bySlug.set(event.slug, event);
+      }
+      const current = row.eventSlug || "";
+      const events = [...bySlug.values()];
+      const currentOption = current && !bySlug.has(current)
+        ? `<option value="${escapeHtml(current)}" data-event-name="${escapeHtml(row.eventName || current)}" data-event-date="${escapeHtml(row.eventDate || row.eventMeta || "")}" selected>${escapeHtml([row.eventName || current, row.eventDate || row.eventMeta].filter(Boolean).join(" | "))}</option>`
+        : "";
+      return [
+        optionMarkup("", "No event assigned", current),
+        currentOption,
+        ...events.map((event) => `
+          <option value="${escapeHtml(event.slug)}" data-event-name="${escapeHtml(event.title)}" data-event-date="${escapeHtml(event.date || "")}" ${event.slug === current ? "selected" : ""}>
+            ${escapeHtml(event.title)}${event.date ? ` | ${escapeHtml(event.date)}` : ""}
+          </option>
+        `)
+      ].join("");
+    }
+
+    function matrixShowOptionList(row = {}) {
+      const role = row.roleValue || row.registrationRole || "guest";
+      const current = eventShowId(row.eventShowId || row.showKey, isSingleShowRegistrationRole(role) ? "morning" : "both");
+      const options = [
+        ...(isSingleShowRegistrationRole(role) ? [] : [["both", "Both shows | 10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"]]),
+        ["morning", "Morning show | 10:00 am - 11:30 am CT"],
+        ["afternoon", "Afternoon show | 1:00 pm - 2:30 pm CT"]
+      ];
+      return matrixOptionList(options, current);
+    }
+
     function partnerCompanyOptionRecords() {
       const records = [
         ...(state.rows || []),
         ...(state.partnerMatrixProspects || []),
         ...(state.partnerInviteCodes || [])
       ];
-      return records.filter((row) =>
-        crmPersonEmail(row) &&
-        partnerCompanyNameFrom(row) &&
-        (
+      return records.filter((row) => {
+        const hasPartnerPerson = Boolean(crmPersonName(row, "") || crmPersonEmail(row));
+        const hasPartnerSource = Boolean(
           row.manualPartner === true ||
           row.matrixOnly === true ||
           row.type === "partner" ||
           row.type === "partner-matrix-prospect" ||
           row.partnerRegistrationType ||
           row.partnerContactEmail
-        )
-      );
+        );
+        return hasPartnerPerson && hasPartnerSource && partnerCompanyNameFrom(row);
+      });
     }
 
     function syncPartnerInviteCompanyOptions() {
@@ -4695,13 +4761,22 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const companies = new Map();
       partnerCompanyOptionRecords().forEach((record) => {
         const company = partnerCompanyNameFrom(record);
-        if (company) companies.set(filterKey(company), company);
+        if (!company) return;
+        const key = filterKey(company);
+        const entry = companies.get(key) || { company, names: new Set() };
+        const name = crmPersonName(record, "");
+        if (name) entry.names.add(name);
+        companies.set(key, entry);
       });
       partnerInviteCompany.innerHTML = [
         optionMarkup("", companies.size ? "Select a partner company" : "No partner companies found", current),
         ...[...companies.entries()]
-          .sort((left, right) => left[1].localeCompare(right[1]))
-          .map(([, company]) => optionMarkup(company, company, current))
+          .sort((left, right) => left[1].company.localeCompare(right[1].company))
+          .map(([, entry]) => {
+            const names = [...entry.names].sort((left, right) => left.localeCompare(right));
+            const suffix = names.length ? ` (${names.slice(0, 3).join(", ")}${names.length > 3 ? ` +${names.length - 3}` : ""})` : "";
+            return optionMarkup(entry.company, `${entry.company}${suffix}`, current);
+          })
       ].join("");
       if (current && companies.has(filterKey(current))) partnerInviteCompany.value = current;
     }
@@ -7691,21 +7766,34 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       guestMatrixSave.textContent = count ? `Save ${matrixEntityLabelTitle()} Changes (${count})` : "Save Changes";
     }
 
-    function queueGuestMatrixChange(select) {
-      const id = matrixDatasetValue(select, "Id");
-      const field = matrixDatasetValue(select, "Field");
+    function queueGuestMatrixChange(element) {
+      const id = matrixDatasetValue(element, "Id");
+      const field = matrixDatasetValue(element, "Field");
       if (!id || !field) return;
-      const value = select.type === "checkbox" ? Boolean(select.checked) : select.value;
+      const value = element.type === "checkbox" ? Boolean(element.checked) : element.value;
+      const staged = { [field]: value };
+      if (field === "eventSlug") {
+        const option = element.selectedOptions?.[0];
+        staged.eventName = value ? option?.dataset?.eventName || option?.textContent?.split("|")[0]?.trim() || "" : "";
+        staged.eventDate = value ? option?.dataset?.eventDate || "" : "";
+      }
+      if (field === "eventShowId") {
+        const showId = eventShowId(value, "both");
+        staged.eventShowId = showId;
+        staged.eventShowLabel = eventShowLabel(showId);
+        staged.eventShowTime = eventShowTime(showId);
+        staged.eventTime = eventShowTime(showId);
+      }
       guestMatrixDrafts[id] = {
         ...(guestMatrixDrafts[id] || {}),
-        [field]: value
+        ...staged
       };
       guestMatrixPendingChanges[id] = {
         ...(guestMatrixPendingChanges[id] || {}),
         id,
-        key: matrixDatasetValue(select, "Key"),
-        kind: matrixDatasetValue(select, "Kind") || "invite",
-        [field]: value
+        key: matrixDatasetValue(element, "Key"),
+        kind: matrixDatasetValue(element, "Kind") || "invite",
+        ...staged
       };
       saveGuestMatrixDrafts();
       updateGuestMatrixSaveButton();
@@ -8713,7 +8801,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     guestMatrixList.addEventListener("input", (event) => {
-      const input = event.target.closest("textarea[data-guest-matrix-field], textarea[data-partner-matrix-field], input[data-partner-matrix-field]");
+      const input = event.target.closest("textarea[data-guest-matrix-field], textarea[data-partner-matrix-field], input[data-guest-matrix-field], input[data-partner-matrix-field]");
       if (!input) return;
       queueGuestMatrixChange(input);
     });

@@ -2478,21 +2478,34 @@ async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invi
   };
   const now = new Date().toISOString();
   const nextEvent = contact.events?.[0] || {};
+  const incomingName = cleanString(contact.name, 240);
   const incomingCompany = cleanString(contact.company, 240);
   const incomingTitle = cleanString(contact.title, 180);
+  const incomingLinkedIn = cleanLinkedInProfileUrl(contact.linkedinProfileUrl || contact.linkedInProfileUrl || contact.linkedinUrl || contact.linkedInUrl);
+  const incomingInvitedBy = cleanString(contact.invitedBy, 180);
+  const existingName = cleanString(mergedExisting?.name, 240);
   const existingCompany = cleanString(mergedExisting?.company, 240);
   const existingTitle = cleanString(mergedExisting?.title, 180);
+  const existingLinkedIn = cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl);
+  const existingInvitedBy = cleanString(existing?.invitedBy || mergedExisting?.invitedBy, 180);
+  const preferIncomingName = options.preferIncomingName === true && incomingName;
   const preferIncomingCompany = options.preferIncomingCompany === true && incomingCompany;
   const preferIncomingTitle = options.preferIncomingTitle === true && incomingTitle;
+  const preferIncomingLinkedIn = options.preferIncomingLinkedIn === true && incomingLinkedIn;
+  const preferIncomingInvitedBy = options.preferIncomingInvitedBy === true && incomingInvitedBy;
   await writeSetupJson(env, contact.key, {
     ...mergedExisting,
     id: contact.id,
     email: contact.email,
-    name: cleanString(mergedExisting?.name) && cleanString(mergedExisting?.name) !== "Name not recorded" ? cleanString(mergedExisting.name) : contact.name,
+    name: preferIncomingName
+      ? incomingName
+      : existingName && existingName !== "Name not recorded"
+        ? existingName
+        : contact.name,
     company: preferIncomingCompany ? incomingCompany : existingCompany || incomingCompany,
     title: preferIncomingTitle ? incomingTitle : existingTitle || incomingTitle,
-    linkedinProfileUrl: contact.linkedinProfileUrl || cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl),
-    invitedBy: cleanString(contact.invitedBy) || cleanString(existing?.invitedBy, 180),
+    linkedinProfileUrl: preferIncomingLinkedIn ? incomingLinkedIn : existingLinkedIn || incomingLinkedIn,
+    invitedBy: preferIncomingInvitedBy ? incomingInvitedBy : existingInvitedBy || incomingInvitedBy,
     source: cleanString(mergedExisting?.source) || contact.source,
     invitationSource: cleanString(mergedExisting?.invitationSource) || contact.invitationSource || contact.source,
     lifecycleStage: cleanAllowed(mergedExisting?.lifecycleStage, allowedLifecycleStages, "") || contact.lifecycleStage,
@@ -5271,9 +5284,86 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     if (!allowedPrefix) continue;
     const existing = await readSetupJson(env, key);
     if (!existing) continue;
+    const isPartnerRecord = key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX);
     const hasCompanyChange = Object.prototype.hasOwnProperty.call(change, "company") ||
       Object.prototype.hasOwnProperty.call(change, "partnerCompany");
+    const hasTitleChange = Object.prototype.hasOwnProperty.call(change, "title");
+    const hasNameChange = Object.prototype.hasOwnProperty.call(change, "name");
+    const hasLinkedInChange = Object.prototype.hasOwnProperty.call(change, "linkedinProfileUrl");
+    const hasInvitedByChange = Object.prototype.hasOwnProperty.call(change, "invitedBy");
     const next = { ...existing };
+    if (hasNameChange) {
+      const name = cleanString(change.name, 240);
+      next.name = name;
+      next.intendedGuestName = name;
+      next.invitedName = name;
+      next.guestName = name;
+      if (isPartnerRecord) next.partnerContactName = name;
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "email")) {
+      const rawEmail = cleanString(change.email, 240).toLowerCase();
+      const email = rawEmail && isEmail(rawEmail) ? rawEmail : "";
+      next.email = email;
+      next.intendedGuestEmail = email;
+      next.invitedEmail = email;
+      next.guestEmail = email;
+      if (isPartnerRecord) next.partnerContactEmail = email;
+    }
+    if (hasTitleChange) {
+      const title = cleanString(change.title, 240);
+      next.title = title;
+      next.jobTitle = title;
+      next.roleTitle = title;
+      next.contactTitle = title;
+    }
+    if (hasLinkedInChange) {
+      const linkedinProfileUrl = cleanLinkedInProfileUrl(change.linkedinProfileUrl);
+      next.linkedinProfileUrl = linkedinProfileUrl;
+      next.linkedinUrl = linkedinProfileUrl;
+      next.linkedInProfileUrl = linkedinProfileUrl;
+      next.linkedInUrl = linkedinProfileUrl;
+    }
+    if (hasInvitedByChange) {
+      next.invitedBy = cleanString(change.invitedBy, 180);
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(change, "eventSlug") ||
+      Object.prototype.hasOwnProperty.call(change, "eventName") ||
+      Object.prototype.hasOwnProperty.call(change, "eventDate")
+    ) {
+      const eventSlug = cleanString(change.eventSlug ?? next.eventSlug, 200);
+      const eventName = cleanString(change.eventName ?? next.eventName, 240);
+      const eventDate = cleanString(change.eventDate ?? next.eventDate, 120);
+      next.eventSlug = eventSlug;
+      next.eventName = eventName;
+      next.eventDate = eventDate;
+      if (!eventSlug && !eventName) {
+        next.eventId = "";
+        next.eventTime = "";
+        next.eventShowId = "";
+        next.eventShowLabel = "";
+        next.eventShowTime = "";
+      } else {
+        const showId = cleanEventShowId(next.eventShowId || next.showId || next.eventShow, "both");
+        next.eventShowId = showId;
+        next.eventShowLabel = showId ? eventShowLabel(showId) : "";
+        next.eventShowTime = showId ? eventShowTime(showId) : "";
+        next.eventTime = next.eventShowTime;
+        next.eventId = cleanString(`${eventSlug || eventName}:${showId || "both"}`, 200);
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "eventShowId")) {
+      const role = next.partnerRegistrationType || next.guestRegistrationType || next.registrationRole;
+      const showId = requiresSingleShowRegistrationRole(role)
+        ? cleanEventShowId(change.eventShowId, "morning")
+        : cleanEventShowId(change.eventShowId, "both");
+      next.eventShowId = showId;
+      next.showId = showId;
+      next.eventShowLabel = showId ? eventShowLabel(showId) : "";
+      next.eventShowTime = showId ? eventShowTime(showId) : "";
+      next.eventTime = next.eventShowTime;
+      if (next.eventSlug || next.eventName) next.eventId = cleanString(`${next.eventSlug || next.eventName}:${showId || "both"}`, 200);
+    }
     if (Object.prototype.hasOwnProperty.call(change, "linkedinConnection")) {
       next.linkedinConnectionStatus = cleanGuestMatrixOption(change.linkedinConnection, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
     }
@@ -5288,7 +5378,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.registrationStatus = status;
     }
     if (Object.prototype.hasOwnProperty.call(change, "registrationRole")) {
-      const roleUpdate = registrationRoleUpdate(change.registrationRole, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner" : "guest", existing);
+      const roleUpdate = registrationRoleUpdate(change.registrationRole, isPartnerRecord ? "partner" : "guest", existing);
       next.registrationRole = roleUpdate.registrationRole;
       next.guestRegistrationType = roleUpdate.guestRegistrationType;
       next.partnerRegistrationType = roleUpdate.partnerRegistrationType;
@@ -5311,7 +5401,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.matrixInterestRating = cleanStarRating(change.matrixInterestRating, existing.matrixInterestRating || 1);
     }
     if (Object.prototype.hasOwnProperty.call(change, "potentialSponsor")) {
-      const isGuestRecord = !key.startsWith(PARTNER_INVITE_PREFIX) && !key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX);
+      const isGuestRecord = !isPartnerRecord;
       next.potentialSponsor = isGuestRecord && change.potentialSponsor === true;
     }
     if (Object.prototype.hasOwnProperty.call(change, "preRegistrationNotes")) {
@@ -5335,7 +5425,11 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       ? key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner-matrix-prospect" : "partner-invite"
       : key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) ? "guest-matrix-prospect" : `${normalized.type || "guest"}-invite`;
     await upsertContactFromInviteRecord(env, normalized, source, actor, {
-      preferIncomingCompany: hasCompanyChange
+      preferIncomingName: hasNameChange,
+      preferIncomingCompany: hasCompanyChange,
+      preferIncomingTitle: hasTitleChange,
+      preferIncomingLinkedIn: hasLinkedInChange,
+      preferIncomingInvitedBy: hasInvitedByChange
     });
     updatedCount += 1;
   }
