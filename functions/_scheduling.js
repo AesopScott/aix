@@ -10,6 +10,7 @@ const CONNECTION_PREFIX = "scheduling:calendar-connection:";
 const OAUTH_STATE_PREFIX = "scheduling:oauth-state:";
 const HOLD_TTL_SECONDS = 10 * 60;
 const OAUTH_STATE_TTL_SECONDS = 10 * 60;
+const BOOKING_EMAIL_RETRY_DELAYS_MS = [750, 2000, 5000];
 
 const DEFAULT_TIMEZONE = "America/Denver";
 const DEFAULT_WORKING_DAYS = [1, 2, 3, 4, 5];
@@ -487,6 +488,18 @@ function formatDateTimeRange(start, end, timeZone) {
   return { date, time };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function bookingKey(record) {
+  return `${BOOKING_PREFIX}${record.start.slice(0, 10)}:${record.id}`;
+}
+
+async function putBookingRecord(env, record) {
+  await putStoredJson(env, bookingKey(record), record);
+}
+
 function bookingConfirmationDetails(employee, meetingType, booking, start, end, zoomMeeting = null) {
   const guestTimeZone = normalizeTimeZone(booking.guestTimeZone, "");
   const hostRange = formatDateTimeRange(start, end, employee.timezone);
@@ -666,6 +679,76 @@ async function sendBookingConfirmation(env, employee, meetingType, booking, star
     mirrorRecipients: mirrorRecipients.map((recipient) => recipient.address),
     calendarInviteAttached: true
   };
+}
+
+function meetingTypeForBooking(employee, meetingTypeId) {
+  return employee.meetingTypes.find((type) => type.id === cleanSlug(meetingTypeId)) || employee.meetingTypes[0] || DEFAULT_MEETING_TYPE;
+}
+
+function zoomMeetingFromBooking(record = {}) {
+  return record.zoomJoinUrl || record.zoomMeetingId
+    ? {
+        meetingId: record.zoomMeetingId || "",
+        zoomUserId: record.zoomUserId || "",
+        joinUrl: record.zoomJoinUrl || record.onlineMeetingUrl || "",
+        passcode: record.zoomPasscode || ""
+      }
+    : null;
+}
+
+async function deliverBookingConfirmation(env, record, { maxAttempts = 1, delays = [] } = {}) {
+  const employee = await getEmployee(env, record.employeeSlug);
+  if (!employee || employee.active === false) {
+    return {
+      ...record,
+      confirmationEmailSent: false,
+      calendarInviteSent: false,
+      confirmationEmailError: "Booking host is no longer available.",
+      confirmationEmailLastAttemptAt: new Date().toISOString()
+    };
+  }
+
+  const meetingType = meetingTypeForBooking(employee, record.meetingTypeId);
+  const start = new Date(record.start);
+  const end = new Date(record.end);
+  const zoomMeeting = zoomMeetingFromBooking(record);
+  let next = { ...record };
+  let lastError = "";
+  const attempts = Math.max(1, maxAttempts);
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const confirmationEmail = await sendBookingConfirmation(env, employee, meetingType, next, start, end, zoomMeeting);
+      next = {
+        ...next,
+        calendarInviteSent: confirmationEmail.sent === true && confirmationEmail.calendarInviteAttached === true,
+        confirmationEmailSent: confirmationEmail.sent === true,
+        confirmationEmailError: "",
+        confirmationEmailProvider: confirmationEmail.provider || "",
+        confirmationEmailGraphError: confirmationEmail.graphError || "",
+        hostNotificationRecipients: confirmationEmail.hostRecipients || [],
+        mirrorNotificationRecipients: confirmationEmail.mirrorRecipients || [],
+        confirmationEmailAttemptCount: (Number(next.confirmationEmailAttemptCount) || 0) + attempt,
+        confirmationEmailLastAttemptAt: new Date().toISOString()
+      };
+      await putBookingRecord(env, next);
+      return { record: next, sent: true, attempts: attempt };
+    } catch (error) {
+      lastError = cleanText(error?.message || "Booking confirmation email failed.", 400);
+      if (attempt < attempts) await sleep(delays[attempt - 1] || 0);
+    }
+  }
+
+  next = {
+    ...next,
+    calendarInviteSent: false,
+    confirmationEmailSent: false,
+    confirmationEmailError: lastError,
+    confirmationEmailAttemptCount: (Number(next.confirmationEmailAttemptCount) || 0) + attempts,
+    confirmationEmailLastAttemptAt: new Date().toISOString()
+  };
+  await putBookingRecord(env, next);
+  return { record: next, sent: false, attempts, error: lastError };
 }
 
 function sanitizeMeetingType(input = {}) {
@@ -1859,18 +1942,7 @@ export async function createBooking(env, input = {}) {
         throw error;
       }
     }
-    let confirmationEmail = { attempted: false, sent: false, calendarInviteAttached: false };
-    try {
-      confirmationEmail = await sendBookingConfirmation(env, employee, meetingType, booking, start, end, zoomMeeting);
-    } catch (error) {
-      confirmationEmail = {
-        attempted: true,
-        sent: false,
-        calendarInviteAttached: false,
-        error: cleanText(error?.message || "Booking confirmation email failed.", 400)
-      };
-    }
-    const record = {
+    let record = {
       ...booking,
       graphEventId: event?.id || "",
       graphWebLink: event?.webLink || "",
@@ -1880,18 +1952,23 @@ export async function createBooking(env, input = {}) {
       zoomJoinUrl: zoomMeeting?.joinUrl || "",
       zoomPasscode: zoomMeeting?.passcode || "",
       onlineMeetingUrl: zoomMeeting?.joinUrl || "",
-      calendarInviteSent: confirmationEmail.sent === true && confirmationEmail.calendarInviteAttached === true,
-      confirmationEmailSent: confirmationEmail.sent === true,
-      confirmationEmailError: confirmationEmail.sent === false ? confirmationEmail.error || "" : "",
-      confirmationEmailProvider: confirmationEmail.provider || "",
-      confirmationEmailGraphError: confirmationEmail.graphError || "",
-      hostNotificationRecipients: confirmationEmail.hostRecipients || [],
-      mirrorNotificationRecipients: confirmationEmail.mirrorRecipients || [],
+      calendarInviteSent: false,
+      confirmationEmailSent: false,
+      confirmationEmailError: "",
+      confirmationEmailProvider: "",
+      confirmationEmailGraphError: "",
+      confirmationEmailAttemptCount: 0,
+      confirmationEmailLastAttemptAt: "",
+      hostNotificationRecipients: [],
+      mirrorNotificationRecipients: [],
       meetingDetailsPending: !zoomMeeting?.joinUrl
     };
 
-    const dateKey = record.start.slice(0, 10);
-    await putStoredJson(env, `${BOOKING_PREFIX}${dateKey}:${record.id}`, record);
+    await putBookingRecord(env, record);
+    record = (await deliverBookingConfirmation(env, record, {
+      maxAttempts: BOOKING_EMAIL_RETRY_DELAYS_MS.length + 1,
+      delays: BOOKING_EMAIL_RETRY_DELAYS_MS
+    })).record;
 
     return {
       ok: true,
@@ -1912,6 +1989,60 @@ export async function createBooking(env, input = {}) {
   } finally {
     await deleteStoredValue(env, holdKey).catch(() => null);
   }
+}
+
+export async function retryFailedBookingConfirmations(env, options = {}) {
+  const daysBack = cleanPositiveInteger(options.daysBack, 2, 0, 30);
+  const daysAhead = cleanPositiveInteger(options.daysAhead, 120, 1, 366);
+  const limit = cleanPositiveInteger(options.limit, 25, 1, 100);
+  const today = utcDateFromValue(utcDateKey(new Date()));
+  const dateKeys = new Set();
+
+  for (let offset = -daysBack; offset <= daysAhead; offset += 1) {
+    dateKeys.add(utcDateKey(addUtcDays(today, offset)));
+  }
+
+  const records = [];
+  await Promise.all([...dateKeys].map(async (dateKey) => {
+    records.push(...(await listStoredJsonByPrefix(env, `${BOOKING_PREFIX}${dateKey}:`)));
+  }));
+
+  const candidates = records
+    .filter((record) =>
+      record &&
+      record.status !== "cancelled" &&
+      isValidEmail(record.guestEmail) &&
+      record.start &&
+      (record.confirmationEmailSent !== true || record.calendarInviteSent !== true)
+    )
+    .sort((a, b) => String(a.start).localeCompare(String(b.start)))
+    .slice(0, limit);
+
+  const results = [];
+  for (const record of candidates) {
+    const result = await deliverBookingConfirmation(env, record, {
+      maxAttempts: BOOKING_EMAIL_RETRY_DELAYS_MS.length + 1,
+      delays: BOOKING_EMAIL_RETRY_DELAYS_MS
+    });
+    results.push({
+      id: result.record.id,
+      employeeSlug: result.record.employeeSlug,
+      guestEmail: result.record.guestEmail,
+      start: result.record.start,
+      sent: result.sent,
+      attempts: result.attempts,
+      error: result.sent ? "" : result.error || result.record.confirmationEmailError || ""
+    });
+  }
+
+  return {
+    ok: true,
+    scanned: records.length,
+    candidates: candidates.length,
+    sent: results.filter((result) => result.sent).length,
+    failed: results.filter((result) => !result.sent).length,
+    results
+  };
 }
 
 export { requireStore, publicEmployee, graphConfig, getStoredText, putStoredText };
