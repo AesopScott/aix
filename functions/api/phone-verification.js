@@ -56,15 +56,6 @@ function isLikelyPhone(phone) {
   return /^\+[1-9]\d{7,14}$/.test(phone);
 }
 
-function isSmsConfigured(env) {
-  const config = awsConfig(env);
-  return (
-    env.SMS_PROVIDER_CONFIGURED === "true" ||
-    env.SMS_PROVIDER === "aws-sns" ||
-    (config.accessKeyId && config.secretAccessKey && config.otpSecret)
-  );
-}
-
 function awsConfig(env) {
   return {
     region: cleanEnvString(env.AWS_REGION || env.AWS_SNS_REGION || "us-east-2"),
@@ -630,36 +621,10 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (action === "start") {
-    if (!isSmsConfigured(env)) {
-      await writePhoneDebug(env, "start-rejected", {
-        action: "start",
-        phone,
-        inviteCode: payload?.inviteCode,
-        status: "not-configured",
-        config: configDebug(awsConfig(env), env)
-      });
-      return json({
-        ok: true,
-        requiresCode: false,
-        status: "pending_sms_setup",
-        message: "SMS verification is not configured yet. This phone will be saved for manual confirmation."
-      });
-    }
-
     return startVerification(phone, payload?.inviteCode, env);
   }
 
   if (action === "confirm") {
-    if (!isSmsConfigured(env)) {
-      await writePhoneDebug(env, "confirm-rejected", {
-        action: "confirm",
-        phone,
-        status: "not-configured",
-        config: configDebug(awsConfig(env), env)
-      });
-      return json({ error: "SMS code confirmation is not available until an SMS provider is configured." }, { status: 409 });
-    }
-
     return confirmVerification(phone, payload?.code, env);
   }
 

@@ -841,9 +841,9 @@
         verifyCodeRow.classList.add('show');
         setMessage(phoneMessage, 'Code sent. Enter the SMS code to confirm this phone number.', 'success');
       } else {
-        verificationStatus.value = data.status || 'pending_sms_setup';
+        verificationStatus.value = data.status || 'verified';
         verifyCodeRow.classList.remove('show');
-        setMessage(phoneMessage, data.message || 'SMS verification is pending configuration. Your registration can still be submitted for manual confirmation.', 'success');
+        setMessage(phoneMessage, data.message || 'Phone already verified.', data.status === 'verified' ? 'success' : 'error');
       }
     } catch (error) {
       verificationStatus.value = 'unverified';
@@ -931,7 +931,7 @@
       return;
     }
     payload.eventShowId = selectedShow;
-    if (payload.phoneVerificationStatus === 'unverified' || payload.phoneVerificationStatus === 'code_sent' || payload.phoneVerificationStatus === 'pending_sms_setup') {
+    if (payload.phoneVerificationStatus === 'unverified' || payload.phoneVerificationStatus === 'code_sent') {
       setMessage(formError, 'Verify the phone number first so the registration has a phone confirmation status.', 'error');
       phoneInput.focus();
       return;
