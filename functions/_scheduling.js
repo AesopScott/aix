@@ -492,6 +492,26 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function availabilitySourceError(message, detail = "") {
+  const error = new Error(message);
+  error.status = 503;
+  error.availabilitySourceError = true;
+  error.detail = detail || message;
+  return error;
+}
+
+function calendarCheckUnavailable(source, detail = "") {
+  return availabilitySourceError(
+    `Availability is temporarily unavailable because ${source} could not be checked.`,
+    detail
+  );
+}
+
+function availabilityErrorResponse(error) {
+  if (!error?.availabilitySourceError) return null;
+  return json({ error: error.message }, { status: error.status || 503 });
+}
+
 function bookingKey(record) {
   return `${BOOKING_PREFIX}${record.start.slice(0, 10)}:${record.id}`;
 }
@@ -580,6 +600,9 @@ function bookingCalendarInvite(employee, meetingType, booking, start, end, zoomM
 
 function bookingConfirmationText(employee, meetingType, booking, start, end, zoomMeeting = null) {
   const details = bookingConfirmationDetails(employee, meetingType, booking, start, end, zoomMeeting);
+  const calendarLine = booking.graphEventId
+    ? "A Microsoft calendar invitation has been sent from the host calendar."
+    : "A calendar invite is attached to this email.";
   return [
     `Hi ${details.guestName},`,
     "",
@@ -595,7 +618,7 @@ function bookingConfirmationText(employee, meetingType, booking, start, end, zoo
     details.zoomPasscode ? `Zoom passcode: ${details.zoomPasscode}` : "",
     details.zoomMeetingId ? `Zoom meeting ID: ${details.zoomMeetingId}` : "",
     "",
-    "A calendar invite is attached to this email.",
+    calendarLine,
     "",
     "Mojo AI Summits"
   ].filter((line) => line !== "").join("\n");
@@ -603,6 +626,9 @@ function bookingConfirmationText(employee, meetingType, booking, start, end, zoo
 
 function bookingConfirmationHtml(employee, meetingType, booking, start, end, zoomMeeting = null) {
   const details = bookingConfirmationDetails(employee, meetingType, booking, start, end, zoomMeeting);
+  const calendarLine = booking.graphEventId
+    ? "A Microsoft calendar invitation has been sent from the host calendar."
+    : "A calendar invite is attached to this email.";
   const rows = [
     ["Date", details.date],
     ["Time", details.time],
@@ -627,7 +653,7 @@ function bookingConfirmationHtml(employee, meetingType, booking, start, end, zoo
         ${rows}
       </table>
       ${details.zoomJoinUrl ? `<p><a href="${escapeHtml(details.zoomJoinUrl)}">Open Zoom</a></p>` : ""}
-      <p>A calendar invite is attached to this email.</p>
+      <p>${escapeHtml(calendarLine)}</p>
       <p style="margin-top:24px">Mojo AI Summits</p>
     </div>
   `;
@@ -635,7 +661,10 @@ function bookingConfirmationHtml(employee, meetingType, booking, start, end, zoo
 
 async function sendBookingConfirmation(env, employee, meetingType, booking, start, end, zoomMeeting = null) {
   const sender = cleanEmail(env.MOJO_BOOKING_EMAIL_SENDER || env.MOJO_SCHEDULING_EMAIL_SENDER || env.MOJO_INVITE_EMAIL_SENDER || employee.email || DEFAULT_BOOKING_EMAIL_SENDER);
-  const calendarInvite = bookingCalendarInvite(employee, meetingType, booking, start, end, zoomMeeting);
+  const attachCalendarInvite = !booking.graphEventId;
+  const calendarInvite = attachCalendarInvite
+    ? bookingCalendarInvite(employee, meetingType, booking, start, end, zoomMeeting)
+    : "";
   const hostRecipients = employee.email && employee.email !== booking.guestEmail
     ? [{ address: employee.email, name: employee.name }]
     : [];
@@ -652,11 +681,13 @@ async function sendBookingConfirmation(env, employee, meetingType, booking, star
     subject: `Confirmed: ${meetingType.label} with ${employee.name}`,
     text: bookingConfirmationText(employee, meetingType, booking, start, end, zoomMeeting),
     html: bookingConfirmationHtml(employee, meetingType, booking, start, end, zoomMeeting),
-    attachments: [{
-      name: "mojo-ai-summits-booking.ics",
-      contentType: "text/calendar; method=REQUEST; charset=utf-8",
-      contentBytes: base64Encode(calendarInvite)
-    }],
+    attachments: attachCalendarInvite
+      ? [{
+          name: "mojo-ai-summits-booking.ics",
+          contentType: "text/calendar; method=REQUEST; charset=utf-8",
+          contentBytes: base64Encode(calendarInvite)
+        }]
+      : [],
     saveToSentItems: true
   };
   let provider = "microsoft-graph";
@@ -677,7 +708,8 @@ async function sendBookingConfirmation(env, employee, meetingType, booking, star
     graphError,
     hostRecipients: hostRecipients.map((recipient) => recipient.address),
     mirrorRecipients: mirrorRecipients.map((recipient) => recipient.address),
-    calendarInviteAttached: true
+    calendarInviteAttached: attachCalendarInvite,
+    microsoftCalendarEventCreated: Boolean(booking.graphEventId)
   };
 }
 
@@ -721,7 +753,7 @@ async function deliverBookingConfirmation(env, record, { maxAttempts = 1, delays
       const confirmationEmail = await sendBookingConfirmation(env, employee, meetingType, next, start, end, zoomMeeting);
       next = {
         ...next,
-        calendarInviteSent: confirmationEmail.sent === true && confirmationEmail.calendarInviteAttached === true,
+        calendarInviteSent: Boolean(next.graphEventId) || (confirmationEmail.sent === true && confirmationEmail.calendarInviteAttached === true),
         confirmationEmailSent: confirmationEmail.sent === true,
         confirmationEmailError: "",
         confirmationEmailProvider: confirmationEmail.provider || "",
@@ -1497,13 +1529,30 @@ async function calendarFeedBusyIntervals(employee, start, end) {
   return (await calendarFeedBusyDetails(employee, start, end)).intervals;
 }
 
-async function connectedCalendarBusyIntervals(env, employee, start, end) {
-  const connections = await listCalendarConnections(env, employee.slug);
-  if (!connections.length) return [];
+function activeCalendarConnections(connections = []) {
+  return connections.filter((connection) => connection.provider === "microsoft" && connection.status !== "disabled");
+}
 
-  const calendars = await Promise.all(connections.map(async (connection) => {
+async function connectedCalendarBusyDetails(env, employee, start, end) {
+  const connections = await listCalendarConnections(env, employee.slug);
+  const activeConnections = activeCalendarConnections(connections);
+  const expectedEmails = [...new Set((employee.authenticatedCalendarEmails || []).map(cleanEmail).filter(isValidEmail))];
+  const connectedEmails = new Set(activeConnections.flatMap((connection) => [
+    cleanEmail(connection.email),
+    cleanEmail(connection.expectedEmail),
+    cleanEmail(connection.id)
+  ]).filter(isValidEmail));
+  const missingConnections = expectedEmails.filter((email) => !connectedEmails.has(email));
+  if (missingConnections.length) {
+    throw availabilitySourceError(
+      "Availability is temporarily unavailable because a configured Microsoft calendar is not connected.",
+      `Missing connected Microsoft calendar records for ${missingConnections.join(", ")}.`
+    );
+  }
+  if (!activeConnections.length) return { intervals: [], checked: false, connectionCount: 0 };
+
+  const calendars = await Promise.all(activeConnections.map(async (connection) => {
     try {
-      if (connection.provider !== "microsoft" || connection.status === "disabled") return [];
       const accessToken = await delegatedAccessToken(env, null, connection);
       const params = new URLSearchParams({
         startDateTime: start.toISOString(),
@@ -1517,12 +1566,29 @@ async function connectedCalendarBusyIntervals(env, employee, start, end) {
           start: event.start,
           end: event.end
         }));
-    } catch {
-      return [];
+    } catch (error) {
+      throw calendarCheckUnavailable(
+        "a connected Microsoft calendar",
+        error?.message || "Connected Microsoft calendar lookup failed."
+      );
     }
   }));
 
-  return busyIntervalsFromSchedule(calendars.flat(), employee);
+  return {
+    intervals: busyIntervalsFromSchedule(calendars.flat(), employee),
+    checked: true,
+    connectionCount: activeConnections.length
+  };
+}
+
+async function connectedCalendarBusyIntervals(env, employee, start, end) {
+  return (await connectedCalendarBusyDetails(env, employee, start, end)).intervals;
+}
+
+function failedCalendarFeeds(feedDetails) {
+  return (feedDetails.feeds || []).filter((feed) =>
+    !["busy-events-found", "connected-no-busy-events"].includes(feed.status)
+  );
 }
 
 async function sharedZoomBusyIntervals(env, start, end, zoomUserId = "") {
@@ -1566,23 +1632,41 @@ async function availabilityContext(env, employee, start, end, meetingType) {
   let warning = graph.configured ? "" : "Live calendar sync is limited, so slots only reflect saved working hours.";
   let busyIntervals = [];
 
+  if (!graph.configured && (employee.busyCalendarEmails || []).length) {
+    throw availabilitySourceError(
+      "Availability is temporarily unavailable because Microsoft calendar sync is not configured.",
+      "Same-tenant busy calendar emails are configured, but Microsoft Graph app credentials are unavailable."
+    );
+  }
+
   if (graph.configured) {
-    const scheduleItems = await graphSchedule(env, employee, start, end, meetingType.durationMinutes);
-    busyIntervals = busyIntervalsFromSchedule(scheduleItems, employee);
-    source = "microsoft-graph";
-    warning = "";
+    try {
+      const scheduleItems = await graphSchedule(env, employee, start, end, meetingType.durationMinutes);
+      busyIntervals = busyIntervalsFromSchedule(scheduleItems, employee);
+      source = "microsoft-graph";
+      warning = "";
+    } catch (error) {
+      throw calendarCheckUnavailable("Microsoft calendar sync", error?.message || "Microsoft Graph availability lookup failed.");
+    }
   }
 
   if ((employee.busyCalendarUrls || []).length) {
-    const feedIntervals = await calendarFeedBusyIntervals(employee, start, end);
-    busyIntervals = [...busyIntervals, ...feedIntervals];
+    const feedDetails = await calendarFeedBusyDetails(employee, start, end);
+    const feedFailures = failedCalendarFeeds(feedDetails);
+    if (feedFailures.length) {
+      throw calendarCheckUnavailable(
+        "a published calendar feed",
+        feedFailures.map((feed) => `${feed.label}: ${feed.error || feed.status}`).join("; ")
+      );
+    }
+    busyIntervals = [...busyIntervals, ...feedDetails.intervals];
     source = graph.configured ? "microsoft-graph+calendar-feeds" : "calendar-feeds";
     warning = graph.configured ? "" : "Live calendar sync is limited, so slots only reflect saved working hours and calendar feeds.";
   }
 
-  const connectionIntervals = await connectedCalendarBusyIntervals(env, employee, start, end);
-  if (connectionIntervals.length) {
-    busyIntervals = [...busyIntervals, ...connectionIntervals];
+  const connectedCalendarDetails = await connectedCalendarBusyDetails(env, employee, start, end);
+  if (connectedCalendarDetails.checked) {
+    busyIntervals = [...busyIntervals, ...connectedCalendarDetails.intervals];
     source = `${source}+connected-calendars`;
   }
 
@@ -1640,7 +1724,16 @@ export async function availability(env, query) {
 
   const dayStart = zonedTimeToUtc(dateValue, employee.dayStart, employee.timezone);
   const dayEnd = zonedTimeToUtc(dateValue, employee.dayEnd, employee.timezone);
-  const { source, warning, busyIntervals } = await availabilityContext(env, employee, dayStart, dayEnd, meetingType);
+  let source;
+  let warning;
+  let busyIntervals;
+  try {
+    ({ source, warning, busyIntervals } = await availabilityContext(env, employee, dayStart, dayEnd, meetingType));
+  } catch (error) {
+    const response = availabilityErrorResponse(error);
+    if (response) return { response };
+    throw error;
+  }
 
   return {
     employee: publicEmployee(employee),
@@ -1686,7 +1779,16 @@ export async function availabilitySummary(env, query) {
   );
   const rangeStart = new Date(Math.min(...starts));
   const rangeEnd = new Date(Math.max(...ends));
-  const { source, warning, busyIntervals } = await availabilityContext(env, baseEmployee, rangeStart, rangeEnd, firstMeetingType);
+  let source;
+  let warning;
+  let busyIntervals;
+  try {
+    ({ source, warning, busyIntervals } = await availabilityContext(env, baseEmployee, rangeStart, rangeEnd, firstMeetingType));
+  } catch (error) {
+    const response = availabilityErrorResponse(error);
+    if (response) return { response };
+    throw error;
+  }
 
   const days = dates.map((date, index) => {
     const employee = rangeEmployees[index];
@@ -1934,13 +2036,20 @@ export async function createBooking(env, input = {}) {
       ? await createZoomMeeting(env, employee, meetingType, booking, start, end)
       : null;
     let event = null;
-    if (graph.configured) {
-      try {
-        event = await createGraphEvent(env, employee, meetingType, booking, start, end, zoomMeeting);
-      } catch (error) {
-        await deleteZoomMeeting(env, zoomMeeting?.meetingId);
-        throw error;
-      }
+    if (!graph.configured) {
+      await deleteZoomMeeting(env, zoomMeeting?.meetingId);
+      return {
+        response: json({
+          error: "Booking is temporarily unavailable because Microsoft calendar write is not configured."
+        }, { status: 503 })
+      };
+    }
+    try {
+      event = await createGraphEvent(env, employee, meetingType, booking, start, end, zoomMeeting);
+      if (!event?.id) throw new Error("Microsoft Graph event creation did not return an event id.");
+    } catch (error) {
+      await deleteZoomMeeting(env, zoomMeeting?.meetingId);
+      throw error;
     }
     let record = {
       ...booking,
