@@ -433,7 +433,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <input name="name" required>
         </label>
         <label>
-          Calendar Email
+          Host Calendar Email
           <input name="email" type="email" required>
         </label>
         <label>
@@ -449,10 +449,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <input name="mirrorInviteEmails" placeholder="sschindler@cmcenters.org">
         </label>
         <div class="wide stack">
-          <div class="field-label">External Microsoft Calendar Read Connections</div>
+          <div class="field-label">External Busy Calendar Read Connections</div>
           <textarea class="hidden-field" name="authenticatedCalendarEmails"></textarea>
           <div class="connection-list" id="microsoftCalendarRows"></div>
-          <button type="button" class="secondary" id="addMicrosoftReadConnection">Add Microsoft Read Connection</button>
+          <button type="button" class="secondary" id="addMicrosoftReadConnection">Add External Busy Calendar</button>
         </div>
         <div class="wide stack">
           <div class="field-label">Published Calendar Feed URLs</div>
@@ -559,6 +559,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function configuredLabels(state = {}) {
+      if (Array.isArray(state.missingVariables) && state.missingVariables.length) return state.missingVariables;
       const missing = [];
       if (state.tenantIdConfigured === false) missing.push("tenant");
       if (state.clientIdConfigured === false) missing.push("client");
@@ -572,17 +573,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const graphReady = payload.graphConfigured === true;
       const delegatedReady = payload.delegatedCalendarOAuthConfigured === true;
       if (graphReady && delegatedReady) {
-        return "Microsoft calendar write/invite and external busy-read OAuth are configured.";
+        return "Host calendar write/invite and external busy calendar read OAuth are configured.";
       }
       if (graphReady) {
         return delegatedMissing.length
-          ? `Microsoft calendar write/invite is configured. External Microsoft busy-read OAuth is missing ${delegatedMissing.join(", ")} configuration; use published calendar feeds below.`
-          : "Microsoft calendar write/invite is configured. External Microsoft busy-read OAuth is not configured; use published calendar feeds below.";
+          ? `Host calendar write/invite is configured. External busy calendar read OAuth is missing ${delegatedMissing.join(", ")} configuration; use published calendar feeds below.`
+          : "Host calendar write/invite is configured. External busy calendar read OAuth is not configured; use published calendar feeds below.";
       }
       if (graphMissing.length) {
-        return `Microsoft calendar write/invite is missing ${graphMissing.join(", ")} configuration. Bookings can still use saved hours, Zoom, and published calendar feeds where configured.`;
+        return `Host calendar write/invite is missing ${graphMissing.join(", ")} configuration. Bookings can still use saved hours, Zoom, and published calendar feeds where configured.`;
       }
-      return "Microsoft calendar write/invite is not configured. Bookings can still use saved hours, Zoom, and published calendar feeds where configured.";
+      return "Host calendar write/invite is not configured. Bookings can still use saved hours, Zoom, and published calendar feeds where configured.";
     }
 
     function localDateValue(date = new Date()) {
@@ -762,7 +763,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
       const header = document.createElement("div");
       header.className = "connection-row connection-heading";
-      ["Email", "Read Authentication URL", "Action"].forEach((label) => {
+      ["External Busy Calendar", "Read Authorization URL", "Action"].forEach((label) => {
         const item = document.createElement("span");
         item.textContent = label;
         header.append(item);
@@ -789,9 +790,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           const valid = isValidEmail(normalizedEmail);
           const authUrl = valid && slug ? authUrlFor(slug, normalizedEmail) : "";
           urlEl.textContent = delegatedCalendarOAuthConfigured
-            ? authUrl || "Enter an email to generate the read URL."
-            : "Microsoft calendar OAuth is not configured. Use a published calendar feed below.";
-          button.textContent = connections.has(normalizedEmail) ? "Reconnect" : "Connect";
+            ? authUrl || "Enter the external calendar email to generate the read URL."
+            : "Microsoft busy-read OAuth is not configured. Use a published calendar feed below.";
+          button.textContent = connections.has(normalizedEmail) ? "Reconnect Read" : "Connect Read";
           button.disabled = !delegatedCalendarOAuthConfigured || !slug || !valid;
         };
 
@@ -807,7 +808,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             return;
           }
           if (!delegatedCalendarOAuthConfigured) {
-            setStatus("Microsoft calendar OAuth is not configured yet. Use a published calendar feed URL for busy-time reads.", "error");
+            setStatus("Microsoft busy-read OAuth is not configured yet. Use a published calendar feed URL for busy-time reads.", "error");
             return;
           }
           window.open(authUrlFor(slug, normalizedEmail), "_blank", "noopener,noreferrer");
@@ -1066,10 +1067,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     loadAdmin()
       .then(() => {
-        if (calendarStatus === "connected") setStatus("Authenticated calendar connected.", "ok");
+        if (calendarStatus === "connected") setStatus("External busy calendar read connection saved.", "ok");
         if (calendarStatus === "expired") setStatus("Calendar connection expired before Microsoft returned. Try again.", "error");
         if (calendarStatus === "denied") setStatus("Calendar connection was cancelled.", "error");
-        if (calendarStatus === "not-configured") setStatus("Microsoft calendar OAuth is not configured yet. Use a published calendar feed URL for busy-time reads.", "error");
+        if (calendarStatus === "not-configured") setStatus("Microsoft busy-read OAuth is not configured yet. Use a published calendar feed URL for busy-time reads.", "error");
         if (calendarStatus === "mismatch") setStatus(`Microsoft returned ${actualCalendar || "a different account"} instead of ${expectedCalendar || "the requested account"}.`, "error");
       })
       .catch((error) => {

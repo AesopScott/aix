@@ -253,7 +253,15 @@ const CRM_D1_KV_BACKFILL_PREFIXES = [
   "crm:company:",
   "partner-company:",
   "member-company:",
-  "guest-company:"
+  "guest-company:",
+  "scheduling:employees:index:v1",
+  "scheduling:employee:",
+  "scheduling:booking:",
+  "scheduling:hold:",
+  "scheduling:calendar-connections:",
+  "scheduling:calendar-connection:",
+  "scheduling:oauth-state:",
+  "scheduling:rate:"
 ];
 const CRM_D1_R2_BACKFILL_PREFIXES = [
   `${R2_REGISTRATION_PREFIX}/member/`,
@@ -264,7 +272,15 @@ const CRM_D1_R2_BACKFILL_PREFIXES = [
   `${OVERFLOW_REGISTRATION_PREFIX}/partner/`,
   `${R2_INVITE_USAGE_PREFIX}/member/`,
   `${R2_INVITE_USAGE_PREFIX}/guest/`,
-  `${R2_INVITE_USAGE_PREFIX}/partner/`
+  `${R2_INVITE_USAGE_PREFIX}/partner/`,
+  "scheduling:employees:index:v1",
+  "scheduling:employee:",
+  "scheduling:booking:",
+  "scheduling:hold:",
+  "scheduling:calendar-connections:",
+  "scheduling:calendar-connection:",
+  "scheduling:oauth-state:",
+  "scheduling:rate:"
 ];
 const builtInDirectoryStarterSources = builtInDirectoryStarterTopics.flatMap(([slug, label]) =>
   Array.from({ length: builtInDirectoryStarterPageCount }, (_, index) => {
