@@ -1,4 +1,11 @@
 import { json } from "./_access-control.js";
+import {
+  crmD1Available,
+  deleteCrmD1Record,
+  listCrmD1Keys,
+  readCrmD1Json,
+  writeCrmD1Json
+} from "./_crm-d1.js";
 import { sendMicrosoftGraphMail, sendResendMail } from "./_mail.js";
 
 const TEAM_INDEX_KEY = "scheduling:employees:index:v1";
@@ -237,7 +244,7 @@ async function decryptText(env, value) {
 }
 
 function requireStore(env) {
-  if (!env.MOJO_SUMMITS_STORAGE && !env.MOJO_SUMMITS_SETUP_STATE) {
+  if (!env.MOJO_SUMMITS_STORAGE && !env.MOJO_SUMMITS_SETUP_STATE && !crmD1Available(env)) {
     return json({ error: "Scheduling storage is not configured." }, { status: 500 });
   }
   return null;
@@ -260,12 +267,30 @@ function withoutExpiryMetadata(value) {
   return rest;
 }
 
+async function d1StoredJson(env, key) {
+  const value = await readCrmD1Json(env, key).catch(() => null);
+  const clean = withoutExpiryMetadata(value);
+  if (value && !clean) await deleteStoredValue(env, key).catch(() => null);
+  return clean;
+}
+
+async function d1StoredText(env, key) {
+  const value = await d1StoredJson(env, key);
+  if (value === null || value === undefined) return null;
+  if (typeof value === "object" && value.__value !== undefined) return String(value.__value);
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
+}
+
 async function objectText(object) {
   if (!object) return null;
   return object.text();
 }
 
 async function getStoredText(env, key) {
+  const d1Text = await d1StoredText(env, key);
+  if (d1Text !== null) return d1Text;
+
   const object = await schedulingObjectStore(env)?.get(key).catch(() => null);
   const text = await objectText(object);
   if (text !== null) {
@@ -290,6 +315,9 @@ async function getStoredText(env, key) {
 }
 
 async function getStoredJson(env, key) {
+  const d1Value = await d1StoredJson(env, key);
+  if (d1Value !== null && d1Value !== undefined) return d1Value;
+
   const object = await schedulingObjectStore(env)?.get(key).catch(() => null);
   if (object) {
     let value = null;
@@ -309,6 +337,14 @@ async function getStoredJson(env, key) {
 }
 
 async function putStoredText(env, key, value, options = {}) {
+  const payload = options.expirationTtl
+    ? {
+        __value: String(value),
+        __expiresAt: new Date(Date.now() + options.expirationTtl * 1000).toISOString()
+      }
+    : { __value: String(value) };
+  await writeCrmD1Json(env, key, payload).catch(() => false);
+
   const objectStore = schedulingObjectStore(env);
   if (objectStore) {
     const body = options.expirationTtl
@@ -334,6 +370,8 @@ async function putStoredJson(env, key, value, options = {}) {
         __expiresAt: new Date(Date.now() + options.expirationTtl * 1000).toISOString()
       }
     : value;
+  await writeCrmD1Json(env, key, payload).catch(() => false);
+
   const objectStore = schedulingObjectStore(env);
   if (objectStore) {
     await objectStore.put(key, JSON.stringify(payload), {
@@ -345,13 +383,14 @@ async function putStoredJson(env, key, value, options = {}) {
 }
 
 async function deleteStoredValue(env, key) {
+  await deleteCrmD1Record(env, key).catch(() => null);
   const objectStore = schedulingObjectStore(env);
   if (objectStore) await objectStore.delete(key).catch(() => null);
   await schedulingKvStore(env)?.delete(key).catch(() => null);
 }
 
 async function listStoredJsonByPrefix(env, prefix) {
-  const keys = new Set();
+  const keys = new Set(await listCrmD1Keys(env, prefix).catch(() => []));
   const objectStore = schedulingObjectStore(env);
   if (objectStore) {
     let cursor;
@@ -509,7 +548,11 @@ function calendarCheckUnavailable(source, detail = "") {
 
 function availabilityErrorResponse(error) {
   if (!error?.availabilitySourceError) return null;
-  return json({ error: error.message }, { status: error.status || 503 });
+  return json({
+    error: "Availability is being updated. Please check back shortly or contact the Mojo AI Summits team.",
+    publicMessage: "Availability is being updated. Please check back shortly or contact the Mojo AI Summits team.",
+    diagnostic: error.message
+  }, { status: error.status || 503 });
 }
 
 function bookingKey(record) {
@@ -1543,13 +1586,9 @@ async function connectedCalendarBusyDetails(env, employee, start, end) {
     cleanEmail(connection.id)
   ]).filter(isValidEmail));
   const missingConnections = expectedEmails.filter((email) => !connectedEmails.has(email));
-  if (missingConnections.length) {
-    throw availabilitySourceError(
-      "Availability is temporarily unavailable because a configured Microsoft calendar is not connected.",
-      `Missing connected Microsoft calendar records for ${missingConnections.join(", ")}.`
-    );
+  if (!activeConnections.length) {
+    return { intervals: [], checked: false, connectionCount: 0, missingConnections };
   }
-  if (!activeConnections.length) return { intervals: [], checked: false, connectionCount: 0 };
 
   const calendars = await Promise.all(activeConnections.map(async (connection) => {
     try {
@@ -1567,17 +1606,15 @@ async function connectedCalendarBusyDetails(env, employee, start, end) {
           end: event.end
         }));
     } catch (error) {
-      throw calendarCheckUnavailable(
-        "a connected Microsoft calendar",
-        error?.message || "Connected Microsoft calendar lookup failed."
-      );
+      return [];
     }
   }));
 
   return {
     intervals: busyIntervalsFromSchedule(calendars.flat(), employee),
     checked: true,
-    connectionCount: activeConnections.length
+    connectionCount: activeConnections.length,
+    missingConnections
   };
 }
 

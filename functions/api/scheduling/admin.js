@@ -18,11 +18,38 @@ function hasSchedulingAccess(user, data = {}) {
   );
 }
 
-function graphCredentialState(graph = {}) {
+const graphCredentialNames = {
+  tenantId: ["MOJO_MS_TENANT_ID", "MOJO_MAIL_TENANT_ID", "MICROSOFT_TENANT_ID", "MS_TENANT_ID"],
+  clientId: ["MOJO_MS_CLIENT_ID", "MOJO_MAIL_CLIENT_ID", "MICROSOFT_CLIENT_ID", "MS_CLIENT_ID"],
+  clientSecret: ["MOJO_MS_CLIENT_SECRET", "MOJO_MAIL_CLIENT_SECRET", "MICROSOFT_CLIENT_SECRET", "MS_CLIENT_SECRET"]
+};
+
+const delegatedGraphCredentialNames = {
+  tenantId: ["MOJO_MS_DELEGATED_TENANT_ID", "MICROSOFT_DELEGATED_TENANT_ID"],
+  clientId: ["MOJO_MS_DELEGATED_CLIENT_ID", "MICROSOFT_DELEGATED_CLIENT_ID", ...graphCredentialNames.clientId],
+  clientSecret: ["MOJO_MS_DELEGATED_CLIENT_SECRET", "MICROSOFT_DELEGATED_CLIENT_SECRET", ...graphCredentialNames.clientSecret]
+};
+
+function configuredVariable(env, names = []) {
+  return names.find((name) => String(env?.[name] || "").trim());
+}
+
+function graphCredentialState(env, graph = {}, names = graphCredentialNames) {
+  const tenantIdVariable = configuredVariable(env, names.tenantId);
+  const clientIdVariable = configuredVariable(env, names.clientId);
+  const clientSecretVariable = configuredVariable(env, names.clientSecret);
+  const missingVariables = [];
+  if (!graph.tenantId) missingVariables.push(names.tenantId.join(" or "));
+  if (!graph.clientId) missingVariables.push(names.clientId.join(" or "));
+  if (!graph.clientSecret) missingVariables.push(names.clientSecret.join(" or "));
   return {
     tenantIdConfigured: Boolean(graph.tenantId),
     clientIdConfigured: Boolean(graph.clientId),
-    clientSecretConfigured: Boolean(graph.clientSecret)
+    clientSecretConfigured: Boolean(graph.clientSecret),
+    tenantIdVariable: tenantIdVariable || "",
+    clientIdVariable: clientIdVariable || "",
+    clientSecretVariable: clientSecretVariable || "",
+    missingVariables
   };
 }
 
@@ -65,8 +92,8 @@ export async function onRequestGet({ request, env, data }) {
     ok: true,
     graphConfigured: graph.configured,
     delegatedCalendarOAuthConfigured: delegatedGraph.configured,
-    graphCredentials: graphCredentialState(graph),
-    delegatedCalendarOAuthCredentials: graphCredentialState(delegatedGraph),
+    graphCredentials: graphCredentialState(env, graph, graphCredentialNames),
+    delegatedCalendarOAuthCredentials: graphCredentialState(env, delegatedGraph, delegatedGraphCredentialNames),
     employees: employeePayloads
   });
 }

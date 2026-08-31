@@ -1095,7 +1095,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const payload = await response.json();
       if (!response.ok) {
         slotsEl.innerHTML = "";
-        throw new Error(payload.error || "Unable to load availability.");
+        throw new Error(payload.publicMessage || payload.error || "Unable to load availability.");
       }
 
       if (payload.warning) {
