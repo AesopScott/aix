@@ -15,6 +15,8 @@ const maxFieldLength = 2000;
 const contactPrefix = "crm:contact:";
 const companyPrefix = "crm:company:";
 const partnerCompanyPrefix = "partner-company:";
+const guestMatrixProspectPrefix = "crm:guest-matrix-prospect:";
+const partnerMatrixProspectPrefix = "crm:partner-matrix-prospect:";
 const source = "blinq-zapier";
 
 const classificationAliases = new Map([
@@ -60,6 +62,24 @@ function cleanString(value, max = maxFieldLength) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+function fieldKey(value = "") {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function payloadValue(payload = {}, ...names) {
+  for (const name of names) {
+    if (Object.prototype.hasOwnProperty.call(payload, name) && payload[name] != null) return payload[name];
+  }
+  const normalized = new Map(
+    Object.entries(payload || {}).map(([key, value]) => [fieldKey(key), value])
+  );
+  for (const name of names) {
+    const value = normalized.get(fieldKey(name));
+    if (value != null) return value;
+  }
+  return "";
+}
+
 function cleanEmail(value) {
   return cleanString(value, 240).toLowerCase();
 }
@@ -92,17 +112,31 @@ function cleanUrl(value) {
 
 function cleanClassification(payload = {}) {
   const raw = cleanString(
-    payload.classification ||
-      payload.relationship_type ||
-      payload.relationshipType ||
-      payload.contact_type ||
-      payload.contactType ||
-      payload.crm_type ||
-      payload.crmType ||
-      payload.type,
+    payloadValue(
+      payload,
+      "classification",
+      "relationship_type",
+      "relationshipType",
+      "relationship type",
+      "contact_type",
+      "contactType",
+      "contact type",
+      "crm_type",
+      "crmType",
+      "crm type",
+      "type"
+    ),
     120
   ).toLowerCase().replace(/[_-]+/g, " ");
   return classificationAliases.get(raw) || "potential-guest";
+}
+
+function cleanBoolean(value) {
+  if (value === true || value === false) return value;
+  const normalized = String(value ?? "").trim().slice(0, 40).toLowerCase();
+  if (["true", "yes", "y", "1", "on"].includes(normalized)) return true;
+  if (["false", "no", "n", "0", "off"].includes(normalized)) return false;
+  return false;
 }
 
 function splitName(name = "") {
@@ -123,8 +157,80 @@ function slugify(value = "") {
     .slice(0, 120);
 }
 
+function safeFileSegment(value = "", fallback = "file") {
+  const clean = String(value || "")
+    .trim()
+    .replace(/@/g, "-at-")
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter(Boolean)
+    .join("-")
+    .replace(/[^a-zA-Z0-9._ -]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 90);
+  return clean || fallback;
+}
+
 function isPartnerClassification(classification = "") {
   return ["partner-candidate", "strategic-partner-contact"].includes(classification);
+}
+
+function matrixProspectPrefix(classification = "") {
+  return isPartnerClassification(classification) ? partnerMatrixProspectPrefix : guestMatrixProspectPrefix;
+}
+
+function matrixProspectType(classification = "") {
+  return isPartnerClassification(classification) ? "partner-matrix-prospect" : "guest-matrix-prospect";
+}
+
+function matrixRegistrationRole(classification = "") {
+  return {
+    "potential-guest": "guest",
+    "featured-guest": "featured-guest",
+    speaker: "presenter",
+    "roundtable-leader": "roundtable-leader",
+    "partner-candidate": "partner-candidate",
+    "strategic-partner-contact": "partner-candidate"
+  }[classification] || "guest";
+}
+
+function cleanMatrixStatus(value = "", fallback = "pending-engagement") {
+  const normalized = cleanString(value, 120).toLowerCase().replace(/[\s_]+/g, "-");
+  const aliases = {
+    new: "pending-engagement",
+    pending: "pending-engagement",
+    tracking: "pending-engagement",
+    accepted: "confirmed",
+    waitlist: "alternate",
+    waitlisted: "alternate"
+  };
+  const status = aliases[normalized] || normalized;
+  return [
+    "scott-engagement",
+    "pending-engagement",
+    "contacted",
+    "confirmed",
+    "declined",
+    "bad-fit",
+    "invited",
+    "registered",
+    "alternate",
+    "attended",
+    "no-show"
+  ].includes(status) ? status : fallback;
+}
+
+function cleanMatrixOption(value = "", allowed = [], fallback = "") {
+  const normalized = cleanString(value, 120).toLowerCase().replace(/[\s_]+/g, "-");
+  return allowed.includes(normalized) ? normalized : fallback;
+}
+
+function cleanStarRating(value, fallback = 1) {
+  const rating = Number.parseInt(value, 10);
+  if ([1, 2, 3].includes(rating)) return rating;
+  return [1, 2, 3].includes(fallback) ? fallback : 1;
 }
 
 async function parsePayload(request) {
@@ -186,27 +292,70 @@ function requireApiKey(request, env = {}) {
   return { ok: true };
 }
 
+async function readBlinqStorageJson(env, key) {
+  const record = await readCrmStorageJson(env, key).catch(() => null);
+  if (!record || typeof record !== "string") return record;
+  return JSON.parse(record);
+}
+
 function normalizePayload(payload = {}) {
   const classification = cleanClassification(payload);
-  const name = cleanString(payload.name || payload.full_name || payload.fullName, 240);
-  const email = cleanEmail(payload.email);
-  const title = cleanString(payload.job_title || payload.jobTitle || payload.title, 240);
-  const company = cleanString(payload.company || payload.company_name || payload.companyName, 240);
-  const phone = cleanPhone(payload.phone);
-  const profilePhoto = cleanUrl(payload.profile_photo || payload.profilePhoto || payload.photoUrl || payload.photo_url);
-  const linkedinProfileUrl = cleanUrl(
-    payload.linkedin_profile_url ||
-      payload.linkedinProfileUrl ||
-      payload.linkedin_url ||
-      payload.linkedinUrl ||
-      payload.profile_url ||
-      payload.profileUrl
+  const firstName = cleanString(payloadValue(payload, "first_name", "firstName", "first name"), 120);
+  const lastName = cleanString(payloadValue(payload, "last_name", "lastName", "last name"), 120);
+  const joinedName = cleanString([firstName, lastName].filter(Boolean).join(" "), 240);
+  const name = cleanString(payloadValue(payload, "name", "full_name", "fullName", "full name", "display_name", "displayName", "display name") || joinedName, 240);
+  const email = cleanEmail(payloadValue(payload, "email", "email_address", "emailAddress", "email address", "work_email", "workEmail", "work email"));
+  const title = cleanString(payloadValue(payload, "job_title", "jobTitle", "job title", "title", "position", "headline"), 240);
+  const company = cleanString(payloadValue(payload, "company", "company_name", "companyName", "company name", "organization", "organisation"), 240);
+  const phone = cleanPhone(payloadValue(payload, "phone", "mobile", "mobile_phone", "mobilePhone", "mobile phone", "phone_number", "phoneNumber", "phone number"));
+  const profilePhoto = cleanUrl(
+    payloadValue(
+      payload,
+      "profile_photo",
+      "profilePhoto",
+      "profile photo",
+      "profile_photo_url",
+      "profilePhotoUrl",
+      "profile photo url",
+      "photoUrl",
+      "photo_url",
+      "photo url",
+      "avatar",
+      "avatar_url",
+      "avatarUrl",
+      "avatar url"
+    )
   );
-  const notes = cleanString(payload.notes || payload.note || payload.crm_notes || payload.crmNotes, 4000);
-  const eventSlug = cleanString(payload.event_slug || payload.eventSlug, 240);
-  const eventName = cleanString(payload.event_name || payload.eventName, 240);
-  const relationshipOwner = cleanEmail(payload.relationship_owner || payload.relationshipOwner || payload.owner);
-  const nextAction = cleanString(payload.next_action || payload.nextAction || "follow-up", 80);
+  const linkedinProfileUrl = cleanUrl(
+    payloadValue(
+      payload,
+      "linkedin_profile_url",
+      "linkedinProfileUrl",
+      "linkedInProfileUrl",
+      "linkedin profile url",
+      "linkedin_url",
+      "linkedinUrl",
+      "linkedInUrl",
+      "linkedin url",
+      "profile_url",
+      "profileUrl",
+      "profile url"
+    )
+  );
+  const notes = cleanString(payloadValue(payload, "notes", "note", "crm_notes", "crmNotes", "crm notes", "matrix_notes", "matrixNotes", "matrix notes"), 4000);
+  const eventSlug = cleanString(payloadValue(payload, "event_slug", "eventSlug", "event slug"), 240);
+  const eventName = cleanString(payloadValue(payload, "event_name", "eventName", "event name"), 240);
+  const eventId = cleanString(payloadValue(payload, "event_id", "eventId", "event id"), 240);
+  const eventDate = cleanString(payloadValue(payload, "event_date", "eventDate", "event date"), 120);
+  const eventTime = cleanString(payloadValue(payload, "event_time", "eventTime", "event time"), 120);
+  const eventShowId = cleanString(payloadValue(payload, "event_show_id", "eventShowId", "event show id", "show_id", "showId", "show id"), 80);
+  const relationshipOwner = cleanEmail(payloadValue(payload, "relationship_owner", "relationshipOwner", "relationship owner", "owner"));
+  const nextAction = cleanString(payloadValue(payload, "next_action", "nextAction", "next action") || "follow-up", 80);
+  const linkedinConnectionStatus = cleanString(payloadValue(payload, "linkedin_connection_status", "linkedinConnectionStatus", "linkedin connection status", "connection_status", "connectionStatus", "connection status"), 120);
+  const registrationRequestStatus = cleanString(payloadValue(payload, "registration_request_status", "registrationRequestStatus", "registration request status", "invite_stage", "inviteStage", "invite stage", "invite_status", "inviteStatus", "invite status"), 120);
+  const crmStatus = cleanString(payloadValue(payload, "crm_status", "crmStatus", "crm status", "guest_status", "guestStatus", "guest status", "partner_status", "partnerStatus", "partner status", "registration_status", "registrationStatus", "registration status"), 120);
+  const matrixInterestRating = payloadValue(payload, "matrix_interest_rating", "matrixInterestRating", "matrix interest rating", "participation_interest_rating", "participationInterestRating", "participation interest rating", "interest_rating", "interestRating", "interest rating");
+  const potentialSponsor = cleanBoolean(payloadValue(payload, "potential_sponsor", "potentialSponsor", "potential sponsor", "is_potential_sponsor", "isPotentialSponsor", "is potential sponsor", "sponsor_prospect", "sponsorProspect", "sponsor prospect"));
 
   return {
     name,
@@ -219,10 +368,19 @@ function normalizePayload(payload = {}) {
     classification,
     classificationLabel: classificationLabels[classification],
     notes,
+    eventId,
     eventSlug,
     eventName,
+    eventDate,
+    eventTime,
+    eventShowId,
     relationshipOwner,
-    nextAction
+    nextAction,
+    linkedinConnectionStatus,
+    registrationRequestStatus,
+    crmStatus,
+    matrixInterestRating,
+    potentialSponsor
   };
 }
 
@@ -263,6 +421,7 @@ function mergeActivity(existing = [], activity) {
 }
 
 function eventForCapture(contact, id, now) {
+  const status = cleanMatrixStatus(contact.crmStatus);
   return {
     id,
     eventId: `blinq:${id}`,
@@ -275,8 +434,8 @@ function eventForCapture(contact, id, now) {
     guestRegistrationType: isPartnerClassification(contact.classification) ? "" : contact.classification,
     partnerRegistrationType: isPartnerClassification(contact.classification) ? contact.classification : "",
     role: contact.classificationLabel,
-    status: "confirmed",
-    registrationStatus: "confirmed",
+    status,
+    registrationStatus: status,
     registeredAt: now
   };
 }
@@ -294,7 +453,7 @@ async function upsertCompanyRollup(env, contact, contactKey, now) {
   const key = isPartnerClassification(contact.classification)
     ? `${partnerCompanyPrefix}${companySlug}`
     : `${companyPrefix}${companySlug}`;
-  const existing = await readCrmStorageJson(env, key).catch(() => null);
+  const existing = await readBlinqStorageJson(env, key).catch(() => null);
   const contacts = Array.isArray(existing?.contacts) ? existing.contacts : [];
   const contactMap = new Map(contacts.map((entry) => [cleanEmail(entry?.email) || cleanString(entry?.name), entry]));
   const previous = contactMap.get(contact.email) || {};
@@ -329,15 +488,134 @@ async function upsertCompanyRollup(env, contact, contactKey, now) {
   return { companyKey: `${companyPrefix}${companySlug}`, profileKey: key, companySlug };
 }
 
+function matrixNotes(contact, rawPayload = {}) {
+  const lines = [
+    contact.notes,
+    contact.nextAction ? `Next action: ${contact.nextAction}` : "",
+    `Captured from Blinq/Zapier as ${contact.classificationLabel}.`,
+    `Webhook fields: ${Object.keys(rawPayload || {}).sort().join(", ")}`
+  ].filter(Boolean);
+  return cleanString(lines.join("\n"), 4000);
+}
+
+function mergeMatrixNotes(existingNotes = "", contact, rawPayload = {}) {
+  const existing = cleanString(existingNotes, 4000);
+  const incoming = matrixNotes(contact, rawPayload);
+  if (!existing) return incoming;
+  if (!incoming || existing.includes(incoming)) return existing;
+  return cleanString(`${existing}\n\n${incoming}`, 4000);
+}
+
+function matrixIdentity(contact = {}) {
+  if (contact.email) return `email:${safeFileSegment(contact.email, "email")}`;
+  if (contact.linkedinProfileUrl) return `linkedin:${safeFileSegment(contact.linkedinProfileUrl.toLowerCase().replace(/\/+$/, ""), "profile")}`;
+  return `name:${safeFileSegment(contact.name, "person")}`;
+}
+
+async function upsertBlinqMatrixProspect(env, contact, contactKey, captureId, now, rawPayload = {}) {
+  const isPartner = isPartnerClassification(contact.classification);
+  const prefix = matrixProspectPrefix(contact.classification);
+  const role = matrixRegistrationRole(contact.classification);
+  const eventShowId = cleanString(contact.eventShowId, 80).toLowerCase().replace(/[\s_]+/g, "-");
+  const hasAssignedEvent = Boolean(contact.eventId || contact.eventSlug || contact.eventName);
+  const eventSegment = safeFileSegment(hasAssignedEvent ? `${contact.eventSlug || contact.eventName || contact.eventId}:${eventShowId || "both"}` : "unassigned", "unassigned");
+  const key = `${prefix}${eventSegment}:${matrixIdentity(contact)}`;
+  const existing = await readBlinqStorageJson(env, key).catch(() => null);
+  const status = cleanMatrixStatus(contact.crmStatus || existing?.crmStatus || existing?.guestStatus || existing?.partnerStatus || existing?.registrationStatus);
+  const linkedinConnectionStatus = cleanMatrixOption(
+    contact.linkedinConnectionStatus || existing?.linkedinConnectionStatus,
+    ["unknown", "not-connected", "connection-requested", "connected", "declined", "unreachable"],
+    "unknown"
+  );
+  const registrationRequestStatus = cleanMatrixOption(
+    contact.registrationRequestStatus || existing?.registrationRequestStatus,
+    ["not-sent", "drafted", "sent", "reminder-sent", "bounced", "declined"],
+    "not-sent"
+  );
+  const existingNotes = cleanString(existing?.preRegistrationNotes || existing?.matrixNotes || existing?.engagementNotes, 4000);
+  const record = {
+    ...(existing || {}),
+    id: cleanString(existing?.id, 200) || captureId,
+    type: matrixProspectType(contact.classification),
+    matrixOnly: true,
+    status: cleanString(existing?.status, 80) || "tracking",
+    source,
+    captureSource: source,
+    sourceContactKey: contactKey,
+    eventId: cleanString(contact.eventId || (hasAssignedEvent ? `${contact.eventSlug || contact.eventName}:${eventShowId || "both"}` : existing?.eventId), 200),
+    eventSlug: contact.eventSlug || cleanString(existing?.eventSlug, 200),
+    eventName: contact.eventName || cleanString(existing?.eventName, 240),
+    eventDate: contact.eventDate || cleanString(existing?.eventDate, 120),
+    eventTime: contact.eventTime || cleanString(existing?.eventTime, 120),
+    eventShowId: eventShowId || cleanString(existing?.eventShowId, 80),
+    eventShowLabel: cleanString(existing?.eventShowLabel, 120),
+    eventShowTime: contact.eventTime || cleanString(existing?.eventShowTime, 120),
+    name: contact.name,
+    email: contact.email,
+    intendedGuestName: contact.name,
+    intendedGuestEmail: contact.email,
+    invitedEmail: contact.email,
+    guestEmail: contact.email,
+    invitedName: contact.name,
+    guestName: contact.name,
+    partnerContactEmail: isPartner ? contact.email : "",
+    partnerContactName: isPartner ? contact.name : "",
+    partnerCompany: isPartner ? contact.company : cleanString(existing?.partnerCompany, 240),
+    company: contact.company,
+    title: contact.title,
+    jobTitle: contact.title,
+    phone: contact.phone || cleanString(existing?.phone, 80),
+    phoneVerificationStatus: contact.phone ? "verified" : cleanString(existing?.phoneVerificationStatus),
+    photoUrl: contact.profilePhoto || cleanString(existing?.photoUrl, 500),
+    profilePhotoUrl: contact.profilePhoto || cleanString(existing?.profilePhotoUrl, 500),
+    linkedinProfileUrl: contact.linkedinProfileUrl || cleanString(existing?.linkedinProfileUrl || existing?.linkedinUrl, 500),
+    linkedinUrl: contact.linkedinProfileUrl || cleanString(existing?.linkedinUrl || existing?.linkedinProfileUrl, 500),
+    enrichmentSource: cleanString(existing?.enrichmentSource || (contact.linkedinProfileUrl ? "blinq-linkedin-profile-url" : ""), 120),
+    crmStatus: status,
+    guestStatus: status,
+    partnerStatus: isPartner ? status : "",
+    registrationStatus: status,
+    guestRegistrationType: isPartner ? cleanString(existing?.guestRegistrationType) : role,
+    partnerRegistrationType: isPartner ? role : cleanString(existing?.partnerRegistrationType),
+    registrationRole: role,
+    potentialSponsor: !isPartner && (contact.potentialSponsor || existing?.potentialSponsor === true),
+    invitedBy: cleanString(contact.relationshipOwner || existing?.invitedBy || "zapier", 180),
+    relationshipOwner: contact.relationshipOwner || cleanString(existing?.relationshipOwner),
+    nextAction: contact.nextAction,
+    linkedinConnectionStatus,
+    registrationRequestStatus,
+    matrixInterestRating: cleanStarRating(contact.matrixInterestRating, cleanStarRating(existing?.matrixInterestRating, 1)),
+    preRegistrationNotes: mergeMatrixNotes(existingNotes, contact, rawPayload),
+    blinqPayload: rawPayload,
+    blinqFields: Object.keys(rawPayload || {}).sort(),
+    capturedAt: now,
+    capturedBy: "zapier",
+    createdAt: cleanString(existing?.createdAt) || now,
+    createdBy: cleanString(existing?.createdBy) || source,
+    updatedAt: now,
+    updatedBy: source
+  };
+
+  await writeCrmStorageJson(env, key, record);
+  return {
+    matrixKey: key,
+    matrixType: record.type,
+    matrixCreated: !existing
+  };
+}
+
 async function upsertBlinqContact(env, contact, rawPayload = {}) {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const nameParts = splitName(contact.name);
   const key = `${contactPrefix}${contact.email}`;
-  const existing = await readCrmStorageJson(env, key).catch(() => null);
+  const existing = await readBlinqStorageJson(env, key).catch(() => null);
   const companyRefs = await upsertCompanyRollup(env, contact, key, now);
+  const matrixRefs = await upsertBlinqMatrixProspect(env, contact, key, id, now, rawPayload);
   const activity = activityForCapture(contact, id, now, rawPayload);
   const event = eventForCapture(contact, id, now);
+  const role = matrixRegistrationRole(contact.classification);
+  const status = cleanMatrixStatus(contact.crmStatus);
 
   const record = {
     ...(existing || {}),
@@ -349,18 +627,22 @@ async function upsertBlinqContact(env, contact, rawPayload = {}) {
     lastName: nameParts.lastName,
     company: contact.company,
     title: contact.title,
-    phone: contact.phone,
+    phone: contact.phone || cleanString(existing?.phone, 80),
     phoneVerificationStatus: contact.phone ? "verified" : cleanString(existing?.phoneVerificationStatus),
     photoUrl: contact.profilePhoto,
     profilePhotoUrl: contact.profilePhoto,
     linkedinProfileUrl: contact.linkedinProfileUrl || cleanString(existing?.linkedinProfileUrl || existing?.linkedinUrl, 500),
+    sourceMatrixProspectKey: matrixRefs.matrixKey,
     classification: contact.classification,
     registrationType: contact.classificationLabel,
-    registrationRole: contact.classification,
-    guestRegistrationType: isPartnerClassification(contact.classification) ? cleanString(existing?.guestRegistrationType) : contact.classification,
-    partnerRegistrationType: isPartnerClassification(contact.classification) ? contact.classification : cleanString(existing?.partnerRegistrationType),
-    lifecycleStage: isPartnerClassification(contact.classification) ? "guest" : "guest",
+    registrationRole: role,
+    guestRegistrationType: isPartnerClassification(contact.classification) ? cleanString(existing?.guestRegistrationType) : role,
+    partnerRegistrationType: isPartnerClassification(contact.classification) ? role : cleanString(existing?.partnerRegistrationType),
+    lifecycleStage: "prospect",
     contactStatus: isPartnerClassification(contact.classification) ? "partner candidate" : "potential guest",
+    crmStatus: status,
+    guestStatus: status,
+    registrationStatus: status,
     nextAction: contact.nextAction,
     relationshipOwner: contact.relationshipOwner || cleanString(existing?.relationshipOwner),
     emailPermission: cleanString(existing?.emailPermission) || "transactional-only",
@@ -376,7 +658,8 @@ async function upsertBlinqContact(env, contact, rawPayload = {}) {
     crmUpdatedBy: source,
     activity: mergeActivity(existing?.activity, activity),
     events: mergeEvents(existing?.events, event),
-    ...companyRefs
+    ...companyRefs,
+    ...matrixRefs
   };
 
   await writeCrmStorageJson(env, key, record);
@@ -386,6 +669,9 @@ async function upsertBlinqContact(env, contact, rawPayload = {}) {
     email: contact.email,
     created: !existing,
     classification: contact.classification,
+    matrixKey: matrixRefs.matrixKey,
+    matrixType: matrixRefs.matrixType,
+    matrixCreated: matrixRefs.matrixCreated,
     profileKey: companyRefs.profileKey || "",
     companyKey: companyRefs.companyKey || ""
   };
@@ -405,7 +691,7 @@ export async function onRequestGet({ request, env }) {
     endpoint: "/api/blinq-contact",
     accepts: ["POST"],
     requiredFields: ["name", "job_title", "company", "email", "profile_photo"],
-    optionalFields: ["phone"]
+    optionalFields: ["phone", "classification", "linkedin_profile_url", "notes", "event_slug", "event_name", "matrix_interest_rating"]
   });
 }
 

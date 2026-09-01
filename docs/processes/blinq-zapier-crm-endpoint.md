@@ -5,7 +5,7 @@ Date: 2026-09-01
 
 ## Purpose
 
-Receive Blinq contact captures through Zapier and add or update the person in the Mojo AI Summits CRM.
+Receive Blinq contact captures through Zapier and add or update the person in the Mojo AI Summits CRM and the appropriate prospect matrix.
 
 This replaces the earlier native mobile scanner direction for the first implementation. Blinq owns the scanning/contact exchange experience. Zapier delivers the normalized contact payload to Mojo.
 
@@ -86,6 +86,10 @@ Zapier can add these fields when Blinq or the Zap includes a selection step:
 - `relationship_owner`
 - `next_action`
 - `linkedin_profile_url`
+- `matrix_interest_rating`
+- `linkedin_connection_status`
+- `registration_request_status`
+- `crm_status`
 
 Supported classification values and aliases:
 
@@ -100,7 +104,10 @@ If no classification is sent, the endpoint defaults to `potential-guest`.
 
 ## CRM Behavior
 
-- Upserts by verified email under `crm:contact:{email}`.
+- Upserts a Guest Matrix row under `crm:guest-matrix-prospect:*` for guest-style classifications.
+- Upserts a Partner Matrix row under `crm:partner-matrix-prospect:*` for partner-style classifications.
+- Keys matrix rows by verified email when available so repeated Blinq scans update the same tracked person.
+- Upserts the canonical contact under `crm:contact:{email}` and links it back to the matrix row with `sourceMatrixProspectKey`.
 - Maps Blinq `profile_photo` to CRM `photoUrl` and `profilePhotoUrl`.
 - Marks phone status as `verified` when a phone number is provided. When phone is omitted, any existing phone verification status is preserved.
 - Appends a CRM activity record with source `blinq-zapier`.
@@ -143,6 +150,8 @@ Expected success response:
   "ok": true,
   "source": "blinq-zapier",
   "contactKey": "crm:contact:john@acmecorp.com",
+  "matrixKey": "crm:guest-matrix-prospect:unassigned:email:john-at-acmecorp.com",
+  "matrixType": "guest-matrix-prospect",
   "email": "john@acmecorp.com",
   "created": true,
   "classification": "potential-guest"
