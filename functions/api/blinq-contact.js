@@ -7,7 +7,7 @@ const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store",
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "POST, OPTIONS",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
   "access-control-allow-headers": "authorization, content-type, x-api-key"
 };
 
@@ -154,7 +154,17 @@ function configuredSecrets(env = {}) {
 function submittedSecret(request) {
   const authorization = cleanString(request.headers.get("authorization"), 600);
   if (/^bearer\s+/i.test(authorization)) return authorization.replace(/^bearer\s+/i, "").trim();
-  return cleanString(request.headers.get("x-api-key"), 600);
+  const headerKey = cleanString(request.headers.get("x-api-key"), 600);
+  if (headerKey) return headerKey;
+
+  const url = new URL(request.url);
+  return cleanString(
+    url.searchParams.get("token")
+      || url.searchParams.get("api_key")
+      || url.searchParams.get("apikey")
+      || url.searchParams.get("key"),
+    600
+  );
 }
 
 function requireApiKey(request, env = {}) {
