@@ -60,6 +60,8 @@ Downloads require an additional email-code verification step. The `/files/` page
 
 The file list supports area, folder, text search, submitter filtering, and object-size sorting so admins can quickly find large files or uploads from a specific person.
 
+The files page should show an inline Sign in action for expired or missing Mojo Auth sessions. If Microsoft Graph cannot send the download MFA code, the API should return a storage email-delivery error rather than exposing provider credential text to the user.
+
 ## Mojo Auth Setup
 
 Before using the storage portal in production, protect the Storage API through `/access`:
