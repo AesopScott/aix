@@ -580,6 +580,16 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/api/invite-request", "mojoaisummits.com/api/invite-request/*"]
   },
   {
+    id: "api-blinq-contact",
+    kind: "api",
+    group: "APIs",
+    label: "Blinq Contact API",
+    summary: "Receives authenticated Blinq contact captures from Zapier and upserts CRM contacts.",
+    mode: "public",
+    matches: [{ exact: "/api/blinq-contact" }, { prefix: "/api/blinq-contact/" }],
+    domains: ["mojoaisummits.com/api/blinq-contact", "mojoaisummits.com/api/blinq-contact/*"]
+  },
+  {
     id: "api-phone-verification",
     kind: "api",
     group: "APIs",
