@@ -4908,21 +4908,28 @@ async function partnerMatrixProspects(env) {
 }
 
 function normalizePartnerInfoSubmission(key, record = {}) {
-  const company = cleanString(record.company || record.displayName || record.companyLegalName, 240);
+  const company = cleanString(record.company || record.companyName || record.organizationName || record.displayName || record.companyLegalName, 240);
   return {
     key,
     id: cleanString(record.id || key, 180),
     type: "partner-info",
     company,
+    organizationName: cleanString(record.organizationName, 240),
+    companyName: cleanString(record.companyName, 240),
     companyLegalName: cleanString(record.companyLegalName, 240),
     displayName: cleanString(record.displayName, 240),
     companySlug: cleanString(record.companySlug || companySlug(company), 180),
     website: cleanString(record.website, 500),
     headquarters: cleanString(record.headquarters, 240),
-    oneLineDescriptor: cleanString(record.oneLineDescriptor, 220),
-    elevatorPitch: cleanString(record.elevatorPitch, 1200),
+    description: cleanString(record.description || record.oneLineDescriptor, 4000),
+    partnerClientMessaging: cleanString(record.partnerClientMessaging || record.elevatorPitch, 4000),
+    oneLineDescriptor: cleanString(record.oneLineDescriptor || record.description, 220),
+    elevatorPitch: cleanString(record.elevatorPitch || record.partnerClientMessaging, 1200),
+    primaryCategory: cleanString(record.primaryCategory, 160),
     categories: Array.isArray(record.categories) ? record.categories.map((item) => cleanString(item, 160)).filter(Boolean) : [],
     categoryOther: cleanString(record.categoryOther, 500),
+    targetExecutiveRoles: Array.isArray(record.targetExecutiveRoles) ? record.targetExecutiveRoles.map((item) => cleanString(item, 160)).filter(Boolean) : [],
+    targetIndustries: Array.isArray(record.targetIndustries) ? record.targetIndustries.map((item) => cleanString(item, 160)).filter(Boolean) : [],
     primaryContact: record.primaryContact && typeof record.primaryContact === "object" ? record.primaryContact : {},
     executive: record.executive && typeof record.executive === "object" ? record.executive : {},
     secondExecutive: record.secondExecutive && typeof record.secondExecutive === "object" ? record.secondExecutive : {},

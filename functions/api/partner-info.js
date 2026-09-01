@@ -10,6 +10,7 @@ const jsonHeaders = {
 };
 
 const partnerInfoPrefix = "crm:partner-info:";
+const partnerCompanyPrefix = "partner-company:";
 const partnerInfoLogoPrefix = "crm/partner-info-logos";
 const maxFieldLength = 4000;
 const maxLogoBytes = 8 * 1024 * 1024;
@@ -111,22 +112,57 @@ function contactPayload(payload, prefix) {
   };
 }
 
-function cleanPayload(payload = {}) {
-  const companyLegalName = cleanString(payload.companyLegalName, 240);
-  const displayName = cleanString(payload.displayName, 240);
+function cleanListText(value, maxItems = 24) {
+  return cleanArray(value, maxItems).join(", ");
+}
+
+function cleanTextArray(value, maxItems = 24) {
+  const fromArray = cleanArray(value, maxItems);
+  if (fromArray.length) return fromArray;
+  return cleanString(value, 2000)
+    .split(/\n|,/)
+    .map((item) => cleanString(item, 160))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function selectedCompanyNames(company = {}) {
+  const legalName = cleanString(company.companyLegalName, 240);
+  const displayName = cleanString(company.displayName, 240);
+  return {
+    companyLegalName: legalName,
+    displayName,
+    company: displayName || legalName,
+    organizationName: displayName || legalName
+  };
+}
+
+function cleanPayload(payload = {}, selectedCompany = {}) {
+  const names = selectedCompanyNames(selectedCompany);
+  const companyLegalName = names.companyLegalName;
+  const displayName = cleanString(payload.displayName, 240) || names.displayName;
   const company = displayName || companyLegalName;
-  const slug = companySlug(company);
+  const slug = selectedCompany.slug;
+  const categories = cleanArray([...cleanArray(payload.categories, 16), cleanString(payload.categoryOther, 160)], 16);
+  const targetExecutiveRoles = cleanTextArray(payload.buyerTitles, 24);
+  const targetIndustries = cleanTextArray(payload.industries, 24);
+  const partnerClientMessaging = cleanString(payload.partnerClientMessaging || payload.elevatorPitch, 4000);
   return {
     type: "partner-info",
     companyLegalName,
     displayName,
     company,
+    organizationName: displayName || names.organizationName,
+    companyName: company,
     companySlug: slug,
-    website: cleanString(payload.website, 500),
-    headquarters: cleanString(payload.headquarters, 240),
-    oneLineDescriptor: cleanString(payload.oneLineDescriptor, 220),
-    elevatorPitch: cleanString(payload.elevatorPitch, 1200),
-    categories: cleanArray(payload.categories, 16),
+    website: cleanString(payload.website || selectedCompany.website, 500),
+    headquarters: cleanString(payload.headquarters || selectedCompany.headquarters, 240),
+    description: cleanString(payload.description || payload.oneLineDescriptor, 4000),
+    partnerClientMessaging,
+    categories,
+    primaryCategory: categories[0] || cleanString(payload.categoryOther, 160),
+    targetExecutiveRoles,
+    targetIndustries,
     categoryOther: cleanString(payload.categoryOther, 500),
     primaryContact: contactPayload(payload, "primaryContact"),
     executive: contactPayload(payload, "executive"),
@@ -176,11 +212,11 @@ function cleanPayload(payload = {}) {
 }
 
 function validate(record) {
-  if (!record.companyLegalName && !record.displayName) return "Company legal name or display name is required.";
+  if (!record.companyLegalName && !record.displayName) return "Choose the partner company legal name from the list.";
   if (!record.companySlug) return "Company name could not be used for a partner profile.";
   if (!record.website) return "Website is required.";
-  if (!record.oneLineDescriptor) return "One-line descriptor is required.";
-  if (!record.elevatorPitch) return "Elevator pitch is required.";
+  if (!record.description) return "One-line descriptor is required.";
+  if (!record.partnerClientMessaging) return "Elevator pitch is required.";
   if (!record.categories.length && !record.categoryOther) return "Choose at least one category or describe the category.";
   if (!record.primaryContact.nameTitle || !isEmail(record.primaryContact.email)) return "Primary contact name/title and email are required.";
   if (!record.executive.nameTitle || !isEmail(record.executive.email)) return "Executive seat holder name/title and email are required.";
@@ -190,6 +226,34 @@ function validate(record) {
   if (!record.permissions.publishItems.length || !record.permissions.attributionPreference) return "Publication permissions are required.";
   if (!record.signoff.nameTitle || !record.signoff.date) return "Sign-off name/title and date are required.";
   return "";
+}
+
+async function resolvePartnerCompanySelection(env, payload = {}) {
+  const submittedSlug = companySlug(payload.partnerCompanySlug || payload.companySlug);
+  const submittedNameSlug = companySlug(payload.companyLegalName || payload.company || payload.displayName);
+  const options = await partnerCompanyOptions(env);
+  const selected = submittedSlug
+    ? options.find((company) => company.slug === submittedSlug)
+    : options.find((company) =>
+      submittedNameSlug && (
+        companySlug(company.companyLegalName) === submittedNameSlug ||
+        companySlug(company.displayName) === submittedNameSlug
+      )
+    );
+  if (!selected) {
+    const error = new Error("Choose an existing partner company from the company legal name list.");
+    error.status = 400;
+    throw error;
+  }
+  if (submittedNameSlug && ![
+    selected.companyLegalName,
+    selected.displayName
+  ].some((value) => companySlug(value) === submittedNameSlug)) {
+    const error = new Error("Company legal name does not match the selected partner company.");
+    error.status = 400;
+    throw error;
+  }
+  return selected;
 }
 
 async function readPayload(request) {
@@ -253,12 +317,19 @@ function compactRecord(record = {}, key = "") {
     key,
     id: cleanString(record.id, 120),
     type: "partner-info",
-    company: cleanString(record.company || record.displayName || record.companyLegalName, 240),
+    company: cleanString(record.company || record.companyName || record.organizationName || record.displayName || record.companyLegalName, 240),
     companyLegalName: cleanString(record.companyLegalName, 240),
     displayName: cleanString(record.displayName, 240),
+    organizationName: cleanString(record.organizationName, 240),
+    companyName: cleanString(record.companyName, 240),
     companySlug: cleanString(record.companySlug, 160),
     website: cleanString(record.website, 500),
     headquarters: cleanString(record.headquarters, 240),
+    description: cleanString(record.description || record.oneLineDescriptor, 4000),
+    partnerClientMessaging: cleanString(record.partnerClientMessaging || record.elevatorPitch, 4000),
+    primaryCategory: cleanString(record.primaryCategory, 160),
+    targetExecutiveRoles: cleanArray(record.targetExecutiveRoles, 24),
+    targetIndustries: cleanArray(record.targetIndustries, 24),
     oneLineDescriptor: cleanString(record.oneLineDescriptor, 220),
     elevatorPitch: cleanString(record.elevatorPitch, 1200),
     categories: cleanArray(record.categories, 16),
@@ -290,6 +361,97 @@ async function partnerInfoRecords(env) {
     .sort((a, b) => String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt)));
 }
 
+function compactPartnerCompany(record = {}, key = "") {
+  const slug = cleanString(record.companySlug || key.replace(partnerCompanyPrefix, ""), 160);
+  const legalName = cleanString(
+    record.companyLegalName ||
+      record.legalName ||
+      record.organizationLegalName ||
+      record.organizationName ||
+      record.company ||
+      record.companyName ||
+      record.name,
+    240
+  );
+  const displayName = cleanString(
+    record.displayName ||
+      record.organizationName ||
+      record.company ||
+      record.companyName ||
+      record.name ||
+      legalName,
+    240
+  );
+  if (!slug || !legalName) return null;
+  return {
+    slug,
+    companyLegalName: legalName,
+    displayName,
+    website: cleanString(record.website || record.companyWebsite, 500),
+    headquarters: cleanString(record.headquarters || record.hq || record.location, 240)
+  };
+}
+
+async function partnerCompanyOptions(env) {
+  const keys = await listCrmStorageKeys(env, partnerCompanyPrefix);
+  const companies = await Promise.all(keys.map(async (key) => {
+    const record = await readCrmStorageJson(env, key);
+    return record ? compactPartnerCompany(record, key) : null;
+  }));
+  const bySlug = new Map();
+  companies.filter(Boolean).forEach((company) => {
+    if (!bySlug.has(company.slug)) bySlug.set(company.slug, company);
+  });
+  return [...bySlug.values()].sort((a, b) =>
+    (a.displayName || a.companyLegalName).localeCompare(b.displayName || b.companyLegalName)
+  );
+}
+
+function firstClean(...values) {
+  for (const value of values) {
+    const clean = cleanString(value);
+    if (clean) return clean;
+  }
+  return "";
+}
+
+function intakeContact(record, contact = {}, role = "") {
+  const [namePart, ...titleParts] = cleanString(contact.nameTitle, 500).split(",").map((part) => cleanString(part, 180));
+  const email = cleanEmail(contact.email);
+  const name = namePart || email;
+  return {
+    id: email || name,
+    email,
+    name,
+    company: record.company,
+    companySlug: record.companySlug,
+    profileKey: `partner-company:${record.companySlug}`,
+    title: titleParts.join(", ") || role,
+    linkedinProfileUrl: cleanString(contact.linkedinUrl, 500),
+    source: "partner-info",
+    updatedAt: record.updatedAt,
+    updatedBy: "partner-info"
+  };
+}
+
+function dedupeContacts(contacts = []) {
+  const map = new Map();
+  contacts.forEach((contact) => {
+    const key = cleanEmail(contact?.email) || cleanString(contact?.name, 180).toLowerCase();
+    if (!key) return;
+    const existing = map.get(key) || {};
+    map.set(key, {
+      ...existing,
+      ...contact,
+      name: cleanString(contact?.name, 180) || cleanString(existing.name, 180),
+      email: cleanEmail(contact?.email) || cleanEmail(existing.email),
+      title: cleanString(contact?.title, 180) || cleanString(existing.title, 180),
+      linkedinProfileUrl: cleanString(contact?.linkedinProfileUrl, 500) || cleanString(existing.linkedinProfileUrl, 500)
+    });
+  });
+  return [...map.values()];
+}
+
 function requireCrmAccess(data = {}) {
   if (data?.auth?.email) return null;
   return json({ error: "Sign in with a Mojo AI Summits account to view partner profile intake records." }, { status: 401 });
@@ -300,9 +462,13 @@ export async function onRequestOptions() {
 }
 
 export async function onRequestGet({ request, env, data }) {
+  const url = new URL(request.url);
+  if (url.searchParams.get("companies") === "1") {
+    return json({ ok: true, partnerCompanies: await partnerCompanyOptions(env) });
+  }
+
   const accessError = requireCrmAccess(data);
   if (accessError) return accessError;
-  const url = new URL(request.url);
   const slug = companySlug(url.searchParams.get("companySlug") || url.searchParams.get("company"));
   const records = (await partnerInfoRecords(env)).filter((record) => !slug || record.companySlug === slug);
   return json({ ok: true, partnerInfoSubmissions: records });
@@ -316,6 +482,13 @@ export async function onRequestPost({ request, env }) {
   const { payload, files } = await readPayload(request);
   if (!payload || typeof payload !== "object") return json({ error: "Submit the partner profile intake form." }, { status: 400 });
 
+  let selectedCompany;
+  try {
+    selectedCompany = await resolvePartnerCompanySelection(env, payload);
+  } catch (selectionError) {
+    return json({ error: selectionError.message || "Choose an existing partner company." }, { status: selectionError.status || 400 });
+  }
+
   const id = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   const record = {
@@ -323,7 +496,7 @@ export async function onRequestPost({ request, env }) {
     createdAt,
     updatedAt: createdAt,
     source: "partnerinfo",
-    ...cleanPayload(payload)
+    ...cleanPayload(payload, selectedCompany)
   };
   const error = validate(record);
   if (error) return json({ error }, { status: 400 });
@@ -343,35 +516,48 @@ export async function onRequestPost({ request, env }) {
 
   const profileKey = `partner-company:${record.companySlug}`;
   const existingProfile = await readCrmStorageJson(env, profileKey).catch(() => null);
-  const contacts = [
+  const logo = record.logoUploads[0] || {};
+  const contacts = dedupeContacts([
     ...(Array.isArray(existingProfile?.contacts) ? existingProfile.contacts : []),
-    {
-      name: record.primaryContact.nameTitle,
-      email: record.primaryContact.email,
-      title: "Primary contact",
-      source: "partner-info"
-    },
-    {
-      name: record.executive.nameTitle,
-      email: record.executive.email,
-      title: "Executive seat holder",
-      source: "partner-info"
-    }
-  ].filter((contact) => cleanString(contact?.email) || cleanString(contact?.name));
+    intakeContact(record, record.primaryContact, "Primary contact"),
+    intakeContact(record, record.executive, "Executive seat holder"),
+    intakeContact(record, record.secondExecutive, "Second executive")
+  ]);
 
   await writeCrmStorageJson(env, profileKey, {
     ...(existingProfile || {}),
-    organizationName: record.displayName || record.companyLegalName,
+    organizationName: firstClean(record.organizationName, existingProfile?.organizationName, existingProfile?.company),
+    companyName: firstClean(record.companyName, existingProfile?.companyName, existingProfile?.company),
     company: record.company,
+    companyLegalName: firstClean(record.companyLegalName, existingProfile?.companyLegalName, existingProfile?.legalName),
     companySlug: record.companySlug,
-    website: record.website,
-    headquarters: record.headquarters,
-    oneLineDescriptor: record.oneLineDescriptor,
-    elevatorPitch: record.elevatorPitch,
-    categories: record.categories,
+    website: firstClean(record.website, existingProfile?.website, existingProfile?.companyWebsite),
+    headquarters: firstClean(record.headquarters, existingProfile?.headquarters, existingProfile?.hq, existingProfile?.location),
+    description: firstClean(record.description, existingProfile?.description),
+    partnerClientMessaging: firstClean(record.partnerClientMessaging, existingProfile?.partnerClientMessaging),
+    primaryCategory: firstClean(record.primaryCategory, existingProfile?.primaryCategory),
+    categories: record.categories.length ? record.categories : cleanArray(existingProfile?.categories, 20),
+    targetExecutiveRoles: record.targetExecutiveRoles.length ? record.targetExecutiveRoles : cleanArray(existingProfile?.targetExecutiveRoles || existingProfile?.targetBuyers, 24),
+    targetIndustries: record.targetIndustries.length ? record.targetIndustries : cleanArray(existingProfile?.targetIndustries, 24),
+    targetEmployeeRange: firstClean(record.market.typicalCustomerSize, existingProfile?.targetEmployeeRange, existingProfile?.employeeRange),
+    companyLogoKey: firstClean(logo.key, existingProfile?.companyLogoKey),
+    companyLogoOriginalName: firstClean(logo.originalName, existingProfile?.companyLogoOriginalName),
+    companyLogoContentType: firstClean(logo.contentType, existingProfile?.companyLogoContentType),
+    companyLogoSize: Number(logo.size || existingProfile?.companyLogoSize || 0),
+    companyLogoUploadedAt: firstClean(logo.uploadedAt, existingProfile?.companyLogoUploadedAt),
     partnerInfoKey: key,
     partnerInfoSubmittedAt: createdAt,
     partnerInfoUpdatedAt: createdAt,
+    partnerInfoAudit: {
+      key,
+      submittedAt: createdAt,
+      market: record.market,
+      pointOfView: record.pointOfView,
+      optionalDepth: record.optionalDepth,
+      permissions: record.permissions,
+      signoff: record.signoff,
+      logoUploads: record.logoUploads
+    },
     contacts,
     updatedAt: createdAt,
     updatedBy: "partner-info"
