@@ -29,6 +29,10 @@ The Partner Matrix payload now includes `partnerInfoSubmissions`.
 
 Rows match a submitted intake by company slug, contact email, or executive LinkedIn URL. Matched rows show a `Profile Intake` action that opens the full intake details in a modal. Unmatched rows show `Send Intake`, linking to `/partnerinfo/?company=...`.
 
+## CRM Intake Editing
+
+The CRM partner pipeline includes an `Intake` nav view. The view lists partner intake submissions as editable CRM forms, including basics, people, market, AI point of view, optional depth, permissions, notes, and signoff. Company legal name is edited through the existing partner-company dropdown. Saving an intake form updates the full `crm:partner-info:` submission and refreshes the matching `partner-company:` rollup. Uploaded logo metadata is visible in the editor, while binary logo replacement remains handled by the public intake upload flow.
+
 ## Verification
 
 - `node --check functions/api/partner-info.js`
@@ -37,3 +41,4 @@ Rows match a submitted intake by company slug, contact email, or executive Linke
 - `node scripts/check-website-analytics-privacy.mjs`
 - Static HTTP checks for `/partnerinfo/`, `/privacy/`, and `/crm/`
 - Mocked submit/read test for `/api/partner-info`
+- Mocked CRM save test for `save-partner-info-submission`

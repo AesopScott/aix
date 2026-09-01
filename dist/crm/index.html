@@ -1400,6 +1400,100 @@
 
     .partner-info-field.full { grid-column: 1 / -1; }
 
+    .partner-intake-tools {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 0.75rem;
+      align-items: end;
+      max-width: 100%;
+    }
+
+    .partner-intake-tools .button-link {
+      align-self: end;
+      text-align: center;
+    }
+
+    .partner-intake-summary {
+      color: var(--muted-blue);
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .partner-intake-list {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .partner-intake-card {
+      display: grid;
+      gap: 1rem;
+      padding: 1rem;
+      border: 1px solid rgba(0, 230, 255, 0.22);
+      border-radius: 8px;
+      background: rgba(5, 9, 19, 0.48);
+    }
+
+    .partner-intake-card header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: flex-start;
+      justify-content: space-between;
+      border: 0;
+      padding: 0;
+      background: transparent;
+    }
+
+    .partner-intake-card h3 {
+      margin: 0.2rem 0 0;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.15rem;
+    }
+
+    .partner-intake-form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .partner-intake-section {
+      display: grid;
+      gap: 0.75rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .partner-intake-section h4 {
+      margin: 0;
+      color: var(--cyan);
+      font-family: "Orbitron", sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .partner-intake-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .partner-intake-grid .span-full,
+    .partner-intake-section .span-full {
+      grid-column: 1 / -1;
+    }
+
+    .partner-intake-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    .partner-intake-actions button {
+      width: auto;
+      min-width: 9rem;
+    }
+
     .pill.good {
       color: var(--good);
       border-color: rgba(106, 240, 182, 0.42);
@@ -1819,8 +1913,10 @@
       main { padding: 1rem 0.5rem 3rem; }
       .table-scroll-proxy { left: 0.5rem; width: calc(100vw - 1rem); }
       #contactSaveAllButton { right: 0.5rem; bottom: 1.75rem; width: calc(100vw - 1rem); }
-      header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-add-form, .guest-matrix-controls, .guest-matrix-summary { grid-template-columns: 1fr; }
+      header, .hero, .crm-shell, .toolbar, .invite-grid, .registration-invite-grid, .manual-partner-contact, .partner-add-contact-form, .invite-search, .invite-row, .guest-matrix-add-form, .guest-matrix-controls, .guest-matrix-summary, .partner-intake-tools, .partner-intake-grid { grid-template-columns: 1fr; }
       .invite-grid-actions { grid-template-columns: 1fr; }
+      .partner-intake-actions { justify-content: stretch; }
+      .partner-intake-actions button { width: 100%; }
       .invite-actions {
         width: 100%;
         min-width: 0;
@@ -1886,6 +1982,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <div class="side-nav-group partner-pipeline" aria-label="Partner pipeline">
           <button type="button" data-view="partner-invite-links">Create Partner Registration Links</button>
           <button type="button" data-view="partner-matrix">Partner Matrix</button>
+          <button type="button" data-view="partner-intake">Intake</button>
           <button type="button" data-view="partner">Partner Registration</button>
           <button type="button" data-view="manual-partners">Add Partner</button>
           <button type="button" data-view="partners-company">Partners by Company</button>
@@ -2371,6 +2468,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       </form>
     </section>
 
+    <section class="invite-panel view-section partner-pipeline-panel" id="partnerIntakePanel" data-view-panel="partner-intake" hidden>
+      <div>
+        <p class="eyebrow">Partner profile intake</p>
+        <h2>Partner intake fields</h2>
+        <p>Edit submitted partner profile intake data and keep the partner company record aligned with the same CRM fields.</p>
+      </div>
+      <form class="partner-intake-tools" id="partnerIntakeSearchForm">
+        <label>
+          Search intake records
+          <input id="partnerIntakeSearch" type="search" placeholder="company, contact, category, market, notes">
+        </label>
+        <button class="secondary" type="button" id="partnerIntakeRefresh">Refresh Intake</button>
+        <a class="button-link compact secondary" href="/partnerinfo/" target="_blank" rel="noopener">Open Intake Form</a>
+      </form>
+      <div class="partner-intake-summary" id="partnerIntakeSummary"></div>
+      <div class="partner-intake-list" id="partnerIntakeList"></div>
+    </section>
+
     <section class="invite-panel view-section" id="registrationDebugPanel" data-view-panel="registration-debug" hidden>
       <div>
         <p class="eyebrow">Registration diagnostics</p>
@@ -2489,6 +2604,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const partnerInfoTitle = document.querySelector("#partnerInfoTitle");
     const partnerInfoBody = document.querySelector("#partnerInfoBody");
     const partnerInfoClose = document.querySelector("#partnerInfoClose");
+    const partnerIntakeSearchForm = document.querySelector("#partnerIntakeSearchForm");
+    const partnerIntakeSearch = document.querySelector("#partnerIntakeSearch");
+    const partnerIntakeRefresh = document.querySelector("#partnerIntakeRefresh");
+    const partnerIntakeSummary = document.querySelector("#partnerIntakeSummary");
+    const partnerIntakeList = document.querySelector("#partnerIntakeList");
     const partnerInviteForm = document.querySelector("#partnerInviteForm");
     const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
     const partnerInviteShow = document.querySelector("#partnerInviteShow");
@@ -2584,6 +2704,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       guestMatrixProspects: [],
       partnerMatrixProspects: [],
       partnerInfoSubmissions: [],
+      partnerCompanyOptions: [],
       upcomingEvents: []
     };
     let registrationDebug = null;
@@ -3578,6 +3699,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (activeView === "guest-matrix") return "Guest Matrix";
       if (activeView === "partner") return "Partner Registration";
       if (activeView === "partner-matrix") return "Partner Matrix";
+      if (activeView === "partner-intake") return "Partner Intake";
       if (activeView === "partners-company") return "Partners by Company";
       return state.label || (state.type === "contacts" ? "Contacts" : state.type === "partner" ? "Partner" : "Member");
     }
@@ -3591,7 +3713,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const url = new URL(api, window.location.origin);
       url.searchParams.set("type", type);
       if (["guest-matrix", "guest-invite-links", "create-guest-invite-links"].includes(view)) url.searchParams.set("matrix", "guest");
-      if (["partner-matrix", "partner-invite-links"].includes(view)) url.searchParams.set("matrix", "partner");
+      if (["partner-matrix", "partner-invite-links", "partner-intake"].includes(view)) url.searchParams.set("matrix", "partner");
+      if (view === "partner-intake") url.searchParams.set("intake", "1");
       if (view === "partner") url.searchParams.set("registrationLinks", "1");
       if (view === "partners-company") url.searchParams.set("includeManualPartners", "1");
       if (view === "create-guest-invite-links") url.searchParams.set("includeUpcomingEvents", "1");
@@ -3614,13 +3737,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         "guest-matrix",
         "create-guest-invite-links",
         "partner-invite-links",
-        "partner-matrix"
+        "partner-matrix",
+        "partner-intake"
       ].includes(view);
     }
 
     function pipelineGroupForView(view = activeView) {
       if (["guest-invite-links", "guest-matrix", "create-guest-invite-links", "guest", "member"].includes(view)) return "guest";
-      if (["partner-invite-links", "partner-matrix", "partner", "manual-partners", "partners-company"].includes(view)) return "partner";
+      if (["partner-invite-links", "partner-matrix", "partner-intake", "partner", "manual-partners", "partners-company"].includes(view)) return "partner";
       if (isProspectingView(view)) return "prospecting";
       return "";
     }
@@ -4240,6 +4364,383 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function closePartnerInfo() {
       partnerInfoModal?.classList.remove("open");
+    }
+
+    function partnerIntakeListText(value) {
+      if (Array.isArray(value)) return value.filter(Boolean).join("\n");
+      return String(value || "").trim();
+    }
+
+    function partnerIntakeField(name, label, value = "", options = {}) {
+      const full = options.full ? " span-full" : "";
+      const readonly = options.readonly ? " readonly" : "";
+      if (options.textarea) {
+        return `
+          <label class="${full.trim()}">
+            ${escapeHtml(label)}
+            <textarea name="${escapeHtml(name)}" placeholder="${escapeHtml(options.placeholder || "")}"${readonly}>${escapeHtml(partnerIntakeListText(value))}</textarea>
+          </label>
+        `;
+      }
+      return `
+        <label class="${full.trim()}">
+          ${escapeHtml(label)}
+          <input name="${escapeHtml(name)}" type="${escapeHtml(options.type || "text")}" value="${escapeHtml(value || "")}" placeholder="${escapeHtml(options.placeholder || "")}"${readonly}>
+        </label>
+      `;
+    }
+
+    function partnerIntakeSection(title, fields = []) {
+      return `
+        <section class="partner-intake-section">
+          <h4>${escapeHtml(title)}</h4>
+          <div class="partner-intake-grid">${fields.join("")}</div>
+        </section>
+      `;
+    }
+
+    function partnerIntakeCompanyOptions(record = {}) {
+      const options = [...(state.partnerCompanyOptions || [])];
+      const currentSlug = partnerInfoCompanySlug(record.companySlug || record.companyLegalName || record.company || "");
+      if (currentSlug && !options.some((company) => company.slug === currentSlug)) {
+        options.push({
+          slug: currentSlug,
+          companyLegalName: record.companyLegalName || record.company || record.displayName,
+          displayName: record.displayName || record.company
+        });
+      }
+      return options.sort((a, b) => String(a.displayName || a.companyLegalName).localeCompare(String(b.displayName || b.companyLegalName)));
+    }
+
+    function partnerIntakeCompanySelect(record = {}) {
+      const currentSlug = partnerInfoCompanySlug(record.companySlug || record.companyLegalName || record.company || "");
+      const options = partnerIntakeCompanyOptions(record);
+      return `
+        <label>
+          Company legal name
+          <select name="companySlug" required>
+            <option value="">Choose partner company</option>
+            ${options.map((company) => {
+              const slug = company.slug || partnerInfoCompanySlug(company.companyLegalName || company.company || company.displayName || "");
+              const legalName = company.companyLegalName || company.company || company.displayName || "";
+              const label = [company.displayName, legalName && legalName !== company.displayName ? legalName : ""].filter(Boolean).join(" | ");
+              return `<option value="${escapeHtml(slug)}" data-legal-name="${escapeHtml(legalName)}" ${slug === currentSlug ? "selected" : ""}>${escapeHtml(label || slug)}</option>`;
+            }).join("")}
+          </select>
+        </label>
+      `;
+    }
+
+    function partnerIntakeDateParts(value = "") {
+      const text = String(value || "").trim();
+      const match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) return { year: match[1], month: match[2], day: match[3] };
+      const parsed = text ? new Date(text) : null;
+      if (parsed && !Number.isNaN(parsed.getTime())) {
+        return {
+          year: String(parsed.getFullYear()),
+          month: String(parsed.getMonth() + 1).padStart(2, "0"),
+          day: String(parsed.getDate()).padStart(2, "0")
+        };
+      }
+      return { year: "", month: "", day: "" };
+    }
+
+    function partnerIntakeDateSelect(name, label, value = "") {
+      const parts = partnerIntakeDateParts(value);
+      const currentYear = new Date().getFullYear();
+      const years = [...new Set([parts.year, ...Array.from({ length: 7 }, (_, index) => String(currentYear - 2 + index))].filter(Boolean))];
+      const option = (candidate, selected) => `<option value="${escapeHtml(candidate)}" ${candidate === selected ? "selected" : ""}>${escapeHtml(candidate || "")}</option>`;
+      return `
+        <label>
+          ${escapeHtml(label)}
+          <div class="threshold-field">
+            <select name="${escapeHtml(name)}Month" aria-label="${escapeHtml(label)} month">
+              <option value="">Month</option>
+              ${Array.from({ length: 12 }, (_, index) => option(String(index + 1).padStart(2, "0"), parts.month)).join("")}
+            </select>
+            <select name="${escapeHtml(name)}Day" aria-label="${escapeHtml(label)} day">
+              <option value="">Day</option>
+              ${Array.from({ length: 31 }, (_, index) => option(String(index + 1).padStart(2, "0"), parts.day)).join("")}
+            </select>
+            <select name="${escapeHtml(name)}Year" aria-label="${escapeHtml(label)} year">
+              <option value="">Year</option>
+              ${years.map((year) => option(year, parts.year)).join("")}
+            </select>
+          </div>
+        </label>
+      `;
+    }
+
+    function partnerIntakeLogoText(record = {}) {
+      return (record.logoUploads || [])
+        .map((item) => [item.variant, item.originalName, item.contentType, item.size ? `${item.size} bytes` : "", item.uploadedAt].filter(Boolean).join(" | "))
+        .join("\n");
+    }
+
+    function partnerIntakeCard(record = {}) {
+      const market = record.market || {};
+      const pointOfView = record.pointOfView || {};
+      const optionalDepth = record.optionalDepth || {};
+      const permissions = record.permissions || {};
+      return `
+        <article class="partner-intake-card">
+          <header>
+            <div>
+              <p class="eyebrow">Partner intake</p>
+              <h3>${escapeHtml(record.company || record.companyName || record.displayName || record.companyLegalName || "Partner intake")}</h3>
+              <p>${escapeHtml(record.updatedAt ? `Updated ${formatDate(record.updatedAt)}` : record.createdAt ? `Submitted ${formatDate(record.createdAt)}` : "")}</p>
+            </div>
+            <div class="partner-intake-actions">
+              <button class="compact secondary" type="submit" form="partnerIntakeForm-${escapeHtml(record.id || partnerInfoCompanySlug(record.key))}">Save Intake</button>
+            </div>
+          </header>
+          <form class="partner-intake-form" id="partnerIntakeForm-${escapeHtml(record.id || partnerInfoCompanySlug(record.key))}" data-partner-intake-key="${escapeHtml(record.key || "")}">
+            ${partnerIntakeSection("Basics", [
+              partnerIntakeCompanySelect(record),
+              partnerIntakeField("displayName", "Display name", record.displayName),
+              partnerIntakeField("website", "Website", record.website, { type: "url" }),
+              partnerIntakeField("headquarters", "Headquarters", record.headquarters),
+              partnerIntakeField("description", "Description", record.description || record.oneLineDescriptor, { textarea: true, full: true }),
+              partnerIntakeField("partnerClientMessaging", "Client messaging", record.partnerClientMessaging || record.elevatorPitch, { textarea: true, full: true }),
+              partnerIntakeField("categories", "Categories", record.categories, { textarea: true }),
+              partnerIntakeField("categoryOther", "Category other", record.categoryOther),
+              partnerIntakeField("primaryCategory", "Primary category", record.primaryCategory)
+            ])}
+            ${partnerIntakeSection("People", [
+              partnerIntakeField("primaryContact.nameTitle", "Primary contact name/title", record.primaryContact?.nameTitle),
+              partnerIntakeField("primaryContact.email", "Primary contact email", record.primaryContact?.email, { type: "email" }),
+              partnerIntakeField("primaryContact.linkedinUrl", "Primary contact LinkedIn", record.primaryContact?.linkedinUrl, { type: "url" }),
+              partnerIntakeField("primaryContact.yearsInRole", "Primary contact years in role", record.primaryContact?.yearsInRole),
+              partnerIntakeField("primaryContact.formats", "Primary contact formats", record.primaryContact?.formats, { textarea: true }),
+              partnerIntakeField("primaryContact.topics", "Primary contact topics", record.primaryContact?.topics, { textarea: true, full: true }),
+              partnerIntakeField("primaryContact.bio", "Primary contact bio", record.primaryContact?.bio, { textarea: true, full: true }),
+              partnerIntakeField("executive.nameTitle", "Executive seat holder name/title", record.executive?.nameTitle),
+              partnerIntakeField("executive.email", "Executive email", record.executive?.email, { type: "email" }),
+              partnerIntakeField("executive.linkedinUrl", "Executive LinkedIn", record.executive?.linkedinUrl, { type: "url" }),
+              partnerIntakeField("executive.yearsInRole", "Executive years in role", record.executive?.yearsInRole),
+              partnerIntakeField("executive.formats", "Executive formats", record.executive?.formats, { textarea: true }),
+              partnerIntakeField("executive.topics", "Executive topics", record.executive?.topics, { textarea: true, full: true }),
+              partnerIntakeField("executive.bio", "Executive bio", record.executive?.bio, { textarea: true, full: true }),
+              partnerIntakeField("secondExecutive.nameTitle", "Second executive name/title", record.secondExecutive?.nameTitle),
+              partnerIntakeField("secondExecutive.email", "Second executive email", record.secondExecutive?.email, { type: "email" }),
+              partnerIntakeField("secondExecutive.linkedinUrl", "Second executive LinkedIn", record.secondExecutive?.linkedinUrl, { type: "url" }),
+              partnerIntakeField("secondExecutive.yearsInRole", "Second executive years in role", record.secondExecutive?.yearsInRole),
+              partnerIntakeField("secondExecutive.formats", "Second executive formats", record.secondExecutive?.formats, { textarea: true }),
+              partnerIntakeField("secondExecutive.topics", "Second executive topics", record.secondExecutive?.topics, { textarea: true, full: true }),
+              partnerIntakeField("secondExecutive.bio", "Second executive bio", record.secondExecutive?.bio, { textarea: true, full: true }),
+              partnerIntakeField("billingContact.nameEmail", "Billing contact name/email", record.billingContact?.nameEmail),
+              partnerIntakeField("billingContact.purchaseOrderNumber", "Purchase order number", record.billingContact?.purchaseOrderNumber)
+            ])}
+            ${partnerIntakeSection("Market", [
+              partnerIntakeField("targetExecutiveRoles", "Target executive roles", record.targetExecutiveRoles?.length ? record.targetExecutiveRoles : market.buyerTitles, { textarea: true, full: true }),
+              partnerIntakeField("targetIndustries", "Target industries", record.targetIndustries?.length ? record.targetIndustries : market.industries, { textarea: true, full: true }),
+              partnerIntakeField("market.idealCustomer", "Ideal customer", market.idealCustomer, { textarea: true, full: true }),
+              partnerIntakeField("market.typicalCustomerSize", "Customer size", market.typicalCustomerSize),
+              partnerIntakeField("market.primaryGeographies", "Geographies", market.primaryGeographies),
+              partnerIntakeField("market.salesCycleLength", "Sales cycle", market.salesCycleLength),
+              partnerIntakeField("market.contractSigner", "Contract signer", market.contractSigner)
+            ])}
+            ${partnerIntakeSection("AI Point Of View", [
+              partnerIntakeField("pointOfView.councilThemes", "Council themes", pointOfView.councilThemes, { textarea: true, full: true }),
+              partnerIntakeField("pointOfView.problemSolved", "Problem solved", pointOfView.problemSolved, { textarea: true, full: true }),
+              partnerIntakeField("pointOfView.topUseCases", "Top use cases", pointOfView.topUseCases, { textarea: true, full: true }),
+              partnerIntakeField("pointOfView.aiObjectives", "12-month objectives", pointOfView.aiObjectives, { textarea: true, full: true }),
+              partnerIntakeField("pointOfView.marketWrong", "Where the market is wrong", pointOfView.marketWrong, { textarea: true, full: true }),
+              partnerIntakeField("pointOfView.deploymentFailure", "Deployment failure", pointOfView.deploymentFailure, { textarea: true, full: true }),
+              partnerIntakeField("pointOfView.executiveQuestion", "Question for executives", pointOfView.executiveQuestion, { textarea: true, full: true })
+            ])}
+            ${partnerIntakeSection("Optional Depth", [
+              partnerIntakeField("optionalDepth.namedCustomers", "Named customers", optionalDepth.namedCustomers, { textarea: true, full: true }),
+              partnerIntakeField("optionalDepth.analystCoverage", "Analyst coverage", optionalDepth.analystCoverage, { textarea: true, full: true }),
+              partnerIntakeField("optionalDepth.alliances", "Alliances", optionalDepth.alliances, { textarea: true, full: true }),
+              partnerIntakeField("optionalDepth.certifications", "Certifications", optionalDepth.certifications, { textarea: true, full: true }),
+              partnerIntakeField("optionalDepth.researchLinks", "Research links", optionalDepth.researchLinks, { textarea: true, full: true }),
+              partnerIntakeField("optionalDepth.eventsCommunities", "Events and communities", optionalDepth.eventsCommunities, { textarea: true, full: true }),
+              partnerIntakeField("optionalDepth.offLimits", "Off-limits topics", optionalDepth.offLimits, { textarea: true, full: true })
+            ])}
+            ${partnerIntakeSection("Permissions And Signoff", [
+              partnerIntakeField("permissions.publishItems", "Profile permissions", permissions.publishItems, { textarea: true, full: true }),
+              partnerIntakeField("permissions.attributionPreference", "Attribution", permissions.attributionPreference),
+              partnerIntakeField("notes", "Notes", record.notes, { textarea: true, full: true }),
+              partnerIntakeField("signoff.nameTitle", "Sign-off name/title", record.signoff?.nameTitle),
+              partnerIntakeDateSelect("signoff.date", "Sign-off date", record.signoff?.date),
+              partnerIntakeField("logoUploads", "Logo uploads", partnerIntakeLogoText(record), { textarea: true, full: true, readonly: true })
+            ])}
+            <div class="partner-intake-actions">
+              <button type="submit">Save Intake</button>
+            </div>
+          </form>
+        </article>
+      `;
+    }
+
+    function partnerIntakeSearchText(record = {}) {
+      return [
+        record.company,
+        record.companyName,
+        record.organizationName,
+        record.displayName,
+        record.companyLegalName,
+        record.website,
+        record.headquarters,
+        record.description,
+        record.partnerClientMessaging,
+        ...(record.categories || []),
+        ...(record.targetExecutiveRoles || []),
+        ...(record.targetIndustries || []),
+        record.primaryContact?.nameTitle,
+        record.primaryContact?.email,
+        record.executive?.nameTitle,
+        record.executive?.email,
+        record.secondExecutive?.nameTitle,
+        record.secondExecutive?.email,
+        record.notes
+      ].join(" ").toLowerCase();
+    }
+
+    function renderPartnerIntake() {
+      if (activeView !== "partner-intake" || !partnerIntakeList) return;
+      const query = (partnerIntakeSearch?.value || "").trim().toLowerCase();
+      const records = (state.partnerInfoSubmissions || []).filter((record) => !query || partnerIntakeSearchText(record).includes(query));
+      if (partnerIntakeSummary) {
+        partnerIntakeSummary.textContent = `${records.length} of ${(state.partnerInfoSubmissions || []).length} intake record${(state.partnerInfoSubmissions || []).length === 1 ? "" : "s"}`;
+      }
+      partnerIntakeList.innerHTML = records.map(partnerIntakeCard).join("") || "<p>No partner intake records match the current search.</p>";
+    }
+
+    async function loadPartnerCompanyOptions() {
+      if (state.partnerCompanyOptions?.length) return;
+      const data = await fetch("/api/partner-info?companies=1").then(readJson);
+      state.partnerCompanyOptions = data.partnerCompanies || [];
+    }
+
+    function partnerIntakeArrayFromForm(form, name) {
+      return String(new FormData(form).get(name) || "")
+        .split(/\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    function partnerIntakeFormValue(form, name) {
+      return String(new FormData(form).get(name) || "").trim();
+    }
+
+    function partnerIntakeContactPayload(form, prefix) {
+      return {
+        nameTitle: partnerIntakeFormValue(form, `${prefix}.nameTitle`),
+        email: partnerIntakeFormValue(form, `${prefix}.email`),
+        linkedinUrl: partnerIntakeFormValue(form, `${prefix}.linkedinUrl`),
+        yearsInRole: partnerIntakeFormValue(form, `${prefix}.yearsInRole`),
+        bio: partnerIntakeFormValue(form, `${prefix}.bio`),
+        topics: partnerIntakeFormValue(form, `${prefix}.topics`),
+        formats: partnerIntakeArrayFromForm(form, `${prefix}.formats`)
+      };
+    }
+
+    function partnerIntakeDateFromForm(form, name) {
+      const month = partnerIntakeFormValue(form, `${name}Month`);
+      const day = partnerIntakeFormValue(form, `${name}Day`);
+      const year = partnerIntakeFormValue(form, `${name}Year`);
+      return year && month && day ? `${year}-${month}-${day}` : "";
+    }
+
+    function partnerIntakePayloadFromForm(form) {
+      const selectedCompany = form.elements.companySlug?.selectedOptions?.[0];
+      const targetExecutiveRoles = partnerIntakeArrayFromForm(form, "targetExecutiveRoles");
+      const targetIndustries = partnerIntakeArrayFromForm(form, "targetIndustries");
+      return {
+        action: "save-partner-info-submission",
+        key: form.dataset.partnerIntakeKey || "",
+        record: {
+          companySlug: partnerIntakeFormValue(form, "companySlug"),
+          companyLegalName: selectedCompany?.dataset.legalName || selectedCompany?.textContent || "",
+          displayName: partnerIntakeFormValue(form, "displayName"),
+          website: partnerIntakeFormValue(form, "website"),
+          headquarters: partnerIntakeFormValue(form, "headquarters"),
+          description: partnerIntakeFormValue(form, "description"),
+          partnerClientMessaging: partnerIntakeFormValue(form, "partnerClientMessaging"),
+          categories: partnerIntakeArrayFromForm(form, "categories"),
+          categoryOther: partnerIntakeFormValue(form, "categoryOther"),
+          primaryCategory: partnerIntakeFormValue(form, "primaryCategory"),
+          targetExecutiveRoles,
+          targetIndustries,
+          primaryContact: partnerIntakeContactPayload(form, "primaryContact"),
+          executive: partnerIntakeContactPayload(form, "executive"),
+          secondExecutive: partnerIntakeContactPayload(form, "secondExecutive"),
+          billingContact: {
+            nameEmail: partnerIntakeFormValue(form, "billingContact.nameEmail"),
+            purchaseOrderNumber: partnerIntakeFormValue(form, "billingContact.purchaseOrderNumber")
+          },
+          market: {
+            buyerTitles: targetExecutiveRoles.join(", "),
+            industries: targetIndustries.join(", "),
+            idealCustomer: partnerIntakeFormValue(form, "market.idealCustomer"),
+            typicalCustomerSize: partnerIntakeFormValue(form, "market.typicalCustomerSize"),
+            primaryGeographies: partnerIntakeFormValue(form, "market.primaryGeographies"),
+            salesCycleLength: partnerIntakeFormValue(form, "market.salesCycleLength"),
+            contractSigner: partnerIntakeFormValue(form, "market.contractSigner")
+          },
+          pointOfView: {
+            councilThemes: partnerIntakeArrayFromForm(form, "pointOfView.councilThemes"),
+            problemSolved: partnerIntakeFormValue(form, "pointOfView.problemSolved"),
+            topUseCases: partnerIntakeFormValue(form, "pointOfView.topUseCases"),
+            aiObjectives: partnerIntakeFormValue(form, "pointOfView.aiObjectives"),
+            marketWrong: partnerIntakeFormValue(form, "pointOfView.marketWrong"),
+            deploymentFailure: partnerIntakeFormValue(form, "pointOfView.deploymentFailure"),
+            executiveQuestion: partnerIntakeFormValue(form, "pointOfView.executiveQuestion")
+          },
+          optionalDepth: {
+            namedCustomers: partnerIntakeFormValue(form, "optionalDepth.namedCustomers"),
+            analystCoverage: partnerIntakeFormValue(form, "optionalDepth.analystCoverage"),
+            alliances: partnerIntakeFormValue(form, "optionalDepth.alliances"),
+            certifications: partnerIntakeFormValue(form, "optionalDepth.certifications"),
+            researchLinks: partnerIntakeFormValue(form, "optionalDepth.researchLinks"),
+            eventsCommunities: partnerIntakeFormValue(form, "optionalDepth.eventsCommunities"),
+            offLimits: partnerIntakeFormValue(form, "optionalDepth.offLimits")
+          },
+          permissions: {
+            publishItems: partnerIntakeArrayFromForm(form, "permissions.publishItems"),
+            attributionPreference: partnerIntakeFormValue(form, "permissions.attributionPreference")
+          },
+          notes: partnerIntakeFormValue(form, "notes"),
+          signoff: {
+            nameTitle: partnerIntakeFormValue(form, "signoff.nameTitle"),
+            date: partnerIntakeDateFromForm(form, "signoff.date")
+          }
+        }
+      };
+    }
+
+    async function savePartnerIntakeForm(form, submitter) {
+      const originalLabel = submitter?.textContent || "";
+      if (submitter) {
+        submitter.disabled = true;
+        submitter.textContent = "Saving...";
+      }
+      setNotice("Saving partner intake fields...");
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(partnerIntakePayloadFromForm(form))
+        }).then(readJson);
+        state = {
+          ...state,
+          ...data,
+          partnerCompanyOptions: state.partnerCompanyOptions || [],
+          loadedView: activeView
+        };
+        renderPartnerIntake();
+        setNotice("Partner intake fields saved.", "ok");
+      } catch (error) {
+        showErrorNotice(error, "Partner intake fields could not be saved.");
+      } finally {
+        if (submitter?.isConnected) {
+          submitter.disabled = false;
+          submitter.textContent = originalLabel || "Save Intake";
+        }
+      }
     }
 
     function guestMatrixDateTime(value = "") {
@@ -7211,6 +7712,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       renderRecordFilterOptions();
       renderRegistrationInvites();
       renderGuestMatrix();
+      renderPartnerIntake();
       renderPartnerInvites();
       if (isRecordsView()) renderRows();
       requestAnimationFrame(syncTableScrollProxy);
@@ -7251,20 +7753,27 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       try {
         const type = isRecordsView(requestedView) ? recordsTypeForView(requestedView) : (typeFilter.value || "contacts");
         typeFilter.value = type;
+        const existingPartnerCompanyOptions = state.partnerCompanyOptions || [];
         const data = await fetch(requestUrl).then(readJson);
         if (activeView !== requestedView) return;
         state = data;
         state.loadedView = requestedView;
         state.loadedUrl = requestUrl;
+        state.partnerCompanyOptions = data.partnerCompanyOptions || existingPartnerCompanyOptions;
         state.partnerInviteCodes = state.partnerInviteCodes || [];
         state.registrationInviteCodes = state.registrationInviteCodes || [];
         state.guestMatrixProspects = state.guestMatrixProspects || [];
         state.partnerMatrixProspects = state.partnerMatrixProspects || [];
         state.partnerInfoSubmissions = state.partnerInfoSubmissions || [];
+        if (requestedView === "partner-intake") await loadPartnerCompanyOptions();
         guestMatrixPendingChanges = {};
         updateGuestMatrixSaveButton();
         typeFilter.value = state.type || type;
-        const noun = state.type === "contacts" ? "contact" : "registrant";
+        const noun = requestedView === "partner-intake"
+          ? "intake record"
+          : state.type === "contacts"
+            ? "contact"
+            : "registrant";
         setNotice(`${state.summary.total || 0} ${activeLabel()} ${noun}${state.summary.total === 1 ? "" : "s"} loaded.`, "ok");
         render();
       } catch (error) {
@@ -9099,6 +9608,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     guestMatrixAddForm?.addEventListener("submit", submitGuestMatrixProspect);
     guestMatrixAddType?.addEventListener("change", updateGuestMatrixAddShowOptions);
     updateGuestMatrixAddShowOptions();
+
+    partnerIntakeSearchForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      renderPartnerIntake();
+    });
+    partnerIntakeSearch?.addEventListener("input", renderPartnerIntake);
+    partnerIntakeRefresh?.addEventListener("click", loadCrm);
+    partnerIntakeList?.addEventListener("submit", async (event) => {
+      const form = event.target.closest(".partner-intake-form");
+      if (!form) return;
+      event.preventDefault();
+      await savePartnerIntakeForm(form, event.submitter);
+    });
 
     partnerInfoClose?.addEventListener("click", closePartnerInfo);
     partnerInfoModal?.addEventListener("click", (event) => {

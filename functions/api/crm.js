@@ -4965,6 +4965,243 @@ async function partnerInfoSubmissions(env) {
   );
 }
 
+function normalizePartnerInfoContact(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    nameTitle: cleanString(source.nameTitle || source.name || source.title, 500),
+    email: cleanString(source.email, 240).toLowerCase(),
+    linkedinUrl: cleanString(source.linkedinUrl || source.linkedInUrl, 500),
+    yearsInRole: cleanString(source.yearsInRole, 120),
+    bio: cleanString(source.bio, 1200),
+    topics: cleanString(source.topics, 1200),
+    formats: cleanArray(source.formats, 8, 120)
+  };
+}
+
+function firstPartnerInfoValue(...values) {
+  for (const value of values) {
+    const clean = cleanString(value, 4000);
+    if (clean) return clean;
+  }
+  return "";
+}
+
+function partnerInfoProfileName(profile = {}) {
+  return cleanString(
+    profile.companyLegalName ||
+      profile.companyName ||
+      profile.organizationName ||
+      profile.displayName ||
+      profile.company,
+    240
+  );
+}
+
+function cleanPartnerInfoEditableRecord(input = {}, existing = {}, profile = {}, actor = "", selectedSlug = "") {
+  const now = new Date().toISOString();
+  const legalName = partnerInfoProfileName(profile);
+  const displayName = cleanString(input.displayName || profile.displayName || profile.organizationName || existing.displayName, 240);
+  const company = cleanString(displayName || legalName || profile.company || existing.company, 240);
+  const categories = cleanArray([
+    ...cleanArray(input.categories, 16, 160),
+    cleanString(input.categoryOther, 160)
+  ], 16, 160);
+  const targetExecutiveRoles = cleanArray(input.targetExecutiveRoles || input.market?.buyerTitles, 24, 160);
+  const targetIndustries = cleanArray(input.targetIndustries || input.market?.industries, 24, 160);
+  const record = {
+    ...(existing || {}),
+    type: "partner-info",
+    company,
+    companyName: company,
+    organizationName: cleanString(displayName || profile.organizationName || company, 240),
+    companyLegalName: legalName,
+    displayName,
+    companySlug: cleanString(selectedSlug || profile.companySlug || companySlug(legalName || company), 180),
+    website: cleanString(input.website || profile.website || existing.website, 500),
+    headquarters: cleanString(input.headquarters || profile.headquarters || existing.headquarters, 240),
+    description: cleanString(input.description, 4000),
+    partnerClientMessaging: cleanString(input.partnerClientMessaging, 4000),
+    categories,
+    primaryCategory: cleanString(input.primaryCategory || categories[0], 160),
+    targetExecutiveRoles,
+    targetIndustries,
+    categoryOther: cleanString(input.categoryOther, 500),
+    primaryContact: normalizePartnerInfoContact(input.primaryContact),
+    executive: normalizePartnerInfoContact(input.executive),
+    secondExecutive: normalizePartnerInfoContact(input.secondExecutive),
+    billingContact: {
+      nameEmail: cleanString(input.billingContact?.nameEmail, 500),
+      purchaseOrderNumber: cleanString(input.billingContact?.purchaseOrderNumber, 180)
+    },
+    market: {
+      buyerTitles: cleanString(input.market?.buyerTitles || targetExecutiveRoles.join(", "), 1200),
+      industries: cleanString(input.market?.industries || targetIndustries.join(", "), 1200),
+      idealCustomer: cleanString(input.market?.idealCustomer, 800),
+      typicalCustomerSize: cleanString(input.market?.typicalCustomerSize, 240),
+      primaryGeographies: cleanString(input.market?.primaryGeographies, 500),
+      salesCycleLength: cleanString(input.market?.salesCycleLength, 180),
+      contractSigner: cleanString(input.market?.contractSigner, 240)
+    },
+    pointOfView: {
+      councilThemes: cleanArray(input.pointOfView?.councilThemes, 12, 160),
+      problemSolved: cleanString(input.pointOfView?.problemSolved, 1200),
+      topUseCases: cleanString(input.pointOfView?.topUseCases, 2000),
+      aiObjectives: cleanString(input.pointOfView?.aiObjectives, 1600),
+      marketWrong: cleanString(input.pointOfView?.marketWrong, 1200),
+      deploymentFailure: cleanString(input.pointOfView?.deploymentFailure, 1600),
+      executiveQuestion: cleanString(input.pointOfView?.executiveQuestion, 800)
+    },
+    optionalDepth: {
+      namedCustomers: cleanString(input.optionalDepth?.namedCustomers, 1200),
+      analystCoverage: cleanString(input.optionalDepth?.analystCoverage, 1200),
+      alliances: cleanString(input.optionalDepth?.alliances, 1200),
+      certifications: cleanString(input.optionalDepth?.certifications, 1200),
+      researchLinks: cleanString(input.optionalDepth?.researchLinks, 1600),
+      eventsCommunities: cleanString(input.optionalDepth?.eventsCommunities, 1200),
+      offLimits: cleanString(input.optionalDepth?.offLimits, 1200)
+    },
+    permissions: {
+      publishItems: cleanArray(input.permissions?.publishItems, 16, 160),
+      attributionPreference: cleanString(input.permissions?.attributionPreference, 180)
+    },
+    notes: cleanString(input.notes, 1600),
+    signoff: {
+      nameTitle: cleanString(input.signoff?.nameTitle, 500),
+      date: cleanString(input.signoff?.date, 80)
+    },
+    logoUploads: Array.isArray(existing.logoUploads) ? existing.logoUploads : [],
+    updatedAt: now,
+    updatedBy: actor || "crm"
+  };
+  delete record.oneLineDescriptor;
+  delete record.elevatorPitch;
+  return record;
+}
+
+function partnerInfoRollupContact(record = {}, contact = {}, role = "") {
+  if (!contact?.nameTitle && !contact?.email && !contact?.linkedinUrl) return null;
+  return {
+    id: cleanString(contact.email || contact.linkedinUrl || contact.nameTitle, 240).toLowerCase(),
+    name: cleanString(contact.nameTitle, 500),
+    email: cleanString(contact.email, 240).toLowerCase(),
+    linkedinUrl: cleanString(contact.linkedinUrl, 500),
+    title: cleanString(role, 120),
+    role,
+    company: record.company,
+    companySlug: record.companySlug,
+    source: "Partner Info Intake",
+    bio: cleanString(contact.bio, 1200),
+    topics: cleanString(contact.topics, 1200),
+    formats: cleanArray(contact.formats, 8, 120),
+    updatedAt: record.updatedAt,
+    updatedBy: record.updatedBy
+  };
+}
+
+function mergePartnerInfoContacts(existing = [], incoming = []) {
+  const merged = new Map();
+  [...(Array.isArray(existing) ? existing : []), ...incoming].forEach((contact) => {
+    if (!contact) return;
+    const id = cleanString(contact.email || contact.linkedinUrl || contact.name || contact.id, 500).toLowerCase();
+    if (!id) return;
+    merged.set(id, {
+      ...(merged.get(id) || {}),
+      ...contact
+    });
+  });
+  return [...merged.values()];
+}
+
+async function savePartnerInfoSubmission(env, payload = {}, actor = "") {
+  const key = cleanString(payload.key || payload.partnerInfoKey, 600);
+  if (!key || !key.startsWith(PARTNER_INFO_PREFIX)) throw new Error("Choose a partner intake record to edit.");
+  const existing = await readSetupJson(env, key);
+  if (!existing) throw new Error("Partner intake record was not found.");
+
+  const input = payload.record && typeof payload.record === "object" ? payload.record : {};
+  const selectedSlug = companySlug(input.companySlug || input.partnerCompanySlug || input.companyLegalName || existing.companySlug || existing.companyLegalName || existing.company);
+  if (!selectedSlug) throw new Error("Choose an existing partner company.");
+  const profileKey = `partner-company:${selectedSlug}`;
+  const profile = await readSetupJson(env, profileKey);
+  if (!profile) throw new Error("Choose an existing partner company from the list.");
+
+  const submittedName = cleanString(input.companyLegalName, 240);
+  const profileNames = [
+    profile.companyLegalName,
+    profile.companyName,
+    profile.organizationName,
+    profile.displayName,
+    profile.company
+  ].map((name) => companySlug(name)).filter(Boolean);
+  if (submittedName && !profileNames.includes(companySlug(submittedName))) {
+    throw new Error("Selected company legal name does not match the existing partner company.");
+  }
+
+  const record = cleanPartnerInfoEditableRecord(input, existing, profile, actor, selectedSlug);
+  await writeSetupJson(env, key, record);
+
+  const logo = (record.logoUploads || [])[0] || {};
+  const contacts = mergePartnerInfoContacts(profile.contacts, [
+    partnerInfoRollupContact(record, record.primaryContact, "Primary contact"),
+    partnerInfoRollupContact(record, record.executive, "Executive seat holder"),
+    partnerInfoRollupContact(record, record.secondExecutive, "Second executive")
+  ]);
+
+  await writeSetupJson(env, profileKey, {
+    ...(profile || {}),
+    organizationName: firstPartnerInfoValue(record.organizationName, profile.organizationName, profile.company),
+    companyName: firstPartnerInfoValue(record.companyName, profile.companyName, profile.company),
+    company: record.company,
+    companyLegalName: firstPartnerInfoValue(record.companyLegalName, profile.companyLegalName),
+    companySlug: record.companySlug,
+    website: firstPartnerInfoValue(record.website, profile.website, profile.companyWebsite),
+    headquarters: firstPartnerInfoValue(record.headquarters, profile.headquarters, profile.hq, profile.location),
+    description: firstPartnerInfoValue(record.description, profile.description),
+    partnerClientMessaging: firstPartnerInfoValue(record.partnerClientMessaging, profile.partnerClientMessaging),
+    primaryCategory: firstPartnerInfoValue(record.primaryCategory, profile.primaryCategory),
+    categories: record.categories.length ? record.categories : cleanArray(profile.categories, 20, 160),
+    targetExecutiveRoles: record.targetExecutiveRoles.length ? record.targetExecutiveRoles : cleanArray(profile.targetExecutiveRoles || profile.targetBuyers, 24, 160),
+    targetIndustries: record.targetIndustries.length ? record.targetIndustries : cleanArray(profile.targetIndustries, 24, 160),
+    targetEmployeeRange: firstPartnerInfoValue(record.market.typicalCustomerSize, profile.targetEmployeeRange, profile.employeeRange),
+    companyLogoKey: firstPartnerInfoValue(logo.key, profile.companyLogoKey),
+    companyLogoOriginalName: firstPartnerInfoValue(logo.originalName, profile.companyLogoOriginalName),
+    companyLogoContentType: firstPartnerInfoValue(logo.contentType, profile.companyLogoContentType),
+    companyLogoSize: Number(logo.size || profile.companyLogoSize || 0),
+    companyLogoUploadedAt: firstPartnerInfoValue(logo.uploadedAt, profile.companyLogoUploadedAt),
+    partnerInfoKey: key,
+    partnerInfoUpdatedAt: record.updatedAt,
+    partnerInfoAudit: {
+      key,
+      submittedAt: record.createdAt,
+      updatedAt: record.updatedAt,
+      market: record.market,
+      pointOfView: record.pointOfView,
+      optionalDepth: record.optionalDepth,
+      permissions: record.permissions,
+      signoff: record.signoff,
+      logoUploads: record.logoUploads
+    },
+    contacts,
+    updatedAt: record.updatedAt,
+    updatedBy: actor || "crm"
+  });
+
+  const partnerInfoRows = await partnerInfoSubmissions(env);
+  return {
+    ok: true,
+    type: "partner",
+    label: registrantTypes.partner.label,
+    summary: { total: partnerInfoRows.length },
+    rows: [],
+    partnerInviteCodes: await partnerInviteCodes(env),
+    registrationInviteCodes: [],
+    guestMatrixProspects: [],
+    partnerMatrixProspects: await partnerMatrixProspects(env),
+    partnerInfoSubmissions: partnerInfoRows,
+    upcomingEvents: await upcomingEvents(env)
+  };
+}
+
 function matrixPersonEnrichmentFromRecord(record = {}, linkedinProfileUrl = "", extra = {}) {
   const name = cleanString(
     record.name ||
@@ -7332,6 +7569,7 @@ export async function onRequestGet({ request, env, data }) {
     const partnerInviteRows = await partnerInviteCodes(env);
     const partnerProspectRows = await partnerMatrixProspects(env);
     const partnerInfoRows = await partnerInfoSubmissions(env);
+    const intakeOnly = includeSideList("intake");
     const manualPartnerRows = includeSideList("includeManualPartners")
       ? (await registrants(env, "partner", { includeManualPartners: true })).filter((row) => row.manualPartner === true)
       : [];
@@ -7340,7 +7578,7 @@ export async function onRequestGet({ request, env, data }) {
       type,
       label: config.label,
       section: config.section,
-      summary: { total: partnerInviteRows.length + partnerProspectRows.length },
+      summary: { total: intakeOnly ? partnerInfoRows.length : partnerInviteRows.length + partnerProspectRows.length },
       rows: manualPartnerRows,
       partnerInviteCodes: partnerInviteRows,
       registrationInviteCodes: [],
@@ -7658,6 +7896,15 @@ export async function onRequestPost({ request, env, data }) {
         },
         { status: error.status || 500 }
       );
+    }
+  }
+
+  if (payload?.action === "save-partner-info-submission") {
+    try {
+      return json(await savePartnerInfoSubmission(env, payload, access.email));
+    } catch (error) {
+      const status = /choose|not found|match/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Partner intake fields could not be saved." }, { status });
     }
   }
 
