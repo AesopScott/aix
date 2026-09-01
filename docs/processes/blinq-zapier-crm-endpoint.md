@@ -19,7 +19,7 @@ Production URL:
 
 ## Authentication
 
-Use API by Zapier when possible.
+Use Webhooks by Zapier for the current production setup. The endpoint still supports API by Zapier headers, but the webhook URL token is simpler and avoids Zapier's static-header connection UI.
 
 Set one of these Cloudflare environment secrets:
 
@@ -39,7 +39,13 @@ or:
 x-api-key: <api-key>
 ```
 
-Do not put the API key in the URL or in the JSON payload.
+For Zapier Webhooks, the endpoint also accepts the same key as a URL token:
+
+```text
+https://mojoaisummits.com/api/blinq-contact?token=<api-key>
+```
+
+Use this only in Zapier's webhook URL field. Do not put the API key in the JSON payload.
 
 ## Payload
 
@@ -106,12 +112,19 @@ If no classification is sent, the endpoint defaults to `potential-guest`.
 
 ## Zapier Setup
 
-Recommended Zapier product: API by Zapier.
+Recommended Zapier product: Webhooks by Zapier.
 
-Connection/auth:
+Webhook setup:
+
+- Action app: `Webhooks by Zapier`
+- Event: `POST`
+- URL: `https://mojoaisummits.com/api/blinq-contact?token=<api-key>`
+- Payload type: JSON
+
+Alternative API by Zapier auth:
 
 - Base URL: `https://mojoaisummits.com`
-- Authentication type: API key or bearer token
+- Authentication type: static header API key or bearer token
 - Header: `Authorization: Bearer <api-key>`
 
 Action:

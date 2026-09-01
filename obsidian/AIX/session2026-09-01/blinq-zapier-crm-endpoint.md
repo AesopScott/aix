@@ -13,6 +13,7 @@ Scott clarified that Mojo will use Blinq and Zapier instead of building a native
 - Authenticated GET returns a Zapier-friendly health response that lists `phone` as optional.
 - Endpoint accepts optional relationship/classification fields for potential guest, featured guest, speaker, roundtable leader, partner candidate, and strategic partner contact routing.
 - Authentication uses an API key in `Authorization: Bearer <api-key>` or `x-api-key`.
+- Webhooks by Zapier can authenticate with the same key in the URL as `?token=<api-key>`.
 - Preferred Cloudflare secret is `MOJO_BLINQ_ZAPIER_API_KEY`.
 - CRM writes upsert by verified email under `crm:contact:{email}` and append a `blinq-zapier` activity record.
 
