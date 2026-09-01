@@ -762,8 +762,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     async function readJson(response) {
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Storage request failed.");
+      if (!response.ok) {
+        const error = new Error(data.error || "Storage request failed.");
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
       return data;
+    }
+
+    function isAuthError(error) {
+      const message = error?.message || "";
+      return error?.status === 401
+        || (error?.status === 403 && /access|credential|approved|account|storage request failed/i.test(message))
+        || /sign in|log in|login|session/i.test(message);
+    }
+
+    function showStorageError(element, error) {
+      if (isAuthError(error)) {
+        setAuthNotice(element, "Sign in again to continue.");
+        return;
+      }
+      setNotice(element, error.message, "error");
     }
 
     function apiModeUrl(mode) {
@@ -845,7 +865,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         closeDownloadMfa();
         window.location.href = downloadUrl;
       } catch (error) {
-        setNotice(downloadMfaNotice, error.message, "error");
+        showStorageError(downloadMfaNotice, error);
         downloadMfaCode.select();
       } finally {
         downloadMfaForm.querySelector('button[type="submit"]').disabled = false;
@@ -1105,11 +1125,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           `)
           .join("");
       } catch (error) {
-        if (/sign in/i.test(error.message)) {
-          setAuthNotice(listNotice, error.message);
-        } else {
-          setNotice(listNotice, error.message, "error");
-        }
+        showStorageError(listNotice, error);
       }
     }
 
@@ -1157,11 +1173,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         );
         await loadFiles();
       } catch (error) {
-        if (/sign in/i.test(error.message)) {
-          setAuthNotice(listNotice, error.message);
-        } else {
-          setNotice(listNotice, error.message, "error");
-        }
+        showStorageError(listNotice, error);
       } finally {
         backfillSubmittersButton.disabled = false;
       }
@@ -1208,11 +1220,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         setNotice(uploadNotice, `Uploaded ${data.name || displayName(data)}.`, "ok");
         await loadFiles();
       } catch (error) {
-        if (/sign in/i.test(error.message)) {
-          setAuthNotice(uploadNotice, error.message);
-        } else {
-          setNotice(uploadNotice, error.message, "error");
-        }
+        showStorageError(uploadNotice, error);
       }
     });
 
@@ -1241,11 +1249,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           await loadFolders(activePrefix(), folderFilter, { placeholder: "All folders" });
         }
       } catch (error) {
-        if (/sign in/i.test(error.message)) {
-          setAuthNotice(folderNotice, error.message);
-        } else {
-          setNotice(folderNotice, error.message, "error");
-        }
+        showStorageError(folderNotice, error);
       }
     });
 
@@ -1261,11 +1265,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         try {
           await beginDownload(decodeURIComponent(downloadKey));
         } catch (error) {
-          if (/sign in/i.test(error.message)) {
-            setAuthNotice(listNotice, error.message);
-          } else {
-            setNotice(listNotice, error.message, "error");
-          }
+          showStorageError(listNotice, error);
         }
         return;
       }
@@ -1290,11 +1290,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           setNotice(listNotice, `Renamed ${currentName || "file"} to ${cleanName}.`, "ok");
           await loadFiles();
         } catch (error) {
-          if (/sign in/i.test(error.message)) {
-            setAuthNotice(listNotice, error.message);
-          } else {
-            setNotice(listNotice, error.message, "error");
-          }
+          showStorageError(listNotice, error);
         }
       }
 
@@ -1308,11 +1304,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           await fetch(url, { method: "DELETE" }).then(readJson);
           await loadFiles();
         } catch (error) {
-          if (/sign in/i.test(error.message)) {
-            setAuthNotice(listNotice, error.message);
-          } else {
-            setNotice(listNotice, error.message, "error");
-          }
+          showStorageError(listNotice, error);
         }
       }
     });
@@ -1332,11 +1324,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }).then(readJson);
         setNotice(listNotice, `Updated status to ${statusLabel(status)}.`, "ok");
       } catch (error) {
-        if (/sign in/i.test(error.message)) {
-          setAuthNotice(listNotice, error.message);
-        } else {
-          setNotice(listNotice, error.message, "error");
-        }
+        showStorageError(listNotice, error);
         await loadFiles();
       }
     });

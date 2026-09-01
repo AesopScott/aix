@@ -752,7 +752,13 @@ async function startDownloadMfa(request, env, access, payload = {}) {
     });
   } catch (error) {
     await store.delete(`${DOWNLOAD_MFA_CHALLENGE_PREFIX}${challengeId}`).catch(() => null);
-    return json({ error: error?.message || "Download code could not be sent." }, { status: 500 });
+    return json(
+      {
+        error: "Download code could not be sent. Ask an admin to check storage email delivery.",
+        mfaDeliveryError: true
+      },
+      { status: 502 }
+    );
   }
 
   return json({
