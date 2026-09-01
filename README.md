@@ -222,7 +222,7 @@ The AWS principal needs permission for `sms-voice:SendTextMessage`; keep `sns:Pu
 The internal CRM lives at `/crm/` and reads from `/api/crm`.
 Member registrations are written to both `member-registration:*` and `crm:member-registrant:*` in `MOJO_SUMMITS_SETUP_STATE`.
 The CRM's Member Registrants section includes contact details, roles, phone verification status, CRM status, notes, and CSV export.
-The Blinq/Zapier CRM capture endpoint lives at `/api/blinq-contact`. It accepts authenticated Zapier POST payloads with `name`, `job_title`, `company`, `email`, `phone`, and `profile_photo`, then upserts `crm:contact:{email}` with a `blinq-zapier` activity entry. Configure `MOJO_BLINQ_ZAPIER_API_KEY` as the preferred Cloudflare secret and send it from Zapier as `Authorization: Bearer <api-key>` or `x-api-key`. See `docs/processes/blinq-zapier-crm-endpoint.md`.
+The Blinq/Zapier CRM capture endpoint lives at `/api/blinq-contact`. It accepts authenticated Zapier POST payloads with `name`, `job_title`, `company`, `email`, and `profile_photo`, plus optional `phone`, then upserts `crm:contact:{email}` with a `blinq-zapier` activity entry. Configure `MOJO_BLINQ_ZAPIER_API_KEY` as the preferred Cloudflare secret and send it from Zapier as `Authorization: Bearer <api-key>` or `x-api-key`. See `docs/processes/blinq-zapier-crm-endpoint.md`.
 
 ## Walkthrough Reviews
 

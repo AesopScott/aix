@@ -41,7 +41,7 @@ x-api-key: <api-key>
 
 Do not put the API key in the URL or in the JSON payload.
 
-## Required Payload
+## Payload
 
 The endpoint accepts JSON, `application/x-www-form-urlencoded`, or multipart form payloads.
 
@@ -62,7 +62,7 @@ Validation:
 - `job_title` is required and maps to CRM `title`.
 - `company` is required.
 - `email` is required and must be valid.
-- `phone` is required and normalized where possible.
+- `phone` is optional and normalized when provided.
 - `profile_photo` is required and must be an `http` or `https` URL.
 
 ## Optional Routing Fields
@@ -96,7 +96,7 @@ If no classification is sent, the endpoint defaults to `potential-guest`.
 
 - Upserts by verified email under `crm:contact:{email}`.
 - Maps Blinq `profile_photo` to CRM `photoUrl` and `profilePhotoUrl`.
-- Marks phone status as `verified` because Blinq sends verified email/contact data and Zapier is the trusted integration path.
+- Marks phone status as `verified` when a phone number is provided. When phone is omitted, any existing phone verification status is preserved.
 - Appends a CRM activity record with source `blinq-zapier`.
 - Appends a contact event named `Blinq contact capture`.
 - Stores original Blinq/Zapier payload keys for audit/debugging.
@@ -119,7 +119,8 @@ Action:
 - Method: `POST`
 - URL path: `/api/blinq-contact`
 - Body type: JSON
-- Required fields: `name`, `job_title`, `company`, `email`, `phone`, `profile_photo`
+- Required fields: `name`, `job_title`, `company`, `email`, `profile_photo`
+- Optional fields: `phone`
 - Optional classification field from a Zap step when Scott chooses potential guest vs partner.
 
 Expected success response:

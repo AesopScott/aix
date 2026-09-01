@@ -222,7 +222,6 @@ function validateContact(contact = {}) {
   if (!contact.company) return "company is required.";
   if (!contact.email) return "email is required.";
   if (!isEmail(contact.email)) return "email must be a valid email address.";
-  if (!contact.phone) return "phone is required.";
   if (!contact.profilePhoto) return "profile_photo must be a valid http or https URL.";
   return "";
 }
@@ -341,7 +340,7 @@ async function upsertBlinqContact(env, contact, rawPayload = {}) {
     company: contact.company,
     title: contact.title,
     phone: contact.phone,
-    phoneVerificationStatus: "verified",
+    phoneVerificationStatus: contact.phone ? "verified" : cleanString(existing?.phoneVerificationStatus),
     photoUrl: contact.profilePhoto,
     profilePhotoUrl: contact.profilePhoto,
     linkedinProfileUrl: contact.linkedinProfileUrl || cleanString(existing?.linkedinProfileUrl || existing?.linkedinUrl, 500),
@@ -384,6 +383,20 @@ async function upsertBlinqContact(env, contact, rawPayload = {}) {
 
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: jsonHeaders });
+}
+
+export async function onRequestGet({ request, env }) {
+  const auth = requireApiKey(request, env);
+  if (!auth.ok) return json({ error: auth.error }, { status: auth.status });
+
+  return json({
+    ok: true,
+    source,
+    endpoint: "/api/blinq-contact",
+    accepts: ["POST"],
+    requiredFields: ["name", "job_title", "company", "email", "profile_photo"],
+    optionalFields: ["phone"]
+  });
 }
 
 export async function onRequestPost({ request, env }) {
