@@ -83,6 +83,7 @@ const PARTNER_PROSPECT_AUDIT_PREFIX = "crm:partner-prospect-audit:";
 const PARTNER_PROSPECT_DEBUG_PREFIX = "crm:partner-prospect-debug:";
 const PARTNER_PROSPECT_SOURCE_PREFIX = "crm:partner-prospect-source:";
 const PARTNER_PROSPECT_SCORE_CONFIG_KEY = "crm:partner-prospect-score-config";
+const PARTNER_INFO_PREFIX = "crm:partner-info:";
 const DEFAULT_UPCOMING_EVENTS = [
   {
     slug: "ai-executive-readiness",
@@ -4906,6 +4907,57 @@ async function partnerMatrixProspects(env) {
   return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
+function normalizePartnerInfoSubmission(key, record = {}) {
+  const company = cleanString(record.company || record.displayName || record.companyLegalName, 240);
+  return {
+    key,
+    id: cleanString(record.id || key, 180),
+    type: "partner-info",
+    company,
+    companyLegalName: cleanString(record.companyLegalName, 240),
+    displayName: cleanString(record.displayName, 240),
+    companySlug: cleanString(record.companySlug || companySlug(company), 180),
+    website: cleanString(record.website, 500),
+    headquarters: cleanString(record.headquarters, 240),
+    oneLineDescriptor: cleanString(record.oneLineDescriptor, 220),
+    elevatorPitch: cleanString(record.elevatorPitch, 1200),
+    categories: Array.isArray(record.categories) ? record.categories.map((item) => cleanString(item, 160)).filter(Boolean) : [],
+    categoryOther: cleanString(record.categoryOther, 500),
+    primaryContact: record.primaryContact && typeof record.primaryContact === "object" ? record.primaryContact : {},
+    executive: record.executive && typeof record.executive === "object" ? record.executive : {},
+    secondExecutive: record.secondExecutive && typeof record.secondExecutive === "object" ? record.secondExecutive : {},
+    billingContact: record.billingContact && typeof record.billingContact === "object" ? record.billingContact : {},
+    market: record.market && typeof record.market === "object" ? record.market : {},
+    pointOfView: record.pointOfView && typeof record.pointOfView === "object" ? record.pointOfView : {},
+    optionalDepth: record.optionalDepth && typeof record.optionalDepth === "object" ? record.optionalDepth : {},
+    permissions: record.permissions && typeof record.permissions === "object" ? record.permissions : {},
+    notes: cleanString(record.notes, 1600),
+    signoff: record.signoff && typeof record.signoff === "object" ? record.signoff : {},
+    logoUploads: Array.isArray(record.logoUploads) ? record.logoUploads.map((item) => ({
+      variant: cleanString(item?.variant, 80),
+      originalName: cleanString(item?.originalName, 240),
+      contentType: cleanString(item?.contentType, 120),
+      size: Number(item?.size || 0),
+      uploadedAt: cleanString(item?.uploadedAt, 80)
+    })).filter((item) => item.originalName) : [],
+    createdAt: cleanString(record.createdAt, 80),
+    updatedAt: cleanString(record.updatedAt, 80)
+  };
+}
+
+async function partnerInfoSubmissions(env) {
+  const keys = await listKeys(env, PARTNER_INFO_PREFIX);
+  const rows = await Promise.all(
+    keys.map(async (key) => {
+      const record = await readSetupJson(env, key);
+      return record ? normalizePartnerInfoSubmission(key, record) : null;
+    })
+  );
+  return rows.filter(Boolean).sort((a, b) =>
+    String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt))
+  );
+}
+
 function matrixPersonEnrichmentFromRecord(record = {}, linkedinProfileUrl = "", extra = {}) {
   const name = cleanString(
     record.name ||
@@ -7272,6 +7324,7 @@ export async function onRequestGet({ request, env, data }) {
   if (matrixMode === "partner") {
     const partnerInviteRows = await partnerInviteCodes(env);
     const partnerProspectRows = await partnerMatrixProspects(env);
+    const partnerInfoRows = await partnerInfoSubmissions(env);
     const manualPartnerRows = includeSideList("includeManualPartners")
       ? (await registrants(env, "partner", { includeManualPartners: true })).filter((row) => row.manualPartner === true)
       : [];
@@ -7286,6 +7339,7 @@ export async function onRequestGet({ request, env, data }) {
       registrationInviteCodes: [],
       guestMatrixProspects: [],
       partnerMatrixProspects: partnerProspectRows,
+      partnerInfoSubmissions: partnerInfoRows,
       upcomingEvents: await upcomingEvents(env)
     });
   }

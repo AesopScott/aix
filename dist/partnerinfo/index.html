@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partner Profile Intake | MOJO AI Summits</title>
+<meta name="description" content="Private MOJO AI Summits partner profile intake for company positioning, council fit, executive contacts, and publication permissions.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mojoaisummits.com/partnerinfo/">
+<meta property="og:title" content="Partner Profile Intake | MOJO AI Summits">
+<meta property="og:description" content="Submit the company and executive context MOJO AI Summits uses to build partner profiles and council placement.">
+<meta property="og:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Partner Profile Intake | MOJO AI Summits">
+<meta name="twitter:description" content="Submit partner profile, council-fit, and permission details for MOJO AI Summits.">
+<meta name="twitter:image" content="https://mojoaisummits.com/assets/og-image.png?v=20260803a">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="/assets/logo-badge.png">
+<link rel="apple-touch-icon" href="/assets/logo-badge.png">
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy:#0A0F1E;
+    --slate:#1B2333;
+    --blue:#1666FF;
+    --cyan:#00E6FF;
+    --white:#FFFFFF;
+    --ink:#d9e3f7;
+    --muted:#92a0ba;
+    --dim:#64708a;
+    --line:rgba(255,255,255,.13);
+    --line-strong:rgba(0,230,255,.34);
+    --panel:rgba(27,35,51,.68);
+    --field:rgba(5,9,19,.66);
+    --danger:#ffb9c2;
+    --good:#6af0b6;
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      linear-gradient(90deg,rgba(22,102,255,.055) 1px,transparent 1px) 0 0/78px 78px,
+      linear-gradient(180deg,rgba(0,230,255,.04) 1px,transparent 1px) 0 0/78px 78px,
+      radial-gradient(circle at 50% -10%,rgba(22,102,255,.32),transparent 38rem),
+      linear-gradient(180deg,#070b16 0%,var(--navy) 52%,#070b16 100%);
+    color:var(--white);
+    font-family:Inter,Arial,sans-serif;
+    letter-spacing:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  p,h1,h2,h3{margin:0}
+  input,select,textarea,button{font:inherit}
+  .shell{width:min(1180px,calc(100% - 40px));margin:0 auto;padding:28px 0 64px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:22px}
+  .brand-lockup{display:inline-flex;align-items:center;gap:12px}
+  .brand-lockup img{width:50px;height:auto;filter:drop-shadow(0 0 18px rgba(0,230,255,.22))}
+  .brand-divider{width:1px;height:34px;background:linear-gradient(180deg,transparent,var(--cyan),transparent)}
+  .brand-name{display:grid;gap:2px;text-transform:uppercase;line-height:1}
+  .brand-primary{font-weight:800;font-size:23px;letter-spacing:.08em;background:linear-gradient(90deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand-secondary{color:rgba(255,255,255,.78);font-weight:700;font-size:11px;letter-spacing:.36em}
+  .home-link{color:var(--cyan);font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;border-bottom:1px solid rgba(0,230,255,.45);padding-bottom:4px}
+  .hero{display:grid;grid-template-columns:minmax(0,.72fr) minmax(360px,.54fr);gap:48px;align-items:end;padding:70px 0 34px}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:10px;font-weight:700;letter-spacing:.3em;text-transform:uppercase}
+  .eyebrow:before{content:"";width:34px;height:1px;background:var(--cyan);box-shadow:0 0 14px rgba(0,230,255,.7)}
+  h1{max-width:760px;margin-top:18px;font-family:Fraunces,Georgia,serif;font-size:clamp(44px,7vw,82px);font-weight:600;line-height:.98}
+  .lead{max-width:680px;margin-top:22px;color:var(--muted);font-size:18px;line-height:1.7}
+  .brief-panel{padding:24px;border:1px solid var(--line);border-radius:8px;background:linear-gradient(135deg,rgba(22,102,255,.16),rgba(0,230,255,.05)),rgba(27,35,51,.58);box-shadow:0 24px 80px rgba(0,0,0,.36)}
+  .brief-panel strong{display:block;color:var(--cyan);font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+  .brief-panel p{margin-top:12px;color:var(--ink);font-size:15px;line-height:1.65}
+  .form-shell{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;align-items:start}
+  .section-nav{position:sticky;top:18px;display:grid;gap:8px;padding:18px;border:1px solid var(--line);border-radius:8px;background:rgba(5,9,19,.74)}
+  .section-nav a{padding:9px 10px;border:1px solid transparent;border-radius:4px;color:var(--muted);font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .section-nav a:hover,.section-nav a:focus-visible{border-color:var(--line-strong);color:var(--cyan);outline:none}
+  form{display:grid;gap:22px}
+  .form-section{padding:28px;border:1px solid var(--line);border-radius:8px;background:var(--panel);box-shadow:0 18px 60px rgba(0,0,0,.24)}
+  .section-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+  h2{font-family:Fraunces,Georgia,serif;font-size:clamp(27px,3vw,38px);font-weight:600;line-height:1.08}
+  .time-chip{align-self:start;border:1px solid var(--line-strong);border-radius:999px;padding:7px 10px;color:var(--cyan);font-family:Space Grotesk,sans-serif;font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
+  .section-copy{margin-top:10px;color:var(--muted);font-size:14px;line-height:1.65}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+  .field{display:grid;gap:8px}
+  .field.full{grid-column:1/-1}
+  label,.field-label{color:var(--cyan);font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+  .hint{color:var(--dim);font-size:13px;line-height:1.55}
+  input,select,textarea{
+    width:100%;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:4px;
+    background:var(--field);
+    color:var(--white);
+    outline:none;
+  }
+  input,select{min-height:48px;padding:12px 14px}
+  textarea{min-height:112px;resize:vertical;padding:13px 14px;line-height:1.5}
+  input:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,230,255,.1)}
+  .check-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .check-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .check-option{display:flex;gap:10px;align-items:flex-start;min-height:48px;padding:11px;border:1px solid rgba(255,255,255,.12);border-radius:6px;background:rgba(5,9,19,.42);color:var(--ink);font-size:14px;line-height:1.35}
+  .check-option input{width:16px;min-height:16px;margin-top:1px;accent-color:var(--cyan)}
+  .contact-block{display:grid;gap:18px;padding:18px;border:1px solid rgba(0,230,255,.18);border-radius:8px;background:rgba(5,9,19,.38)}
+  .contact-block h3{font-family:Space Grotesk,sans-serif;font-size:16px;letter-spacing:.04em;text-transform:uppercase}
+  .date-selects{display:grid;grid-template-columns:1.15fr .72fr .8fr;gap:10px}
+  .message{display:none;color:var(--muted);font-size:14px;font-weight:700;line-height:1.5}
+  .message.show{display:block}
+  .message.error{color:var(--danger)}
+  .message.success{color:var(--good)}
+  .submit-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;padding:24px;border:1px solid var(--line-strong);border-radius:8px;background:linear-gradient(135deg,rgba(0,230,255,.09),rgba(22,102,255,.09))}
+  .button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;border:1px solid var(--cyan);border-radius:4px;padding:14px 22px;background:var(--cyan);color:#031018;font-family:Space Grotesk,sans-serif;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;transition:background .25s var(--ease),border-color .25s var(--ease),color .25s var(--ease)}
+  .button:hover,.button:focus-visible{background:var(--white);border-color:var(--white);outline:none}
+  .button:disabled{cursor:not-allowed;opacity:.62}
+  .privacy-note{max-width:700px;color:var(--dim);font-size:12px;line-height:1.6}
+  .success-panel{display:none;padding:32px;border:1px solid rgba(106,240,182,.45);border-radius:8px;background:rgba(106,240,182,.08)}
+  .success-panel.show{display:block}
+  .success-panel h2{color:var(--good)}
+  .success-panel p{margin-top:12px;color:var(--ink);line-height:1.7}
+  @media (max-width:980px){.hero,.form-shell{grid-template-columns:1fr}.section-nav{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}.check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:680px){.shell{width:min(100% - 28px,1180px);padding-top:20px}.hero{padding-top:46px}.brand-primary{font-size:20px}.brand-secondary{font-size:9px}.home-link{font-size:10px}.section-head,.grid,.check-grid,.check-grid.two,.section-nav,.date-selects{grid-template-columns:1fr}.form-section{padding:20px}.time-chip{width:max-content;white-space:normal}}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <a class="brand-lockup" href="/" aria-label="MOJO AI Summits home">
+        <img src="/assets/logo-mark.png" alt="">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-name" aria-hidden="true"><span class="brand-primary">MOJO AI</span><span class="brand-secondary">Summits</span></span>
+      </a>
+      <a class="home-link" href="/partners/">Partners</a>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="pageTitle">
+        <div>
+          <span class="eyebrow">Invitation only</span>
+          <h1 id="pageTitle">Partner Profile Intake</h1>
+          <p class="lead">This builds the partner profile MOJO AI Summits maintains for executive members and uses to place your team in the right council.</p>
+        </div>
+        <aside class="brief-panel">
+          <strong>Before you start</strong>
+          <p>Parts 1 through 4 take about ten minutes and are all we need to build your profile. Optional depth can be skipped. If a question does not fit your business, write n/a and move on.</p>
+        </aside>
+      </section>
+
+      <div class="form-shell">
+        <nav class="section-nav" aria-label="Partner intake sections">
+          <a href="#basics">Basics</a>
+          <a href="#people">People</a>
+          <a href="#market">Market</a>
+          <a href="#ai-view">AI View</a>
+          <a href="#depth">Optional Depth</a>
+          <a href="#permissions">Permissions</a>
+        </nav>
+
+        <form id="partnerInfoForm">
+          <section class="form-section" id="basics">
+            <div class="section-head">
+              <div>
+                <h2>Part 1 - The basics</h2>
+                <p class="section-copy">Company identity, concise positioning, and the category signals we use in the executive directory.</p>
+              </div>
+              <span class="time-chip">About five minutes</span>
+            </div>
+            <div class="grid">
+              <div class="field">
+                <label for="companyLegalName">Company legal name</label>
+                <input id="companyLegalName" name="companyLegalName" type="text" autocomplete="organization" required>
+              </div>
+              <div class="field">
+                <label for="displayName">Display name, if different</label>
+                <input id="displayName" name="displayName" type="text" autocomplete="organization">
+              </div>
+              <div class="field">
+                <label for="website">Website</label>
+                <input id="website" name="website" type="url" placeholder="https://example.com" required>
+              </div>
+              <div class="field">
+                <label for="headquarters">Headquarters city and country</label>
+                <input id="headquarters" name="headquarters" type="text" autocomplete="address-level2" required>
+              </div>
+              <div class="field full">
+                <label for="oneLineDescriptor">One-line descriptor</label>
+                <input id="oneLineDescriptor" name="oneLineDescriptor" type="text" maxlength="220" placeholder="Twelve words or fewer" required>
+                <span class="hint">This appears under your name in the executive directory.</span>
+              </div>
+              <div class="field full">
+                <label for="elevatorPitch">Elevator pitch</label>
+                <textarea id="elevatorPitch" name="elevatorPitch" required placeholder="About fifty words for a CIO who has never heard of you. What you do, who for, and why it matters."></textarea>
+              </div>
+              <div class="field full">
+                <span class="field-label">Category</span>
+                <div class="check-grid" data-checkbox-group="categories">
+                  <label class="check-option"><input type="checkbox" value="Cybersecurity and AI risk"> Cybersecurity and AI risk</label>
+                  <label class="check-option"><input type="checkbox" value="Cloud, data, and infrastructure"> Cloud, data, and infrastructure</label>
+                  <label class="check-option"><input type="checkbox" value="Analytics and business intelligence"> Analytics and business intelligence</label>
+                  <label class="check-option"><input type="checkbox" value="Enterprise software and SaaS"> Enterprise software and SaaS</label>
+                  <label class="check-option"><input type="checkbox" value="IT services and MSP"> IT services and MSP</label>
+                  <label class="check-option"><input type="checkbox" value="Consulting and transformation advisory"> Consulting and transformation advisory</label>
+                  <label class="check-option"><input type="checkbox" value="Governance, compliance, and privacy"> Governance, compliance, and privacy</label>
+                  <label class="check-option"><input type="checkbox" value="Legal-tech, risk, and audit"> Legal-tech, risk, and audit</label>
+                  <label class="check-option"><input type="checkbox" value="Automation and workflow"> Automation and workflow</label>
+                  <label class="check-option"><input type="checkbox" value="Agent and developer platforms"> Agent and developer platforms</label>
+                  <label class="check-option"><input type="checkbox" value="Identity and access"> Identity and access</label>
+                </div>
+              </div>
+              <div class="field full">
+                <label for="categoryOther">If other, or if none quite fit</label>
+                <input id="categoryOther" name="categoryOther" type="text">
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" id="people">
+            <div class="section-head">
+              <div>
+                <h2>Part 2 - Your people</h2>
+                <p class="section-copy">Every council seat is held by one named executive at director level or above. Recognition compounds when the same person returns.</p>
+              </div>
+              <span class="time-chip">Two contacts required</span>
+            </div>
+            <div class="contact-block">
+              <h3>Primary contact - who we coordinate with</h3>
+              <div class="grid">
+                <div class="field">
+                  <label for="primaryContactNameTitle">Name and title</label>
+                  <input id="primaryContactNameTitle" name="primaryContactNameTitle" type="text" required>
+                </div>
+                <div class="field">
+                  <label for="primaryContactEmail">Email</label>
+                  <input id="primaryContactEmail" name="primaryContactEmail" type="email" autocomplete="email" required>
+                </div>
+              </div>
+            </div>
+            <div class="contact-block">
+              <h3>Executive holding the seat</h3>
+              <div class="grid">
+                <div class="field">
+                  <label for="executiveNameTitle">Name and title</label>
+                  <input id="executiveNameTitle" name="executiveNameTitle" type="text" required>
+                </div>
+                <div class="field">
+                  <label for="executiveEmail">Email</label>
+                  <input id="executiveEmail" name="executiveEmail" type="email" required>
+                </div>
+                <div class="field">
+                  <label for="executiveLinkedinUrl">LinkedIn URL</label>
+                  <input id="executiveLinkedinUrl" name="executiveLinkedinUrl" type="url">
+                </div>
+                <div class="field">
+                  <label for="executiveYearsInRole">Years in role or category</label>
+                  <input id="executiveYearsInRole" name="executiveYearsInRole" type="text">
+                </div>
+                <div class="field full">
+                  <label for="executiveBio">Short bio</label>
+                  <textarea id="executiveBio" name="executiveBio" placeholder="About seventy-five words, third person."></textarea>
+                </div>
+                <div class="field full">
+                  <label for="executiveTopics">Topics this executive can speak to with real authority</label>
+                  <textarea id="executiveTopics" name="executiveTopics" placeholder="Three to five specific topics."></textarea>
+                </div>
+                <div class="field full">
+                  <span class="field-label">Formats they are willing to join</span>
+                  <div class="check-grid" data-checkbox-group="executiveFormats">
+                    <label class="check-option"><input type="checkbox" value="Virtual research council"> Virtual research council</label>
+                    <label class="check-option"><input type="checkbox" value="Executive roundtable"> Executive roundtable</label>
+                    <label class="check-option"><input type="checkbox" value="Working session or workshop"> Working session or workshop</label>
+                    <label class="check-option"><input type="checkbox" value="Written contribution to a brief"> Written contribution to a brief</label>
+                    <label class="check-option"><input type="checkbox" value="Summit problem room"> Summit problem room</label>
+                    <label class="check-option"><input type="checkbox" value="Prefer to observe first"> Prefer to observe first</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="contact-block">
+              <h3>Second executive</h3>
+              <div class="grid">
+                <div class="field">
+                  <label for="secondExecutiveNameTitle">Name and title</label>
+                  <input id="secondExecutiveNameTitle" name="secondExecutiveNameTitle" type="text">
+                </div>
+                <div class="field">
+                  <label for="secondExecutiveEmail">Email</label>
+                  <input id="secondExecutiveEmail" name="secondExecutiveEmail" type="email">
+                </div>
+              </div>
+            </div>
+            <div class="contact-block">
+              <h3>Billing contact</h3>
+              <div class="grid">
+                <div class="field">
+                  <label for="billingContactNameEmail">AP name and email</label>
+                  <input id="billingContactNameEmail" name="billingContactNameEmail" type="text">
+                </div>
+                <div class="field">
+                  <label for="purchaseOrderNumber">Purchase order number, if required</label>
+                  <input id="purchaseOrderNumber" name="purchaseOrderNumber" type="text">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" id="market">
+            <div class="section-head">
+              <div>
+                <h2>Part 3 - Your market</h2>
+                <p class="section-copy">This is how we match your company to the right council and conversations where your experience is genuinely useful.</p>
+              </div>
+              <span class="time-chip">About two minutes</span>
+            </div>
+            <div class="grid">
+              <div class="field full">
+                <label for="buyerTitles">Who you sell to</label>
+                <textarea id="buyerTitles" name="buyerTitles" required placeholder="Titles, not departments. For example: CISO, VP of Security Engineering, Head of Identity."></textarea>
+              </div>
+              <div class="field full">
+                <label for="industries">Industries you serve best</label>
+                <textarea id="industries" name="industries" required placeholder="Three to five, in order."></textarea>
+              </div>
+              <div class="field full">
+                <label for="idealCustomer">Your ideal customer in one sentence</label>
+                <input id="idealCustomer" name="idealCustomer" type="text" required>
+              </div>
+              <div class="field">
+                <label for="typicalCustomerSize">Typical customer size</label>
+                <input id="typicalCustomerSize" name="typicalCustomerSize" type="text">
+              </div>
+              <div class="field">
+                <label for="primaryGeographies">Primary geographies</label>
+                <input id="primaryGeographies" name="primaryGeographies" type="text">
+              </div>
+              <div class="field">
+                <label for="salesCycleLength">Typical sales cycle length</label>
+                <input id="salesCycleLength" name="salesCycleLength" type="text">
+              </div>
+              <div class="field">
+                <label for="contractSigner">Who signs the contract</label>
+                <input id="contractSigner" name="contractSigner" type="text">
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" id="ai-view">
+            <div class="section-head">
+              <div>
+                <h2>Part 4 - Your point of view on AI</h2>
+                <p class="section-copy">Councils are built around questions, not categories. What you write here shapes where we place you and what we ask you.</p>
+              </div>
+              <span class="time-chip">About three minutes</span>
+            </div>
+            <div class="grid">
+              <div class="field full">
+                <span class="field-label">Which council themes do you have real ground truth in?</span>
+                <div class="check-grid" data-checkbox-group="councilThemes">
+                  <label class="check-option"><input type="checkbox" value="AI adoption and readiness"> AI adoption and readiness</label>
+                  <label class="check-option"><input type="checkbox" value="AI governance and policy"> AI governance and policy</label>
+                  <label class="check-option"><input type="checkbox" value="AI security and model risk"> AI security and model risk</label>
+                  <label class="check-option"><input type="checkbox" value="Data readiness and quality"> Data readiness and quality</label>
+                  <label class="check-option"><input type="checkbox" value="Workflow and process automation"> Workflow and process automation</label>
+                  <label class="check-option"><input type="checkbox" value="Platform and vendor strategy"> Platform and vendor strategy</label>
+                  <label class="check-option"><input type="checkbox" value="Operations and cost"> Operations and cost</label>
+                  <label class="check-option"><input type="checkbox" value="Workforce and change"> Workforce and change</label>
+                  <label class="check-option"><input type="checkbox" value="Integration and architecture"> Integration and architecture</label>
+                </div>
+              </div>
+              <div class="field full">
+                <label for="problemSolved">What problem do you actually solve for an AI-adopting enterprise?</label>
+                <textarea id="problemSolved" name="problemSolved" required placeholder="Plain language. No product names, no category jargon."></textarea>
+              </div>
+              <div class="field full">
+                <label for="topUseCases">Your top three use cases</label>
+                <textarea id="topUseCases" name="topUseCases" required placeholder="For each one, describe the outcome the customer got, not the feature that produced it."></textarea>
+              </div>
+              <div class="field full">
+                <label for="aiObjectives">Your AI objectives for the next twelve months</label>
+                <textarea id="aiObjectives" name="aiObjectives" required></textarea>
+              </div>
+              <div class="field full">
+                <label for="marketWrong">Where you think the market is wrong</label>
+                <textarea id="marketWrong" name="marketWrong" required placeholder="One belief you hold that most competitors do not."></textarea>
+              </div>
+              <div class="field full">
+                <label for="deploymentFailure">One thing you have watched fail in an AI deployment</label>
+                <textarea id="deploymentFailure" name="deploymentFailure" required placeholder="Yours or a customer's. Anonymize freely."></textarea>
+              </div>
+              <div class="field full">
+                <label for="executiveQuestion">One question you would want six senior executives to answer</label>
+                <textarea id="executiveQuestion" name="executiveQuestion" required></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" id="depth">
+            <div class="section-head">
+              <div>
+                <h2>Part 5 - Optional depth</h2>
+                <p class="section-copy">None of this affects your standing. It only makes your profile more useful to members who read it.</p>
+              </div>
+              <span class="time-chip">Skip what does not apply</span>
+            </div>
+            <div class="grid">
+              <div class="field">
+                <label for="namedCustomers">Notable customers you may name publicly</label>
+                <textarea id="namedCustomers" name="namedCustomers"></textarea>
+              </div>
+              <div class="field">
+                <label for="analystCoverage">Analyst coverage or recognition</label>
+                <textarea id="analystCoverage" name="analystCoverage"></textarea>
+              </div>
+              <div class="field">
+                <label for="alliances">Key alliances or ecosystem partners</label>
+                <textarea id="alliances" name="alliances"></textarea>
+              </div>
+              <div class="field">
+                <label for="certifications">Relevant certifications or attestations</label>
+                <textarea id="certifications" name="certifications"></textarea>
+              </div>
+              <div class="field full">
+                <label for="researchLinks">Published research or thought leadership we should read</label>
+                <textarea id="researchLinks" name="researchLinks"></textarea>
+              </div>
+              <div class="field full">
+                <label for="eventsCommunities">Events or communities you already participate in</label>
+                <textarea id="eventsCommunities" name="eventsCommunities"></textarea>
+              </div>
+              <div class="field full">
+                <label for="offLimits">Anything you would prefer we not raise</label>
+                <textarea id="offLimits" name="offLimits" placeholder="Litigation, embargoes, sensitive customers, or off-limits topics."></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" id="permissions">
+            <div class="section-head">
+              <div>
+                <h2>Part 6 - Permissions</h2>
+                <p class="section-copy">Your profile is visible to Mojo executive members. Tell us what we may use.</p>
+              </div>
+              <span class="time-chip">Required</span>
+            </div>
+            <div class="grid">
+              <div class="field full">
+                <span class="field-label">We may publish the following on your partner profile</span>
+                <div class="check-grid" data-checkbox-group="publishItems">
+                  <label class="check-option"><input type="checkbox" value="Company logo"> Company logo</label>
+                  <label class="check-option"><input type="checkbox" value="One-line descriptor"> One-line descriptor</label>
+                  <label class="check-option"><input type="checkbox" value="Elevator pitch"> Elevator pitch</label>
+                  <label class="check-option"><input type="checkbox" value="Executive name and title"> Executive name and title</label>
+                  <label class="check-option"><input type="checkbox" value="Executive bio"> Executive bio</label>
+                  <label class="check-option"><input type="checkbox" value="Executive headshot"> Executive headshot</label>
+                  <label class="check-option"><input type="checkbox" value="Industries and use cases"> Industries and use cases</label>
+                  <label class="check-option"><input type="checkbox" value="Named customers listed above"> Named customers listed above</label>
+                  <label class="check-option"><input type="checkbox" value="Published research links"> Published research links</label>
+                </div>
+              </div>
+              <div class="field full">
+                <span class="field-label">Attribution preference in published briefs</span>
+                <div class="check-grid two" data-radio-group="attributionPreference">
+                  <label class="check-option"><input name="attributionPreference" type="radio" value="Name our company and the executive" required> Name our company and the executive</label>
+                  <label class="check-option"><input name="attributionPreference" type="radio" value="Name our company only"> Name our company only</label>
+                  <label class="check-option"><input name="attributionPreference" type="radio" value="Attribute by role and industry only"> Attribute by role and industry only</label>
+                  <label class="check-option"><input name="attributionPreference" type="radio" value="Decide case by case"> Decide case by case</label>
+                </div>
+              </div>
+              <div class="field">
+                <label for="logoLight">Logo for light backgrounds</label>
+                <input id="logoLight" name="logoLight" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp">
+                <span class="hint">SVG or transparent PNG preferred.</span>
+              </div>
+              <div class="field">
+                <label for="logoDark">Logo for dark backgrounds</label>
+                <input id="logoDark" name="logoDark" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp">
+                <span class="hint">Use a reversed or light logo if you have one.</span>
+              </div>
+              <div class="field full">
+                <label for="notes">Anything else we should know</label>
+                <textarea id="notes" name="notes"></textarea>
+              </div>
+              <div class="field">
+                <label for="signoffNameTitle">Sign-off name and title</label>
+                <input id="signoffNameTitle" name="signoffNameTitle" type="text" required>
+              </div>
+              <div class="field">
+                <label>Sign-off date</label>
+                <div class="date-selects">
+                  <select id="signoffMonth" aria-label="Sign-off month" required></select>
+                  <select id="signoffDay" aria-label="Sign-off day" required></select>
+                  <select id="signoffYear" aria-label="Sign-off year" required></select>
+                </div>
+                <input id="signoffDate" name="signoffDate" type="hidden">
+              </div>
+            </div>
+          </section>
+
+          <p class="message" id="formMessage" aria-live="polite"></p>
+          <div class="submit-row">
+            <p class="privacy-note">By submitting, you confirm the information is accurate to the best of your knowledge and that you have authority to grant the publication permissions selected. Permissions may be changed by writing to your Mojo contact. See the <a href="/privacy/" target="_blank" rel="noopener">privacy policy</a>.</p>
+            <button class="button" id="submitButton" type="submit">Submit Partner Profile</button>
+          </div>
+        </form>
+
+        <section class="success-panel" id="successPanel" aria-live="polite">
+          <h2>Profile intake received.</h2>
+          <p>MOJO AI Summits will build the partner profile and send it back for a factual check before it goes live.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+
+<script>
+  const form = document.getElementById("partnerInfoForm");
+  const message = document.getElementById("formMessage");
+  const successPanel = document.getElementById("successPanel");
+  const submitButton = document.getElementById("submitButton");
+  const signoffDate = document.getElementById("signoffDate");
+  const signoffMonth = document.getElementById("signoffMonth");
+  const signoffDay = document.getElementById("signoffDay");
+  const signoffYear = document.getElementById("signoffYear");
+
+  const monthNames = [
+    ["01", "January"], ["02", "February"], ["03", "March"], ["04", "April"],
+    ["05", "May"], ["06", "June"], ["07", "July"], ["08", "August"],
+    ["09", "September"], ["10", "October"], ["11", "November"], ["12", "December"]
+  ];
+
+  function option(value, label, selectedValue = "") {
+    return `<option value="${value}" ${value === selectedValue ? "selected" : ""}>${label}</option>`;
+  }
+
+  function initDateSelectors() {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const selectedMonth = String(today.getMonth() + 1).padStart(2, "0");
+    const selectedDay = String(today.getDate()).padStart(2, "0");
+    signoffMonth.innerHTML = option("", "Month") + monthNames.map(([value, label]) => option(value, label, selectedMonth)).join("");
+    signoffDay.innerHTML = option("", "Day") + Array.from({ length: 31 }, (_, index) => {
+      const value = String(index + 1).padStart(2, "0");
+      return option(value, String(index + 1), selectedDay);
+    }).join("");
+    signoffYear.innerHTML = option("", "Year") + Array.from({ length: 3 }, (_, index) => {
+      const value = String(currentYear + index);
+      return option(value, value, String(currentYear));
+    }).join("");
+    syncSignoffDate();
+  }
+
+  function prefillFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const company = (params.get("company") || "").trim();
+    if (company && !document.getElementById("companyLegalName").value.trim()) {
+      document.getElementById("companyLegalName").value = company;
+    }
+  }
+
+  function syncSignoffDate() {
+    signoffDate.value = signoffYear.value && signoffMonth.value && signoffDay.value
+      ? `${signoffYear.value}-${signoffMonth.value}-${signoffDay.value}`
+      : "";
+  }
+
+  function selectedValues(group) {
+    return [...document.querySelectorAll(`[data-checkbox-group="${group}"] input:checked`)].map((input) => input.value);
+  }
+
+  function campaignAttributionFields() {
+    const params = new URLSearchParams(window.location.search);
+    let referrerHost = "";
+    try {
+      referrerHost = document.referrer ? new URL(document.referrer).hostname : "";
+    } catch (error) {}
+    return {
+      utmSource: params.get("utm_source") || "",
+      utmMedium: params.get("utm_medium") || "",
+      utmCampaign: params.get("utm_campaign") || "",
+      utmContent: params.get("utm_content") || "",
+      utmTerm: params.get("utm_term") || "",
+      landingPath: window.location.pathname,
+      referrerHost
+    };
+  }
+
+  function setMessage(text, type = "") {
+    message.textContent = text;
+    message.className = `message show ${type}`.trim();
+  }
+
+  function clearMessage() {
+    message.textContent = "";
+    message.className = "message";
+  }
+
+  function appendJsonField(formData, name, value) {
+    formData.set(name, JSON.stringify(value || []));
+  }
+
+  function validateGroupedSelections() {
+    if (!selectedValues("categories").length && !document.getElementById("categoryOther").value.trim()) {
+      return "Choose at least one category or describe the category.";
+    }
+    if (!selectedValues("councilThemes").length) {
+      return "Choose at least one council theme.";
+    }
+    if (!selectedValues("publishItems").length) {
+      return "Choose at least one profile permission.";
+    }
+    if (!signoffDate.value) {
+      return "Choose a complete sign-off date.";
+    }
+    return "";
+  }
+
+  async function submitPartnerInfo(event) {
+    event.preventDefault();
+    clearMessage();
+    syncSignoffDate();
+    const groupedError = validateGroupedSelections();
+    if (groupedError) {
+      setMessage(groupedError, "error");
+      return;
+    }
+
+    const formData = new FormData(form);
+    appendJsonField(formData, "categories", selectedValues("categories"));
+    appendJsonField(formData, "executiveFormats", selectedValues("executiveFormats"));
+    appendJsonField(formData, "councilThemes", selectedValues("councilThemes"));
+    appendJsonField(formData, "publishItems", selectedValues("publishItems"));
+    Object.entries(campaignAttributionFields()).forEach(([key, value]) => {
+      if (value) formData.set(key, value);
+    });
+
+    submitButton.disabled = true;
+    submitButton.textContent = "Submitting...";
+    try {
+      const response = await fetch("/api/partner-info", {
+        method: "POST",
+        body: formData
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Partner profile intake could not be submitted.");
+      form.hidden = true;
+      successPanel.classList.add("show");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      setMessage(error.message, "error");
+      submitButton.disabled = false;
+      submitButton.textContent = "Submit Partner Profile";
+    }
+  }
+
+  [signoffMonth, signoffDay, signoffYear].forEach((select) => select.addEventListener("change", syncSignoffDate));
+  initDateSelectors();
+  prefillFromUrl();
+  form.addEventListener("submit", submitPartnerInfo);
+</script>
+<link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
+</body>
+</html>

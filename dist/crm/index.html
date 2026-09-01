@@ -1284,6 +1284,122 @@
       margin-top: 0.45rem;
     }
 
+    .partner-info-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      place-items: center;
+      padding: 1.5rem;
+      background: rgba(5, 8, 20, 0.78);
+      backdrop-filter: blur(14px);
+    }
+
+    .partner-info-modal.open { display: grid; }
+
+    .partner-info-card {
+      width: min(920px, 100%);
+      max-height: min(86vh, 820px);
+      overflow: auto;
+      border: 1px solid rgba(0, 230, 255, 0.32);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(27, 35, 51, 0.98), rgba(10, 15, 30, 0.98));
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.56);
+    }
+
+    .partner-info-card header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 15, 30, 0.94);
+    }
+
+    .partner-info-card h3 {
+      margin: 0.3rem 0 0;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.45rem;
+      line-height: 1.15;
+    }
+
+    .partner-info-close {
+      width: 2.35rem;
+      height: 2.35rem;
+      border: 1px solid rgba(0, 230, 255, 0.34);
+      border-radius: 50%;
+      background: rgba(5, 9, 19, 0.72);
+      color: var(--cyan);
+      font-size: 1.35rem;
+      cursor: pointer;
+    }
+
+    .partner-info-body {
+      display: grid;
+      gap: 1rem;
+      padding: 1.25rem;
+    }
+
+    .partner-info-section {
+      display: grid;
+      gap: 0.65rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .partner-info-section:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .partner-info-section h4 {
+      margin: 0;
+      color: var(--cyan);
+      font-family: "Orbitron", sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .partner-info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .partner-info-field {
+      min-width: 0;
+      padding: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      background: rgba(5, 9, 19, 0.48);
+    }
+
+    .partner-info-field strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--muted-blue);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .partner-info-field span,
+    .partner-info-field p {
+      display: block;
+      margin: 0;
+      white-space: pre-wrap;
+      color: var(--text);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .partner-info-field.full { grid-column: 1 / -1; }
+
     .pill.good {
       color: var(--good);
       border-color: rgba(106, 240, 182, 0.42);
@@ -1714,6 +1830,10 @@
       .invite-qr { width: 100%; justify-items: start; }
       .side-nav { position: static; }
       .crm-content .hero, .view-section { grid-column: 1; }
+      .partner-info-modal { padding: 0.75rem; }
+      .partner-info-card header { position: static; }
+      .partner-info-grid { grid-template-columns: 1fr; }
+      .partner-info-field.full { grid-column: auto; }
     }
   </style>
 <style>
@@ -2277,6 +2397,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     </div>
   </main>
 
+  <div class="partner-info-modal" id="partnerInfoModal" role="dialog" aria-modal="true" aria-labelledby="partnerInfoTitle">
+    <div class="partner-info-card">
+      <header>
+        <div>
+          <p class="eyebrow">Profile intake</p>
+          <h3 id="partnerInfoTitle">Partner profile intake</h3>
+        </div>
+        <button class="partner-info-close" type="button" id="partnerInfoClose" aria-label="Close partner profile intake">x</button>
+      </header>
+      <div class="partner-info-body" id="partnerInfoBody"></div>
+    </div>
+  </div>
+
   <div class="table-scroll-proxy" id="tableScrollProxy" aria-hidden="true">
     <div class="table-scroll-proxy-inner" id="tableScrollProxyInner"></div>
   </div>
@@ -2352,6 +2485,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const guestMatrixSummary = document.querySelector("#guestMatrixSummary");
     const guestMatrixSearchSummary = document.querySelector("#guestMatrixSearchSummary");
     const guestMatrixList = document.querySelector("#guestMatrixList");
+    const partnerInfoModal = document.querySelector("#partnerInfoModal");
+    const partnerInfoTitle = document.querySelector("#partnerInfoTitle");
+    const partnerInfoBody = document.querySelector("#partnerInfoBody");
+    const partnerInfoClose = document.querySelector("#partnerInfoClose");
     const partnerInviteForm = document.querySelector("#partnerInviteForm");
     const partnerInviteEvent = document.querySelector("#partnerInviteEvent");
     const partnerInviteShow = document.querySelector("#partnerInviteShow");
@@ -2446,6 +2583,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       registrationInviteCodes: [],
       guestMatrixProspects: [],
       partnerMatrixProspects: [],
+      partnerInfoSubmissions: [],
       upcomingEvents: []
     };
     let registrationDebug = null;
@@ -3947,6 +4085,163 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return [...new Set(keys)];
     }
 
+    function partnerInfoCompanySlug(value = "") {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/&/g, " and ")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 120);
+    }
+
+    function partnerInfoEmails(record = {}) {
+      return [
+        record.primaryContact?.email,
+        record.executive?.email,
+        record.secondExecutive?.email
+      ].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
+    }
+
+    function partnerInfoLinkedIns(record = {}) {
+      return [
+        record.executive?.linkedinUrl,
+        record.secondExecutive?.linkedinUrl
+      ].map(normalizedLinkedInKey).filter(Boolean);
+    }
+
+    function partnerInfoForMatrixRecord(record = {}) {
+      if (!isPartnerMatrix()) return null;
+      const company = crmCompanyName(record);
+      const companyKey = partnerInfoCompanySlug(company);
+      const email = guestMatrixPersonEmail(record).toLowerCase();
+      const linkedin = normalizedLinkedInKey(guestMatrixPersonLinkedIn(record));
+      return (state.partnerInfoSubmissions || []).find((info) => {
+        if (companyKey && partnerInfoCompanySlug(info.company || info.displayName || info.companyLegalName) === companyKey) return true;
+        if (email && partnerInfoEmails(info).includes(email)) return true;
+        if (linkedin && partnerInfoLinkedIns(info).includes(linkedin)) return true;
+        return false;
+      }) || null;
+    }
+
+    function partnerInfoButtonMarkup(row = {}) {
+      if (!isPartnerMatrix()) return "";
+      if (!row.partnerInfo?.key) {
+        const href = `/partnerinfo/?company=${encodeURIComponent(row.company || "")}`;
+        return `<a class="button-link compact" href="${escapeHtml(href)}" target="_blank" rel="noopener">Send Intake</a>`;
+      }
+      const date = row.partnerInfo.updatedAt || row.partnerInfo.createdAt;
+      return `
+        <button class="compact secondary" type="button" data-open-partner-info-key="${escapeHtml(row.partnerInfo.key)}">Profile Intake</button>
+        ${date ? `<span class="matrix-muted">Updated ${escapeHtml(formatDate(date))}</span>` : ""}
+      `;
+    }
+
+    function partnerInfoValue(value) {
+      if (Array.isArray(value)) return value.filter(Boolean).join(", ");
+      if (value && typeof value === "object") return "";
+      return String(value || "").trim();
+    }
+
+    function partnerInfoField(label, value, full = false) {
+      const text = partnerInfoValue(value);
+      if (!text) return "";
+      return `<div class="partner-info-field ${full ? "full" : ""}"><strong>${escapeHtml(label)}</strong><p>${escapeHtml(text)}</p></div>`;
+    }
+
+    function partnerInfoContactFields(label, contact = {}) {
+      const parts = [
+        contact.nameTitle,
+        contact.email,
+        contact.linkedinUrl,
+        contact.yearsInRole ? `Years: ${contact.yearsInRole}` : "",
+        contact.formats?.length ? `Formats: ${contact.formats.join(", ")}` : "",
+        contact.topics ? `Topics: ${contact.topics}` : "",
+        contact.bio ? `Bio: ${contact.bio}` : ""
+      ].filter(Boolean).join("\n");
+      return partnerInfoField(label, parts, true);
+    }
+
+    function partnerInfoSection(title, fields = []) {
+      const body = fields.filter(Boolean).join("");
+      if (!body) return "";
+      return `<section class="partner-info-section"><h4>${escapeHtml(title)}</h4><div class="partner-info-grid">${body}</div></section>`;
+    }
+
+    function renderPartnerInfoModal(record = {}) {
+      if (!partnerInfoTitle || !partnerInfoBody) return;
+      partnerInfoTitle.textContent = record.company || record.displayName || record.companyLegalName || "Partner profile intake";
+      const market = record.market || {};
+      const pointOfView = record.pointOfView || {};
+      const optionalDepth = record.optionalDepth || {};
+      const permissions = record.permissions || {};
+      const logoUploads = (record.logoUploads || []).map((item) => [item.variant, item.originalName].filter(Boolean).join(": "));
+      partnerInfoBody.innerHTML = [
+        partnerInfoSection("Basics", [
+          partnerInfoField("Legal name", record.companyLegalName),
+          partnerInfoField("Display name", record.displayName),
+          partnerInfoField("Website", record.website),
+          partnerInfoField("Headquarters", record.headquarters),
+          partnerInfoField("Descriptor", record.oneLineDescriptor, true),
+          partnerInfoField("Elevator pitch", record.elevatorPitch, true),
+          partnerInfoField("Categories", [...(record.categories || []), record.categoryOther].filter(Boolean), true),
+          partnerInfoField("Submitted", record.updatedAt || record.createdAt)
+        ]),
+        partnerInfoSection("People", [
+          partnerInfoContactFields("Primary contact", record.primaryContact),
+          partnerInfoContactFields("Executive holding the seat", record.executive),
+          partnerInfoContactFields("Second executive", record.secondExecutive),
+          partnerInfoField("Billing contact", [record.billingContact?.nameEmail, record.billingContact?.purchaseOrderNumber].filter(Boolean).join("\n"), true)
+        ]),
+        partnerInfoSection("Market", [
+          partnerInfoField("Who they sell to", market.buyerTitles, true),
+          partnerInfoField("Industries", market.industries, true),
+          partnerInfoField("Ideal customer", market.idealCustomer, true),
+          partnerInfoField("Customer size", market.typicalCustomerSize),
+          partnerInfoField("Geographies", market.primaryGeographies),
+          partnerInfoField("Sales cycle", market.salesCycleLength),
+          partnerInfoField("Contract signer", market.contractSigner)
+        ]),
+        partnerInfoSection("AI Point Of View", [
+          partnerInfoField("Council themes", pointOfView.councilThemes, true),
+          partnerInfoField("Problem solved", pointOfView.problemSolved, true),
+          partnerInfoField("Top use cases", pointOfView.topUseCases, true),
+          partnerInfoField("12-month objectives", pointOfView.aiObjectives, true),
+          partnerInfoField("Where the market is wrong", pointOfView.marketWrong, true),
+          partnerInfoField("Deployment failure", pointOfView.deploymentFailure, true),
+          partnerInfoField("Question for executives", pointOfView.executiveQuestion, true)
+        ]),
+        partnerInfoSection("Optional Depth", [
+          partnerInfoField("Named customers", optionalDepth.namedCustomers, true),
+          partnerInfoField("Analyst coverage", optionalDepth.analystCoverage, true),
+          partnerInfoField("Alliances", optionalDepth.alliances, true),
+          partnerInfoField("Certifications", optionalDepth.certifications, true),
+          partnerInfoField("Research links", optionalDepth.researchLinks, true),
+          partnerInfoField("Events and communities", optionalDepth.eventsCommunities, true),
+          partnerInfoField("Off-limits topics", optionalDepth.offLimits, true)
+        ]),
+        partnerInfoSection("Permissions", [
+          partnerInfoField("Profile permissions", permissions.publishItems, true),
+          partnerInfoField("Attribution", permissions.attributionPreference),
+          partnerInfoField("Logo uploads", logoUploads, true),
+          partnerInfoField("Notes", record.notes, true),
+          partnerInfoField("Sign-off", [record.signoff?.nameTitle, record.signoff?.date].filter(Boolean).join("\n"), true)
+        ])
+      ].join("") || "<p>No partner profile intake details found.</p>";
+    }
+
+    function openPartnerInfo(key = "") {
+      const record = (state.partnerInfoSubmissions || []).find((item) => item.key === key);
+      if (!record || !partnerInfoModal) return;
+      renderPartnerInfoModal(record);
+      partnerInfoModal.classList.add("open");
+      partnerInfoClose?.focus();
+    }
+
+    function closePartnerInfo() {
+      partnerInfoModal?.classList.remove("open");
+    }
+
     function guestMatrixDateTime(value = "") {
       const text = String(value || "").trim();
       if (!text) return Number.POSITIVE_INFINITY;
@@ -4140,6 +4435,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const notes = isRegisteredRow ? firstCleanValue(eventNotes, preRegistrationNotes) : preRegistrationNotes;
       const matrixInterestRating = starRatingValue(draft.matrixInterestRating ?? invite.matrixInterestRating ?? invite.participationInterestRating ?? invite.interestRating, 1);
       const potentialSponsor = draft.potentialSponsor ?? invite.potentialSponsor ?? invite.isPotentialSponsor ?? invite.sponsorProspect === true;
+      const name = guestMatrixPersonName(invite);
+      const company = firstCleanValue(draft.company, draft.partnerCompany, crmCompanyName(invite));
+      const partnerInfo = partnerRow ? partnerInfoForMatrixRecord({ ...invite, email, name, company }) : null;
       return {
         id,
         invite,
@@ -4151,11 +4449,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         showKey,
         showLabel: isRegisteredRow ? "" : guestMatrixShowMeta(invite),
         registeredShowLabel: isRegisteredRow ? guestMatrixRegisteredShowMeta(invite) : "",
-        name: guestMatrixPersonName(invite),
+        name,
         email,
-        company: firstCleanValue(draft.company, draft.partnerCompany, crmCompanyName(invite)),
+        company,
         title: crmPersonTitle(invite),
         linkedinProfileUrl: firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl),
+        partnerInfo,
         createdAt: firstCleanValue(invite.createdAt, invite.addedAt),
         updatedAt: firstCleanValue(invite.updatedAt, invite.crmUpdatedAt),
         invitedBy: firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy, "Not recorded"),
@@ -4191,6 +4490,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           guestMatrixRegisteredShowMeta(invite),
           guestMatrixShowMeta(invite),
           matrixOptionLabel(matrixRegistrationStatusOptions(), registrationStatus),
+          partnerInfo?.oneLineDescriptor,
+          partnerInfo?.elevatorPitch,
+          partnerInfo?.categories?.join(" "),
+          partnerInfo?.pointOfView?.councilThemes?.join(" "),
           ...futureEvents.flatMap((event) => [event.status, event.eventName, event.eventDate, event.eventShow])
         ].join(" ").toLowerCase()
       };
@@ -4261,6 +4564,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         company: firstCleanValue(primary.company, secondary.company),
         title: firstCleanValue(primary.title, secondary.title),
         linkedinProfileUrl: firstCleanValue(primary.linkedinProfileUrl, secondary.linkedinProfileUrl),
+        partnerInfo: primary.partnerInfo || secondary.partnerInfo,
         showKey: primary.showKey || secondary.showKey,
         showLabel: registeredShowLabel ? "" : primary.showLabel || secondary.showLabel,
         registeredShowLabel,
@@ -4457,6 +4761,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ["Event groups", new Set(rows.map((row) => row.eventKey)).size],
         [isPartnerMatrix() ? "Tracked partners" : "Tracked people", rows.length],
         ...(isPartnerMatrix() ? [["Companies", new Set(rows.map((row) => row.company).filter(Boolean)).size]] : []),
+        ...(isPartnerMatrix() ? [["Profile Intakes", rows.filter((row) => row.partnerInfo?.key).length]] : []),
         ...(!isPartnerMatrix() ? [["Potential Sponsors", rows.filter((row) => row.potentialSponsor).length]] : []),
         ["Scott's Engagement", rows.filter((row) => row.registrationStatus === "scott-engagement").length],
         ["Pending Engagement", rows.filter((row) => row.registrationStatus === "pending-engagement").length],
@@ -4627,6 +4932,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                         ${row.matrixOnly ? '<span class="pill warn">No invite link yet</span>' : `<code>${escapeHtml(row.code || "No code")}</code>`}
                         <div class="matrix-muted">${row.matrixOnly ? `Create one when this ${isPartnerMatrix() ? "partner" : "person"} is ready for an invite.` : escapeHtml(row.url || "Tracked before invite")}</div>
                         <div class="guest-matrix-actions">
+                          ${isPartnerMatrix() ? partnerInfoButtonMarkup(row) : ""}
                           ${row.matrixOnly ? `<button class="compact secondary" type="button" data-create-${dataPrefix}-matrix-invite-id="${escapeHtml(row.id)}">Create one</button>` : ""}
                           ${!isPartnerMatrix() && !row.matrixOnly && row.invite.key ? `<button class="compact secondary" type="button" data-reminder-guest-matrix-invite-key="${escapeHtml(row.invite.key)}" data-reminder-guest-matrix-invite-type="${escapeHtml(row.invite.type || "guest")}" ${row.email ? "" : "disabled title=\"No email address on file for this invite\""}>Reminder Email</button>` : ""}
                           ${row.invite.key ? `<button class="compact secondary" type="button" data-manual-register-key="${escapeHtml(row.invite.key)}" data-manual-register-type="${escapeHtml(isPartnerMatrix() ? "partner" : row.invite.type || "guest")}" ${manualRegistrationButtonDisabled(row, row.registered)}>Manual Register</button>` : ""}
@@ -6923,6 +7229,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         registrationInviteCodes: guestMatrixDemoInvites,
         guestMatrixProspects: [],
         partnerMatrixProspects: [],
+        partnerInfoSubmissions: [],
         upcomingEvents: fallbackMojoEvents
       };
       guestMatrixPendingChanges = {};
@@ -6947,6 +7254,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.registrationInviteCodes = state.registrationInviteCodes || [];
         state.guestMatrixProspects = state.guestMatrixProspects || [];
         state.partnerMatrixProspects = state.partnerMatrixProspects || [];
+        state.partnerInfoSubmissions = state.partnerInfoSubmissions || [];
         guestMatrixPendingChanges = {};
         updateGuestMatrixSaveButton();
         typeFilter.value = state.type || type;
@@ -8786,6 +9094,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     guestMatrixAddType?.addEventListener("change", updateGuestMatrixAddShowOptions);
     updateGuestMatrixAddShowOptions();
 
+    partnerInfoClose?.addEventListener("click", closePartnerInfo);
+    partnerInfoModal?.addEventListener("click", (event) => {
+      if (event.target === partnerInfoModal) closePartnerInfo();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && partnerInfoModal?.classList.contains("open")) closePartnerInfo();
+    });
+
     guestMatrixList.addEventListener("change", (event) => {
       const select = event.target.closest("[data-guest-matrix-field], [data-partner-matrix-field]");
       if (!select) return;
@@ -8812,6 +9128,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
       const starButton = event.target.closest("[data-star-rating-scope]");
       if (starButton && stageStarRating(starButton)) return;
+
+      const partnerInfoButton = event.target.closest("[data-open-partner-info-key]");
+      if (partnerInfoButton) {
+        openPartnerInfo(partnerInfoButton.dataset.openPartnerInfoKey || "");
+        return;
+      }
 
       const createInviteButton = event.target.closest("[data-create-guest-matrix-invite-id], [data-create-partner-matrix-invite-id]");
       if (createInviteButton) {
