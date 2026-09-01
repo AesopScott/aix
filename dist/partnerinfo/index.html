@@ -170,7 +170,11 @@
             <div class="grid">
               <div class="field">
                 <label for="companyLegalName">Company legal name</label>
-                <input id="companyLegalName" name="companyLegalName" type="text" autocomplete="organization" required>
+                <select id="companyLegalName" name="companyLegalName" autocomplete="organization" required>
+                  <option value="">Loading partner companies...</option>
+                </select>
+                <input id="partnerCompanySlug" name="partnerCompanySlug" type="hidden">
+                <span class="hint" id="companyListStatus">Loading existing partner company list.</span>
               </div>
               <div class="field">
                 <label for="displayName">Display name, if different</label>
@@ -514,13 +518,20 @@
 
 <script>
   const form = document.getElementById("partnerInfoForm");
+  const companyLegalName = document.getElementById("companyLegalName");
+  const partnerCompanySlug = document.getElementById("partnerCompanySlug");
+  const displayName = document.getElementById("displayName");
+  const website = document.getElementById("website");
+  const headquarters = document.getElementById("headquarters");
   const message = document.getElementById("formMessage");
   const successPanel = document.getElementById("successPanel");
   const submitButton = document.getElementById("submitButton");
+  const companyListStatus = document.getElementById("companyListStatus");
   const signoffDate = document.getElementById("signoffDate");
   const signoffMonth = document.getElementById("signoffMonth");
   const signoffDay = document.getElementById("signoffDay");
   const signoffYear = document.getElementById("signoffYear");
+  let partnerCompanies = [];
 
   const monthNames = [
     ["01", "January"], ["02", "February"], ["03", "March"], ["04", "April"],
@@ -530,6 +541,20 @@
 
   function option(value, label, selectedValue = "") {
     return `<option value="${value}" ${value === selectedValue ? "selected" : ""}>${label}</option>`;
+  }
+
+  function companySlug(value = "") {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/&/g, " and ")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 120);
+  }
+
+  function preferredCompanyFromUrl() {
+    return (new URLSearchParams(window.location.search).get("company") || "").trim();
   }
 
   function initDateSelectors() {
@@ -549,11 +574,75 @@
     syncSignoffDate();
   }
 
-  function prefillFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const company = (params.get("company") || "").trim();
-    if (company && !document.getElementById("companyLegalName").value.trim()) {
-      document.getElementById("companyLegalName").value = company;
+  function companyOptionLabel(company = {}) {
+    const legalName = company.companyLegalName || "";
+    const name = company.displayName || legalName;
+    return legalName && name && legalName !== name ? `${name} - ${legalName}` : name || legalName;
+  }
+
+  function populatePartnerCompanies(companies = [], preferredCompany = "") {
+    partnerCompanies = companies;
+    companyLegalName.innerHTML = "";
+    const placeholder = new Option(companies.length ? "Select partner company" : "No partner companies found", "");
+    companyLegalName.append(placeholder);
+
+    const preferredSlug = companySlug(preferredCompany);
+    let selectedValue = "";
+    companies.forEach((company) => {
+      const legalName = company.companyLegalName || "";
+      if (!legalName) return;
+      const option = new Option(companyOptionLabel(company), legalName);
+      option.dataset.slug = company.slug || companySlug(legalName);
+      option.dataset.displayName = company.displayName || "";
+      option.dataset.website = company.website || "";
+      option.dataset.headquarters = company.headquarters || "";
+      companyLegalName.append(option);
+      if (!selectedValue && preferredSlug && (
+        preferredSlug === option.dataset.slug ||
+        preferredSlug === companySlug(company.displayName) ||
+        preferredSlug === companySlug(legalName)
+      )) {
+        selectedValue = legalName;
+      }
+    });
+
+    companyLegalName.value = selectedValue;
+    companyLegalName.disabled = !companies.length;
+    companyListStatus.textContent = companies.length
+      ? `${companies.length} partner companies available.`
+      : "No partner companies are available yet. Ask the MOJO AI Summits team to add the company before submitting.";
+    syncCompanyDetails();
+  }
+
+  function syncCompanyDetails() {
+    const selected = companyLegalName.selectedOptions[0];
+    if (!selected || !selected.value) {
+      partnerCompanySlug.value = "";
+      return;
+    }
+    partnerCompanySlug.value = selected.dataset.slug || companySlug(selected.value);
+    const selectedCompany = partnerCompanies.find((company) => company.companyLegalName === selected.value) || {};
+    if (!displayName.value.trim() && selectedCompany.displayName && selectedCompany.displayName !== selected.value) {
+      displayName.value = selectedCompany.displayName;
+    }
+    if (!website.value.trim() && selectedCompany.website) {
+      website.value = selectedCompany.website;
+    }
+    if (!headquarters.value.trim() && selectedCompany.headquarters) {
+      headquarters.value = selectedCompany.headquarters;
+    }
+  }
+
+  async function loadPartnerCompanies() {
+    const preferredCompany = preferredCompanyFromUrl();
+    try {
+      const response = await fetch("/api/partner-info?companies=1", { headers: { "accept": "application/json" } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Partner company list could not be loaded.");
+      populatePartnerCompanies(Array.isArray(data.partnerCompanies) ? data.partnerCompanies : [], preferredCompany);
+    } catch (error) {
+      populatePartnerCompanies([], preferredCompany);
+      setMessage(error.message || "Partner company list could not be loaded.", "error");
     }
   }
 
@@ -611,6 +700,9 @@
     if (!signoffDate.value) {
       return "Choose a complete sign-off date.";
     }
+    if (!companyLegalName.value) {
+      return "Choose the partner company legal name from the list.";
+    }
     return "";
   }
 
@@ -653,8 +745,9 @@
   }
 
   [signoffMonth, signoffDay, signoffYear].forEach((select) => select.addEventListener("change", syncSignoffDate));
+  companyLegalName.addEventListener("change", syncCompanyDetails);
   initDateSelectors();
-  prefillFromUrl();
+  loadPartnerCompanies();
   form.addEventListener("submit", submitPartnerInfo);
 </script>
 <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>

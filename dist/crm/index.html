@@ -4117,7 +4117,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const email = guestMatrixPersonEmail(record).toLowerCase();
       const linkedin = normalizedLinkedInKey(guestMatrixPersonLinkedIn(record));
       return (state.partnerInfoSubmissions || []).find((info) => {
-        if (companyKey && partnerInfoCompanySlug(info.company || info.displayName || info.companyLegalName) === companyKey) return true;
+        if (companyKey && partnerInfoCompanySlug(info.company || info.companyName || info.organizationName || info.displayName || info.companyLegalName) === companyKey) return true;
         if (email && partnerInfoEmails(info).includes(email)) return true;
         if (linkedin && partnerInfoLinkedIns(info).includes(linkedin)) return true;
         return false;
@@ -4170,7 +4170,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function renderPartnerInfoModal(record = {}) {
       if (!partnerInfoTitle || !partnerInfoBody) return;
-      partnerInfoTitle.textContent = record.company || record.displayName || record.companyLegalName || "Partner profile intake";
+      partnerInfoTitle.textContent = record.company || record.companyName || record.organizationName || record.displayName || record.companyLegalName || "Partner profile intake";
       const market = record.market || {};
       const pointOfView = record.pointOfView || {};
       const optionalDepth = record.optionalDepth || {};
@@ -4182,8 +4182,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           partnerInfoField("Display name", record.displayName),
           partnerInfoField("Website", record.website),
           partnerInfoField("Headquarters", record.headquarters),
-          partnerInfoField("Descriptor", record.oneLineDescriptor, true),
-          partnerInfoField("Elevator pitch", record.elevatorPitch, true),
+          partnerInfoField("Description", record.description || record.oneLineDescriptor, true),
+          partnerInfoField("Client messaging", record.partnerClientMessaging || record.elevatorPitch, true),
           partnerInfoField("Categories", [...(record.categories || []), record.categoryOther].filter(Boolean), true),
           partnerInfoField("Submitted", record.updatedAt || record.createdAt)
         ]),
@@ -4194,8 +4194,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           partnerInfoField("Billing contact", [record.billingContact?.nameEmail, record.billingContact?.purchaseOrderNumber].filter(Boolean).join("\n"), true)
         ]),
         partnerInfoSection("Market", [
-          partnerInfoField("Who they sell to", market.buyerTitles, true),
-          partnerInfoField("Industries", market.industries, true),
+          partnerInfoField("Who they sell to", record.targetExecutiveRoles?.length ? record.targetExecutiveRoles : market.buyerTitles, true),
+          partnerInfoField("Industries", record.targetIndustries?.length ? record.targetIndustries : market.industries, true),
           partnerInfoField("Ideal customer", market.idealCustomer, true),
           partnerInfoField("Customer size", market.typicalCustomerSize),
           partnerInfoField("Geographies", market.primaryGeographies),
@@ -5505,6 +5505,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.partnerProductTypes,
           row.partnerClientMessaging,
           row.partnerLinkedInPromotionText,
+          row.partnerInfo?.description,
+          row.partnerInfo?.partnerClientMessaging,
+          ...(row.partnerInfo?.targetExecutiveRoles || []),
+          ...(row.partnerInfo?.targetIndustries || []),
+          row.partnerInfo?.oneLineDescriptor,
+          row.partnerInfo?.elevatorPitch,
           row.relationshipOwner,
           row.lifecycleStage,
           row.lastContactDate,
