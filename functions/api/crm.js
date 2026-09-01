@@ -253,15 +253,7 @@ const CRM_D1_KV_BACKFILL_PREFIXES = [
   "crm:company:",
   "partner-company:",
   "member-company:",
-  "guest-company:",
-  "scheduling:employees:index:v1",
-  "scheduling:employee:",
-  "scheduling:booking:",
-  "scheduling:hold:",
-  "scheduling:calendar-connections:",
-  "scheduling:calendar-connection:",
-  "scheduling:oauth-state:",
-  "scheduling:rate:"
+  "guest-company:"
 ];
 const CRM_D1_R2_BACKFILL_PREFIXES = [
   `${R2_REGISTRATION_PREFIX}/member/`,
@@ -272,15 +264,7 @@ const CRM_D1_R2_BACKFILL_PREFIXES = [
   `${OVERFLOW_REGISTRATION_PREFIX}/partner/`,
   `${R2_INVITE_USAGE_PREFIX}/member/`,
   `${R2_INVITE_USAGE_PREFIX}/guest/`,
-  `${R2_INVITE_USAGE_PREFIX}/partner/`,
-  "scheduling:employees:index:v1",
-  "scheduling:employee:",
-  "scheduling:booking:",
-  "scheduling:hold:",
-  "scheduling:calendar-connections:",
-  "scheduling:calendar-connection:",
-  "scheduling:oauth-state:",
-  "scheduling:rate:"
+  `${R2_INVITE_USAGE_PREFIX}/partner/`
 ];
 const builtInDirectoryStarterSources = builtInDirectoryStarterTopics.flatMap(([slug, label]) =>
   Array.from({ length: builtInDirectoryStarterPageCount }, (_, index) => {
@@ -2475,7 +2459,7 @@ function mergeContactEventList(existingEvents = [], nextEvent = {}) {
   return [nextEvent, ...events];
 }
 
-async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invite", actor = "", options = {}) {
+async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invite", actor = "") {
   const contact = contactFromInviteRecord(row, source);
   if (!contact?.key) return {};
   const existing = await readRawRecord(env, contact.key);
@@ -2494,34 +2478,15 @@ async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invi
   };
   const now = new Date().toISOString();
   const nextEvent = contact.events?.[0] || {};
-  const incomingName = cleanString(contact.name, 240);
-  const incomingCompany = cleanString(contact.company, 240);
-  const incomingTitle = cleanString(contact.title, 180);
-  const incomingLinkedIn = cleanLinkedInProfileUrl(contact.linkedinProfileUrl || contact.linkedInProfileUrl || contact.linkedinUrl || contact.linkedInUrl);
-  const incomingInvitedBy = cleanString(contact.invitedBy, 180);
-  const existingName = cleanString(mergedExisting?.name, 240);
-  const existingCompany = cleanString(mergedExisting?.company, 240);
-  const existingTitle = cleanString(mergedExisting?.title, 180);
-  const existingLinkedIn = cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl);
-  const existingInvitedBy = cleanString(existing?.invitedBy || mergedExisting?.invitedBy, 180);
-  const preferIncomingName = options.preferIncomingName === true && incomingName;
-  const preferIncomingCompany = options.preferIncomingCompany === true && incomingCompany;
-  const preferIncomingTitle = options.preferIncomingTitle === true && incomingTitle;
-  const preferIncomingLinkedIn = options.preferIncomingLinkedIn === true && incomingLinkedIn;
-  const preferIncomingInvitedBy = options.preferIncomingInvitedBy === true && incomingInvitedBy;
   await writeSetupJson(env, contact.key, {
     ...mergedExisting,
     id: contact.id,
     email: contact.email,
-    name: preferIncomingName
-      ? incomingName
-      : existingName && existingName !== "Name not recorded"
-        ? existingName
-        : contact.name,
-    company: preferIncomingCompany ? incomingCompany : existingCompany || incomingCompany,
-    title: preferIncomingTitle ? incomingTitle : existingTitle || incomingTitle,
-    linkedinProfileUrl: preferIncomingLinkedIn ? incomingLinkedIn : existingLinkedIn || incomingLinkedIn,
-    invitedBy: preferIncomingInvitedBy ? incomingInvitedBy : existingInvitedBy || incomingInvitedBy,
+    name: cleanString(mergedExisting?.name) && cleanString(mergedExisting?.name) !== "Name not recorded" ? cleanString(mergedExisting.name) : contact.name,
+    company: cleanString(mergedExisting?.company) || contact.company,
+    title: cleanString(mergedExisting?.title) || contact.title,
+    linkedinProfileUrl: contact.linkedinProfileUrl || cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl),
+    invitedBy: cleanString(contact.invitedBy) || cleanString(existing?.invitedBy, 180),
     source: cleanString(mergedExisting?.source) || contact.source,
     invitationSource: cleanString(mergedExisting?.invitationSource) || contact.invitationSource || contact.source,
     lifecycleStage: cleanAllowed(mergedExisting?.lifecycleStage, allowedLifecycleStages, "") || contact.lifecycleStage,
@@ -4657,7 +4622,7 @@ async function partnerRegistrationLinkRows(env) {
       partnerTier: registration?.partnerTier || invite.partnerTier,
       partnerProductTypes: registration?.partnerProductTypes,
       partnerClientMessaging: registration?.partnerClientMessaging,
-      partnerLinkedInPromotionText: registration?.partnerLinkedInPromotionText,
+      partnerLinkedInPromotionText: registration?.partnerLinkedInPromotionText || registration?.partnerPromotionText || registration?.partnerHypeText,
       attended: registration?.attended === true,
       attendanceStatus: registration?.attendanceStatus,
       crmStatus,
@@ -4831,9 +4796,7 @@ async function upsertManualPartnerMatrixProspect(env, row = {}, actor = "crm") {
   };
   await writeSetupJson(env, key, next);
   const prospect = normalizeGuestMatrixProspect(key, next, "partner");
-  await upsertContactFromInviteRecord(env, prospect, "partner-matrix-prospect", actor, {
-    preferIncomingCompany: Boolean(prospect.company || prospect.partnerCompany)
-  });
+  await upsertContactFromInviteRecord(env, prospect, "partner-matrix-prospect", actor);
   return prospect;
 }
 
@@ -5145,9 +5108,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
   };
   await writeSetupJson(env, key, nextRecord);
   const prospect = normalizeGuestMatrixProspect(key, nextRecord, prospectType);
-  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor, {
-    preferIncomingCompany: Boolean(prospect.company || prospect.partnerCompany)
-  });
+  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
   return prospect;
 }
 
@@ -5158,7 +5119,6 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   const existing = await readSetupJson(env, key);
   if (!existing) throw new Error("Tracked person was not found.");
   const field = cleanString(payload.field, 80);
-  const hasCompanyChange = field === "company" || field === "partnerCompany";
   const next = { ...existing };
   if (field === "linkedinConnection") {
     next.linkedinConnectionStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
@@ -5189,9 +5149,7 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   next.updatedBy = actor;
   await writeSetupJson(env, key, next);
   const prospect = normalizeGuestMatrixProspect(key, next, prospectType);
-  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor, {
-    preferIncomingCompany: hasCompanyChange
-  });
+  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
   return prospect;
 }
 
@@ -5300,86 +5258,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     if (!allowedPrefix) continue;
     const existing = await readSetupJson(env, key);
     if (!existing) continue;
-    const isPartnerRecord = key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX);
-    const hasCompanyChange = Object.prototype.hasOwnProperty.call(change, "company") ||
-      Object.prototype.hasOwnProperty.call(change, "partnerCompany");
-    const hasTitleChange = Object.prototype.hasOwnProperty.call(change, "title");
-    const hasNameChange = Object.prototype.hasOwnProperty.call(change, "name");
-    const hasLinkedInChange = Object.prototype.hasOwnProperty.call(change, "linkedinProfileUrl");
-    const hasInvitedByChange = Object.prototype.hasOwnProperty.call(change, "invitedBy");
     const next = { ...existing };
-    if (hasNameChange) {
-      const name = cleanString(change.name, 240);
-      next.name = name;
-      next.intendedGuestName = name;
-      next.invitedName = name;
-      next.guestName = name;
-      if (isPartnerRecord) next.partnerContactName = name;
-    }
-    if (Object.prototype.hasOwnProperty.call(change, "email")) {
-      const rawEmail = cleanString(change.email, 240).toLowerCase();
-      const email = rawEmail && isEmail(rawEmail) ? rawEmail : "";
-      next.email = email;
-      next.intendedGuestEmail = email;
-      next.invitedEmail = email;
-      next.guestEmail = email;
-      if (isPartnerRecord) next.partnerContactEmail = email;
-    }
-    if (hasTitleChange) {
-      const title = cleanString(change.title, 240);
-      next.title = title;
-      next.jobTitle = title;
-      next.roleTitle = title;
-      next.contactTitle = title;
-    }
-    if (hasLinkedInChange) {
-      const linkedinProfileUrl = cleanLinkedInProfileUrl(change.linkedinProfileUrl);
-      next.linkedinProfileUrl = linkedinProfileUrl;
-      next.linkedinUrl = linkedinProfileUrl;
-      next.linkedInProfileUrl = linkedinProfileUrl;
-      next.linkedInUrl = linkedinProfileUrl;
-    }
-    if (hasInvitedByChange) {
-      next.invitedBy = cleanString(change.invitedBy, 180);
-    }
-    if (
-      Object.prototype.hasOwnProperty.call(change, "eventSlug") ||
-      Object.prototype.hasOwnProperty.call(change, "eventName") ||
-      Object.prototype.hasOwnProperty.call(change, "eventDate")
-    ) {
-      const eventSlug = cleanString(change.eventSlug ?? next.eventSlug, 200);
-      const eventName = cleanString(change.eventName ?? next.eventName, 240);
-      const eventDate = cleanString(change.eventDate ?? next.eventDate, 120);
-      next.eventSlug = eventSlug;
-      next.eventName = eventName;
-      next.eventDate = eventDate;
-      if (!eventSlug && !eventName) {
-        next.eventId = "";
-        next.eventTime = "";
-        next.eventShowId = "";
-        next.eventShowLabel = "";
-        next.eventShowTime = "";
-      } else {
-        const showId = cleanEventShowId(next.eventShowId || next.showId || next.eventShow, "both");
-        next.eventShowId = showId;
-        next.eventShowLabel = showId ? eventShowLabel(showId) : "";
-        next.eventShowTime = showId ? eventShowTime(showId) : "";
-        next.eventTime = next.eventShowTime;
-        next.eventId = cleanString(`${eventSlug || eventName}:${showId || "both"}`, 200);
-      }
-    }
-    if (Object.prototype.hasOwnProperty.call(change, "eventShowId")) {
-      const role = next.partnerRegistrationType || next.guestRegistrationType || next.registrationRole;
-      const showId = requiresSingleShowRegistrationRole(role)
-        ? cleanEventShowId(change.eventShowId, "morning")
-        : cleanEventShowId(change.eventShowId, "both");
-      next.eventShowId = showId;
-      next.showId = showId;
-      next.eventShowLabel = showId ? eventShowLabel(showId) : "";
-      next.eventShowTime = showId ? eventShowTime(showId) : "";
-      next.eventTime = next.eventShowTime;
-      if (next.eventSlug || next.eventName) next.eventId = cleanString(`${next.eventSlug || next.eventName}:${showId || "both"}`, 200);
-    }
     if (Object.prototype.hasOwnProperty.call(change, "linkedinConnection")) {
       next.linkedinConnectionStatus = cleanGuestMatrixOption(change.linkedinConnection, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
     }
@@ -5394,7 +5273,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.registrationStatus = status;
     }
     if (Object.prototype.hasOwnProperty.call(change, "registrationRole")) {
-      const roleUpdate = registrationRoleUpdate(change.registrationRole, isPartnerRecord ? "partner" : "guest", existing);
+      const roleUpdate = registrationRoleUpdate(change.registrationRole, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner" : "guest", existing);
       next.registrationRole = roleUpdate.registrationRole;
       next.guestRegistrationType = roleUpdate.guestRegistrationType;
       next.partnerRegistrationType = roleUpdate.partnerRegistrationType;
@@ -5406,7 +5285,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.isFeaturedPartner = roleUpdate.isFeaturedPartner;
       await updateRegistrantRoleForMatrixChange(env, next, roleUpdate.registrationRole, actor, now);
     }
-    if (hasCompanyChange) {
+    if (Object.prototype.hasOwnProperty.call(change, "company") || Object.prototype.hasOwnProperty.call(change, "partnerCompany")) {
       const company = cleanString(change.partnerCompany ?? change.company, 240);
       next.company = company;
       if (key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)) {
@@ -5417,7 +5296,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.matrixInterestRating = cleanStarRating(change.matrixInterestRating, existing.matrixInterestRating || 1);
     }
     if (Object.prototype.hasOwnProperty.call(change, "potentialSponsor")) {
-      const isGuestRecord = !isPartnerRecord;
+      const isGuestRecord = !key.startsWith(PARTNER_INVITE_PREFIX) && !key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX);
       next.potentialSponsor = isGuestRecord && change.potentialSponsor === true;
     }
     if (Object.prototype.hasOwnProperty.call(change, "preRegistrationNotes")) {
@@ -5440,13 +5319,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     const source = key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)
       ? key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner-matrix-prospect" : "partner-invite"
       : key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) ? "guest-matrix-prospect" : `${normalized.type || "guest"}-invite`;
-    await upsertContactFromInviteRecord(env, normalized, source, actor, {
-      preferIncomingName: hasNameChange,
-      preferIncomingCompany: hasCompanyChange,
-      preferIncomingTitle: hasTitleChange,
-      preferIncomingLinkedIn: hasLinkedInChange,
-      preferIncomingInvitedBy: hasInvitedByChange
-    });
+    await upsertContactFromInviteRecord(env, normalized, source, actor);
     updatedCount += 1;
   }
   return { updatedCount };
@@ -5629,9 +5502,7 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     await deleteSetupRecord(env, sourceMatrixProspectKey);
   }
   const invite = normalizeInviteCode(key, record);
-  await upsertContactFromInviteRecord(env, invite, `${type}-invite`, actor, {
-    preferIncomingCompany: Boolean(record.company)
-  });
+  await upsertContactFromInviteRecord(env, invite, `${type}-invite`, actor);
   return invite;
 }
 
@@ -5683,9 +5554,7 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   const key = `${PARTNER_INVITE_PREFIX}${code}`;
   await writeSetupJson(env, key, record);
   const invite = normalizeInviteCode(key, record);
-  await upsertContactFromInviteRecord(env, invite, "partner-invite", actor, {
-    preferIncomingCompany: Boolean(company)
-  });
+  await upsertContactFromInviteRecord(env, invite, "partner-invite", actor);
   return invite;
 }
 
@@ -5769,6 +5638,273 @@ async function updateRegistrationInviteShow(env, payload = {}, actor = "") {
   const updatedInvite = normalizeInviteCode(invite.key, next);
   await upsertContactFromInviteRecord(env, updatedInvite, `${updatedInvite.type || "guest"}-invite`, actor);
   return updatedInvite;
+}
+
+function manualRegistrationTypeForPayload(payload = {}, key = "") {
+  const requested = cleanString(payload.type, 80).toLowerCase();
+  if (key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) || requested === "partner") return "partner";
+  if (key.startsWith(REGISTRATION_INVITE_PREFIXES.member) || requested === "member") return "member";
+  return "guest";
+}
+
+function manualRegistrationSourcePrefixes(type = "guest") {
+  if (type === "partner") return [PARTNER_INVITE_PREFIX, PARTNER_MATRIX_PROSPECT_PREFIX];
+  if (type === "member") return [REGISTRATION_INVITE_PREFIXES.member];
+  return [REGISTRATION_INVITE_PREFIXES.guest, GUEST_MATRIX_PROSPECT_PREFIX];
+}
+
+function normalizeManualRegistrationSource(key = "", record = {}, type = "guest") {
+  if (key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)) return normalizeGuestMatrixProspect(key, record, "guest");
+  if (key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)) return normalizeGuestMatrixProspect(key, record, "partner");
+  if (key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(REGISTRATION_INVITE_PREFIXES.guest) || key.startsWith(REGISTRATION_INVITE_PREFIXES.member)) {
+    return normalizeInviteCode(key, { ...record, type });
+  }
+  return normalizeRecord(key, record);
+}
+
+async function findManualRegistrationSource(env, payload = {}) {
+  const requestedKey = cleanString(payload.key, 500);
+  const initialType = manualRegistrationTypeForPayload(payload, requestedKey);
+  const candidates = [];
+  if (requestedKey) candidates.push({ key: requestedKey, type: manualRegistrationTypeForPayload(payload, requestedKey) });
+
+  const code = cleanCode(payload.code);
+  if (code) {
+    const types = initialType === "partner"
+      ? ["partner"]
+      : initialType === "member"
+        ? ["member"]
+        : ["guest", "member"];
+    for (const type of types) {
+      for (const prefix of manualRegistrationSourcePrefixes(type)) {
+        if (prefix.includes("matrix-prospect")) continue;
+        candidates.push({ key: `${prefix}${code}`, type });
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    const allowed = manualRegistrationSourcePrefixes(candidate.type);
+    if (!allowed.some((prefix) => candidate.key.startsWith(prefix))) continue;
+    const record = await readSetupJson(env, candidate.key);
+    if (!record) continue;
+    return {
+      key: candidate.key,
+      type: candidate.type,
+      record,
+      source: normalizeManualRegistrationSource(candidate.key, record, candidate.type)
+    };
+  }
+
+  throw new Error("Registration source record was not found.");
+}
+
+function manualRegistrationEventIdentity(row = {}) {
+  return cleanString(row.eventSlug || row.eventName || row.eventId || row.eventDate, 240).toLowerCase();
+}
+
+function manualRegistrationMatchesSource(source = {}, row = {}) {
+  const sourceRegistrationId = cleanString(source.registrationId || source.id);
+  const rowRegistrationId = cleanString(row.id || row.registrationId);
+  if (sourceRegistrationId && rowRegistrationId && sourceRegistrationId === rowRegistrationId) return true;
+
+  const sourceCode = cleanCode(source.code || source.inviteCode);
+  const rowCode = cleanCode(row.inviteCode || row.code);
+  if (sourceCode && rowCode && sourceCode === rowCode) return true;
+
+  const sourceEvent = manualRegistrationEventIdentity(source);
+  const rowEvent = manualRegistrationEventIdentity(row);
+  if (sourceEvent && rowEvent && sourceEvent !== rowEvent) return false;
+
+  const sourceShow = cleanEventShowId(source.eventShowId || source.showId || source.eventShow, "");
+  const rowShow = cleanEventShowId(row.eventShowId || row.showId || row.eventShow, "");
+  if (sourceShow && rowShow && sourceShow !== rowShow) return false;
+
+  const sourceEmail = invitePersonEmail(source);
+  const rowEmail = invitePersonEmail(row);
+  if (sourceEmail && rowEmail && sourceEmail === rowEmail) return true;
+
+  const sourceLinkedIn = linkedInProfileIdentity(source.linkedinProfileUrl || source.linkedInProfileUrl || source.linkedinUrl || source.linkedInUrl);
+  const rowLinkedIn = linkedInProfileIdentity(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl);
+  if (sourceLinkedIn && rowLinkedIn && sourceLinkedIn === rowLinkedIn) return true;
+
+  const sourceName = guestMatrixMergeNameKey(invitePersonName(source) || source.name);
+  const rowName = guestMatrixMergeNameKey(invitePersonName(row) || row.name);
+  return sourceName.length >= 6 && rowName.length >= 6 && sourceName === rowName;
+}
+
+async function findExistingRegistrationForManualSource(env, type = "guest", source = {}) {
+  const rows = await registrants(env, type, { includeManualPartners: true });
+  return rows.find((row) => manualRegistrationMatchesSource(source, row)) || null;
+}
+
+async function markManualRegistrationSourceRegistered(env, sourceInfo = {}, registration = {}, actor = "", now = new Date().toISOString()) {
+  const key = cleanString(sourceInfo.key, 500);
+  if (!key) return null;
+  const existing = await readSetupJson(env, key);
+  if (!existing) return null;
+  const isInvite = key.startsWith(PARTNER_INVITE_PREFIX) ||
+    key.startsWith(REGISTRATION_INVITE_PREFIXES.guest) ||
+    key.startsWith(REGISTRATION_INVITE_PREFIXES.member);
+  const isPartner = sourceInfo.type === "partner" || key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX);
+  const next = {
+    ...existing,
+    status: isInvite ? "used" : existing.status || "tracking",
+    crmStatus: "registered",
+    guestStatus: isPartner ? existing.guestStatus : "registered",
+    partnerStatus: isPartner ? "registered" : existing.partnerStatus,
+    registrationStatus: "registered",
+    usedAt: isInvite ? now : existing.usedAt,
+    usedBy: isInvite ? registration.email || registration.name : existing.usedBy,
+    usedByName: isInvite ? registration.name : existing.usedByName,
+    usedByEmail: isInvite ? registration.email : existing.usedByEmail,
+    usedFor: registration.eventName || existing.eventName,
+    usedForDate: registration.eventDate || existing.eventDate,
+    usedForShow: registration.eventShowLabel || existing.eventShowLabel,
+    usedForTime: registration.eventShowTime || registration.eventTime || existing.eventShowTime || existing.eventTime,
+    registrationId: registration.id,
+    manualRegistration: true,
+    manualRegistrationAt: now,
+    manualRegistrationBy: actor,
+    updatedAt: now,
+    updatedBy: actor
+  };
+  await writeSetupJson(env, key, next);
+  const normalized = normalizeManualRegistrationSource(key, next, sourceInfo.type);
+  await upsertContactFromInviteRecord(env, normalized, isInvite ? `${sourceInfo.type}-invite` : `${sourceInfo.type}-matrix-prospect`, actor);
+  return normalized;
+}
+
+async function manualRegisterForShow(env, payload = {}, actor = "") {
+  const sourceInfo = await findManualRegistrationSource(env, payload);
+  const type = sourceInfo.type;
+  const config = registrantTypes[type];
+  if (!config || type === "contacts") throw new Error("Choose a guest, member, or partner registration source.");
+
+  const source = sourceInfo.source || {};
+  const role = cleanGuestRegistrationType(
+    payload.registrationRole ||
+      source.partnerRegistrationType ||
+      source.guestRegistrationType ||
+      source.registrationRole ||
+      (type === "partner" ? "partner-candidate" : type)
+  );
+  const showId = cleanEventShowId(payload.eventShowId || source.eventShowId || source.showId || source.eventShow, "");
+  if (!showId) throw new Error("Choose an event show before manually registering this person.");
+  if (requiresSingleShowRegistrationRole(role) && showId === "both") {
+    throw new Error("Choose either the morning show or afternoon show for this featured registration.");
+  }
+
+  const eventSlug = cleanString(payload.eventSlug || source.eventSlug, 200);
+  const eventName = cleanString(payload.eventName || source.eventName || source.usedFor, 240);
+  const eventDate = cleanString(payload.eventDate || source.eventDate || source.usedForDate, 120);
+  if (!eventSlug && !eventName) throw new Error("Choose an event before manually registering this person.");
+
+  const email = invitePersonEmail(source);
+  if (!isEmail(email)) throw new Error("A valid email address is required before manually registering someone.");
+
+  const now = new Date().toISOString();
+  const existing = await findExistingRegistrationForManualSource(env, type, { ...source, eventShowId: showId, eventSlug, eventName, eventDate });
+  const ensured = existing ? await ensureCrmRecord(env, existing, type) : null;
+  const baseRow = ensured?.row || {};
+  const id = cleanString(baseRow.id || source.registrationId, 200) || crypto.randomUUID?.() || `${Date.now()}-${randomInviteCode()}`;
+  const createdAt = cleanString(baseRow.createdAt) || now;
+  const registrationKey = ensured?.key || `${config.crmPrefix}${createdAt}:${id}`;
+  const roleUpdate = registrationRoleUpdate(role, type, source);
+  const name = invitePersonName(baseRow) || invitePersonName(source) || baseRow.name || source.name || email;
+  const company = cleanString(baseRow.partnerCompany || baseRow.company || source.partnerCompany || source.company || source.organization, 240);
+  const eventTime = eventShowTime(showId);
+  const manualRecord = {
+    ...source,
+    ...baseRow,
+    ...roleUpdate,
+    key: undefined,
+    id,
+    createdAt,
+    source: `${type}-manual-registration`,
+    crmType: config.crmType,
+    type,
+    name,
+    email,
+    company,
+    partnerCompany: type === "partner" ? company : cleanString(baseRow.partnerCompany || source.partnerCompany, 240),
+    title: cleanString(baseRow.title || source.title || source.jobTitle || source.roleTitle, 240),
+    phone: cleanString(baseRow.phone || source.phone, 80),
+    city: cleanString(baseRow.city || source.city, 120),
+    stateCountry: cleanString(baseRow.stateCountry || baseRow.state || baseRow.country || source.stateCountry || source.state || source.country, 120),
+    state: cleanString(baseRow.state || baseRow.stateCountry || baseRow.country || source.state || source.stateCountry || source.country, 120),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(baseRow.linkedinProfileUrl || baseRow.linkedInProfileUrl || baseRow.linkedinUrl || baseRow.linkedInUrl || source.linkedinProfileUrl || source.linkedInProfileUrl || source.linkedinUrl || source.linkedInUrl),
+    photoUrl: cleanString(baseRow.photoUrl || baseRow.photoURL || baseRow.photo || source.photoUrl || source.photoURL || source.photo, 500),
+    photoKey: safeObjectKey(baseRow.photoKey || source.photoKey),
+    photoOriginalName: cleanString(baseRow.photoOriginalName || source.photoOriginalName),
+    photoUploadedAt: cleanString(baseRow.photoUploadedAt || source.photoUploadedAt),
+    companyLogoUrl: cleanString(baseRow.companyLogoUrl || baseRow.partnerCompanyLogoUrl || baseRow.logoUrl || source.companyLogoUrl || source.partnerCompanyLogoUrl || source.logoUrl, 500),
+    companyLogoKey: safeObjectKey(baseRow.companyLogoKey || baseRow.partnerCompanyLogoKey || baseRow.logoKey || source.companyLogoKey || source.partnerCompanyLogoKey || source.logoKey),
+    companyLogoOriginalName: cleanString(baseRow.companyLogoOriginalName || baseRow.partnerCompanyLogoOriginalName || source.companyLogoOriginalName || source.partnerCompanyLogoOriginalName),
+    companyLogoUploadedAt: cleanString(baseRow.companyLogoUploadedAt || baseRow.partnerCompanyLogoUploadedAt || source.companyLogoUploadedAt || source.partnerCompanyLogoUploadedAt),
+    inviteCode: cleanCode(source.code || source.inviteCode),
+    invitedBy: cleanString(source.invitedBy || source.inviter || source.invitedByName || source.createdBy || actor, 180),
+    eventId: cleanString(payload.eventId || `${eventSlug || eventName}:${showId}`, 200),
+    eventSlug,
+    eventName,
+    eventDate,
+    eventTime,
+    eventShowId: showId,
+    eventShowLabel: eventShowLabel(showId),
+    eventShowTime: eventTime,
+    eventAccessLink: cleanString(baseRow.eventAccessLink || baseRow.accessLink || baseRow.joinUrl || baseRow.zoomUrl || baseRow.zoomJoinUrl || source.eventAccessLink || source.accessLink || source.joinUrl || source.zoomUrl || source.zoomJoinUrl, 1000),
+    accessLink: cleanString(baseRow.accessLink || baseRow.eventAccessLink || baseRow.joinUrl || baseRow.zoomUrl || baseRow.zoomJoinUrl || source.accessLink || source.eventAccessLink || source.joinUrl || source.zoomUrl || source.zoomJoinUrl, 1000),
+    zoomJoinUrl: cleanString(baseRow.zoomJoinUrl || baseRow.eventAccessLink || baseRow.accessLink || baseRow.joinUrl || baseRow.zoomUrl || source.zoomJoinUrl || source.eventAccessLink || source.accessLink || source.joinUrl || source.zoomUrl, 1000),
+    crmStatus: "registered",
+    guestStatus: type === "partner" ? cleanString(source.guestStatus) : "registered",
+    partnerStatus: type === "partner" ? "registered" : cleanString(source.partnerStatus),
+    registrationStatus: "registered",
+    phoneVerificationStatus: cleanString(baseRow.phoneVerificationStatus || source.phoneVerificationStatus) === "verified" ? "verified" : "manual",
+    publicationUseName: source.publicationUseName === true || baseRow.publicationUseName === true,
+    publicationUseCompany: source.publicationUseCompany === true || baseRow.publicationUseCompany === true,
+    eventNotes: cleanEventNotes(baseRow) || cleanEventNotes(source) || cleanString(source.preRegistrationNotes || source.crmNotes, 4000),
+    registrationNotes: cleanEventNotes(baseRow) || cleanEventNotes(source) || cleanString(source.preRegistrationNotes || source.crmNotes, 4000),
+    crmNotes: cleanString(baseRow.crmNotes || source.crmNotes, 4000),
+    manualRegistration: true,
+    manualRegistrationSourceKey: sourceInfo.key,
+    manualRegistrationAt: now,
+    manualRegistrationBy: actor,
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor,
+    updatedAt: now,
+    updatedBy: actor
+  };
+
+  const accessRecord = await registrationWithVirtualEventAccess(env, manualRecord);
+  const contactRefs = await upsertRegistrationContact(env, type, accessRecord, {
+    ...config,
+    source: `${type}-manual-registration`,
+    updatedBy: actor
+  }).catch(() => ({}));
+  const storedRecord = {
+    ...accessRecord,
+    ...contactRefs,
+    key: undefined
+  };
+  await writeSetupJson(env, registrationKey, storedRecord);
+  await markManualRegistrationSourceRegistered(env, sourceInfo, storedRecord, actor, now);
+
+  let confirmationEmail = null;
+  if (cleanBoolean(payload.sendConfirmation)) {
+    confirmationEmail = await sendRegistrationConfirmation(env, type, storedRecord);
+    await writeSetupJson(env, registrationKey, {
+      ...storedRecord,
+      confirmationEmail,
+      confirmationResentAt: now,
+      crmUpdatedAt: now,
+      crmUpdatedBy: actor
+    });
+  }
+
+  return {
+    registration: normalizeRecord(registrationKey, { ...storedRecord, confirmationEmail }),
+    confirmationEmail
+  };
 }
 
 function inviteRegistrationUrl(origin, invite) {
@@ -6367,11 +6503,10 @@ async function updateContact(env, payload = {}, actor = "") {
     name,
     firstName,
     lastName,
-    company: cleanString(payload.company ?? payload.partnerCompany ?? existing?.company ?? existing?.partnerCompany, 240),
+    company: cleanString(payload.company ?? existing?.company, 240),
     title: cleanString(payload.title ?? existing?.title, 180),
     phone: cleanString(payload.phone ?? existing?.phone, 80),
     linkedinProfileUrl,
-    partnerLinkedInPromotionText: cleanString(payload.partnerLinkedInPromotionText ?? payload.partnerPromotionText ?? payload.partnerHypeText ?? existing?.partnerLinkedInPromotionText, 4000),
     source: cleanString(existing?.source) || "crm-contact-overlay",
     createdAt: cleanString(existing?.createdAt) || now,
     photoUrl: cleanString(payload.photoUrl ?? payload.photoURL ?? payload.photo ?? existing?.photoUrl, 500),
@@ -6380,6 +6515,15 @@ async function updateContact(env, payload = {}, actor = "") {
     companyLogoKey: safeObjectKey(payload.companyLogoKey ?? payload.partnerCompanyLogoKey ?? payload.logoKey ?? existing?.companyLogoKey ?? existing?.partnerCompanyLogoKey ?? existing?.logoKey),
     companyLogoOriginalName: cleanString(payload.companyLogoOriginalName ?? payload.partnerCompanyLogoOriginalName ?? existing?.companyLogoOriginalName ?? existing?.partnerCompanyLogoOriginalName),
     companyLogoUploadedAt: cleanString(payload.companyLogoUploadedAt ?? payload.partnerCompanyLogoUploadedAt ?? existing?.companyLogoUploadedAt ?? existing?.partnerCompanyLogoUploadedAt),
+    partnerLinkedInPromotionText: cleanString(
+      payload.partnerLinkedInPromotionText ??
+      payload.partnerPromotionText ??
+      payload.partnerHypeText ??
+      existing?.partnerLinkedInPromotionText ??
+      existing?.partnerPromotionText ??
+      existing?.partnerHypeText,
+      4000
+    ),
     bio: cleanString(payload.bio ?? payload.biography ?? existing?.bio, 4000),
     executiveFunction: cleanAllowed(payload.executiveFunction ?? existing?.executiveFunction, allowedExecutiveFunctions, ""),
     industry: cleanString(payload.industry ?? existing?.industry),
@@ -7008,7 +7152,9 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
     ]));
     contactMap.set(email, {
       ...(contactMap.get(email) || {}),
-      ...profileContact
+      ...profileContact,
+      partnerLinkedInPromotionText: profileContact.partnerLinkedInPromotionText ||
+        cleanString(contactMap.get(email)?.partnerLinkedInPromotionText, 4000)
     });
     await writeSetupJson(env, companyKey, {
       ...(existingCompany || {}),
@@ -7019,8 +7165,16 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
       companyLogoKey: safeObjectKey(row.companyLogoKey || row.partnerCompanyLogoKey || row.logoKey || existingCompany?.companyLogoKey),
       companyLogoOriginalName: cleanString(row.companyLogoOriginalName || row.partnerCompanyLogoOriginalName || existingCompany?.companyLogoOriginalName),
       companyLogoUploadedAt: cleanString(row.companyLogoUploadedAt || row.partnerCompanyLogoUploadedAt || existingCompany?.companyLogoUploadedAt),
+      partnerLinkedInPromotionText: cleanString(
+        row.partnerLinkedInPromotionText ||
+        row.partnerPromotionText ||
+        row.partnerHypeText ||
+        existingCompany?.partnerLinkedInPromotionText ||
+        existingCompany?.partnerPromotionText ||
+        existingCompany?.partnerHypeText,
+        4000
+      ),
       tier: cleanString(row.partnerTier || existingCompany?.tier, 120),
-      partnerLinkedInPromotionText: cleanString(row.partnerLinkedInPromotionText || row.partnerPromotionText || row.partnerHypeText || existingCompany?.partnerLinkedInPromotionText, 4000),
       status: cleanString(row.crmStatus || existingCompany?.status, 80) || "new",
       crmNotes: cleanString(row.crmNotes || existingCompany?.crmNotes),
       contacts: [...contactMap.values()],
@@ -7052,6 +7206,15 @@ async function upsertPartnerContactProfile(env, row, actor = "") {
     companyLogoKey: safeObjectKey(row.companyLogoKey || row.partnerCompanyLogoKey || row.logoKey || existingCompany?.companyLogoKey),
     companyLogoOriginalName: cleanString(row.companyLogoOriginalName || row.partnerCompanyLogoOriginalName || existingCompany?.companyLogoOriginalName),
     companyLogoUploadedAt: cleanString(row.companyLogoUploadedAt || row.partnerCompanyLogoUploadedAt || existingCompany?.companyLogoUploadedAt),
+    partnerLinkedInPromotionText: cleanString(
+      row.partnerLinkedInPromotionText ||
+      row.partnerPromotionText ||
+      row.partnerHypeText ||
+      existingCompany?.partnerLinkedInPromotionText ||
+      existingCompany?.partnerPromotionText ||
+      existingCompany?.partnerHypeText,
+      4000
+    ),
     tier: cleanString(row.partnerTier || existingCompany?.tier, 120),
     updatedAt: now,
     updatedBy: actor || "crm"
@@ -7718,11 +7881,12 @@ export async function onRequestPost({ request, env, data }) {
       let emailMessageId = "";
       if (sendEmail) {
         const origin = new URL(request.url).origin;
+        const inviteEmail = invitePersonEmail(invite);
         const subject = `Partner Invite: ${invite.eventName || "Mojo AI Summits"}`;
         await logGuestRegistrationEmail(env, {
           type: "partner-registration-invitation",
           status: "attempted",
-          to: invite.partnerContactEmail,
+          to: inviteEmail,
           cc: partnerInviteEmailCc,
           subject,
           inviteKey: invite.key,
@@ -7753,7 +7917,7 @@ export async function onRequestPost({ request, env, data }) {
           await logGuestRegistrationEmail(env, {
             type: "partner-registration-invitation",
             status: "failed",
-            to: invite.partnerContactEmail,
+            to: inviteEmail,
             cc: partnerInviteEmailCc,
             subject,
             inviteKey: invite.key,
@@ -7972,6 +8136,31 @@ export async function onRequestPost({ request, env, data }) {
     } catch (error) {
       const status = /already been used|valid show|featured invite/i.test(error.message || "") ? 400 : 404;
       return json({ error: error.message || "Invite show time could not be updated." }, { status });
+    }
+  }
+
+  if (payload?.action === "manual-register-for-show") {
+    try {
+      const type = manualRegistrationTypeForPayload(payload, cleanString(payload.key, 500));
+      const result = await manualRegisterForShow(env, payload, access.email);
+      const rows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type, { includeManualPartners: type === "partner" });
+      return json({
+        ok: true,
+        type,
+        label: registrantTypes[type].label,
+        summary: summarize(rows),
+        rows,
+        registration: result.registration,
+        confirmationEmail: result.confirmationEmail,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        partnerMatrixProspects: await partnerMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      }, { status: 201 });
+    } catch (error) {
+      const status = /source record|valid email|choose an event|choose an event show|featured registration/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Manual registration could not be completed." }, { status });
     }
   }
 
