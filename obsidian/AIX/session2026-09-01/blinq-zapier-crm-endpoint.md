@@ -16,6 +16,7 @@ Scott clarified that Mojo will use Blinq and Zapier instead of building a native
 - Webhooks by Zapier can authenticate with the same key in the URL as `?token=<api-key>`.
 - Preferred Cloudflare secret is `MOJO_BLINQ_ZAPIER_API_KEY`.
 - CRM writes upsert by verified email under `crm:contact:{email}` and append a `blinq-zapier` activity record.
+- Blinq captures now also upsert `crm:guest-matrix-prospect:*` or `crm:partner-matrix-prospect:*` rows keyed by email so scans appear in the Guest or Partner Matrix instead of only Contacts.
 
 ## Source Artifact
 
