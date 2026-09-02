@@ -5771,6 +5771,8 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.potentialSponsor = prospectType === "guest" && payload.value === true;
   } else if (field === "registrationRole") {
     Object.assign(next, registrationRoleUpdate(payload.value, prospectType, existing));
+  } else if (field === "eventShowId") {
+    Object.assign(next, eventShowUpdate(payload.value, next));
   } else if (field === "company" || field === "partnerCompany") {
     const company = cleanString(payload.value, 240);
     next.company = company;
@@ -5848,6 +5850,24 @@ function registrationRoleUpdate(roleValue = "", type = "guest", existing = {}) {
   };
 }
 
+function eventShowUpdate(showValue = "", existing = {}) {
+  const role = cleanGuestRegistrationType(existing.partnerRegistrationType || existing.guestRegistrationType || existing.registrationRole || existing.type || "guest");
+  const showId = cleanEventShowId(showValue || existing.eventShowId || existing.showId || existing.eventShow, "");
+  if (!showId) throw new Error("Choose a valid show time.");
+  if (requiresSingleShowRegistrationRole(role) && showId === "both") {
+    throw new Error("Choose either the morning show or afternoon show for this featured invite.");
+  }
+  const showTime = eventShowTime(showId);
+  const eventBase = cleanString(existing.eventSlug || existing.eventName, 200);
+  return {
+    eventShowId: showId,
+    eventShowLabel: eventShowLabel(showId),
+    eventShowTime: showTime,
+    eventTime: showTime,
+    eventId: eventBase ? `${eventBase}:${showId}` : existing.eventId
+  };
+}
+
 async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue = "", actor = "", now = new Date().toISOString()) {
   const inviteCode = cleanCode(record.code || record.inviteCode);
   const registrationId = cleanString(record.registrationId);
@@ -5869,6 +5889,38 @@ async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue =
     await writeSetupJson(env, key, {
       ...crmRow,
       ...roleUpdate,
+      key: undefined,
+      crmType: registrantTypes[type].crmType,
+      crmUpdatedAt: now,
+      crmUpdatedBy: actor
+    });
+    return true;
+  }
+
+  return false;
+}
+
+async function updateRegistrantShowForMatrixChange(env, record = {}, showValue = "", actor = "", now = new Date().toISOString()) {
+  const inviteCode = cleanCode(record.code || record.inviteCode);
+  const registrationId = cleanString(record.registrationId);
+  const email = invitePersonEmail(record);
+  const typeCandidates = record.type === "partner" || record.partnerContactEmail
+    ? ["partner"]
+    : ["guest", "member"];
+
+  for (const type of typeCandidates) {
+    const rows = await registrants(env, type);
+    const row = rows.find((entry) =>
+      (registrationId && (entry.key === registrationId || entry.id === registrationId)) ||
+      (inviteCode && cleanCode(entry.inviteCode) === inviteCode && (!email || cleanString(entry.email).toLowerCase() === email))
+    );
+    if (!row) continue;
+    const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
+    const showUpdate = eventShowUpdate(showValue, { ...crmRow, ...record });
+    await assertFeaturedGuestShowCapacity(env, { ...crmRow, ...showUpdate, key }, { excludeKeys: [key, cleanString(record.key, 500)] });
+    await writeSetupJson(env, key, {
+      ...crmRow,
+      ...showUpdate,
       key: undefined,
       crmType: registrantTypes[type].crmType,
       crmUpdatedAt: now,
@@ -5921,6 +5973,11 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
       next.isFeaturedAuthor = roleUpdate.isFeaturedAuthor;
       next.isFeaturedPartner = roleUpdate.isFeaturedPartner;
       await updateRegistrantRoleForMatrixChange(env, next, roleUpdate.registrationRole, actor, now);
+    }
+    if (Object.prototype.hasOwnProperty.call(change, "eventShowId")) {
+      const showUpdate = eventShowUpdate(change.eventShowId, next);
+      Object.assign(next, showUpdate);
+      await updateRegistrantShowForMatrixChange(env, next, showUpdate.eventShowId, actor, now);
     }
     if (Object.prototype.hasOwnProperty.call(change, "company") || Object.prototype.hasOwnProperty.call(change, "partnerCompany")) {
       const company = cleanString(change.partnerCompany ?? change.company, 240);

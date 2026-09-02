@@ -3170,6 +3170,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function eventShowId(value, fallback = "both") {
       const show = String(value || "").toLowerCase();
+      const compact = show.replace(/[^a-z0-9]/g, "");
+      if (show.includes("morning") || compact.includes("10am") || compact.includes("1000am")) return "morning";
+      if (show.includes("afternoon") || compact.includes("1pm") || compact.includes("100pm") || compact.includes("1300")) return "afternoon";
+      if (show.includes("both") || compact === "bothshows") return "both";
       if (["morning", "am", "10", "10am", "10:00"].includes(show)) return "morning";
       if (["afternoon", "pm", "1", "1pm", "13:00", "1:00"].includes(show)) return "afternoon";
       if (["both", "all", "both-shows"].includes(show)) return "both";
@@ -3209,6 +3213,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ["afternoon", "Afternoon show | 1:00 pm - 2:30 pm CT"]
       ];
       return options.map(([value, label]) => `<option value="${value}" ${value === current ? "selected" : ""}>${escapeHtml(label)}</option>`).join("");
+    }
+
+    function matrixShowOptionList(row = {}) {
+      const role = row.roleValue || row.registrationRole || row.invite?.registrationRole || row.invite?.guestRegistrationType || row.invite?.partnerRegistrationType || "guest";
+      const current = eventShowId(row.showKey || row.invite?.eventShowId || row.invite?.showId || row.invite?.eventShow, isSingleShowRegistrationRole(role) ? "morning" : "both");
+      const options = [
+        ...(isSingleShowRegistrationRole(role) ? [] : [["both", "Both shows | 10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"]]),
+        ["morning", "Morning show | 10:00 am - 11:30 am CT"],
+        ["afternoon", "Afternoon show | 1:00 pm - 2:30 pm CT"]
+      ];
+      return matrixOptionList(options, current);
     }
 
     function actualEventBase(event = {}) {
@@ -5424,6 +5439,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                     <th>${isPartnerMatrix() ? "Partner" : "Guest"}</th>
                     ${isPartnerMatrix() ? "<th>Company</th>" : ""}
                     <th>Role</th>
+                    <th>Show</th>
                     <th>Interest</th>
                     ${isPartnerMatrix() ? "" : "<th>Potential Sponsor</th>"}
                     <th>${isPartnerMatrix() ? "Partner Status" : "Guest Status"}</th>
@@ -5457,6 +5473,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
                       <td>
                         <select class="matrix-select" data-${dataPrefix}-matrix-field="registrationRole" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Role for ${escapeHtml(row.name)}">
                           ${matrixOptionList(guestMatrixRoleOptions(row), row.roleValue || "guest")}
+                        </select>
+                      </td>
+                      <td>
+                        <select class="matrix-select matrix-show-select" data-${dataPrefix}-matrix-field="eventShowId" data-${dataPrefix}-matrix-id="${escapeHtml(row.id)}" data-${dataPrefix}-matrix-key="${escapeHtml(row.invite.key || "")}" data-${dataPrefix}-matrix-kind="${row.matrixOnly ? "prospect" : "invite"}" aria-label="Show time for ${escapeHtml(row.name)}">
+                          ${matrixShowOptionList(row)}
                         </select>
                         ${row.registeredShowLabel
                           ? `<div class="matrix-muted">Registered: ${escapeHtml(row.registeredShowLabel)}</div>`
