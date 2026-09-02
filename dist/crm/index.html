@@ -4051,6 +4051,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return "both";
     }
 
+    function guestMatrixShowMatches(rowShow = "", selectedShow = "all") {
+      if (selectedShow === "all") return true;
+      if (selectedShow === "morning" || selectedShow === "afternoon") {
+        return rowShow === selectedShow || rowShow === "both";
+      }
+      return rowShow === selectedShow;
+    }
+
     function guestMatrixActualEventKey(invite = {}) {
       const eventId = firstCleanValue(invite.eventId).replace(/:(morning|afternoon|both)$/i, "");
       return filterKey(firstCleanValue(invite.eventSlug, invite.usedFor, invite.eventName, eventId, "No event assigned"));
@@ -5280,7 +5288,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const terms = (guestMatrixSearch?.value.trim().toLowerCase() || "").split(/\s+/).filter(Boolean);
       return rows.filter((row) => {
         if (eventValue !== "all" && row.eventKey !== eventValue) return false;
-        if (showValue !== "all" && row.showKey !== showValue) return false;
+        if (!guestMatrixShowMatches(row.showKey, showValue)) return false;
         if (roleValue !== "all" && row.roleKey !== roleValue) return false;
         if (!guestMatrixStatusMatch(row, statusValue)) return false;
         if (intakeTypeValue !== "all" && row.intakeTypeKey !== intakeTypeValue) return false;
