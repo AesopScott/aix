@@ -3231,12 +3231,116 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return event.eventName || event.eventSlug || (/[a-z]/i.test(eventId) ? eventId : "");
     }
 
-    function eventDisplayLabel(event = {}) {
+    function normalizedEventIdentity(value = "") {
+      return filterKey(String(value || "").replace(/:(morning|afternoon|both)$/i, ""));
+    }
+
+    function fallbackEventForIdentity(value = "") {
+      const key = normalizedEventIdentity(value);
+      if (!key) return null;
+      return fallbackMojoEvents.find((event) =>
+        normalizedEventIdentity(event.slug) === key ||
+        normalizedEventIdentity(event.title) === key
+      ) || null;
+    }
+
+    function eventDateSortValue(value = "") {
+      const text = String(value || "").trim().replace(/\b(\d{1,2})(st|nd|rd|th)\b/gi, "$1");
+      if (!text) return Number.POSITIVE_INFINITY;
+      const direct = new Date(text).getTime();
+      if (Number.isFinite(direct)) return direct;
+      const match = text.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})\b/i);
+      if (!match) return Number.POSITIVE_INFINITY;
+      const parsed = new Date(`${match[1]} ${match[2]}, ${match[3]}`).getTime();
+      return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+    }
+
+    function canonicalEventCatalog() {
+      const bySlug = new Map();
+      const addEvent = (source = {}) => {
+        const fallback = fallbackEventForIdentity(firstCleanValue(
+          source.slug,
+          source.eventSlug,
+          source.title,
+          source.eventName,
+          source.usedFor,
+          source.eventId,
+          source.id
+        ));
+        const slug = firstCleanValue(
+          fallback?.slug,
+          source.slug,
+          source.eventSlug,
+          source.eventId,
+          source.id,
+          filterKey(firstCleanValue(source.title, source.eventName, source.usedFor))
+        );
+        if (!slug) return;
+        const previous = bySlug.get(slug) || {};
+        const title = firstCleanValue(source.title, source.eventName, source.usedFor, previous.title, fallback?.title, titleCaseLabel(slug));
+        const date = firstCleanValue(source.date, source.eventDate, source.usedForDate, source.dateLabel, previous.date, fallback?.date);
+        bySlug.set(slug, {
+          ...previous,
+          ...source,
+          slug,
+          title,
+          date,
+          sortTime: eventDateSortValue(date)
+        });
+      };
+      fallbackMojoEvents.forEach(addEvent);
+      (state.upcomingEvents || []).forEach(addEvent);
+      return [...bySlug.values()].sort((left, right) =>
+        left.sortTime - right.sortTime ||
+        String(left.title || "").localeCompare(String(right.title || ""))
+      );
+    }
+
+    function canonicalEventFor(event = {}) {
+      const identities = [
+        event.slug,
+        event.eventSlug,
+        event.title,
+        event.eventName,
+        event.usedFor,
+        event.eventId,
+        event.id
+      ].map(normalizedEventIdentity).filter(Boolean);
+      if (!identities.length) return null;
+      return canonicalEventCatalog().find((candidate) =>
+        identities.includes(normalizedEventIdentity(candidate.slug)) ||
+        identities.includes(normalizedEventIdentity(candidate.title))
+      ) || null;
+    }
+
+    function eventSortTimeFor(event = {}) {
+      const canonical = canonicalEventFor(event);
+      return eventDateSortValue(firstCleanValue(
+        canonical?.date,
+        event.date,
+        event.eventDate,
+        event.usedForDate,
+        event.dateLabel
+      ));
+    }
+
+    function eventFilterDisplayLabel(event = {}) {
+      const canonical = canonicalEventFor(event);
       const base = actualEventBase(event);
-      const label = event.eventName || titleCaseLabel(base);
+      const title = firstCleanValue(canonical?.title, event.eventName, event.usedFor, event.title, titleCaseLabel(base));
+      if (!title) return "";
+      const date = firstCleanValue(canonical?.date, event.eventDate, event.usedForDate, event.date, event.dateLabel);
+      return [date, title].filter(Boolean).join(" | ");
+    }
+
+    function eventDisplayLabel(event = {}) {
+      const canonical = canonicalEventFor(event);
+      const base = actualEventBase(event);
+      const label = firstCleanValue(canonical?.title, event.eventName, event.usedFor, event.title, titleCaseLabel(base));
       if (!base) return "";
+      const date = firstCleanValue(canonical?.date, event.eventDate, event.usedForDate, event.date, event.dateLabel);
       const show = eventShowText(event);
-      return show ? `${label} | ${show}` : label;
+      return [label, date, show].filter(Boolean).join(" | ");
     }
 
     function contactStatusLabel(row) {
@@ -3382,14 +3486,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function actualEventKey(event = {}) {
-      const show = eventShowId(event.eventShowId || event.showId || event.eventShow, "");
+      const canonical = canonicalEventFor(event);
       const base = actualEventBase(event);
       if (!base) return "";
+      const date = firstCleanValue(canonical?.date, event.eventDate, event.usedForDate, event.date, event.dateLabel);
       return filterKey([
-        base,
-        event.eventDate || "",
-        show
-      ].join("|"));
+        firstCleanValue(canonical?.slug, base),
+        date
+      ].filter(Boolean).join("|"));
     }
 
     function eventStatusValue(event = {}) {
@@ -4060,8 +4164,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixActualEventKey(invite = {}) {
+      const canonical = canonicalEventFor(invite);
       const eventId = firstCleanValue(invite.eventId).replace(/:(morning|afternoon|both)$/i, "");
-      return filterKey(firstCleanValue(invite.eventSlug, invite.usedFor, invite.eventName, eventId, "No event assigned"));
+      return filterKey(firstCleanValue(canonical?.slug, invite.eventSlug, invite.usedFor, invite.eventName, eventId, "No event assigned"));
     }
 
     function optionValueExists(options, value) {
@@ -4174,10 +4279,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixEventKey(invite = {}) {
+      const canonical = canonicalEventFor(invite);
+      const actualKey = guestMatrixActualEventKey(invite);
+      if (actualKey === "no event assigned") return "no-event-assigned|";
       return [
-        guestMatrixActualEventKey(invite),
-        normalizedMatrixValue(firstCleanValue(invite.eventDate, invite.usedForDate))
+        actualKey,
+        normalizedMatrixValue(firstCleanValue(canonical?.date, invite.eventDate, invite.usedForDate, invite.date))
       ].join("|");
+    }
+
+    function guestMatrixEventSortTime(invite = {}) {
+      const canonical = canonicalEventFor(invite);
+      return eventDateSortValue(firstCleanValue(canonical?.date, invite.eventDate, invite.usedForDate, invite.date));
     }
 
     function guestMatrixRoleKey(invite = {}) {
@@ -4185,11 +4298,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixEventLabel(invite = {}) {
-      return firstCleanValue(invite.eventName, invite.usedFor, invite.eventSlug, "No event assigned");
+      const canonical = canonicalEventFor(invite);
+      return firstCleanValue(canonical?.title, invite.eventName, invite.usedFor, invite.eventSlug, "No event assigned");
     }
 
     function guestMatrixEventMeta(invite = {}) {
-      return firstCleanValue(invite.eventDate, invite.usedForDate);
+      const canonical = canonicalEventFor(invite);
+      return firstCleanValue(canonical?.date, invite.eventDate, invite.usedForDate, invite.date);
     }
 
     function guestMatrixShowMeta(invite = {}) {
@@ -4796,13 +4911,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixEventEntry({ status = "Invited", eventName = "", eventDate = "", eventShow = "" } = {}) {
-      const name = firstCleanValue(eventName, "Event not named");
+      const canonical = canonicalEventFor({ eventName, eventDate });
+      const name = firstCleanValue(canonical?.title, eventName, "Event not named");
       if (!name || name === "No event assigned") return null;
-      if (!isGuestMatrixFutureEvent(eventDate)) return null;
+      const date = firstCleanValue(canonical?.date, eventDate);
+      if (!isGuestMatrixFutureEvent(date)) return null;
       return {
         status,
         eventName: name,
-        eventDate: firstCleanValue(eventDate),
+        eventDate: date,
         eventShow: firstCleanValue(eventShow)
       };
     }
@@ -4995,6 +5112,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventKey,
         eventName,
         eventMeta: guestMatrixEventMeta(invite),
+        eventSortTime: guestMatrixEventSortTime(invite),
         showKey,
         showLabel: isRegisteredRow ? "" : guestMatrixShowMeta(invite),
         registeredShowLabel: isRegisteredRow ? guestMatrixRegisteredShowMeta(invite) : "",
@@ -5118,6 +5236,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const notes = [...new Set(noteValues)].join("\n\n");
       return {
         ...primary,
+        eventMeta: firstCleanValue(primary.eventMeta, secondary.eventMeta),
+        eventSortTime: Math.min(primary.eventSortTime ?? Number.POSITIVE_INFINITY, secondary.eventSortTime ?? Number.POSITIVE_INFINITY),
         name: firstCleanValue(primary.name, secondary.name),
         email: firstCleanValue(primary.email, secondary.email),
         company: firstCleanValue(primary.company, secondary.company),
@@ -5203,7 +5323,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const inviteRows = sourceInvites.map(guestMatrixRowForInvite);
       const prospectRows = sourceProspects.map(guestMatrixRowForInvite);
       return mergeUnassignedGuestMatrixProspectRows(dedupeGuestMatrixRows([...prospectRows, ...inviteRows]))
-        .sort((a, b) => `${a.eventName} ${a.name}`.localeCompare(`${b.eventName} ${b.name}`));
+        .sort((a, b) =>
+          (a.eventSortTime ?? Number.POSITIVE_INFINITY) - (b.eventSortTime ?? Number.POSITIVE_INFINITY) ||
+          String(a.eventName || "").localeCompare(String(b.eventName || "")) ||
+          String(a.name || "").localeCompare(String(b.name || ""))
+        );
     }
 
     function guestMatrixStatusMatch(row, status) {
@@ -5223,16 +5347,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const intakeTypes = new Map();
       const invitationSources = new Map();
       rows.forEach((row) => {
-        if (!events.has(row.eventKey)) events.set(row.eventKey, [row.eventName, row.eventMeta].filter(Boolean).join(" | "));
+        const existingEvent = events.get(row.eventKey);
+        const eventOption = {
+          value: row.eventKey,
+          label: [row.eventMeta, row.eventName].filter(Boolean).join(" | ") || row.eventName || "No event assigned",
+          sortTime: row.eventSortTime ?? Number.POSITIVE_INFINITY
+        };
+        if (!existingEvent || eventOption.sortTime < existingEvent.sortTime || eventOption.label.length > existingEvent.label.length) {
+          events.set(row.eventKey, eventOption);
+        }
         if (row.roleKey && row.role) roles.set(row.roleKey, row.role);
         if (row.intakeTypeKey && row.intakeType) intakeTypes.set(row.intakeTypeKey, row.intakeType);
         if (row.invitationSourceKey && row.invitationSource) invitationSources.set(row.invitationSourceKey, row.invitationSource);
       });
       guestMatrixEventFilter.innerHTML = [
         '<option value="all">All events</option>',
-        ...[...events.entries()]
-          .sort((a, b) => a[1].localeCompare(b[1]))
-          .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === current ? "selected" : ""}>${escapeHtml(label)}</option>`)
+        ...[...events.values()]
+          .sort((a, b) => a.sortTime - b.sortTime || a.label.localeCompare(b.label))
+          .map((event) => `<option value="${escapeHtml(event.value)}" ${event.value === current ? "selected" : ""}>${escapeHtml(event.label)}</option>`)
       ].join("");
       if (current !== "all" && !events.has(current)) guestMatrixEventFilter.value = "all";
       if (guestMatrixShowFilter) {
@@ -5548,11 +5680,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function eventOptionMarkup(emptyLabel = "Select an event", noEventsLabel = "No upcoming event pages found") {
-      const bySlug = new Map(fallbackMojoEvents.map((event) => [event.slug, event]));
-      for (const event of state.upcomingEvents || []) {
-        if (event?.slug && event?.title) bySlug.set(event.slug, event);
-      }
-      const events = [...bySlug.values()];
+      const events = canonicalEventCatalog();
       if (!events.length) {
         return `<option value="">${escapeHtml(noEventsLabel)}</option>`;
       }
@@ -5560,7 +5688,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         `<option value="">${escapeHtml(emptyLabel)}</option>`,
         ...events.map((event) => `
           <option value="${escapeHtml(event.slug)}" data-event-name="${escapeHtml(event.title)}" data-event-date="${escapeHtml(event.date || "")}">
-            ${escapeHtml(event.title)}${event.date ? ` | ${escapeHtml(event.date)}` : ""}
+            ${event.date ? `${escapeHtml(event.date)} | ` : ""}${escapeHtml(event.title)}
           </option>
         `)
       ].join("");
@@ -5636,16 +5764,20 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
         for (const event of rowEvents(row)) {
           const key = actualEventKey(event);
-          const label = eventDisplayLabel(event);
-          if (key && label) events.set(key, label);
+          const label = eventFilterDisplayLabel(event);
+          const sortTime = eventSortTimeFor(event);
+          const existingEvent = events.get(key);
+          if (key && label && (!existingEvent || sortTime < existingEvent.sortTime || label.length > existingEvent.label.length)) {
+            events.set(key, { value: key, label, sortTime });
+          }
         }
       }
 
       eventFilter.innerHTML = [
         optionMarkup("all", "All events", selectedEvent),
-        ...[...events.entries()]
-          .sort((left, right) => left[1].localeCompare(right[1]))
-          .map(([value, label]) => optionMarkup(value, label, selectedEvent))
+        ...[...events.values()]
+          .sort((left, right) => left.sortTime - right.sortTime || left.label.localeCompare(right.label))
+          .map((event) => optionMarkup(event.value, event.label, selectedEvent))
       ].join("");
       if (selectedEvent !== "all" && eventFilter.value !== selectedEvent) eventFilter.value = "all";
 

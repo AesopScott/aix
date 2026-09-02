@@ -146,7 +146,7 @@
   function brandedPortraitMarkup(person, src, alt) {
     const style = portraitTuneStyle(person);
     const name = person.displayName || "Featured guest";
-    const role = roleLabel(person.roleLabel);
+    const role = roleLabel(person.roleLabel || person.registrationRole || person.guestRegistrationType || person.partnerRegistrationType || person.role);
     const title = role === "Featured Author" ? "" : person.title || "Title pending";
     const titleMarkup = title ? `<span>${escapeHtml(title)}</span>` : "";
     return `<div class="mojo-portrait-card"${style}>
@@ -156,6 +156,21 @@
       </div>
       <div class="mojo-portrait-role is-${escapeHtml(roleClass(role))}">${escapeHtml(role)}</div>
       <div class="mojo-headshot-frame"><img src="${src}" alt="${escapeHtml(alt)}" loading="lazy"></div>
+    </div>`;
+  }
+
+  function brandedInitialsMarkup(person) {
+    const name = person.displayName || "Featured guest";
+    const role = roleLabel(person.roleLabel || person.registrationRole || person.guestRegistrationType || person.partnerRegistrationType || person.role);
+    const title = role === "Featured Author" ? "" : person.title || "Title pending";
+    const titleMarkup = title ? `<span>${escapeHtml(title)}</span>` : "";
+    return `<div class="mojo-portrait-card">
+      <div class="mojo-portrait-top">
+        <div class="mojo-portrait-brand" aria-label="MOJO AI Summits"><strong>MOJO AI</strong><span>SUMMITS</span></div>
+        <div class="mojo-portrait-person"><strong>${escapeHtml(name)}</strong>${titleMarkup}</div>
+      </div>
+      <div class="mojo-portrait-role is-${escapeHtml(roleClass(role))}">${escapeHtml(role)}</div>
+      <div class="mojo-headshot-frame"><span class="featured-lineup-initials" aria-hidden="true">${escapeHtml(initials(name))}</span></div>
     </div>`;
   }
 
@@ -171,7 +186,7 @@
       const alt = person.displayName ? `${person.displayName} MOJO AI Summits featured guest portrait` : "MOJO AI Summits featured guest portrait";
       return `<img class="featured-lineup-photo-primary is-framed-portrait" src="${escapeHtml(framedPortrait)}" alt="${escapeHtml(alt)}" loading="lazy">`;
     }
-    return `<span class="featured-lineup-initials" aria-hidden="true">${escapeHtml(initials(person.displayName))}</span>`;
+    return brandedInitialsMarkup(person);
   }
 
   function photoTuneStyle(person) {
