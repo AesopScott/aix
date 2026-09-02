@@ -49,5 +49,5 @@ The Guest Matrix now shares the Partner Matrix `scott-engagement` lifecycle stat
 
 Updated: 2026-09-02
 
-The CRM is the source of truth for public featured lineups. Each event time slot can have at most 6 Featured Guest assignments. The website can publish a featured person only when the person comes from an actual CRM registration record for that event/show. Invite links, contact event history, and matrix-only prospects can support tracking, but they do not publish someone to the website lineup by themselves. If an invite/contact record disagrees with the current CRM registration/matrix state, the CRM registration/matrix state wins.
+The CRM is the source of truth for public featured lineups. Each event time slot can have at most 6 Featured Guest assignments. The website can publish a featured person only when the person comes from an actual CRM registration record for that event/show with an empty legacy status or an explicit `registered`/`attended` lifecycle status. Invite links, contact event history, explicit non-registered statuses such as `new` or `invited`, and matrix-only prospects can support tracking, but they do not publish someone to the website lineup by themselves. If an invite/contact record disagrees with the current CRM registration/matrix state, the CRM registration/matrix state wins.
 
