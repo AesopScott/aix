@@ -30,6 +30,8 @@ const featuredShowLineups = [
   { id: "morning", label: "10:00 AM featured lineup", time: "10:00 am - 11:30 am CT" },
   { id: "afternoon", label: "1:00 PM featured lineup", time: "1:00 pm - 2:30 pm CT" }
 ];
+const maxPublicFeaturedGuestsPerShow = 6;
+const publicFeaturedRegistrationStatuses = new Set(["registered", "attended"]);
 const productionVirtualEventsApi = "https://mojoaisummits.com/api/virtual-events/";
 const productionOrigin = "https://mojoaisummits.com";
 
@@ -233,26 +235,29 @@ function mergePublicFeaturedPeople(people = []) {
     const key = publicFeaturedPersonKey(person);
     if (!key) continue;
     const previous = map.get(key) || {};
+    const previousRank = Number(previous.lineupSourceRank ?? publicLineupSourceRank(previous));
+    const nextRank = Number(person.lineupSourceRank ?? publicLineupSourceRank(person));
+    const primary = nextRank >= previousRank ? person : previous;
+    const secondary = nextRank >= previousRank ? previous : person;
     map.set(key, {
-      ...previous,
-      ...person,
-      photoUrl: cleanString(person.photoUrl || person.photoURL || person.photo) || cleanString(previous.photoUrl || previous.photoURL || previous.photo),
-      photoKey: cleanString(person.photoKey) || cleanString(previous.photoKey),
-      linkedinProfileUrl: cleanLinkedInProfileUrl(person.linkedinProfileUrl || person.linkedInProfileUrl || person.linkedinUrl || person.linkedInUrl) ||
-        cleanLinkedInProfileUrl(previous.linkedinProfileUrl || previous.linkedInProfileUrl || previous.linkedinUrl || previous.linkedInUrl)
+      ...secondary,
+      ...primary,
+      lineupSourceRank: Math.max(previousRank, nextRank),
+      photoUrl: cleanString(primary.photoUrl || primary.photoURL || primary.photo) || cleanString(secondary.photoUrl || secondary.photoURL || secondary.photo),
+      photoKey: cleanString(primary.photoKey) || cleanString(secondary.photoKey),
+      linkedinProfileUrl: cleanLinkedInProfileUrl(primary.linkedinProfileUrl || primary.linkedInProfileUrl || primary.linkedinUrl || primary.linkedInUrl) ||
+        cleanLinkedInProfileUrl(secondary.linkedinProfileUrl || secondary.linkedInProfileUrl || secondary.linkedinUrl || secondary.linkedInUrl)
     });
   }
   return [...map.values()];
 }
 
 function slotFeaturedPeople(people = []) {
-  const sorted = mergePublicFeaturedPeople(people).sort((left, right) => {
-    return cleanString(left.displayName || left.name).localeCompare(cleanString(right.displayName || right.name));
-  });
-  const guests = sorted.filter((person) => publicFeaturedRoleKey(person) === "featured-guest").slice(0, 6);
+  const sorted = mergePublicFeaturedPeople(people).sort(publicLineupCompare);
+  const guests = sorted.filter((person) => publicFeaturedRoleKey(person) === "featured-guest").slice(0, maxPublicFeaturedGuestsPerShow);
   const authors = sorted.filter((person) => publicFeaturedRoleKey(person) === "featured-author").slice(0, 1);
   const partners = sorted.filter((person) => publicFeaturedRoleKey(person) === "featured-partner").slice(0, 2);
-  return [...guests, ...authors, ...partners];
+  return [...guests, ...authors, ...partners].map(publicFeaturedPerson);
 }
 
 function mergePreviewPayloads(livePayload = {}, localPayload = {}) {
@@ -326,9 +331,37 @@ function registeredStatus(value) {
   return cleanString(value, 120).toLowerCase().replace(/[\s_]+/g, "-");
 }
 
+function isCrmRegistrantRecord(record = {}) {
+  const sourceKey = cleanString(record.sourceKey || record.key, 500).toLowerCase();
+  const source = cleanString(record.source || record.crmType, 200).toLowerCase();
+  return sourceKey.startsWith("crm:guest-registrant:") ||
+    sourceKey.startsWith("crm:member-registrant:") ||
+    sourceKey.startsWith("crm:partner-registrant:") ||
+    sourceKey.startsWith("guest-registration:") ||
+    sourceKey.startsWith("member-registration:") ||
+    sourceKey.startsWith("partner-registration:") ||
+    sourceKey.startsWith("crm/registrations/") ||
+    sourceKey.startsWith("crm-overflow/registrations/") ||
+    source === "guest-registration" ||
+    source === "member-registration" ||
+    source === "partner-registration" ||
+    source.includes("manual-registration");
+}
+
+function normalizedPublicRegistrationStatus(record = {}) {
+  const status = registeredStatus(record.crmStatus || record.guestStatus || record.registrationStatus || record.status);
+  if (!status) return isCrmRegistrantRecord(record) ? "registered" : "";
+  if (status === "used") return "registered";
+  if (status === "cancelled") return "canceled";
+  if (["new", "pending", "pending-engagement", "contacted", "confirmed", "invited", "active"].includes(status)) {
+    return isCrmRegistrantRecord(record) ? "registered" : status;
+  }
+  return status;
+}
+
 function contactEventIsPublicLineupCandidate(event = {}) {
   const status = registeredStatus(event.registrationStatus || event.status || event.crmStatus || event.guestStatus);
-  return ["invited", "registered", "confirmed", "accepted", "attended"].includes(status);
+  return ["registered", "confirmed", "accepted", "attended"].includes(status);
 }
 
 function isFeaturedRegistrant(registrant = {}) {
@@ -350,6 +383,13 @@ function isFeaturedRegistrant(registrant = {}) {
     registrant.isFeaturedAuthor ||
     ["featured-guest", "featured-author"].includes(role)
   );
+}
+
+function isPublicFeaturedRegistrant(registrant = {}) {
+  const status = normalizedPublicRegistrationStatus(registrant);
+  return isCrmRegistrantRecord(registrant) &&
+    isFeaturedRegistrant(registrant) &&
+    publicFeaturedRegistrationStatuses.has(status);
 }
 
 function publicFeaturedGuest(registrant, type) {
@@ -386,6 +426,7 @@ function publicFeaturedGuest(registrant, type) {
     eventShowId: registrantShowId(registrant),
     eventShowLabel: eventShowLabel(registrantShowId(registrant)),
     eventShowTime: eventShowTime(registrantShowId(registrant)),
+    lineupSourceRank: publicLineupSourceRank(registrant),
     roleLabel: cleanString(
       registrant?.featuredGuestLabel ||
         registrant?.speakerLabel ||
@@ -466,6 +507,71 @@ function featuredRoleFields(record = {}) {
   };
 }
 
+function publicLineupSourceRank(registrant = {}) {
+  const sourceKey = cleanString(registrant.sourceKey || registrant.key, 500).toLowerCase();
+  const source = cleanString(registrant.source || registrant.crmType || registrant.type, 200).toLowerCase();
+  if (source.includes("manual-registration") || sourceKey.includes("manual-lineup")) return 500;
+  if (source.includes("matrix-prospect") || sourceKey.includes("matrix-prospect")) return 450;
+  if (sourceKey.includes(":registrant:") || sourceKey.includes("/registrations/")) return 400;
+  if (sourceKey.includes("/invite-usage/")) return 300;
+  if (sourceKey.includes(":event:") || source.includes("contact")) return 100;
+  return 200;
+}
+
+function publicLineupCompare(left = {}, right = {}) {
+  const leftRank = Number(left.lineupSourceRank ?? publicLineupSourceRank(left));
+  const rightRank = Number(right.lineupSourceRank ?? publicLineupSourceRank(right));
+  if (leftRank !== rightRank) return rightRank - leftRank;
+  return cleanString(left.displayName || left.name).localeCompare(cleanString(right.displayName || right.name));
+}
+
+function publicFeaturedPerson(person = {}) {
+  const { lineupSourceRank, ...publicPerson } = person;
+  return publicPerson;
+}
+
+function clearLineupRoleFields(record = {}) {
+  delete record.registrationRole;
+  delete record.guestRegistrationType;
+  delete record.partnerRegistrationType;
+  delete record.contactEventRole;
+  delete record.featuredGuestLabel;
+  delete record.strategicRole;
+  delete record.role;
+  delete record.isFeaturedGuest;
+  delete record.isFeaturedAuthor;
+  delete record.isFeaturedPartner;
+  delete record.isFeaturedSponsor;
+  return record;
+}
+
+function clearShowFields(record = {}) {
+  delete record.eventShowId;
+  delete record.showId;
+  delete record.eventShow;
+  delete record.show;
+  delete record.eventShowLabel;
+  delete record.eventShowTime;
+  delete record.eventTime;
+  return record;
+}
+
+function hasExplicitLineupRole(record = {}) {
+  return Boolean(
+    cleanString(record.registrationRole) ||
+      cleanString(record.guestRegistrationType) ||
+      cleanString(record.partnerRegistrationType) ||
+      cleanString(record.contactEventRole) ||
+      cleanString(record.featuredGuestLabel) ||
+      cleanString(record.strategicRole) ||
+      cleanString(record.role) ||
+      Object.prototype.hasOwnProperty.call(record, "isFeaturedGuest") ||
+      Object.prototype.hasOwnProperty.call(record, "isFeaturedAuthor") ||
+      Object.prototype.hasOwnProperty.call(record, "isFeaturedPartner") ||
+      Object.prototype.hasOwnProperty.call(record, "isFeaturedSponsor")
+  );
+}
+
 function showFields(record = {}) {
   const showId = registrantShowId(record);
   if (!showId) return null;
@@ -482,18 +588,27 @@ function mergeRegistrantRecords(previous = {}, registrant = {}, type = "guest") 
   const previousSubmittedPhoto = submittedPhotoFields(previous);
   const previousFeaturedRole = featuredRoleFields(previous);
   const previousShow = showFields(previous);
+  const previousCanSupplyLineupFields = isCrmRegistrantRecord(previous);
   const next = { ...previous, ...registrant, type };
+
+  if (!previousCanSupplyLineupFields && !hasExplicitLineupRole(registrant)) {
+    clearLineupRoleFields(next);
+  }
+
+  if (!previousCanSupplyLineupFields && !showFields(registrant)) {
+    clearShowFields(next);
+  }
 
   if (previousSubmittedPhoto && !submittedPhotoFields(registrant)) {
     next.photoKey = previousSubmittedPhoto.photoKey || next.photoKey;
     next.photoUrl = previousSubmittedPhoto.photoUrl || next.photoUrl;
   }
 
-  if (previousFeaturedRole && !featuredRoleFields(registrant)) {
+  if (previousCanSupplyLineupFields && previousFeaturedRole && !featuredRoleFields(registrant) && !hasExplicitLineupRole(registrant)) {
     Object.assign(next, previousFeaturedRole);
   }
 
-  if (previousShow && !showFields(registrant)) {
+  if (previousCanSupplyLineupFields && previousShow && !showFields(registrant)) {
     Object.assign(next, previousShow);
   }
 
@@ -601,7 +716,7 @@ async function eventRegistrants(env, event) {
   const r2Rows = await r2Registrants(env);
   const kvRows = await kvRegistrants(env);
   const contactRows = await contactEventRegistrants(env);
-  const registrants = [r2Rows, kvRows, contactRows];
+  const registrants = [contactRows, r2Rows, kvRows];
   const map = new Map();
 
   for (const registrant of registrants.flat()) {
@@ -617,16 +732,17 @@ async function eventRegistrants(env, event) {
 
 function featuredGuestsFromRegistrants(registrants) {
   return registrants
-    .filter(isFeaturedRegistrant)
+    .filter(isPublicFeaturedRegistrant)
     .map((registrant) => publicFeaturedGuest(registrant, registrant.type))
-    .sort((left, right) => left.displayName.localeCompare(right.displayName))
-    .slice(0, 18);
+    .sort(publicLineupCompare)
+    .slice(0, 18)
+    .map(publicFeaturedPerson);
 }
 
 function featuredGuestsByShowFromRegistrants(registrants) {
   const featuredRegistrants = registrants
-    .filter(isFeaturedRegistrant)
-    .sort((left, right) => cleanString(left.name).localeCompare(cleanString(right.name)));
+    .filter(isPublicFeaturedRegistrant)
+    .sort(publicLineupCompare);
 
   return featuredShowLineups.reduce((lineups, show) => {
     const people = featuredRegistrants
