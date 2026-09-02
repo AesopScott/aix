@@ -17,6 +17,7 @@ const encoder = new TextEncoder();
 const phoneDebugPrefix = "crm:phone-verification-debug";
 const verifiedPhonePrefix = "sms:verified-phone:";
 const verifiedPhoneObjectPrefix = "sms/verified-phones";
+const reusableTestPhones = new Set(["+17192446690"]);
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -54,6 +55,10 @@ function cleanPhone(value) {
 
 function isLikelyPhone(phone) {
   return /^\+[1-9]\d{7,14}$/.test(phone);
+}
+
+function isReusableTestPhone(phone) {
+  return reusableTestPhones.has(cleanPhone(phone));
 }
 
 function awsConfig(env) {
@@ -384,6 +389,7 @@ async function readVerifiedPhone(env, phone) {
 
 async function startVerification(phone, inviteCode, env) {
   const config = awsConfig(env);
+  const reusableTestPhone = isReusableTestPhone(phone);
   await writePhoneDebug(env, "start-received", {
     action: "start",
     phone,
@@ -391,7 +397,7 @@ async function startVerification(phone, inviteCode, env) {
     config: configDebug(config, env)
   });
   const existingVerifiedPhone = await readVerifiedPhone(env, phone);
-  if (existingVerifiedPhone) {
+  if (existingVerifiedPhone && !reusableTestPhone) {
     await writePhoneDebug(env, "start-skipped", {
       action: "start",
       phone,
@@ -426,7 +432,7 @@ async function startVerification(phone, inviteCode, env) {
   const key = verificationKey(phone);
   const existing = await env.MOJO_SUMMITS_SETUP_STATE.get(key, "json").catch(() => null);
   const now = Date.now();
-  if (existing?.sentAt && now - Date.parse(existing.sentAt) < resendCooldownSeconds * 1000) {
+  if (!reusableTestPhone && existing?.sentAt && now - Date.parse(existing.sentAt) < resendCooldownSeconds * 1000) {
     await writePhoneDebug(env, "start-rejected", {
       action: "start",
       phone,

@@ -17,6 +17,7 @@ import {
   sendRegistrationConfirmation,
   upsertRegistrationContact
 } from "../_registration-crm.js";
+import { sendMicrosoftGraphMail } from "../_mail.js";
 import {
   crmD1Available,
   crmD1Primary,
@@ -190,6 +191,7 @@ const allowedTopicTracks = new Set([
 const allowedGuestMatrixLinkedInStatuses = new Set(["unknown", "not-connected", "connection-requested", "connected", "declined", "unreachable"]);
 const allowedGuestMatrixRegistrationRequestStatuses = new Set(["not-sent", "drafted", "sent", "reminder-sent", "bounced", "declined"]);
 const maxFieldLength = 2000;
+const angelEmail = "angel@mojoaisummits.com";
 const guestInviteEmailCc = ["angel@mojoaisummits.com", "scott@mojoaisummits.com"];
 const partnerInviteEmailCc = ["scott@mojoaisummits.com", "miller@mojoaisummits.com", "jodi@mojoaisummits.com"];
 const EMAIL_LOG_PREFIX = "crm:email-log:";
@@ -2460,7 +2462,7 @@ function mergeContactEventList(existingEvents = [], nextEvent = {}) {
   return [nextEvent, ...events];
 }
 
-async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invite", actor = "") {
+async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invite", actor = "", options = {}) {
   const contact = contactFromInviteRecord(row, source);
   if (!contact?.key) return {};
   const existing = await readRawRecord(env, contact.key);
@@ -2479,15 +2481,34 @@ async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invi
   };
   const now = new Date().toISOString();
   const nextEvent = contact.events?.[0] || {};
+  const incomingName = cleanString(contact.name, 240);
+  const incomingCompany = cleanString(contact.company, 240);
+  const incomingTitle = cleanString(contact.title, 180);
+  const incomingLinkedIn = cleanLinkedInProfileUrl(contact.linkedinProfileUrl || contact.linkedInProfileUrl || contact.linkedinUrl || contact.linkedInUrl);
+  const incomingInvitedBy = cleanString(contact.invitedBy, 180);
+  const existingName = cleanString(mergedExisting?.name, 240);
+  const existingCompany = cleanString(mergedExisting?.company, 240);
+  const existingTitle = cleanString(mergedExisting?.title, 180);
+  const existingLinkedIn = cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl);
+  const existingInvitedBy = cleanString(existing?.invitedBy || mergedExisting?.invitedBy, 180);
+  const preferIncomingName = options.preferIncomingName === true && incomingName;
+  const preferIncomingCompany = options.preferIncomingCompany === true && incomingCompany;
+  const preferIncomingTitle = options.preferIncomingTitle === true && incomingTitle;
+  const preferIncomingLinkedIn = options.preferIncomingLinkedIn === true && incomingLinkedIn;
+  const preferIncomingInvitedBy = options.preferIncomingInvitedBy === true && incomingInvitedBy;
   await writeSetupJson(env, contact.key, {
     ...mergedExisting,
     id: contact.id,
     email: contact.email,
-    name: cleanString(mergedExisting?.name) && cleanString(mergedExisting?.name) !== "Name not recorded" ? cleanString(mergedExisting.name) : contact.name,
-    company: cleanString(mergedExisting?.company) || contact.company,
-    title: cleanString(mergedExisting?.title) || contact.title,
-    linkedinProfileUrl: contact.linkedinProfileUrl || cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl),
-    invitedBy: cleanString(contact.invitedBy) || cleanString(existing?.invitedBy, 180),
+    name: preferIncomingName
+      ? incomingName
+      : existingName && existingName !== "Name not recorded"
+        ? existingName
+        : incomingName,
+    company: preferIncomingCompany ? incomingCompany : existingCompany || incomingCompany,
+    title: preferIncomingTitle ? incomingTitle : existingTitle || incomingTitle,
+    linkedinProfileUrl: preferIncomingLinkedIn ? incomingLinkedIn : existingLinkedIn || incomingLinkedIn,
+    invitedBy: preferIncomingInvitedBy ? incomingInvitedBy : existingInvitedBy || incomingInvitedBy,
     source: cleanString(mergedExisting?.source) || contact.source,
     invitationSource: cleanString(mergedExisting?.invitationSource) || contact.invitationSource || contact.source,
     lifecycleStage: cleanAllowed(mergedExisting?.lifecycleStage, allowedLifecycleStages, "") || contact.lifecycleStage,
@@ -5391,6 +5412,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
   const eventSegment = safeFileSegment(hasAssignedEvent ? `${eventSlug || eventName}:${eventShowId || "both"}` : "unassigned", "unassigned");
   const key = `${matrixProspectPrefix(prospectType)}${eventSegment}:${identityId}`;
   const previous = await readRawRecord(env, key);
+  const createdNew = !previous;
   const nextRecord = {
     ...(previous || {}),
     ...record,
@@ -5404,8 +5426,10 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
   };
   await writeSetupJson(env, key, nextRecord);
   const prospect = normalizeGuestMatrixProspect(key, nextRecord, prospectType);
-  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
-  return prospect;
+  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor, {
+    preferIncomingCompany: Boolean(prospect.company || prospect.partnerCompany)
+  });
+  return { ...prospect, createdNew };
 }
 
 async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
@@ -6513,6 +6537,85 @@ async function logGuestRegistrationEmail(env, entry = {}) {
     messageId: cleanString(entry.messageId, 240),
     error: cleanString(entry.error, 500)
   });
+}
+
+function guestMatrixProcessingNotificationText(prospect = {}, actor = "") {
+  const name = invitePersonName(prospect) || invitePersonEmail(prospect) || "Name not recorded";
+  const linkedinProfileUrl = cleanLinkedInProfileUrl(prospect.linkedinProfileUrl || prospect.linkedInProfileUrl || prospect.linkedinUrl || prospect.linkedInUrl);
+  return [
+    "A new guest was added to the Guest Matrix and needs to be processed.",
+    "",
+    `Guest: ${name}`,
+    `LinkedIn profile: ${linkedinProfileUrl || "Not provided"}`,
+    `Added by: ${cleanString(actor, 240) || "Unknown"}`,
+    "",
+    "This is a pre-registration Guest Matrix tracking record."
+  ].join("\n");
+}
+
+function guestMatrixProcessingNotificationHtml(prospect = {}, actor = "") {
+  const name = invitePersonName(prospect) || invitePersonEmail(prospect) || "Name not recorded";
+  const linkedinProfileUrl = cleanLinkedInProfileUrl(prospect.linkedinProfileUrl || prospect.linkedInProfileUrl || prospect.linkedinUrl || prospect.linkedInUrl);
+  const linkedInMarkup = linkedinProfileUrl
+    ? `<a href="${escapeHtml(linkedinProfileUrl)}">${escapeHtml(linkedinProfileUrl)}</a>`
+    : "Not provided";
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.55;max-width:680px">
+      <p>A new guest was added to the Guest Matrix and needs to be processed.</p>
+      <table style="border-collapse:collapse;width:100%;margin:0 0 20px">
+        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb;width:150px">Guest</th><td style="padding:8px 10px;border:1px solid #d8dee9">${escapeHtml(name)}</td></tr>
+        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb">LinkedIn profile</th><td style="padding:8px 10px;border:1px solid #d8dee9">${linkedInMarkup}</td></tr>
+        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb">Added by</th><td style="padding:8px 10px;border:1px solid #d8dee9">${escapeHtml(cleanString(actor, 240) || "Unknown")}</td></tr>
+      </table>
+      <p>This is a pre-registration Guest Matrix tracking record.</p>
+    </div>
+  `;
+}
+
+async function notifyAngelForNewGuestMatrixProspect(env, prospect = {}, actor = "") {
+  const actorEmail = cleanString(actor, 240).toLowerCase();
+  if (actorEmail === angelEmail) {
+    return { attempted: false, sent: false, skipped: "actor-is-angel" };
+  }
+
+  const name = invitePersonName(prospect) || invitePersonEmail(prospect) || "Name not recorded";
+  const subject = `New guest to process: ${name}`;
+  try {
+    const result = await sendMicrosoftGraphMail(env, {
+      sender: cleanString(env.MOJO_REGISTRATION_NOTIFICATION_SENDER || env.MOJO_INVITE_EMAIL_SENDER || "Angel@mojoaisummits.com", 240),
+      to: [{ address: angelEmail, name: "Angel Mosley" }],
+      replyTo: isEmail(actorEmail) ? [{ address: actorEmail }] : [],
+      subject,
+      text: guestMatrixProcessingNotificationText(prospect, actorEmail),
+      html: guestMatrixProcessingNotificationHtml(prospect, actorEmail),
+      saveToSentItems: true
+    });
+    await logGuestRegistrationEmail(env, {
+      type: "guest-matrix-processing-notification",
+      status: "sent",
+      to: angelEmail,
+      subject,
+      contactKey: prospect.key,
+      eventSlug: prospect.eventSlug,
+      eventName: prospect.eventName,
+      actor: actorEmail,
+      messageId: result?.id || result?.messageId || ""
+    });
+    return { attempted: true, sent: true, to: angelEmail };
+  } catch (error) {
+    await logGuestRegistrationEmail(env, {
+      type: "guest-matrix-processing-notification",
+      status: "failed",
+      to: angelEmail,
+      subject,
+      contactKey: prospect.key,
+      eventSlug: prospect.eventSlug,
+      eventName: prospect.eventName,
+      actor: actorEmail,
+      error: error?.message || "Angel notification email failed."
+    });
+    return { attempted: true, sent: false, to: angelEmail, error: error?.message || "Angel notification email failed." };
+  }
 }
 
 async function removeEmailFromCompanyContacts(env, email, actor = "") {
@@ -8332,10 +8435,15 @@ export async function onRequestPost({ request, env, data }) {
   if (payload?.action === "create-guest-matrix-prospect") {
     try {
       const prospect = await createGuestMatrixProspect(env, payload, access.email);
+      const angelNotification = prospect.createdNew
+        ? await notifyAngelForNewGuestMatrixProspect(env, prospect, access.email)
+        : { attempted: false, sent: false, skipped: "existing-record" };
+      const { createdNew, ...responseProspect } = prospect;
       return json({
         ok: true,
-        prospect,
-        guestMatrixProspects: [prospect],
+        prospect: responseProspect,
+        angelNotification,
+        guestMatrixProspects: [responseProspect],
         partnerMatrixProspects: await partnerMatrixProspects(env),
         registrationInviteCodes: await registrationInviteCodes(env),
         upcomingEvents: await upcomingEvents(env)
@@ -8349,10 +8457,11 @@ export async function onRequestPost({ request, env, data }) {
   if (payload?.action === "create-partner-matrix-prospect") {
     try {
       const prospect = await createGuestMatrixProspect(env, payload, access.email, "partner");
+      const { createdNew, ...responseProspect } = prospect;
       return json({
         ok: true,
-        prospect,
-        partnerMatrixProspects: [prospect],
+        prospect: responseProspect,
+        partnerMatrixProspects: [responseProspect],
         partnerInviteCodes: await partnerInviteCodes(env),
         guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
