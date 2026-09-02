@@ -14,6 +14,6 @@ The CRM is the source of truth for public featured lineups.
 ## Implementation Notes
 
 - The CRM API enforces the 6-person Featured Guest capacity when matrix, invite, registration, or contact event role/show changes are saved.
-- The public virtual event API filters featured lineup candidates to CRM registration records before applying the public 6-person slot limit.
+- The public virtual event API filters featured lineup candidates to CRM registration records before applying the public 6-person slot limit, and the legacy aggregate `featuredGuests` list is flattened from those show-level lineups.
 - Actual guest/member registration rows are treated as registered even when older raw status values such as `new`, `pending-engagement`, `confirmed`, or `invited` remain on the stored record.
 - Inactive statuses such as `declined`, `bad-fit`, `no-show`, and `canceled` are not eligible for the public lineup.
