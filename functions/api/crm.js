@@ -4685,6 +4685,16 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
   const linkedinProfileUrl = cleanLinkedInProfileUrl(record?.linkedinProfileUrl || record?.linkedInProfileUrl || record?.linkedinUrl || record?.linkedInUrl);
   const company = cleanString(record?.company || record?.partnerCompany || record?.organization, 240);
   const title = cleanString(record?.title || record?.jobTitle || record?.roleTitle || record?.contactTitle, 240);
+  const source = cleanString(record?.source, 180);
+  const captureSource = cleanString(record?.captureSource, 180);
+  const classification = cleanString(record?.classification, 120);
+  const contactStatus = cleanString(
+    record?.contactStatus ||
+      (classification === "potential-guest" ? "potential guest" : "") ||
+      (classification === "partner-candidate" ? "partner candidate" : "") ||
+      (/^blinq-zapier$/i.test(source || captureSource) ? (prospectType === "partner" ? "partner candidate" : "potential guest") : ""),
+    180
+  );
   const hasAssignedEvent = Boolean(cleanString(record?.eventSlug || record?.eventName || record?.eventId, 240));
   const rawShowId = hasAssignedEvent ? cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, "both") : "";
   const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
@@ -4718,7 +4728,12 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     jobTitle: title,
     linkedinProfileUrl,
     linkedinUrl: linkedinProfileUrl,
+    source,
+    invitationSource: cleanString(record?.invitationSource || source || captureSource, 180),
     enrichmentSource: cleanString(record?.enrichmentSource, 120),
+    classification,
+    classificationLabel: cleanString(record?.classificationLabel, 180),
+    contactStatus,
     crmStatus: cleanGuestRegistrationLifecycleStatus(record?.crmStatus || record?.partnerStatus || record?.guestStatus || record?.registrationStatus, "pending-engagement"),
     guestStatus: cleanGuestRegistrationLifecycleStatus(record?.guestStatus || record?.partnerStatus || record?.crmStatus || record?.registrationStatus, "pending-engagement"),
     partnerStatus: prospectType === "partner" ? cleanGuestRegistrationLifecycleStatus(record?.partnerStatus || record?.crmStatus || record?.registrationStatus || record?.guestStatus, "pending-engagement") : "",
@@ -4773,6 +4788,7 @@ async function upsertManualPartnerMatrixProspect(env, row = {}, actor = "crm") {
     ...(existing || {}),
     id: cleanString(existing?.id || row.id, 200) || key,
     source: "manual-partner",
+    invitationSource: cleanString(row.invitationSource || existing?.invitationSource || "manual-partner", 180),
     manualPartnerSourceKey: cleanString(row.key, 500),
     intendedGuestName: cleanString(row.name, 240),
     intendedGuestEmail: cleanString(row.email, 240).toLowerCase(),
@@ -4851,6 +4867,7 @@ function guestRegistrationRowFromMatrixProspect(prospect = {}) {
     name: prospect.intendedGuestName || prospect.guestName || prospect.invitedName || prospect.intendedGuestEmail || "Name not recorded",
     email: prospect.intendedGuestEmail || prospect.guestEmail || prospect.invitedEmail,
     source: "guest-matrix-prospect",
+    invitationSource: prospect.invitationSource || prospect.source,
     crmStatus: prospect.crmStatus || prospect.guestStatus || prospect.registrationStatus || "pending-engagement",
     guestStatus: prospect.guestStatus || prospect.crmStatus || prospect.registrationStatus || "pending-engagement",
     registrationStatus: prospect.registrationStatus || prospect.crmStatus || prospect.guestStatus || "pending-engagement",
