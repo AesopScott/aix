@@ -17,7 +17,6 @@ import {
   sendRegistrationConfirmation,
   upsertRegistrationContact
 } from "../_registration-crm.js";
-import { sendMicrosoftGraphMail } from "../_mail.js";
 import {
   crmD1Available,
   crmD1Primary,
@@ -190,8 +189,9 @@ const allowedTopicTracks = new Set([
 ]);
 const allowedGuestMatrixLinkedInStatuses = new Set(["unknown", "not-connected", "connection-requested", "connected", "declined", "unreachable"]);
 const allowedGuestMatrixRegistrationRequestStatuses = new Set(["not-sent", "drafted", "sent", "reminder-sent", "bounced", "declined"]);
+const maxFeaturedGuestsPerShow = 6;
+const inactiveFeaturedGuestAssignmentStatuses = new Set(["declined", "bad-fit", "no-show"]);
 const maxFieldLength = 2000;
-const angelEmail = "angel@mojoaisummits.com";
 const guestInviteEmailCc = ["angel@mojoaisummits.com", "scott@mojoaisummits.com"];
 const partnerInviteEmailCc = ["scott@mojoaisummits.com", "miller@mojoaisummits.com", "jodi@mojoaisummits.com"];
 const EMAIL_LOG_PREFIX = "crm:email-log:";
@@ -2462,7 +2462,7 @@ function mergeContactEventList(existingEvents = [], nextEvent = {}) {
   return [nextEvent, ...events];
 }
 
-async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invite", actor = "", options = {}) {
+async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invite", actor = "") {
   const contact = contactFromInviteRecord(row, source);
   if (!contact?.key) return {};
   const existing = await readRawRecord(env, contact.key);
@@ -2481,34 +2481,15 @@ async function upsertContactFromInviteRecord(env, row = {}, source = "guest-invi
   };
   const now = new Date().toISOString();
   const nextEvent = contact.events?.[0] || {};
-  const incomingName = cleanString(contact.name, 240);
-  const incomingCompany = cleanString(contact.company, 240);
-  const incomingTitle = cleanString(contact.title, 180);
-  const incomingLinkedIn = cleanLinkedInProfileUrl(contact.linkedinProfileUrl || contact.linkedInProfileUrl || contact.linkedinUrl || contact.linkedInUrl);
-  const incomingInvitedBy = cleanString(contact.invitedBy, 180);
-  const existingName = cleanString(mergedExisting?.name, 240);
-  const existingCompany = cleanString(mergedExisting?.company, 240);
-  const existingTitle = cleanString(mergedExisting?.title, 180);
-  const existingLinkedIn = cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl);
-  const existingInvitedBy = cleanString(existing?.invitedBy || mergedExisting?.invitedBy, 180);
-  const preferIncomingName = options.preferIncomingName === true && incomingName;
-  const preferIncomingCompany = options.preferIncomingCompany === true && incomingCompany;
-  const preferIncomingTitle = options.preferIncomingTitle === true && incomingTitle;
-  const preferIncomingLinkedIn = options.preferIncomingLinkedIn === true && incomingLinkedIn;
-  const preferIncomingInvitedBy = options.preferIncomingInvitedBy === true && incomingInvitedBy;
   await writeSetupJson(env, contact.key, {
     ...mergedExisting,
     id: contact.id,
     email: contact.email,
-    name: preferIncomingName
-      ? incomingName
-      : existingName && existingName !== "Name not recorded"
-        ? existingName
-        : incomingName,
-    company: preferIncomingCompany ? incomingCompany : existingCompany || incomingCompany,
-    title: preferIncomingTitle ? incomingTitle : existingTitle || incomingTitle,
-    linkedinProfileUrl: preferIncomingLinkedIn ? incomingLinkedIn : existingLinkedIn || incomingLinkedIn,
-    invitedBy: preferIncomingInvitedBy ? incomingInvitedBy : existingInvitedBy || incomingInvitedBy,
+    name: cleanString(mergedExisting?.name) && cleanString(mergedExisting?.name) !== "Name not recorded" ? cleanString(mergedExisting.name) : contact.name,
+    company: cleanString(mergedExisting?.company) || contact.company,
+    title: cleanString(mergedExisting?.title) || contact.title,
+    linkedinProfileUrl: contact.linkedinProfileUrl || cleanLinkedInProfileUrl(mergedExisting?.linkedinProfileUrl || mergedExisting?.linkedInProfileUrl || mergedExisting?.linkedinUrl || mergedExisting?.linkedInUrl),
+    invitedBy: cleanString(contact.invitedBy) || cleanString(existing?.invitedBy, 180),
     source: cleanString(mergedExisting?.source) || contact.source,
     invitationSource: cleanString(mergedExisting?.invitationSource) || contact.invitationSource || contact.source,
     lifecycleStage: cleanAllowed(mergedExisting?.lifecycleStage, allowedLifecycleStages, "") || contact.lifecycleStage,
@@ -4917,6 +4898,141 @@ async function guestRegistrationRows(env) {
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
+function featuredGuestAssignmentEventKey(row = {}) {
+  const eventIdBase = cleanString(row.eventId, 240).replace(/:(morning|afternoon|both)$/i, "");
+  return cleanString(row.eventSlug || row.usedFor || row.eventName || eventIdBase || row.eventDate, 240).toLowerCase();
+}
+
+function featuredGuestAssignmentShowIds(row = {}) {
+  const showId = cleanEventShowId(
+    row.eventShowId ||
+      row.showId ||
+      row.eventShow ||
+      row.usedForShow ||
+      row.eventShowLabel ||
+      row.usedForTime ||
+      row.eventShowTime ||
+      row.eventTime,
+    ""
+  );
+  if (showId === "both") return ["morning", "afternoon"];
+  return showId ? [showId] : [];
+}
+
+function featuredGuestAssignmentPersonKey(row = {}) {
+  const email = invitePersonEmail(row);
+  if (email) return `email:${email}`;
+
+  const linkedin = linkedInProfileIdentity(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl);
+  if (linkedin) return `linkedin:${linkedin}`;
+
+  const name = guestMatrixMergeNameKey(invitePersonName(row) || row.name);
+  if (name) return `name:${name}`;
+
+  return `record:${cleanString(row.registrationId || row.id || row.key, 500).toLowerCase()}`;
+}
+
+function featuredGuestAssignmentStatus(row = {}) {
+  return cleanGuestRegistrationLifecycleStatus(
+    row.registrationStatus || row.guestStatus || row.crmStatus || row.status,
+    row.status === "used" || row.usedAt ? "registered" : "pending-engagement"
+  );
+}
+
+function rowIsFeaturedGuestAssignment(row = {}) {
+  return cleanContactEventRole(row.registrationRole || row.guestRegistrationType || row.role) === "featured-guest" ||
+    row.isFeaturedGuest === true;
+}
+
+function rowCountsTowardFeaturedGuestCapacity(row = {}) {
+  return rowIsFeaturedGuestAssignment(row) &&
+    !inactiveFeaturedGuestAssignmentStatuses.has(featuredGuestAssignmentStatus(row)) &&
+    Boolean(featuredGuestAssignmentEventKey(row)) &&
+    featuredGuestAssignmentShowIds(row).length > 0;
+}
+
+async function featuredGuestAssignmentRows(env) {
+  const [guestRows, invites, prospects, contactRows] = await Promise.all([
+    registrants(env, "guest"),
+    registrationInviteCodes(env),
+    guestMatrixProspects(env),
+    contacts(env).catch(() => [])
+  ]);
+  const contactEventRows = contactRows.flatMap((contact) =>
+    (Array.isArray(contact.events) ? contact.events : []).map((event) => ({
+      ...event,
+      name: invitePersonName(event) || contact.name,
+      email: invitePersonEmail(event) || contact.email,
+      linkedinProfileUrl: event.linkedinProfileUrl || contact.linkedinProfileUrl,
+      assignmentKey: `${contact.key || contact.email || contact.id}:${contactEventIdentity(event) || event.id || event.eventId || event.eventSlug || event.eventName}`,
+      assignmentKind: "contact-event"
+    }))
+  );
+  return [
+    ...guestRows.map((row) => ({
+      ...row,
+      assignmentKey: row.key || row.id,
+      assignmentKind: "registration"
+    })),
+    ...invites
+      .filter((invite) => cleanGuestRegistrationType(invite.guestRegistrationType || invite.registrationRole) === "featured-guest")
+      .map((row) => ({
+        ...row,
+        assignmentKey: row.key || row.code,
+        assignmentKind: "invite"
+      })),
+    ...prospects
+      .filter((prospect) => cleanGuestRegistrationType(prospect.guestRegistrationType || prospect.registrationRole) === "featured-guest")
+      .map((row) => ({
+        ...row,
+        assignmentKey: row.key || row.id,
+        assignmentKind: "matrix-prospect"
+      })),
+    ...contactEventRows
+  ];
+}
+
+async function assertFeaturedGuestShowCapacity(env, candidate = {}, options = {}) {
+  if (!rowIsFeaturedGuestAssignment(candidate)) return;
+
+  const eventKey = featuredGuestAssignmentEventKey(candidate);
+  const showIds = featuredGuestAssignmentShowIds(candidate);
+  if (!eventKey || !showIds.length) return;
+
+  const candidatePersonKey = featuredGuestAssignmentPersonKey(candidate);
+  const excludedKeys = new Set(
+    (Array.isArray(options.excludeKeys) ? options.excludeKeys : [])
+      .map((value) => cleanString(value, 500))
+      .filter(Boolean)
+  );
+  const peopleByShow = new Map(showIds.map((showId) => [showId, new Set()]));
+  const rows = await featuredGuestAssignmentRows(env);
+
+  for (const row of rows) {
+    const rowKey = cleanString(row.assignmentKey || row.key || row.id || row.registrationId, 500);
+    const rowKeys = [rowKey, row.key, row.id, row.registrationId].map((value) => cleanString(value, 500)).filter(Boolean);
+    if (rowKeys.some((value) => excludedKeys.has(value))) continue;
+    if (!rowCountsTowardFeaturedGuestCapacity(row)) continue;
+    if (featuredGuestAssignmentEventKey(row) !== eventKey) continue;
+
+    const rowPersonKey = featuredGuestAssignmentPersonKey(row) || rowKey;
+    for (const showId of featuredGuestAssignmentShowIds(row)) {
+      if (!peopleByShow.has(showId)) continue;
+      peopleByShow.get(showId).add(rowPersonKey);
+    }
+  }
+
+  for (const showId of showIds) {
+    const people = peopleByShow.get(showId) || new Set();
+    const candidateAlreadyPresent = candidatePersonKey && people.has(candidatePersonKey);
+    const projectedCount = people.size + (candidateAlreadyPresent ? 0 : 1);
+    if (projectedCount > maxFeaturedGuestsPerShow) {
+      const eventLabel = cleanString(candidate.eventName || candidate.usedFor || candidate.eventSlug || "this event", 240);
+      throw new Error(`${eventLabel} ${eventShowLabel(showId)} already has ${maxFeaturedGuestsPerShow} featured guests. Move someone out of Featured Guest before adding another.`);
+    }
+  }
+}
+
 async function partnerMatrixProspects(env) {
   const keys = await listKeys(env, PARTNER_MATRIX_PROSPECT_PREFIX);
   const rows = await Promise.all(
@@ -4935,22 +5051,22 @@ function normalizePartnerInfoSubmission(key, record = {}) {
     id: cleanString(record.id || key, 180),
     type: "partner-info",
     company,
-    organizationName: cleanString(record.organizationName, 240),
-    companyName: cleanString(record.companyName, 240),
     companyLegalName: cleanString(record.companyLegalName, 240),
     displayName: cleanString(record.displayName, 240),
+    organizationName: cleanString(record.organizationName, 240),
+    companyName: cleanString(record.companyName, 240),
     companySlug: cleanString(record.companySlug || companySlug(company), 180),
     website: cleanString(record.website, 500),
     headquarters: cleanString(record.headquarters, 240),
     description: cleanString(record.description || record.oneLineDescriptor, 4000),
     partnerClientMessaging: cleanString(record.partnerClientMessaging || record.elevatorPitch, 4000),
-    oneLineDescriptor: cleanString(record.oneLineDescriptor || record.description, 220),
-    elevatorPitch: cleanString(record.elevatorPitch || record.partnerClientMessaging, 1200),
     primaryCategory: cleanString(record.primaryCategory, 160),
-    categories: Array.isArray(record.categories) ? record.categories.map((item) => cleanString(item, 160)).filter(Boolean) : [],
-    categoryOther: cleanString(record.categoryOther, 500),
     targetExecutiveRoles: Array.isArray(record.targetExecutiveRoles) ? record.targetExecutiveRoles.map((item) => cleanString(item, 160)).filter(Boolean) : [],
     targetIndustries: Array.isArray(record.targetIndustries) ? record.targetIndustries.map((item) => cleanString(item, 160)).filter(Boolean) : [],
+    oneLineDescriptor: cleanString(record.oneLineDescriptor, 220),
+    elevatorPitch: cleanString(record.elevatorPitch, 1200),
+    categories: Array.isArray(record.categories) ? record.categories.map((item) => cleanString(item, 160)).filter(Boolean) : [],
+    categoryOther: cleanString(record.categoryOther, 500),
     primaryContact: record.primaryContact && typeof record.primaryContact === "object" ? record.primaryContact : {},
     executive: record.executive && typeof record.executive === "object" ? record.executive : {},
     secondExecutive: record.secondExecutive && typeof record.secondExecutive === "object" ? record.secondExecutive : {},
@@ -5018,7 +5134,7 @@ function partnerInfoProfileName(profile = {}) {
   );
 }
 
-function cleanPartnerInfoEditableRecord(input = {}, existing = {}, profile = {}, actor = "", selectedSlug = "") {
+function cleanPartnerInfoEditableRecord(input = {}, existing = {}, profile = {}, actor = "") {
   const now = new Date().toISOString();
   const legalName = partnerInfoProfileName(profile);
   const displayName = cleanString(input.displayName || profile.displayName || profile.organizationName || existing.displayName, 240);
@@ -5037,7 +5153,7 @@ function cleanPartnerInfoEditableRecord(input = {}, existing = {}, profile = {},
     organizationName: cleanString(displayName || profile.organizationName || company, 240),
     companyLegalName: legalName,
     displayName,
-    companySlug: cleanString(selectedSlug || profile.companySlug || companySlug(legalName || company), 180),
+    companySlug: companySlug(legalName || company),
     website: cleanString(input.website || profile.website || existing.website, 500),
     headquarters: cleanString(input.headquarters || profile.headquarters || existing.headquarters, 240),
     description: cleanString(input.description, 4000),
@@ -5158,7 +5274,7 @@ async function savePartnerInfoSubmission(env, payload = {}, actor = "") {
     throw new Error("Selected company legal name does not match the existing partner company.");
   }
 
-  const record = cleanPartnerInfoEditableRecord(input, existing, profile, actor, selectedSlug);
+  const record = cleanPartnerInfoEditableRecord(input, existing, profile, actor);
   await writeSetupJson(env, key, record);
 
   const logo = (record.logoUploads || [])[0] || {};
@@ -5261,6 +5377,147 @@ function mergeMatrixPersonEnrichment(fallback = {}, found = {}) {
     linkedinProfileUrl: cleanLinkedInProfileUrl(found.linkedinProfileUrl || fallback.linkedinProfileUrl),
     enrichmentSource: cleanString(found.enrichmentSource || fallback.enrichmentSource, 120)
   };
+}
+
+function cleanDuplicatePersonName(value = "") {
+  const name = cleanString(value, 240);
+  if (!name || isEmail(name)) return "";
+  const normalized = name.toLowerCase();
+  if (["name not recorded", "not recorded", "unknown", "no name"].includes(normalized)) return "";
+  return name;
+}
+
+function duplicatePersonIdentity(record = {}) {
+  const name = cleanDuplicatePersonName(
+    record.name ||
+      record.fullName ||
+      record.nameTitle ||
+      record.contactName ||
+      record.intendedGuestName ||
+      record.invitedName ||
+      record.guestName ||
+      record.partnerContactName ||
+      record.usedByName
+  );
+  const email = invitePersonEmail(record);
+  const linkedinProfileUrl = cleanLinkedInProfileUrl(
+    record.linkedinProfileUrl ||
+      record.linkedInProfileUrl ||
+      record.linkedinUrl ||
+      record.linkedInUrl
+  );
+  const linkedinIdentity = linkedInProfileIdentity(linkedinProfileUrl);
+  const nameKey = contactMergeNameKey(name);
+  return {
+    name,
+    nameKey: nameKey.length >= 4 ? nameKey : "",
+    email,
+    linkedinProfileUrl,
+    linkedinIdentity
+  };
+}
+
+function duplicatePersonRecordSources(key = "", record = {}) {
+  const sources = [{ key, record }];
+  if (Array.isArray(record.events)) {
+    record.events.forEach((event, index) => {
+      if (event && typeof event === "object") sources.push({ key: `${key}#event-${index}`, record: { ...record, ...event } });
+    });
+  }
+  if (Array.isArray(record.contacts)) {
+    record.contacts.forEach((contact, index) => {
+      if (contact && typeof contact === "object") sources.push({ key: `${key}#contact-${index}`, record: { ...contact, company: record.company || contact.company } });
+    });
+  }
+  return sources;
+}
+
+function duplicatePersonRecordLabel(key = "", record = {}) {
+  if (key.startsWith(registrantTypes.contacts.crmPrefix)) return "Contacts";
+  if (key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)) return "Guest Matrix";
+  if (key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)) return "Partner Matrix";
+  if (key.startsWith(REGISTRATION_INVITE_PREFIXES.guest)) return "Guest invite links";
+  if (key.startsWith(REGISTRATION_INVITE_PREFIXES.member)) return "Member invite links";
+  if (key.startsWith(PARTNER_INVITE_PREFIX)) return "Partner invite links";
+  if (key.startsWith(registrantTypes.guest.crmPrefix) || key.startsWith(registrantTypes.guest.legacyPrefix)) return "Guest Registration";
+  if (key.startsWith(registrantTypes.member.crmPrefix) || key.startsWith(registrantTypes.member.legacyPrefix)) return "Member Registration";
+  if (key.startsWith(registrantTypes.partner.crmPrefix) || key.startsWith(registrantTypes.partner.legacyPrefix)) return record.manualPartner ? "Manual partner contacts" : "Partner Registration";
+  if (key.startsWith(PARTNER_PROSPECT_PERSON_PREFIX)) return "Vendor Universe people";
+  return "CRM";
+}
+
+function duplicatePersonFields(input = {}, candidate = {}) {
+  const fields = [];
+  if (input.email && candidate.email && input.email === candidate.email) fields.push("email");
+  if (input.linkedinIdentity && candidate.linkedinIdentity && input.linkedinIdentity === candidate.linkedinIdentity) fields.push("linkedin");
+  if (input.nameKey && candidate.nameKey && input.nameKey === candidate.nameKey) fields.push("name");
+  return fields;
+}
+
+function duplicatePersonError(input = {}, matches = []) {
+  const fields = [...new Set(matches.flatMap((match) => match.fields || []))];
+  const fieldText = fields.map((field) => ({
+    email: "email address",
+    linkedin: "LinkedIn profile",
+    name: "name"
+  })[field] || field).join(", ").replace(/, ([^,]*)$/, fields.length > 2 ? ", and $1" : " and $1");
+  const first = matches[0] || {};
+  const existing = [first.name, first.email].filter(Boolean).join(" | ") || first.linkedinProfileUrl || first.key || "existing CRM record";
+  const target = input.name || input.email || input.linkedinProfileUrl || "this person";
+  const error = new Error(`Warning: ${target} already exists in the CRM with the same ${fieldText || "identity"}: ${existing} in ${first.section || "CRM"}. Open the existing record instead of creating a duplicate.`);
+  error.code = "crm_duplicate_person";
+  error.matches = matches.slice(0, 5);
+  return error;
+}
+
+function defaultDuplicatePersonPrefixes() {
+  return [
+    registrantTypes.contacts.crmPrefix,
+    registrantTypes.guest.crmPrefix,
+    registrantTypes.guest.legacyPrefix,
+    registrantTypes.member.crmPrefix,
+    registrantTypes.member.legacyPrefix,
+    registrantTypes.partner.crmPrefix,
+    registrantTypes.partner.legacyPrefix,
+    REGISTRATION_INVITE_PREFIXES.guest,
+    REGISTRATION_INVITE_PREFIXES.member,
+    PARTNER_INVITE_PREFIX,
+    GUEST_MATRIX_PROSPECT_PREFIX,
+    PARTNER_MATRIX_PROSPECT_PREFIX,
+    PARTNER_PROSPECT_PERSON_PREFIX
+  ];
+}
+
+async function assertNoDuplicateCrmPerson(env, input = {}, options = {}) {
+  const identity = duplicatePersonIdentity(input);
+  if (!identity.email && !identity.linkedinIdentity && !identity.nameKey) return;
+
+  const excluded = new Set((options.excludeKeys || []).map((key) => cleanString(key, 600)).filter(Boolean));
+  const prefixes = Array.isArray(options.prefixes) && options.prefixes.length ? options.prefixes : defaultDuplicatePersonPrefixes();
+  const keys = [...new Set((await Promise.all(prefixes.map((prefix) => listKeys(env, prefix).catch(() => [])))).flat())];
+  const matches = [];
+  for (const key of keys) {
+    if (excluded.has(key)) continue;
+    const record = await readRawRecord(env, key);
+    if (!record) continue;
+    for (const source of duplicatePersonRecordSources(key, record)) {
+      if ([...excluded].some((excludedKey) => source.key === excludedKey || source.key.startsWith(`${excludedKey}#`))) continue;
+      const candidate = duplicatePersonIdentity(source.record);
+      const fields = duplicatePersonFields(identity, candidate);
+      if (!fields.length) continue;
+      matches.push({
+        key: source.key,
+        section: duplicatePersonRecordLabel(key, record),
+        fields,
+        name: candidate.name,
+        email: candidate.email,
+        linkedinProfileUrl: candidate.linkedinProfileUrl
+      });
+      break;
+    }
+  }
+
+  if (matches.length) throw duplicatePersonError(identity, matches);
 }
 
 async function enrichMatrixPersonFromLinkedIn(env, rawLinkedInProfileUrl = "") {
@@ -5412,7 +5669,19 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
   const eventSegment = safeFileSegment(hasAssignedEvent ? `${eventSlug || eventName}:${eventShowId || "both"}` : "unassigned", "unassigned");
   const key = `${matrixProspectPrefix(prospectType)}${eventSegment}:${identityId}`;
   const previous = await readRawRecord(env, key);
-  const createdNew = !previous;
+  if (previous) {
+    const inputIdentity = duplicatePersonIdentity(record);
+    const previousIdentity = duplicatePersonIdentity(previous);
+    throw duplicatePersonError(inputIdentity, [{
+      key,
+      section: duplicatePersonRecordLabel(key, previous),
+      fields: duplicatePersonFields(inputIdentity, previousIdentity).length ? duplicatePersonFields(inputIdentity, previousIdentity) : ["name"],
+      name: previousIdentity.name,
+      email: previousIdentity.email,
+      linkedinProfileUrl: previousIdentity.linkedinProfileUrl
+    }]);
+  }
+  await assertNoDuplicateCrmPerson(env, record, { excludeKeys: [key] });
   const nextRecord = {
     ...(previous || {}),
     ...record,
@@ -5424,12 +5693,11 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     updatedAt: createdAt,
     updatedBy: actor
   };
+  await assertFeaturedGuestShowCapacity(env, { ...nextRecord, key }, { excludeKeys: [key] });
   await writeSetupJson(env, key, nextRecord);
   const prospect = normalizeGuestMatrixProspect(key, nextRecord, prospectType);
-  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor, {
-    preferIncomingCompany: Boolean(prospect.company || prospect.partnerCompany)
-  });
-  return { ...prospect, createdNew };
+  await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
+  return prospect;
 }
 
 async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
@@ -5467,6 +5735,7 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   }
   next.updatedAt = new Date().toISOString();
   next.updatedBy = actor;
+  await assertFeaturedGuestShowCapacity(env, { ...next, key }, { excludeKeys: [key] });
   await writeSetupJson(env, key, next);
   const prospect = normalizeGuestMatrixProspect(key, next, prospectType);
   await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
@@ -5549,6 +5818,7 @@ async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue =
     if (!row) continue;
     const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
     const roleUpdate = registrationRoleUpdate(roleValue, type, crmRow);
+    await assertFeaturedGuestShowCapacity(env, { ...crmRow, ...roleUpdate, key }, { excludeKeys: [key, cleanString(record.key, 500)] });
     await writeSetupJson(env, key, {
       ...crmRow,
       ...roleUpdate,
@@ -5630,6 +5900,7 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     }
     next.updatedAt = now;
     next.updatedBy = actor;
+    await assertFeaturedGuestShowCapacity(env, { ...next, key }, { excludeKeys: [key] });
     await writeSetupJson(env, key, next);
     const normalized = key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)
       ? normalizeGuestMatrixProspect(key, next, "partner")
@@ -5817,6 +6088,7 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
   };
 
   const key = `${REGISTRATION_INVITE_PREFIXES[type]}${code}`;
+  await assertFeaturedGuestShowCapacity(env, { ...record, key }, { excludeKeys: [key, sourceMatrixProspectKey] });
   await writeSetupJson(env, key, record);
   if (sourceProspect) {
     await deleteSetupRecord(env, sourceMatrixProspectKey);
@@ -5954,6 +6226,7 @@ async function updateRegistrationInviteShow(env, payload = {}, actor = "") {
     updatedAt: now,
     updatedBy: actor
   };
+  await assertFeaturedGuestShowCapacity(env, { ...next, key: invite.key }, { excludeKeys: [invite.key] });
   await writeSetupJson(env, invite.key, next);
   const updatedInvite = normalizeInviteCode(invite.key, next);
   await upsertContactFromInviteRecord(env, updatedInvite, `${updatedInvite.type || "guest"}-invite`, actor);
@@ -6195,6 +6468,7 @@ async function manualRegisterForShow(env, payload = {}, actor = "") {
     updatedBy: actor
   };
 
+  await assertFeaturedGuestShowCapacity(env, { ...manualRecord, key: registrationKey }, { excludeKeys: [registrationKey, sourceInfo.key] });
   const accessRecord = await registrationWithVirtualEventAccess(env, manualRecord);
   const contactRefs = await upsertRegistrationContact(env, type, accessRecord, {
     ...config,
@@ -6209,17 +6483,18 @@ async function manualRegisterForShow(env, payload = {}, actor = "") {
   await writeSetupJson(env, registrationKey, storedRecord);
   await markManualRegistrationSourceRegistered(env, sourceInfo, storedRecord, actor, now);
 
-  let confirmationEmail = null;
-  if (cleanBoolean(payload.sendConfirmation)) {
-    confirmationEmail = await sendRegistrationConfirmation(env, type, storedRecord);
-    await writeSetupJson(env, registrationKey, {
-      ...storedRecord,
-      confirmationEmail,
-      confirmationResentAt: now,
-      crmUpdatedAt: now,
-      crmUpdatedBy: actor
-    });
-  }
+  const confirmationEmail = await sendRegistrationConfirmation(env, type, storedRecord).catch((error) => ({
+    attempted: true,
+    sent: false,
+    error: cleanString(error?.message || "Registration confirmation email failed.")
+  }));
+  await writeSetupJson(env, registrationKey, {
+    ...storedRecord,
+    confirmationEmail,
+    confirmationResentAt: now,
+    crmUpdatedAt: now,
+    crmUpdatedBy: actor
+  });
 
   return {
     registration: normalizeRecord(registrationKey, { ...storedRecord, confirmationEmail }),
@@ -6539,85 +6814,6 @@ async function logGuestRegistrationEmail(env, entry = {}) {
   });
 }
 
-function guestMatrixProcessingNotificationText(prospect = {}, actor = "") {
-  const name = invitePersonName(prospect) || invitePersonEmail(prospect) || "Name not recorded";
-  const linkedinProfileUrl = cleanLinkedInProfileUrl(prospect.linkedinProfileUrl || prospect.linkedInProfileUrl || prospect.linkedinUrl || prospect.linkedInUrl);
-  return [
-    "A new guest was added to the Guest Matrix and needs to be processed.",
-    "",
-    `Guest: ${name}`,
-    `LinkedIn profile: ${linkedinProfileUrl || "Not provided"}`,
-    `Added by: ${cleanString(actor, 240) || "Unknown"}`,
-    "",
-    "This is a pre-registration Guest Matrix tracking record."
-  ].join("\n");
-}
-
-function guestMatrixProcessingNotificationHtml(prospect = {}, actor = "") {
-  const name = invitePersonName(prospect) || invitePersonEmail(prospect) || "Name not recorded";
-  const linkedinProfileUrl = cleanLinkedInProfileUrl(prospect.linkedinProfileUrl || prospect.linkedInProfileUrl || prospect.linkedinUrl || prospect.linkedInUrl);
-  const linkedInMarkup = linkedinProfileUrl
-    ? `<a href="${escapeHtml(linkedinProfileUrl)}">${escapeHtml(linkedinProfileUrl)}</a>`
-    : "Not provided";
-  return `
-    <div style="font-family:Inter,Arial,sans-serif;color:#0A0F1E;line-height:1.55;max-width:680px">
-      <p>A new guest was added to the Guest Matrix and needs to be processed.</p>
-      <table style="border-collapse:collapse;width:100%;margin:0 0 20px">
-        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb;width:150px">Guest</th><td style="padding:8px 10px;border:1px solid #d8dee9">${escapeHtml(name)}</td></tr>
-        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb">LinkedIn profile</th><td style="padding:8px 10px;border:1px solid #d8dee9">${linkedInMarkup}</td></tr>
-        <tr><th style="text-align:left;padding:8px 10px;border:1px solid #d8dee9;background:#f4f7fb">Added by</th><td style="padding:8px 10px;border:1px solid #d8dee9">${escapeHtml(cleanString(actor, 240) || "Unknown")}</td></tr>
-      </table>
-      <p>This is a pre-registration Guest Matrix tracking record.</p>
-    </div>
-  `;
-}
-
-async function notifyAngelForNewGuestMatrixProspect(env, prospect = {}, actor = "") {
-  const actorEmail = cleanString(actor, 240).toLowerCase();
-  if (actorEmail === angelEmail) {
-    return { attempted: false, sent: false, skipped: "actor-is-angel" };
-  }
-
-  const name = invitePersonName(prospect) || invitePersonEmail(prospect) || "Name not recorded";
-  const subject = `New guest to process: ${name}`;
-  try {
-    const result = await sendMicrosoftGraphMail(env, {
-      sender: cleanString(env.MOJO_REGISTRATION_NOTIFICATION_SENDER || env.MOJO_INVITE_EMAIL_SENDER || "Angel@mojoaisummits.com", 240),
-      to: [{ address: angelEmail, name: "Angel Mosley" }],
-      replyTo: isEmail(actorEmail) ? [{ address: actorEmail }] : [],
-      subject,
-      text: guestMatrixProcessingNotificationText(prospect, actorEmail),
-      html: guestMatrixProcessingNotificationHtml(prospect, actorEmail),
-      saveToSentItems: true
-    });
-    await logGuestRegistrationEmail(env, {
-      type: "guest-matrix-processing-notification",
-      status: "sent",
-      to: angelEmail,
-      subject,
-      contactKey: prospect.key,
-      eventSlug: prospect.eventSlug,
-      eventName: prospect.eventName,
-      actor: actorEmail,
-      messageId: result?.id || result?.messageId || ""
-    });
-    return { attempted: true, sent: true, to: angelEmail };
-  } catch (error) {
-    await logGuestRegistrationEmail(env, {
-      type: "guest-matrix-processing-notification",
-      status: "failed",
-      to: angelEmail,
-      subject,
-      contactKey: prospect.key,
-      eventSlug: prospect.eventSlug,
-      eventName: prospect.eventName,
-      actor: actorEmail,
-      error: error?.message || "Angel notification email failed."
-    });
-    return { attempted: true, sent: false, to: angelEmail, error: error?.message || "Angel notification email failed." };
-  }
-}
-
 async function removeEmailFromCompanyContacts(env, email, actor = "") {
   const deletedFromCompanies = [];
   const companyKeys = [
@@ -6894,6 +7090,10 @@ async function updateContact(env, payload = {}, actor = "") {
   if (rawLinkedInProfileUrl && !linkedinProfileUrl) {
     throw new Error("Enter a valid LinkedIn profile URL.");
   }
+  await assertNoDuplicateCrmPerson(env, { name, email, linkedinProfileUrl }, {
+    excludeKeys: [currentKey, key],
+    prefixes: [registrantTypes.contacts.crmPrefix]
+  });
 
   await writeSetupJson(env, key, {
     ...(existing || {}),
@@ -7123,6 +7323,9 @@ async function createManualPartner(env, payload = {}, actor = "") {
     if (!contact.phone) throw new Error("Contact phone is required for every partner contact.");
     if (seenEmails.has(contact.email)) throw new Error("Each partner contact email must be unique.");
     seenEmails.add(contact.email);
+  }
+  for (const contact of contacts) {
+    await assertNoDuplicateCrmPerson(env, contact);
   }
 
   const existingRows = await registrants(env, "partner", { includeManualPartners: true });
@@ -7455,6 +7658,15 @@ async function updateContactEventRole(env, payload = {}, actor = "") {
   }
 
   const existingName = cleanString(existing?.name);
+  const contactAssignmentKey = `${targetContact.key || targetContact.email || targetContact.identity}:${contactEventIdentity(targetEvent) || targetEvent.id || targetEvent.eventId || targetEvent.eventSlug || targetEvent.eventName}`;
+  await assertFeaturedGuestShowCapacity(env, {
+    ...targetEvent,
+    ...roleUpdate,
+    key: contactAssignmentKey,
+    name: existingName && existingName !== "Name not recorded" ? existingName : targetContact.email || "",
+    email: targetContact.email || cleanString(existing?.email).toLowerCase(),
+    linkedinProfileUrl: existing?.linkedinProfileUrl || existing?.linkedInProfileUrl || existing?.linkedinUrl || existing?.linkedInUrl
+  }, { excludeKeys: [contactAssignmentKey] });
   await writeSetupJson(env, targetContact.key, {
     ...(existing || {}),
     id: cleanString(existing?.id) || targetContact.email || contactRecordIdFromIdentity(targetContact.identity) || targetContact.key,
@@ -8428,47 +8640,42 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      return json({ error: error.message || "Registration invite code could not be created." }, { status: 500 });
+      const status = /featured guests/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Registration invite code could not be created." }, { status });
     }
   }
 
   if (payload?.action === "create-guest-matrix-prospect") {
     try {
       const prospect = await createGuestMatrixProspect(env, payload, access.email);
-      const angelNotification = prospect.createdNew
-        ? await notifyAngelForNewGuestMatrixProspect(env, prospect, access.email)
-        : { attempted: false, sent: false, skipped: "existing-record" };
-      const { createdNew, ...responseProspect } = prospect;
       return json({
         ok: true,
-        prospect: responseProspect,
-        angelNotification,
-        guestMatrixProspects: [responseProspect],
+        prospect,
+        guestMatrixProspects: [prospect],
         partnerMatrixProspects: await partnerMatrixProspects(env),
         registrationInviteCodes: await registrationInviteCodes(env),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = /select an event|name, email|name or email|LinkedIn profile/i.test(error.message || "") ? 400 : 500;
-      return json({ error: error.message || "Tracked person could not be added." }, { status });
+      const status = error?.code === "crm_duplicate_person" ? 409 : /select an event|name, email|name or email|LinkedIn profile|featured guests/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Tracked person could not be added.", duplicateMatches: error?.matches || [] }, { status });
     }
   }
 
   if (payload?.action === "create-partner-matrix-prospect") {
     try {
       const prospect = await createGuestMatrixProspect(env, payload, access.email, "partner");
-      const { createdNew, ...responseProspect } = prospect;
       return json({
         ok: true,
-        prospect: responseProspect,
-        partnerMatrixProspects: [responseProspect],
+        prospect,
+        partnerMatrixProspects: [prospect],
         partnerInviteCodes: await partnerInviteCodes(env),
         guestMatrixProspects: await guestMatrixProspects(env),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = /select an event|name, email|name or email|LinkedIn profile/i.test(error.message || "") ? 400 : 500;
-      return json({ error: error.message || "Tracked partner could not be added." }, { status });
+      const status = error?.code === "crm_duplicate_person" ? 409 : /select an event|name, email|name or email|LinkedIn profile|featured guests/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Tracked partner could not be added.", duplicateMatches: error?.matches || [] }, { status });
     }
   }
 
@@ -8485,7 +8692,8 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
-      return json({ error: error.message || "Matrix changes could not be saved." }, { status: 500 });
+      const status = /featured guests/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Matrix changes could not be saved." }, { status });
     }
   }
 
@@ -8551,7 +8759,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
-      const status = /already been used|valid show|featured invite/i.test(error.message || "") ? 400 : 404;
+      const status = /already been used|valid show|featured invite|featured guests/i.test(error.message || "") ? 400 : 404;
       return json({ error: error.message || "Invite show time could not be updated." }, { status });
     }
   }
@@ -8576,7 +8784,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = /source record|valid email|choose an event|choose an event show|featured registration/i.test(error.message || "") ? 400 : 500;
+      const status = /source record|valid email|choose an event|choose an event show|featured registration|featured guests/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Manual registration could not be completed." }, { status });
     }
   }
@@ -8708,8 +8916,8 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = /required|valid contact email|unique|At least one/i.test(error.message || "") ? 400 : 500;
-      return json({ error: error.message || "Manual partner could not be saved." }, { status });
+      const status = error?.code === "crm_duplicate_person" ? 409 : /required|valid contact email|unique|At least one/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Manual partner could not be saved.", duplicateMatches: error?.matches || [] }, { status });
     }
   }
 
@@ -8774,8 +8982,8 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
-      const status = /required|already exists|valid email/i.test(error.message || "") ? 400 : 500;
-      return json({ error: error.message || "Contact could not be updated." }, { status });
+      const status = error?.code === "crm_duplicate_person" ? 409 : /required|already exists|valid email/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Contact could not be updated.", duplicateMatches: error?.matches || [] }, { status });
     }
   }
 
@@ -8975,7 +9183,8 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
-      return json({ error: error.message || "Contact event role could not be updated." }, { status: 500 });
+      const status = /featured guests|Event is required/i.test(error.message || "") ? 400 : 500;
+      return json({ error: error.message || "Contact event role could not be updated." }, { status });
     }
   }
 

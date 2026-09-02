@@ -4991,9 +4991,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           guestMatrixRegisteredShowMeta(invite),
           guestMatrixShowMeta(invite),
           matrixOptionLabel(matrixRegistrationStatusOptions(), registrationStatus),
+          partnerInfo?.description,
           partnerInfo?.oneLineDescriptor,
+          partnerInfo?.partnerClientMessaging,
           partnerInfo?.elevatorPitch,
           partnerInfo?.categories?.join(" "),
+          partnerInfo?.targetExecutiveRoles?.join(" "),
+          partnerInfo?.targetIndustries?.join(" "),
           partnerInfo?.pointOfView?.councilThemes?.join(" "),
           ...futureEvents.flatMap((event) => [event.status, event.eventName, event.eventDate, event.eventShow])
         ].join(" ").toLowerCase()
@@ -5141,11 +5145,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const inviteRows = sourceInvites.map(guestMatrixRowForInvite);
       const prospectRows = sourceProspects.map(guestMatrixRowForInvite);
       return mergeUnassignedGuestMatrixProspectRows(dedupeGuestMatrixRows([...prospectRows, ...inviteRows]))
-        .sort((a, b) =>
-          guestMatrixDateTime(a.eventMeta) - guestMatrixDateTime(b.eventMeta) ||
-          a.eventName.localeCompare(b.eventName) ||
-          a.name.localeCompare(b.name)
-        );
+        .sort((a, b) => `${a.eventName} ${a.name}`.localeCompare(`${b.eventName} ${b.name}`));
     }
 
     function guestMatrixStatusMatch(row, status) {
@@ -5161,20 +5161,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const events = new Map();
       const roles = new Map();
       rows.forEach((row) => {
-        if (!events.has(row.eventKey)) {
-          events.set(row.eventKey, {
-            name: row.eventName,
-            date: row.eventMeta,
-            label: matrixEventLabel(row.eventName, row.eventMeta)
-          });
-        }
+        if (!events.has(row.eventKey)) events.set(row.eventKey, [row.eventName, row.eventMeta].filter(Boolean).join(" | "));
         if (row.roleKey && row.role) roles.set(row.roleKey, row.role);
       });
       guestMatrixEventFilter.innerHTML = [
         '<option value="all">All events</option>',
         ...[...events.entries()]
-          .sort((a, b) => matrixEventSort(a[1], b[1]))
-          .map(([value, event]) => `<option value="${escapeHtml(value)}" ${value === current ? "selected" : ""}>${escapeHtml(event.label)}</option>`)
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === current ? "selected" : ""}>${escapeHtml(label)}</option>`)
       ].join("");
       if (current !== "all" && !events.has(current)) guestMatrixEventFilter.value = "all";
       if (guestMatrixShowFilter) {
@@ -5461,28 +5455,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       requestAnimationFrame(syncTableScrollProxy);
     }
 
-    function matrixEventLabel(name = "", date = "") {
-      return [date, name].filter(Boolean).join(" | ") || "No event assigned";
-    }
-
-    function matrixEventSort(left = {}, right = {}) {
-      return guestMatrixDateTime(left.date) - guestMatrixDateTime(right.date) ||
-        String(left.name || "").localeCompare(String(right.name || ""));
-    }
-
-    function upcomingEventOptions() {
+    function eventOptionMarkup(emptyLabel = "Select an event", noEventsLabel = "No upcoming event pages found") {
       const bySlug = new Map(fallbackMojoEvents.map((event) => [event.slug, event]));
       for (const event of state.upcomingEvents || []) {
         if (event?.slug && event?.title) bySlug.set(event.slug, event);
       }
-      return [...bySlug.values()].sort((a, b) => matrixEventSort(
-        { name: a.title, date: a.date },
-        { name: b.title, date: b.date }
-      ));
-    }
-
-    function eventOptionMarkup(emptyLabel = "Select an event", noEventsLabel = "No upcoming event pages found") {
-      const events = upcomingEventOptions();
+      const events = [...bySlug.values()];
       if (!events.length) {
         return `<option value="">${escapeHtml(noEventsLabel)}</option>`;
       }
@@ -5490,7 +5468,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         `<option value="">${escapeHtml(emptyLabel)}</option>`,
         ...events.map((event) => `
           <option value="${escapeHtml(event.slug)}" data-event-name="${escapeHtml(event.title)}" data-event-date="${escapeHtml(event.date || "")}">
-            ${escapeHtml(matrixEventLabel(event.title, event.date))}
+            ${escapeHtml(event.title)}${event.date ? ` | ${escapeHtml(event.date)}` : ""}
           </option>
         `)
       ].join("");
@@ -5507,52 +5485,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return `<option value="${escapeHtml(value)}" ${value === selectedValue ? "selected" : ""}>${escapeHtml(label)}</option>`;
     }
 
-    function matrixEventOptionList(row = {}) {
-      const current = row.eventSlug || "";
-      const events = upcomingEventOptions();
-      const currentOption = current && !events.some((event) => event.slug === current)
-        ? `<option value="${escapeHtml(current)}" data-event-name="${escapeHtml(row.eventName || current)}" data-event-date="${escapeHtml(row.eventDate || row.eventMeta || "")}" selected>${escapeHtml(matrixEventLabel(row.eventName || current, row.eventDate || row.eventMeta))}</option>`
-        : "";
-      return [
-        optionMarkup("", "No event assigned", current),
-        currentOption,
-        ...events.map((event) => `
-          <option value="${escapeHtml(event.slug)}" data-event-name="${escapeHtml(event.title)}" data-event-date="${escapeHtml(event.date || "")}" ${event.slug === current ? "selected" : ""}>
-            ${escapeHtml(matrixEventLabel(event.title, event.date))}
-          </option>
-        `)
-      ].join("");
-    }
-
-    function matrixShowOptionList(row = {}) {
-      const role = row.roleValue || row.registrationRole || "guest";
-      const current = eventShowId(row.eventShowId || row.showKey, isSingleShowRegistrationRole(role) ? "morning" : "both");
-      const options = [
-        ...(isSingleShowRegistrationRole(role) ? [] : [["both", "Both shows | 10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"]]),
-        ["morning", "Morning show | 10:00 am - 11:30 am CT"],
-        ["afternoon", "Afternoon show | 1:00 pm - 2:30 pm CT"]
-      ];
-      return matrixOptionList(options, current);
-    }
-
     function partnerCompanyOptionRecords() {
-      const records = [
-        ...(state.rows || []),
-        ...(state.partnerMatrixProspects || []),
-        ...(state.partnerInviteCodes || [])
-      ];
-      return records.filter((row) => {
-        const hasPartnerPerson = Boolean(crmPersonName(row, "") || crmPersonEmail(row));
-        const hasPartnerSource = Boolean(
-          row.manualPartner === true ||
-          row.matrixOnly === true ||
-          row.type === "partner" ||
-          row.type === "partner-matrix-prospect" ||
-          row.partnerRegistrationType ||
-          row.partnerContactEmail
-        );
-        return hasPartnerPerson && hasPartnerSource && partnerCompanyNameFrom(row);
-      });
+      return (state.rows || []).filter((row) =>
+        row.manualPartner === true && row.email && partnerCompanyNameFrom(row)
+      );
     }
 
     function syncPartnerInviteCompanyOptions() {
@@ -5810,7 +5746,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
       const confirmed = window.confirm(`Manually register ${name} for ${eventLine}? This creates the real CRM registration record and bypasses public phone verification.`);
       if (!confirmed) return;
-      const sendConfirmation = window.confirm(`Send the normal registration confirmation email to ${email}?`);
       const originalLabel = triggerButton?.textContent || "";
       if (triggerButton) {
         triggerButton.disabled = true;
@@ -5824,8 +5759,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           body: JSON.stringify({
             action: "manual-register-for-show",
             key,
-            type,
-            sendConfirmation
+            type
           })
         }).then(readJson);
         state = {
@@ -5835,12 +5769,19 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           registrationInviteCodes: data.registrationInviteCodes || state.registrationInviteCodes || [],
           guestMatrixProspects: data.guestMatrixProspects || state.guestMatrixProspects || [],
           partnerMatrixProspects: data.partnerMatrixProspects || state.partnerMatrixProspects || [],
+          partnerInfoSubmissions: data.partnerInfoSubmissions || state.partnerInfoSubmissions || [],
           upcomingEvents: data.upcomingEvents || state.upcomingEvents || []
         };
         guestMatrixPendingChanges = {};
         updateGuestMatrixSaveButton();
         render();
-        setNotice(sendConfirmation ? `${name} is manually registered and the confirmation email was sent.` : `${name} is manually registered.`, "ok");
+        const confirmation = data.confirmationEmail || data.registration?.confirmationEmail;
+        setNotice(
+          confirmation?.sent === false
+            ? `${name} is manually registered, but the confirmation email did not send: ${confirmation.error || "email delivery failed."}`
+            : `${name} is manually registered and the confirmation email was sent.`,
+          confirmation?.sent === false ? "error" : "ok"
+        );
       } catch (error) {
         showErrorNotice(error, "Manual registration could not be completed.");
       } finally {
@@ -6074,12 +6015,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           row.partnerProductTypes,
           row.partnerClientMessaging,
           row.partnerLinkedInPromotionText,
-          row.partnerInfo?.description,
-          row.partnerInfo?.partnerClientMessaging,
-          ...(row.partnerInfo?.targetExecutiveRoles || []),
-          ...(row.partnerInfo?.targetIndustries || []),
-          row.partnerInfo?.oneLineDescriptor,
-          row.partnerInfo?.elevatorPitch,
           row.relationshipOwner,
           row.lifecycleStage,
           row.lastContactDate,
