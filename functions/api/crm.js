@@ -4720,6 +4720,8 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     invitedName: intendedGuestName,
     guestEmail: intendedGuestEmail,
     guestName: intendedGuestName,
+    sourceContactKey: cleanString(record?.sourceContactKey, 500),
+    sourceMatrixProspectKey: cleanString(record?.sourceMatrixProspectKey, 500),
     partnerContactEmail: prospectType === "partner" ? intendedGuestEmail : "",
     partnerContactName: prospectType === "partner" ? intendedGuestName : "",
     partnerCompany: prospectType === "partner" ? company : "",
@@ -4854,10 +4856,38 @@ async function guestMatrixProspects(env) {
   const rows = await Promise.all(
     keys.map(async (key) => {
       const record = await readSetupJson(env, key);
-      return record ? normalizeGuestMatrixProspect(key, record, "guest") : null;
+      return record ? hydrateMatrixProspectFromContact(env, normalizeGuestMatrixProspect(key, record, "guest")) : null;
     })
   );
   return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+function matrixProspectContactKey(prospect = {}) {
+  const sourceContactKey = cleanString(prospect.sourceContactKey, 500);
+  if (sourceContactKey.startsWith(registrantTypes.contacts.crmPrefix)) return sourceContactKey;
+  const email = cleanString(prospect.intendedGuestEmail || prospect.guestEmail || prospect.partnerContactEmail || prospect.email, 240).toLowerCase();
+  return isEmail(email) ? `${registrantTypes.contacts.crmPrefix}${email}` : "";
+}
+
+async function hydrateMatrixProspectFromContact(env, prospect = {}) {
+  const contactKey = matrixProspectContactKey(prospect);
+  if (!contactKey) return prospect;
+  const contact = await readSetupJson(env, contactKey).catch(() => null);
+  if (!contact) return prospect;
+
+  const linkedinProfileUrl =
+    cleanLinkedInProfileUrl(prospect.linkedinProfileUrl || prospect.linkedInProfileUrl || prospect.linkedinUrl || prospect.linkedInUrl) ||
+    cleanLinkedInProfileUrl(contact.linkedinProfileUrl || contact.linkedInProfileUrl || contact.linkedinUrl || contact.linkedInUrl);
+
+  return {
+    ...prospect,
+    linkedinProfileUrl,
+    linkedinUrl: linkedinProfileUrl || prospect.linkedinUrl,
+    classification: cleanString(prospect.classification, 120) || cleanString(contact.classification, 120),
+    classificationLabel: cleanString(prospect.classificationLabel, 180) || cleanString(contact.classificationLabel || contact.registrationType, 180),
+    contactStatus: cleanString(prospect.contactStatus, 180) || cleanString(contact.contactStatus, 180),
+    sourceContactKey: prospect.sourceContactKey || contactKey
+  };
 }
 
 function guestRegistrationRowFromMatrixProspect(prospect = {}) {
@@ -5055,7 +5085,7 @@ async function partnerMatrixProspects(env) {
   const rows = await Promise.all(
     keys.map(async (key) => {
       const record = await readSetupJson(env, key);
-      return record ? normalizeGuestMatrixProspect(key, record, "partner") : null;
+      return record ? hydrateMatrixProspectFromContact(env, normalizeGuestMatrixProspect(key, record, "partner")) : null;
     })
   );
   return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
