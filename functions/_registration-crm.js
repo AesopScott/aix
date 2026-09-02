@@ -570,9 +570,12 @@ function cleanPayload(payload, type = "") {
     registrationNotes: eventNotes,
     partnerProductTypes: type === "partner" ? cleanString(payload?.partnerProductTypes, 2000) : "",
     partnerClientMessaging: type === "partner" ? cleanString(payload?.partnerClientMessaging, 4000) : "",
-    partnerLinkedInPromotionText: type === "partner"
-      ? cleanString(payload?.partnerLinkedInPromotionText || payload?.partnerPromotionText || payload?.partnerHypeText, 4000)
-      : "",
+    partnerLinkedInPromotionText: type === "partner" ? cleanString(
+      payload?.partnerLinkedInPromotionText ||
+      payload?.partnerPromotionText ||
+      payload?.partnerHypeText,
+      4000
+    ) : "",
     publicationUseName: cleanBoolean(payload?.publicationUseName),
     publicationUseCompany: cleanBoolean(payload?.publicationUseCompany),
     campaignAttribution: cleanCampaignAttribution(payload)
@@ -633,7 +636,8 @@ function validateRegistrationCompanyLogo(file) {
   return "";
 }
 
-function requiresRegistrationPhoto(registration = {}, invite = {}) {
+function requiresRegistrationPhoto(registration = {}, invite = {}, type = "") {
+  if (type === "partner") return true;
   const role = cleanGuestRegistrationType(
     invite.partnerRegistrationType ||
       invite.guestRegistrationType ||
@@ -1562,7 +1566,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
     companyLogoKey: contact.companyLogoKey || cleanString(mergedExisting?.companyLogoKey),
     companyLogoOriginalName: contact.companyLogoOriginalName || cleanString(mergedExisting?.companyLogoOriginalName),
     companyLogoUploadedAt: contact.companyLogoUploadedAt || cleanString(mergedExisting?.companyLogoUploadedAt),
-    partnerLinkedInPromotionText: contact.partnerLinkedInPromotionText || cleanString(mergedExisting?.partnerLinkedInPromotionText),
+    partnerLinkedInPromotionText: contact.partnerLinkedInPromotionText || cleanString(mergedExisting?.partnerLinkedInPromotionText, 4000),
     source: cleanString(mergedExisting?.source) || contact.source,
     createdAt: cleanString(mergedExisting?.createdAt) || now,
     events: mergeContactEvents(mergedExisting?.events, type, registration, now)
@@ -1582,7 +1586,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
     contactMap.set(email, {
       ...previous,
       ...contact,
-      partnerLinkedInPromotionText: contact.partnerLinkedInPromotionText || cleanString(previous.partnerLinkedInPromotionText),
+      partnerLinkedInPromotionText: contact.partnerLinkedInPromotionText || cleanString(previous.partnerLinkedInPromotionText, 4000),
       source: cleanString(previous.source) || contact.source
     });
 
@@ -1595,7 +1599,7 @@ export async function upsertRegistrationContact(env, type, registration, config 
       companyLogoKey: contact.companyLogoKey || cleanString(existing?.companyLogoKey),
       companyLogoOriginalName: contact.companyLogoOriginalName || cleanString(existing?.companyLogoOriginalName),
       companyLogoUploadedAt: contact.companyLogoUploadedAt || cleanString(existing?.companyLogoUploadedAt),
-      partnerLinkedInPromotionText: contact.partnerLinkedInPromotionText || cleanString(existing?.partnerLinkedInPromotionText),
+      partnerLinkedInPromotionText: contact.partnerLinkedInPromotionText || cleanString(existing?.partnerLinkedInPromotionText, 4000),
       contacts: [...contactMap.values()],
       updatedAt: now,
       updatedBy
@@ -1675,7 +1679,7 @@ export async function handlePublicRegistration({ request, env }, type) {
       });
       return json({ error: showError }, { status: 400 });
     }
-    const photoRequired = requiresRegistrationPhoto(registration, invite);
+    const photoRequired = requiresRegistrationPhoto(registration, invite, type);
     if (photoRequired || hasRegistrationPhotoFile(photoFile)) {
       const photoError = validateRegistrationPhoto(photoFile);
       if (photoError) {

@@ -518,7 +518,7 @@
           <div class="status-item"><span class="status-mark"></span><span>Invite code required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Email required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>LinkedIn profile required</span></div>
-          <div class="status-item"><span class="status-mark"></span><span>Brief photo required for featured partners</span></div>
+          <div class="status-item"><span class="status-mark"></span><span>Bio picture required</span></div>
           <div class="status-item"><span class="status-mark"></span><span>Phone confirmation recorded</span></div>
         </div>
       </section>
@@ -630,10 +630,10 @@
               <input type="hidden" id="eventQuestionRankingSummary" name="eventQuestionRankingSummary" value="">
               <input type="hidden" id="eventNotes" name="eventNotes" value="">
             </section>
-            <div class="field full" id="briefPhotoField" hidden>
-              <label for="briefPhoto">Brief photo</label>
-              <input type="file" id="briefPhoto" name="briefPhoto" accept="image/jpeg,image/png,image/webp">
-              <p class="file-help">Featured partners upload a picture suitable for inclusion in MOJO AI Summits briefs. JPG, PNG, or WebP, up to 6 MB.</p>
+            <div class="field full" id="briefPhotoField">
+              <label for="briefPhoto">Bio picture</label>
+              <input type="file" id="briefPhoto" name="briefPhoto" accept="image/jpeg,image/png,image/webp" required>
+              <p class="file-help">Upload a bio picture suitable for inclusion in MOJO AI Summits partner materials. JPG, PNG, or WebP, up to 6 MB.</p>
             </div>
             <div class="field full">
               <label for="companyLogo">Company logo</label>
@@ -892,7 +892,7 @@
   }
 
   function requiresBriefPhotoForRole(role = currentInviteRole){
-    return ['featured-guest', 'featured-member', 'featured-author', 'featured-partner', 'presenter', 'speaker', 'roundtable-leader', 'roundtable'].includes(normalizeInviteRole(role));
+    return true;
   }
 
   function requiresSingleShowForRole(role = currentInviteRole){
@@ -1043,9 +1043,9 @@
   async function validateBriefPhoto(){
     const file = selectedBriefPhoto();
     if (!file && !requiresBriefPhotoForRole()) return '';
-    if (!file) return 'Upload a picture for the event brief before submitting featured partner registration.';
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return 'Upload the brief picture as a JPG, PNG, or WebP image.';
-    if (file.size > 6 * 1024 * 1024) return 'Upload a brief picture smaller than 6 MB.';
+    if (!file) return 'Upload a bio picture before submitting partner registration.';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return 'Upload the bio picture as a JPG, PNG, or WebP image.';
+    if (file.size > 6 * 1024 * 1024) return 'Upload a bio picture smaller than 6 MB.';
     return '';
   }
 

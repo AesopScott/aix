@@ -57,6 +57,28 @@ function cleanString(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+function cleanLinkedInProfileUrl(value = "") {
+  const raw = cleanString(value, 500).replace(/\s+/g, "");
+  if (!raw) return "";
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, "")}`;
+  let url;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return "";
+  }
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (host !== "linkedin.com" && !host.endsWith(".linkedin.com")) return "";
+  const path = url.pathname.replace(/\/+$/, "");
+  if (!/^\/(in|pub)\/[^/]+/i.test(path)) return "";
+  url.protocol = "https:";
+  url.username = "";
+  url.password = "";
+  url.search = "";
+  url.hash = "";
+  return url.toString().slice(0, 500);
+}
+
 function cleanEventShowId(value, fallback = "") {
   const raw = cleanString(value, 160).toLowerCase();
   const normalized = raw.replace(/[\s_]+/g, "-");
@@ -179,24 +201,45 @@ function mergePreviewGuestLists(primary = [], secondary = []) {
   });
 }
 
+function publicFeaturedRoleKey(person = {}) {
+  return cleanFeaturedRole(
+    person.roleLabel ||
+      person.registrationRole ||
+      person.guestRegistrationType ||
+      person.partnerRegistrationType ||
+      person.contactEventRole ||
+      person.role
+  );
+}
+
+function slotFeaturedPeople(people = []) {
+  const sorted = [...people].sort((left, right) => {
+    return cleanString(left.displayName || left.name).localeCompare(cleanString(right.displayName || right.name));
+  });
+  const guests = sorted.filter((person) => publicFeaturedRoleKey(person) === "featured-guest").slice(0, 6);
+  const authors = sorted.filter((person) => publicFeaturedRoleKey(person) === "featured-author").slice(0, 1);
+  const partners = sorted.filter((person) => publicFeaturedRoleKey(person) === "featured-partner").slice(0, 2);
+  return [...guests, ...authors, ...partners];
+}
+
 function mergePreviewPayloads(livePayload = {}, localPayload = {}) {
   const live = withAbsolutePreviewPhotoUrls(livePayload);
   const local = withAbsolutePreviewPhotoUrls(localPayload);
   const featuredGuestsByShow = featuredShowLineups.reduce((lineups, show) => {
-    lineups[show.id] = mergePreviewGuestLists(
+    lineups[show.id] = slotFeaturedPeople(mergePreviewGuestLists(
       Array.isArray(live.featuredGuestsByShow?.[show.id]) ? live.featuredGuestsByShow[show.id] : [],
       Array.isArray(local.featuredGuestsByShow?.[show.id]) ? local.featuredGuestsByShow[show.id] : []
-    ).slice(0, 9);
+    ));
     return lineups;
   }, {});
 
   return {
     ...live,
     ...local,
-    featuredGuests: mergePreviewGuestLists(
+    featuredGuests: slotFeaturedPeople(mergePreviewGuestLists(
       Array.isArray(live.featuredGuests) ? live.featuredGuests : [],
       Array.isArray(local.featuredGuests) ? local.featuredGuests : []
-    ).slice(0, 18),
+    )).slice(0, 18),
     featuredGuestsByShow,
     registeredGuests: mergePreviewGuestLists(
       Array.isArray(live.registeredGuests) ? live.registeredGuests : [],
@@ -239,9 +282,10 @@ function registrantMatchesEvent(registrant, event) {
 
 function cleanFeaturedRole(value) {
   const role = cleanString(value, 140).toLowerCase().replace(/[\s_]+/g, "-");
-  if (role.includes("author")) return "featured-author";
-  if (role.includes("sponsor") || role.includes("partner")) return "featured-partner";
-  if (role.includes("featured") || role.includes("presenter") || role.includes("speaker") || role.includes("roundtable")) return "featured-guest";
+  if (role.includes("featured-author")) return "featured-author";
+  if (role.includes("featured-sponsor")) return "featured-partner";
+  if (role.includes("featured-partner")) return "featured-partner";
+  if (role.includes("featured-guest")) return "featured-guest";
   return role;
 }
 
@@ -265,14 +309,13 @@ function isFeaturedRegistrant(registrant = {}) {
     120
   );
 
+  if (role === "featured-partner" || role === "featured-sponsor") return true;
+  if (role === "partner" || role === "partner-candidate") return false;
+
   return Boolean(
     registrant.isFeaturedGuest ||
-    registrant.isFeaturedMember ||
     registrant.isFeaturedAuthor ||
-    registrant.isFeaturedSponsor ||
-    registrant.isPresenter ||
-    registrant.isRoundtableLeader ||
-    ["featured-guest", "featured-author", "featured-partner", "featured-sponsor"].includes(role)
+    ["featured-guest", "featured-author"].includes(role)
   );
 }
 
@@ -290,6 +333,12 @@ function publicFeaturedGuest(registrant, type) {
       registrant?.profileImageUrl,
     500
   );
+  const linkedinProfileUrl = cleanLinkedInProfileUrl(
+    registrant?.linkedinProfileUrl ||
+      registrant?.linkedInProfileUrl ||
+      registrant?.linkedinUrl ||
+      registrant?.linkedInUrl
+  );
   const industry = cleanString(registrant?.industry || registrant?.organizationType, 140);
 
   return {
@@ -300,6 +349,7 @@ function publicFeaturedGuest(registrant, type) {
     title,
     industry,
     photoUrl,
+    linkedinProfileUrl,
     eventShowId: registrantShowId(registrant),
     eventShowLabel: eventShowLabel(registrantShowId(registrant)),
     eventShowTime: eventShowTime(registrantShowId(registrant)),
@@ -378,8 +428,8 @@ function featuredRoleFields(record = {}) {
     featuredGuestLabel: role || record.featuredGuestLabel,
     isFeaturedGuest: role === "featured-guest" || record.isFeaturedGuest === true,
     isFeaturedAuthor: role === "featured-author" || record.isFeaturedAuthor === true,
-    isFeaturedSponsor: (role === "featured-partner" || role === "featured-sponsor") || record.isFeaturedSponsor === true,
-    isFeaturedPartner: (role === "featured-partner" || role === "featured-sponsor") || record.isFeaturedPartner === true
+    isFeaturedSponsor: role === "featured-partner" || role === "featured-sponsor",
+    isFeaturedPartner: role === "featured-partner" || role === "featured-sponsor"
   };
 }
 
@@ -458,6 +508,16 @@ async function contactEventRegistrants(env) {
           title: cleanString(contact.title || event.title, 180),
           company: cleanString(contact.company || event.company, 180),
           industry: cleanString(contact.industry || event.industry || contact.organizationType, 140),
+          linkedinProfileUrl: cleanLinkedInProfileUrl(
+            event.linkedinProfileUrl ||
+              event.linkedInProfileUrl ||
+              event.linkedinUrl ||
+              event.linkedInUrl ||
+              contact.linkedinProfileUrl ||
+              contact.linkedInProfileUrl ||
+              contact.linkedinUrl ||
+              contact.linkedInUrl
+          ),
           photoUrl: cleanString(contact.photoUrl || contact.photoURL || contact.photo || event.photoUrl || event.photoURL || event.photo, 500),
           photoKey: cleanString(contact.photoKey || event.photoKey, 500),
           registrationRole: role,
@@ -527,7 +587,7 @@ function featuredGuestsFromRegistrants(registrants) {
     .filter(isFeaturedRegistrant)
     .map((registrant) => publicFeaturedGuest(registrant, registrant.type))
     .sort((left, right) => left.displayName.localeCompare(right.displayName))
-    .slice(0, 9);
+    .slice(0, 18);
 }
 
 function featuredGuestsByShowFromRegistrants(registrants) {
@@ -536,10 +596,10 @@ function featuredGuestsByShowFromRegistrants(registrants) {
     .sort((left, right) => cleanString(left.name).localeCompare(cleanString(right.name)));
 
   return featuredShowLineups.reduce((lineups, show) => {
-    lineups[show.id] = featuredRegistrants
+    const people = featuredRegistrants
       .filter((registrant) => registrantMatchesShow(registrant, show.id))
-      .map((registrant) => publicFeaturedGuest(registrant, registrant.type))
-      .slice(0, 9);
+      .map((registrant) => publicFeaturedGuest(registrant, registrant.type));
+    lineups[show.id] = slotFeaturedPeople(people);
     return lineups;
   }, {});
 }
