@@ -731,12 +731,16 @@ async function eventRegistrants(env, event) {
 }
 
 function featuredGuestsFromRegistrants(registrants) {
-  return registrants
+  const featuredRegistrants = registrants
     .filter(isPublicFeaturedRegistrant)
-    .map((registrant) => publicFeaturedGuest(registrant, registrant.type))
-    .sort(publicLineupCompare)
-    .slice(0, 18)
-    .map(publicFeaturedPerson);
+    .sort(publicLineupCompare);
+
+  return featuredShowLineups.flatMap((show) => {
+    const people = featuredRegistrants
+      .filter((registrant) => registrantMatchesShow(registrant, show.id))
+      .map((registrant) => publicFeaturedGuest(registrant, registrant.type));
+    return slotFeaturedPeople(people);
+  }).slice(0, 18);
 }
 
 function featuredGuestsByShowFromRegistrants(registrants) {
