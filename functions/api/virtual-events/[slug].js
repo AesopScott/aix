@@ -353,6 +353,9 @@ function normalizedPublicRegistrationStatus(record = {}) {
   if (!status) return isCrmRegistrantRecord(record) ? "registered" : "";
   if (status === "used") return "registered";
   if (status === "cancelled") return "canceled";
+  if (["new", "pending", "pending-engagement", "contacted", "confirmed", "invited", "active"].includes(status)) {
+    return isCrmRegistrantRecord(record) ? "registered" : status;
+  }
   return status;
 }
 
