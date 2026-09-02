@@ -63,6 +63,33 @@
     return raw;
   }
 
+  function publicPersonKey(person = {}) {
+    const linkedin = linkedInProfileUrl(person).toLowerCase().replace(/\/+$/, "");
+    if (linkedin) return `linkedin:${linkedin}`;
+    const email = String(person.email || "").trim().toLowerCase();
+    if (email) return `email:${email}`;
+    const name = String(person.displayName || person.name || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const role = roleKey(person.roleLabel || person.registrationRole || person.guestRegistrationType || person.partnerRegistrationType || person.role);
+    return [name, role].filter(Boolean).join("|");
+  }
+
+  function mergePublicPeople(people = []) {
+    const map = new Map();
+    people.forEach((person) => {
+      const key = publicPersonKey(person);
+      if (!key) return;
+      const previous = map.get(key) || {};
+      map.set(key, {
+        ...previous,
+        ...person,
+        photoUrl: person.photoUrl || person.photoURL || person.photo || previous.photoUrl || previous.photoURL || previous.photo || "",
+        photoKey: person.photoKey || previous.photoKey || "",
+        linkedinProfileUrl: linkedInProfileUrl(person) || linkedInProfileUrl(previous)
+      });
+    });
+    return [...map.values()];
+  }
+
   function cleanEventShowId(value, fallback = "") {
     const raw = String(value || "").trim().toLowerCase();
     const normalized = raw.replace(/[\s_]+/g, "-");
@@ -174,7 +201,7 @@
   }
 
   function showSlotGroups(payload, showId) {
-    const people = showLineupById(payload, showId);
+    const people = mergePublicPeople(showLineupById(payload, showId));
     return {
       guests: people.filter((person) => roleKey(person.roleLabel) === "featured-guest").slice(0, 6),
       authors: people.filter((person) => roleKey(person.roleLabel) === "featured-author").slice(0, 1),
