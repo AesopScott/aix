@@ -1,6 +1,6 @@
 # CRM Taxonomy
 
-Updated: 2026-08-10
+Updated: 2026-09-02
 
 ## Summary
 
@@ -28,7 +28,7 @@ When adding or renaming events, update `taxonomy.md` first, then update the CRM/
 
 ## Guest Invite Matrix
 
-Updated: 2026-08-13
+Updated: 2026-08-26
 
 The CRM now has a `Guest Matrix` mockup under the Guest pipeline in `dist/crm/index.html`.
 
@@ -42,4 +42,12 @@ The matrix groups guest/member invite links by event and surfaces:
 Current implementation is a frontend mockup: matrix status edits persist only in browser `localStorage` under `mojoGuestMatrixMockup:v1`. Production persistence still needs backend fields or a CRM activity model for LinkedIn connection state, registration request state, and registration completion state.
 
 When the CRM API is unavailable from a local `file://`, `localhost`, or `127.0.0.1` preview, the CRM falls back to a sample Guest Matrix dataset so the interface can be reviewed without authentication.
+
+The Guest Matrix now shares the Partner Matrix `scott-engagement` lifecycle status, labeled `Scott's Engagement` in the CRM UI. It is available in the Guest Matrix status filter, per-person matrix status dropdown, summary rollup, frontend normalization, and backend guest registration lifecycle validation.
+
+## Public Featured Lineup Canon
+
+Updated: 2026-09-02
+
+The CRM is the source of truth for public featured lineups. Each event time slot can have at most 6 Featured Guest assignments. The website can publish a featured person only when the person comes from an actual CRM registration record for that event/show. Invite links, contact event history, and matrix-only prospects can support tracking, but they do not publish someone to the website lineup by themselves. If an invite/contact record disagrees with the current CRM registration/matrix state, the CRM registration/matrix state wins.
 
