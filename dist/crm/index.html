@@ -2264,6 +2264,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           </select>
         </label>
         <label>
+          Intake Type
+          <select id="guestMatrixIntakeTypeFilter">
+            <option value="all">All intake types</option>
+          </select>
+        </label>
+        <label>
+          Invitation Source
+          <select id="guestMatrixInvitationSourceFilter">
+            <option value="all">All sources</option>
+          </select>
+        </label>
+        <label>
           Search matrix
           <input id="guestMatrixSearch" type="search" placeholder="name, email, company, event, code">
         </label>
@@ -2593,6 +2605,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const guestMatrixShowFilter = document.querySelector("#guestMatrixShowFilter");
     const guestMatrixRoleFilter = document.querySelector("#guestMatrixRoleFilter");
     const guestMatrixStatusFilter = document.querySelector("#guestMatrixStatusFilter");
+    const guestMatrixIntakeTypeFilter = document.querySelector("#guestMatrixIntakeTypeFilter");
+    const guestMatrixInvitationSourceFilter = document.querySelector("#guestMatrixInvitationSourceFilter");
     const guestMatrixSearch = document.querySelector("#guestMatrixSearch");
     const guestMatrixClear = document.querySelector("#guestMatrixClear");
     const guestMatrixSave = document.querySelector("#guestMatrixSave");
@@ -4911,6 +4925,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return matrixOptionLabel(matrixRegistrationStatusOptions(), row.registrationStatus);
     }
 
+    function guestMatrixIntakeTypeLabel(record = {}) {
+      const raw = firstCleanValue(record.contactStatus, record.classificationLabel, record.registrationType, record.classification);
+      const normalized = String(raw || "").trim().toLowerCase().replace(/[_-]+/g, " ");
+      if (normalized.includes("potential guest")) return "Potential Guest";
+      if (normalized.includes("partner candidate")) return "Partner Candidate";
+      if (normalized.includes("strategic partner contact")) return "Strategic Partner Contact";
+      return "";
+    }
+
     function guestMatrixRowForInvite(invite = {}) {
       const id = guestMatrixRecordId(invite);
       const draft = guestMatrixDraft(invite);
@@ -4939,6 +4962,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const name = guestMatrixPersonName(invite);
       const company = firstCleanValue(draft.company, draft.partnerCompany, crmCompanyName(invite));
       const partnerInfo = partnerRow ? partnerInfoForMatrixRecord({ ...invite, email, name, company }) : null;
+      const invitationSource = firstCleanValue(draft.invitationSource, invite.invitationSource, invite.source, invite.captureSource);
+      const intakeType = guestMatrixIntakeTypeLabel(invite);
       return {
         id,
         invite,
@@ -4955,6 +4980,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         company,
         title: crmPersonTitle(invite),
         linkedinProfileUrl: firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl),
+        intakeType,
+        intakeTypeKey: filterKey(intakeType),
+        invitationSource,
+        invitationSourceKey: filterKey(invitationSource),
         partnerInfo,
         createdAt: firstCleanValue(invite.createdAt, invite.addedAt),
         updatedAt: firstCleanValue(invite.updatedAt, invite.crmUpdatedAt),
@@ -4979,6 +5008,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           guestMatrixPersonName(invite),
           email,
           firstCleanValue(invite.linkedinProfileUrl, invite.linkedInProfileUrl, invite.linkedinUrl, invite.linkedInUrl),
+          intakeType,
+          invitationSource,
           crmPersonTitle(invite),
           firstCleanValue(invite.createdAt, invite.addedAt),
           firstCleanValue(invite.invitedBy, invite.inviter, invite.invitedByName, invite.createdBy),
@@ -5069,6 +5100,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         company: firstCleanValue(primary.company, secondary.company),
         title: firstCleanValue(primary.title, secondary.title),
         linkedinProfileUrl: firstCleanValue(primary.linkedinProfileUrl, secondary.linkedinProfileUrl),
+        intakeType: firstCleanValue(primary.intakeType, secondary.intakeType),
+        intakeTypeKey: firstCleanValue(primary.intakeTypeKey, secondary.intakeTypeKey),
+        invitationSource: firstCleanValue(primary.invitationSource, secondary.invitationSource),
+        invitationSourceKey: firstCleanValue(primary.invitationSourceKey, secondary.invitationSourceKey),
         partnerInfo: primary.partnerInfo || secondary.partnerInfo,
         showKey: primary.showKey || secondary.showKey,
         showLabel: registeredShowLabel ? "" : primary.showLabel || secondary.showLabel,
@@ -5158,11 +5193,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const current = guestMatrixEventFilter.value || "all";
       const currentShow = guestMatrixShowFilter?.value || "all";
       const currentRole = guestMatrixRoleFilter?.value || "all";
+      const currentIntakeType = guestMatrixIntakeTypeFilter?.value || "all";
+      const currentInvitationSource = guestMatrixInvitationSourceFilter?.value || "all";
       const events = new Map();
       const roles = new Map();
+      const intakeTypes = new Map();
+      const invitationSources = new Map();
       rows.forEach((row) => {
         if (!events.has(row.eventKey)) events.set(row.eventKey, [row.eventName, row.eventMeta].filter(Boolean).join(" | "));
         if (row.roleKey && row.role) roles.set(row.roleKey, row.role);
+        if (row.intakeTypeKey && row.intakeType) intakeTypes.set(row.intakeTypeKey, row.intakeType);
+        if (row.invitationSourceKey && row.invitationSource) invitationSources.set(row.invitationSourceKey, row.invitationSource);
       });
       guestMatrixEventFilter.innerHTML = [
         '<option value="all">All events</option>',
@@ -5183,6 +5224,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         ].join("");
         if (currentRole !== "all" && !roles.has(currentRole)) guestMatrixRoleFilter.value = "all";
       }
+      if (guestMatrixIntakeTypeFilter) {
+        guestMatrixIntakeTypeFilter.innerHTML = [
+          '<option value="all">All intake types</option>',
+          ...[...intakeTypes.entries()]
+            .sort((a, b) => a[1].localeCompare(b[1]))
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === currentIntakeType ? "selected" : ""}>${escapeHtml(label)}</option>`)
+        ].join("");
+        if (currentIntakeType !== "all" && !intakeTypes.has(currentIntakeType)) guestMatrixIntakeTypeFilter.value = "all";
+      }
+      if (guestMatrixInvitationSourceFilter) {
+        guestMatrixInvitationSourceFilter.innerHTML = [
+          '<option value="all">All sources</option>',
+          ...[...invitationSources.entries()]
+            .sort((a, b) => a[1].localeCompare(b[1]))
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === currentInvitationSource ? "selected" : ""}>${escapeHtml(label)}</option>`)
+        ].join("");
+        if (currentInvitationSource !== "all" && !invitationSources.has(currentInvitationSource)) guestMatrixInvitationSourceFilter.value = "all";
+      }
     }
 
     function syncGuestMatrixStatusFilter() {
@@ -5201,12 +5260,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const showValue = guestMatrixShowFilter?.value || "all";
       const roleValue = guestMatrixRoleFilter?.value || "all";
       const statusValue = guestMatrixStatusFilter?.value || "all";
+      const intakeTypeValue = guestMatrixIntakeTypeFilter?.value || "all";
+      const invitationSourceValue = guestMatrixInvitationSourceFilter?.value || "all";
       const terms = (guestMatrixSearch?.value.trim().toLowerCase() || "").split(/\s+/).filter(Boolean);
       return rows.filter((row) => {
         if (eventValue !== "all" && row.eventKey !== eventValue) return false;
         if (showValue !== "all" && row.showKey !== showValue) return false;
         if (roleValue !== "all" && row.roleKey !== roleValue) return false;
         if (!guestMatrixStatusMatch(row, statusValue)) return false;
+        if (intakeTypeValue !== "all" && row.intakeTypeKey !== intakeTypeValue) return false;
+        if (invitationSourceValue !== "all" && row.invitationSourceKey !== invitationSourceValue) return false;
         return !terms.length || terms.every((term) => row.haystack.includes(term));
       });
     }
@@ -9588,7 +9651,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       renderGuestMatrix();
     }
 
-    [guestMatrixEventFilter, guestMatrixShowFilter, guestMatrixRoleFilter, guestMatrixStatusFilter, guestMatrixSearch].forEach((input) => {
+    [guestMatrixEventFilter, guestMatrixShowFilter, guestMatrixRoleFilter, guestMatrixStatusFilter, guestMatrixIntakeTypeFilter, guestMatrixInvitationSourceFilter, guestMatrixSearch].forEach((input) => {
       if (!input) return;
       input.addEventListener("input", renderGuestMatrixFromFilterChange);
       input.addEventListener("change", renderGuestMatrixFromFilterChange);
@@ -9599,6 +9662,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (guestMatrixShowFilter) guestMatrixShowFilter.value = "all";
       if (guestMatrixRoleFilter) guestMatrixRoleFilter.value = "all";
       guestMatrixStatusFilter.value = "all";
+      if (guestMatrixIntakeTypeFilter) guestMatrixIntakeTypeFilter.value = "all";
+      if (guestMatrixInvitationSourceFilter) guestMatrixInvitationSourceFilter.value = "all";
       guestMatrixSearch.value = "";
       resetGuestMatrixPagination();
       renderGuestMatrix();
