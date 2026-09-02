@@ -212,8 +212,41 @@ function publicFeaturedRoleKey(person = {}) {
   );
 }
 
+function publicFeaturedPersonKey(person = {}) {
+  const linkedin = cleanLinkedInProfileUrl(
+    person.linkedinProfileUrl ||
+      person.linkedInProfileUrl ||
+      person.linkedinUrl ||
+      person.linkedInUrl
+  ).toLowerCase().replace(/\/+$/, "");
+  if (linkedin) return `linkedin:${linkedin}`;
+  const email = cleanString(person.email, 240).toLowerCase();
+  if (email) return `email:${email}`;
+  const name = cleanString(person.displayName || person.name, 240).toLowerCase().replace(/\s+/g, " ");
+  const role = publicFeaturedRoleKey(person);
+  return [name, role].filter(Boolean).join("|");
+}
+
+function mergePublicFeaturedPeople(people = []) {
+  const map = new Map();
+  for (const person of people) {
+    const key = publicFeaturedPersonKey(person);
+    if (!key) continue;
+    const previous = map.get(key) || {};
+    map.set(key, {
+      ...previous,
+      ...person,
+      photoUrl: cleanString(person.photoUrl || person.photoURL || person.photo) || cleanString(previous.photoUrl || previous.photoURL || previous.photo),
+      photoKey: cleanString(person.photoKey) || cleanString(previous.photoKey),
+      linkedinProfileUrl: cleanLinkedInProfileUrl(person.linkedinProfileUrl || person.linkedInProfileUrl || person.linkedinUrl || person.linkedInUrl) ||
+        cleanLinkedInProfileUrl(previous.linkedinProfileUrl || previous.linkedInProfileUrl || previous.linkedinUrl || previous.linkedInUrl)
+    });
+  }
+  return [...map.values()];
+}
+
 function slotFeaturedPeople(people = []) {
-  const sorted = [...people].sort((left, right) => {
+  const sorted = mergePublicFeaturedPeople(people).sort((left, right) => {
     return cleanString(left.displayName || left.name).localeCompare(cleanString(right.displayName || right.name));
   });
   const guests = sorted.filter((person) => publicFeaturedRoleKey(person) === "featured-guest").slice(0, 6);
