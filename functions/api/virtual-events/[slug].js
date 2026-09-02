@@ -320,10 +320,12 @@ function registrantMatchesEvent(registrant, event) {
 
 function cleanFeaturedRole(value) {
   const role = cleanString(value, 140).toLowerCase().replace(/[\s_]+/g, "-");
-  if (role.includes("featured-author")) return "featured-author";
+  if (role.includes("author")) return "featured-author";
   if (role.includes("featured-sponsor")) return "featured-partner";
   if (role.includes("featured-partner")) return "featured-partner";
+  if (role === "sponsor") return "featured-partner";
   if (role.includes("featured-guest")) return "featured-guest";
+  if (role === "featured" || role.includes("presenter") || role.includes("speaker") || role.includes("roundtable")) return "featured-guest";
   return role;
 }
 
@@ -348,6 +350,14 @@ function isCrmRegistrantRecord(record = {}) {
     source.includes("manual-registration");
 }
 
+function isCrmContactEventRegistrationEvidence(record = {}) {
+  const sourceKey = cleanString(record.sourceKey || record.key, 500).toLowerCase();
+  const status = registeredStatus(record.crmStatus || record.guestStatus || record.registrationStatus || record.status);
+  return sourceKey.startsWith("crm:contact:") &&
+    sourceKey.includes(":event:") &&
+    publicFeaturedRegistrationStatuses.has(status);
+}
+
 function normalizedPublicRegistrationStatus(record = {}) {
   const status = registeredStatus(record.crmStatus || record.guestStatus || record.registrationStatus || record.status);
   if (!status) return isCrmRegistrantRecord(record) ? "registered" : "";
@@ -361,7 +371,7 @@ function normalizedPublicRegistrationStatus(record = {}) {
 
 function contactEventIsPublicLineupCandidate(event = {}) {
   const status = registeredStatus(event.registrationStatus || event.status || event.crmStatus || event.guestStatus);
-  return ["registered", "confirmed", "accepted", "attended"].includes(status);
+  return publicFeaturedRegistrationStatuses.has(status);
 }
 
 function isFeaturedRegistrant(registrant = {}) {
@@ -387,7 +397,7 @@ function isFeaturedRegistrant(registrant = {}) {
 
 function isPublicFeaturedRegistrant(registrant = {}) {
   const status = normalizedPublicRegistrationStatus(registrant);
-  return isCrmRegistrantRecord(registrant) &&
+  return (isCrmRegistrantRecord(registrant) || isCrmContactEventRegistrationEvidence(registrant)) &&
     isFeaturedRegistrant(registrant) &&
     publicFeaturedRegistrationStatuses.has(status);
 }
