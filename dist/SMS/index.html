@@ -171,6 +171,21 @@
     .row span { color: var(--muted); font-size: 0.9rem; }
     .row.failed { border-color: rgba(255, 99, 123, 0.5); }
     .row.not-ready { border-color: rgba(255, 99, 123, 0.36); }
+    .failure-summary {
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.8rem;
+      border: 1px solid rgba(255, 99, 123, 0.52);
+      border-radius: 6px;
+      background: rgba(255, 99, 123, 0.08);
+      color: var(--danger);
+      font-weight: 800;
+    }
+    .failure-summary span {
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
 
     .checkbox-row {
       display: flex;
@@ -248,6 +263,7 @@
           <span id="confirmCopy">I understand this will send to verified phone numbers for the selected event.</span>
         </label>
         <button type="submit" class="danger" id="sendButton">Send SMS</button>
+        <button type="button" class="secondary" id="retryFailedButton">Retry Failed Only</button>
         <p class="notice" id="notice" aria-live="polite"></p>
       </form>
 
@@ -282,6 +298,7 @@
     const charCount = document.querySelector("#charCount");
     const form = document.querySelector("#smsForm");
     const sendButton = document.querySelector("#sendButton");
+    const retryFailedButton = document.querySelector("#retryFailedButton");
     const refreshButton = document.querySelector("#refreshButton");
     const confirmSend = document.querySelector("#confirmSend");
     const confirmCopy = document.querySelector("#confirmCopy");
@@ -428,14 +445,39 @@
       }
     }
 
-    function renderResults(results = []) {
+    function summarizeFailures(results = []) {
+      const map = new Map();
+      results.forEach((result) => {
+        if (result.status !== "failed") return;
+        const reason = result.error || "Unknown AWS send failure.";
+        map.set(reason, (map.get(reason) || 0) + 1);
+      });
+      return [...map.entries()]
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((left, right) => right.count - left.count || left.reason.localeCompare(right.reason));
+    }
+
+    function renderResults(results = [], result = {}) {
+      const failureSummaries = result.failureSummaries?.length
+        ? result.failureSummaries
+        : summarizeFailures(results);
+      const summaryMarkup = failureSummaries.length
+        ? `<div class="failure-summary">
+            <strong>Failure reasons</strong>
+            ${failureSummaries.map((summary) => `
+              <span>${escapeHtml(String(summary.count || 0))} failed: ${escapeHtml(summary.reason || "Unknown AWS send failure.")}</span>
+            `).join("")}
+          </div>`
+        : "";
       resultList.innerHTML = results.length
-        ? results.map((result) => `
-            <div class="row ${result.status === "failed" ? "failed" : ""}">
-              <strong>${escapeHtml(result.phone)} | ${escapeHtml(result.status)}</strong>
-              <span>${escapeHtml(result.messageId || result.error || "")}</span>
+        ? `${summaryMarkup}${results.map((entry) => `
+            <div class="row ${entry.status === "failed" ? "failed" : ""}">
+              <strong>${escapeHtml(entry.phone)} | ${escapeHtml(entry.status)}</strong>
+              <span>${escapeHtml(entry.messageId || entry.error || "")}</span>
             </div>
-          `).join("")
+          `).join("")}`
+        : result.skippedPreviouslySentCount
+        ? `<p>${escapeHtml(String(result.skippedPreviouslySentCount))} already-successful recipient${result.skippedPreviouslySentCount === 1 ? " was" : "s were"} skipped. No SMS was resent.</p>`
         : "<p>No SMS send has been run from this page yet.</p>";
     }
 
@@ -448,10 +490,13 @@
     function renderSendConfirmation(result = {}) {
       const sentCount = result.sentCount || 0;
       const failedCount = result.failedCount || 0;
+      const skippedCount = result.skippedPreviouslySentCount || 0;
       const total = result.recipientCount || sentCount + failedCount;
+      const prefix = result.retryFailedOnly ? "Retry SMS" : "SMS";
+      const skippedText = skippedCount ? ` ${skippedCount} already-successful recipient${skippedCount === 1 ? " was" : "s were"} skipped.` : "";
       const message = failedCount
-        ? `SMS partially sent: ${sentCount} of ${total} messages sent to ${sendTargetLabel(result)}; ${failedCount} failed.`
-        : `SMS sent: ${sentCount} of ${total} messages sent to ${sendTargetLabel(result)}.`;
+        ? `${prefix} partially sent: ${sentCount} of ${total} messages sent to ${sendTargetLabel(result)}; ${failedCount} failed.${skippedText}`
+        : `${prefix} sent: ${sentCount} of ${total} messages sent to ${sendTargetLabel(result)}.${skippedText}`;
       const type = failedCount ? "error" : "ok";
       resultSummary.textContent = message;
       resultSummary.className = `notice result-summary ${type}`;
@@ -487,8 +532,8 @@
     });
     eventSelect.addEventListener("change", loadRecipients);
 
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    async function sendSmsNotifications(options = {}) {
+      const retryFailedOnly = Boolean(options.retryFailedOnly);
       if (messageType.value === "event-reminder" && !eventSelect.value) {
         setNotice("Select an event before sending an upcoming event reminder.", "error");
         return;
@@ -497,13 +542,16 @@
         setNotice(messageType.value === "reply-test"
           ? "Confirm that you want to send the reply test to Scott, Angel, and Miller."
           : messageType.value === "event-reminder"
-          ? "Confirm that you want to send to verified phone numbers for the selected event."
+          ? retryFailedOnly
+            ? "Confirm that you want to retry only numbers not already marked sent for this event and message."
+            : "Confirm that you want to send to verified phone numbers for the selected event."
           : "Confirm that you want to send to all verified phone numbers.",
         "error");
         return;
       }
       sendButton.disabled = true;
-      setNotice("Sending SMS notifications...");
+      retryFailedButton.disabled = true;
+      setNotice(retryFailedOnly ? "Retrying failed SMS notifications..." : "Sending SMS notifications...");
       try {
         const payload = await fetch(api, {
           method: "POST",
@@ -511,11 +559,12 @@
           body: JSON.stringify({
             type: messageType.value,
             eventKey: eventSelect.value,
-            message: messageText.value
+            message: messageText.value,
+            retryFailedOnly
           })
         }).then(readJson);
         const result = payload.result || {};
-        renderResults(result.results || []);
+        renderResults(result.results || [], result);
         renderSendConfirmation(result);
         confirmSend.checked = false;
         await loadRecipients({ quiet: true });
@@ -523,8 +572,15 @@
         setNotice(error.message, "error");
       } finally {
         sendButton.disabled = false;
+        retryFailedButton.disabled = false;
       }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await sendSmsNotifications();
     });
+    retryFailedButton.addEventListener("click", () => sendSmsNotifications({ retryFailedOnly: true }));
 
     renderResults();
     syncModeUi();

@@ -35,6 +35,7 @@ const registrationIndexCacheTtlMs = 5 * 60 * 1000;
 const registrationIndexCacheMaxStaleMs = 24 * 60 * 60 * 1000;
 const additionalNoticeKey = "sms:notifications:last-additional-event-notice";
 const additionalNoticeCooldownMs = 30 * 24 * 60 * 60 * 1000;
+const notificationPrefix = "sms:notification:";
 const encoder = new TextEncoder();
 const staffSmsRecipients = [
   { name: "Scott", phone: "+17192446690" },
@@ -49,6 +50,16 @@ const eventReminderStaffRecipients = staffSmsRecipients.map((recipient) => ({
   ...recipient,
   role: "Staff event reminder copy"
 }));
+const smsSendSpacingMs = 1100;
+
+class AwsSmsError extends Error {
+  constructor(message, details = {}) {
+    super(message || "AWS rejected the SMS request.");
+    this.name = "AwsSmsError";
+    this.status = details.status || 0;
+    this.code = cleanString(details.code, 120);
+  }
+}
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -88,6 +99,11 @@ function maskPhone(phone) {
   const digits = cleanString(phone, 80).replace(/\D/g, "");
   if (!digits) return "";
   return `${"*".repeat(Math.max(0, digits.length - 4))}${digits.slice(-4)}`;
+}
+
+async function phoneHash(phone) {
+  const normalized = cleanPhone(phone);
+  return normalized ? sha256Hex(normalized) : "";
 }
 
 function cleanRole(value) {
@@ -211,6 +227,20 @@ function parseAwsErrorMessage(text) {
   }
 }
 
+function parseAwsErrorCode(text) {
+  try {
+    const data = JSON.parse(text);
+    const raw = data.code || data.Code || data.__type || "";
+    return cleanString(raw).split("#").pop();
+  } catch {
+    return "";
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function signedAwsJsonPost(config, service, target, payload) {
   const host = `${service}.${config.region}.amazonaws.com`;
   const endpoint = `https://${host}/`;
@@ -242,7 +272,12 @@ async function signedAwsJsonPost(config, service, target, payload) {
     body
   });
   const text = await response.text();
-  if (!response.ok) throw new Error(parseAwsErrorMessage(text) || "AWS rejected the SMS request.");
+  if (!response.ok) {
+    throw new AwsSmsError(parseAwsErrorMessage(text) || "AWS rejected the SMS request.", {
+      status: response.status,
+      code: parseAwsErrorCode(text)
+    });
+  }
   return JSON.parse(text);
 }
 
@@ -255,6 +290,90 @@ async function sendSms(config, phone, message) {
     TimeToLive: 600
   });
   return result.MessageId || "";
+}
+
+function isRetryableSmsError(error) {
+  const text = `${error?.code || ""} ${error?.message || ""}`.toLowerCase();
+  return error?.status === 429
+    || error?.status >= 500
+    || text.includes("throttl")
+    || text.includes("too many")
+    || text.includes("rate")
+    || text.includes("throughput")
+    || text.includes("timeout");
+}
+
+async function sendSmsWithRetry(config, phone, message) {
+  const delays = [0, 1500, 3000];
+  let lastError;
+  for (let attempt = 0; attempt < delays.length; attempt += 1) {
+    if (delays[attempt]) await sleep(delays[attempt]);
+    try {
+      const messageId = await sendSms(config, phone, message);
+      return { messageId, attempts: attempt + 1 };
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableSmsError(error)) break;
+    }
+  }
+  throw lastError;
+}
+
+function summarizeSendFailures(results = []) {
+  const map = new Map();
+  for (const result of results) {
+    if (result.status !== "failed") continue;
+    const reason = cleanString(result.error || "Unknown AWS send failure.", 400);
+    const previous = map.get(reason) || { reason, count: 0 };
+    previous.count += 1;
+    map.set(reason, previous);
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));
+}
+
+function sameNotificationTarget(record = {}, criteria = {}) {
+  if (notificationType(record.type) !== notificationType(criteria.type)) return false;
+  if (notificationType(criteria.type) === "event-reminder" && cleanString(record.eventKey, 240) !== cleanString(criteria.eventKey, 240)) {
+    return false;
+  }
+  return cleanString(record.message, 1300) === cleanString(criteria.message, 1300);
+}
+
+async function successfulRecipientFilters(env, criteria = {}) {
+  const filters = {
+    phoneHashes: new Set(),
+    maskedPhones: new Set()
+  };
+  const keys = await listKeys(env, notificationPrefix);
+  for (const key of keys) {
+    const record = await readCrmStorageJson(env, key);
+    if (!record || !sameNotificationTarget(record, criteria)) continue;
+    for (const result of record.results || []) {
+      if (result?.status !== "sent") continue;
+      const hash = cleanString(result.phoneHash, 80);
+      const maskedPhone = cleanString(result.phone, 40);
+      if (hash) filters.phoneHashes.add(hash);
+      else if (maskedPhone) filters.maskedPhones.add(maskedPhone);
+    }
+  }
+  return filters;
+}
+
+async function filterPreviouslySentRecipients(env, recipients, criteria = {}) {
+  const filters = await successfulRecipientFilters(env, criteria);
+  const kept = [];
+  const skipped = [];
+  for (const recipient of recipients) {
+    const hash = await phoneHash(recipient.phone);
+    const maskedPhone = recipient.maskedPhone || maskPhone(recipient.phone);
+    const skip = hash && filters.phoneHashes.has(hash)
+      ? true
+      : Boolean(maskedPhone && filters.maskedPhones.has(maskedPhone));
+    const enriched = { ...recipient, phoneHash: hash, maskedPhone };
+    if (skip) skipped.push(enriched);
+    else kept.push(enriched);
+  }
+  return { recipients: kept, skipped };
 }
 
 function noteLookupWarning(warnings, source, prefix, error) {
@@ -612,11 +731,12 @@ async function sendNotification(env, payload, actor) {
   if (missing.length) throw new Error(`SMS notifications are missing configuration: ${missing.join(", ")}.`);
 
   const type = notificationType(payload?.type);
+  const retryFailedOnly = payload?.retryFailedOnly === true || cleanString(payload?.sendMode, 80) === "retry-failed-only";
   const eventKey = cleanString(payload?.eventKey, 240);
   if (type === "event-reminder" && !eventKey) {
     throw new Error("Select an event before sending an upcoming event reminder.");
   }
-  if (type === "additional-event-notice") {
+  if (type === "additional-event-notice" && !retryFailedOnly) {
     const last = await readCrmStorageJson(env, additionalNoticeKey);
     if (last?.sentAt && Date.now() - Date.parse(last.sentAt) < additionalNoticeCooldownMs) {
       throw new Error("Additional event notices can only be sent once per month.");
@@ -634,34 +754,57 @@ async function sendNotification(env, payload, actor) {
       : await collectVerifiedRecipients(env);
   if (!recipients.length) throw new Error("No verified phone numbers are available.");
 
+  const retryFilter = retryFailedOnly
+    ? await filterPreviouslySentRecipients(env, recipients, { type, eventKey, message })
+    : { recipients, skipped: [] };
+  const recipientsToSend = retryFilter.recipients;
   const now = new Date().toISOString();
   const id = crypto.randomUUID();
   const results = [];
-  for (const recipient of recipients) {
+  for (let index = 0; index < recipientsToSend.length; index += 1) {
+    const recipient = recipientsToSend[index];
+    if (index > 0) await sleep(smsSendSpacingMs);
+    const hashedPhone = recipient.phoneHash || await phoneHash(recipient.phone);
     try {
-      const messageId = await sendSms(config, recipient.phone, message);
-      results.push({ phone: recipient.maskedPhone, status: "sent", messageId });
+      const { messageId, attempts } = await sendSmsWithRetry(config, recipient.phone, message);
+      results.push({ phone: recipient.maskedPhone, phoneHash: hashedPhone, status: "sent", messageId, attempts });
     } catch (error) {
-      results.push({ phone: recipient.maskedPhone, status: "failed", error: cleanString(error?.message || error, 400) });
+      results.push({
+        phone: recipient.maskedPhone,
+        phoneHash: hashedPhone,
+        status: "failed",
+        error: cleanString(error?.message || error, 400),
+        errorCode: cleanString(error?.code, 120),
+        httpStatus: Number(error?.status || 0) || undefined
+      });
     }
   }
 
   const sentCount = results.filter((entry) => entry.status === "sent").length;
   const failedCount = results.length - sentCount;
+  const failureSummaries = summarizeSendFailures(results);
   const record = {
     id,
     createdAt: now,
     type,
+    retryFailedOnly,
     actor: cleanString(actor, 200),
     message,
     eventKey: type === "event-reminder" ? eventKey : "",
     eventName: type === "event-reminder" ? cleanString(recipients[0]?.eventName, 240) : "",
-    recipientCount: recipients.length,
+    recipientCount: recipientsToSend.length,
+    originalRecipientCount: recipients.length,
+    skippedPreviouslySentCount: retryFilter.skipped.length,
+    skippedPreviouslySent: retryFilter.skipped.map((recipient) => ({
+      phone: recipient.maskedPhone,
+      phoneHash: recipient.phoneHash
+    })),
     sentCount,
     failedCount,
+    failureSummaries,
     results
   };
-  await writeCrmStorageJson(env, `sms:notification:${now}:${id}`, record);
+  await writeCrmStorageJson(env, `${notificationPrefix}${now}:${id}`, record);
   if (type === "additional-event-notice" && sentCount) {
     await writeCrmStorageJson(env, additionalNoticeKey, { sentAt: now, id, actor });
   }
