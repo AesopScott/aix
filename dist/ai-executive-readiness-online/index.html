@@ -185,6 +185,35 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
   }
+  function firstName(name) {
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "";
+    const first = parts[0].replace(/,+$/g, "");
+    if (/^(?:dr|mr|mrs|ms|miss|prof)\.?$/i.test(first) && parts[1]) return parts[1].replace(/,+$/g, "");
+    return first;
+  }
+  function publicDisplayName(guest = {}) {
+    const explicit = String(guest.publicDisplayName || guest.publicName || "").trim();
+    if (explicit) return explicit;
+    const fullName = String(guest.displayName || guest.name || "").trim();
+    if (guest.nameAllowed === false || guest.publicationUseName === false) return firstName(fullName) || "Featured guest";
+    return fullName || "Featured guest";
+  }
+  function publicCompany(guest = {}) {
+    if (guest.companyAllowed === true || guest.publicationUseCompany === true) {
+      return String(guest.company || guest.partnerCompany || "").trim();
+    }
+    return "";
+  }
+  function portraitPersonDetailLines(guest = {}) {
+    return [
+      guest.title,
+      publicCompany(guest),
+      guest.industry || guest.organizationType
+    ]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
+  }
   const framedPortraits = new Set([
     "cynthia-dixon",
     "imran-jan",
@@ -225,28 +254,26 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
   }
   function brandedPortraitMarkup(guest, src, alt) {
     const style = portraitTuneStyle(guest);
-    const name = guest.displayName || "Featured guest";
+    const name = publicDisplayName(guest);
     const role = portraitRoleText(guest);
-    const title = role === "Featured Author" ? "" : guest.title || "Title pending";
-    const titleMarkup = title ? `<span>${escapeHtml(title)}</span>` : "";
+    const detailsMarkup = portraitPersonDetailLines(guest).map((line) => `<span>${escapeHtml(line)}</span>`).join("");
     return `<div class="mojo-portrait-card"${style}>
       <div class="mojo-portrait-top">
         <div class="mojo-portrait-brand" aria-label="MOJO AI Summits"><strong>MOJO AI</strong><span>SUMMITS</span></div>
-        <div class="mojo-portrait-person"><strong>${escapeHtml(name)}</strong>${titleMarkup}</div>
+        <div class="mojo-portrait-person"><strong>${escapeHtml(name)}</strong>${detailsMarkup}</div>
       </div>
       <div class="mojo-portrait-role is-${escapeHtml(portraitRoleClass(role))}">${escapeHtml(role)}</div>
       <div class="mojo-headshot-frame"><img src="${src}" alt="${escapeHtml(alt)}" loading="lazy"></div>
     </div>`;
   }
   function brandedInitialsMarkup(guest) {
-    const name = guest.displayName || "Featured guest";
+    const name = publicDisplayName(guest);
     const role = portraitRoleText(guest);
-    const title = role === "Featured Author" ? "" : guest.title || "Title pending";
-    const titleMarkup = title ? `<span>${escapeHtml(title)}</span>` : "";
+    const detailsMarkup = portraitPersonDetailLines(guest).map((line) => `<span>${escapeHtml(line)}</span>`).join("");
     return `<div class="mojo-portrait-card">
       <div class="mojo-portrait-top">
         <div class="mojo-portrait-brand" aria-label="MOJO AI Summits"><strong>MOJO AI</strong><span>SUMMITS</span></div>
-        <div class="mojo-portrait-person"><strong>${escapeHtml(name)}</strong>${titleMarkup}</div>
+        <div class="mojo-portrait-person"><strong>${escapeHtml(name)}</strong>${detailsMarkup}</div>
       </div>
       <div class="mojo-portrait-role is-${escapeHtml(portraitRoleClass(role))}">${escapeHtml(role)}</div>
       <div class="mojo-headshot-frame"><span class="guest-initials" aria-hidden="true">${escapeHtml(initials(name))}</span></div>
