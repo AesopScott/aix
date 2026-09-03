@@ -157,7 +157,7 @@ function absoluteProductionUrl(value) {
 }
 
 function withAbsolutePreviewPhotoUrls(payload = {}) {
-  const photoFields = ["photoUrl", "photoURL", "photo", "headshotUrl", "bioImageUrl", "profileImageUrl"];
+  const photoFields = ["photoUrl", "photoURL", "photo", "headshotUrl", "bioImageUrl", "profileImageUrl", "profilePhotoUrl"];
   const normalizePerson = (person = {}) => {
     const normalized = { ...person };
     for (const field of photoFields) {
@@ -413,7 +413,8 @@ function publicFeaturedGuest(registrant, type) {
       registrant?.photo ||
       registrant?.headshotUrl ||
       registrant?.bioImageUrl ||
-      registrant?.profileImageUrl,
+      registrant?.profileImageUrl ||
+      registrant?.profilePhotoUrl,
     500
   );
   const linkedinProfileUrl = cleanLinkedInProfileUrl(
@@ -487,6 +488,24 @@ function submittedPhotoFields(record = {}) {
   );
 
   return hasSubmittedPhoto ? { photoKey, photoUrl } : null;
+}
+
+function publicPhotoFields(record = {}) {
+  const photoUrl = cleanString(
+    record.photoUrl ||
+      record.photoURL ||
+      record.photo ||
+      record.headshotUrl ||
+      record.bioImageUrl ||
+      record.profileImageUrl ||
+      record.profilePhotoUrl,
+    500
+  );
+  if (!photoUrl) return null;
+  return {
+    photoKey: cleanString(record.photoKey, 500),
+    photoUrl
+  };
 }
 
 function featuredRoleFields(record = {}) {
@@ -596,6 +615,8 @@ function showFields(record = {}) {
 
 function mergeRegistrantRecords(previous = {}, registrant = {}, type = "guest") {
   const previousSubmittedPhoto = submittedPhotoFields(previous);
+  const previousPublicPhoto = publicPhotoFields(previous);
+  const registrantPublicPhoto = publicPhotoFields(registrant);
   const previousFeaturedRole = featuredRoleFields(previous);
   const previousShow = showFields(previous);
   const previousCanSupplyLineupFields = isCrmRegistrantRecord(previous);
@@ -612,6 +633,11 @@ function mergeRegistrantRecords(previous = {}, registrant = {}, type = "guest") 
   if (previousSubmittedPhoto && !submittedPhotoFields(registrant)) {
     next.photoKey = previousSubmittedPhoto.photoKey || next.photoKey;
     next.photoUrl = previousSubmittedPhoto.photoUrl || next.photoUrl;
+  }
+
+  if (previousPublicPhoto && !registrantPublicPhoto) {
+    next.photoKey = previousPublicPhoto.photoKey || next.photoKey;
+    next.photoUrl = previousPublicPhoto.photoUrl || next.photoUrl;
   }
 
   if (previousCanSupplyLineupFields && previousFeaturedRole && !featuredRoleFields(registrant) && !hasExplicitLineupRole(registrant)) {
@@ -696,6 +722,70 @@ async function contactEventRegistrants(env) {
   return grouped.flat();
 }
 
+async function contactProfileSupplements(env) {
+  const keys = await listKeys(env, "crm:contact:");
+  const rows = await Promise.all(keys.map(async (key) => {
+    const contact = await readSetupJson(env, key);
+    return contact && typeof contact === "object" ? { ...contact, sourceKey: key } : null;
+  }));
+  return rows.filter(Boolean);
+}
+
+function normalizedPersonName(value = "") {
+  return cleanString(value, 240).toLowerCase().replace(/\s+/g, " ");
+}
+
+function profileMatchesRegistrant(profile = {}, registrant = {}) {
+  const profileEmail = cleanString(profile.email, 240).toLowerCase();
+  const registrantEmail = cleanString(registrant.email, 240).toLowerCase();
+  if (profileEmail && registrantEmail && profileEmail === registrantEmail) return true;
+
+  const profileLinkedIn = cleanLinkedInProfileUrl(
+    profile.linkedinProfileUrl ||
+      profile.linkedInProfileUrl ||
+      profile.linkedinUrl ||
+      profile.linkedInUrl
+  ).toLowerCase().replace(/\/+$/, "");
+  const registrantLinkedIn = cleanLinkedInProfileUrl(
+    registrant.linkedinProfileUrl ||
+      registrant.linkedInProfileUrl ||
+      registrant.linkedinUrl ||
+      registrant.linkedInUrl
+  ).toLowerCase().replace(/\/+$/, "");
+  if (profileLinkedIn && registrantLinkedIn && profileLinkedIn === registrantLinkedIn) return true;
+
+  const profileName = normalizedPersonName(profile.name || profile.displayName);
+  const registrantName = normalizedPersonName(registrant.name || registrant.displayName);
+  return Boolean(profileName && registrantName && profileName === registrantName);
+}
+
+function mergeContactProfileSupplement(registrant = {}, profiles = []) {
+  const profile = profiles.find((candidate) => profileMatchesRegistrant(candidate, registrant));
+  if (!profile) return registrant;
+
+  const profilePhoto = publicPhotoFields(profile);
+  return {
+    ...registrant,
+    photoKey: cleanString(registrant.photoKey, 500) || cleanString(profile.photoKey, 500),
+    photoUrl: publicPhotoFields(registrant)?.photoUrl || profilePhoto?.photoUrl || cleanString(registrant.photoUrl, 500),
+    linkedinProfileUrl: cleanLinkedInProfileUrl(
+      registrant.linkedinProfileUrl ||
+        registrant.linkedInProfileUrl ||
+        registrant.linkedinUrl ||
+        registrant.linkedInUrl
+    ) || cleanLinkedInProfileUrl(
+      profile.linkedinProfileUrl ||
+        profile.linkedInProfileUrl ||
+        profile.linkedinUrl ||
+        profile.linkedInUrl
+    ),
+    title: cleanString(registrant.title, 180) || cleanString(profile.title, 180),
+    company: cleanString(registrant.company || registrant.partnerCompany, 180) || cleanString(profile.company || profile.partnerCompany, 180),
+    industry: cleanString(registrant.industry || registrant.organizationType, 140) || cleanString(profile.industry || profile.organizationType, 140),
+    publicationUseCompany: registrant.publicationUseCompany === true || profile.publicationUseCompany === true
+  };
+}
+
 async function r2Registrants(env) {
   if (crmD1Primary(env)) return [];
   const store = env.MOJO_SUMMITS_STORAGE;
@@ -726,6 +816,7 @@ async function eventRegistrants(env, event) {
   const r2Rows = await r2Registrants(env);
   const kvRows = await kvRegistrants(env);
   const contactRows = await contactEventRegistrants(env);
+  const contactProfiles = await contactProfileSupplements(env);
   const registrants = [contactRows, r2Rows, kvRows];
   const map = new Map();
 
@@ -737,7 +828,7 @@ async function eventRegistrants(env, event) {
     map.set(key, mergeRegistrantRecords(previous, registrant, type));
   }
 
-  return [...map.values()];
+  return [...map.values()].map((registrant) => mergeContactProfileSupplement(registrant, contactProfiles));
 }
 
 function featuredGuestsFromRegistrants(registrants) {
