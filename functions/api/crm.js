@@ -5867,6 +5867,7 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   const existing = await readSetupJson(env, key);
   if (!existing) throw new Error("Tracked person was not found.");
   const field = cleanString(payload.field, 80);
+  const now = new Date().toISOString();
   const next = { ...existing };
   if (field === "linkedinConnection") {
     next.linkedinConnectionStatus = cleanGuestMatrixOption(payload.value, allowedGuestMatrixLinkedInStatuses, existing.linkedinConnectionStatus || "unknown");
@@ -5878,24 +5879,30 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
     next.guestStatus = status;
     if (prospectType === "partner") next.partnerStatus = status;
     next.registrationStatus = status;
+    await updateRegistrantStatusForMatrixChange(env, next, status, actor, now);
   } else if (field === "matrixInterestRating") {
     next.matrixInterestRating = cleanStarRating(payload.value, existing.matrixInterestRating || 1);
   } else if (field === "potentialSponsor") {
     next.potentialSponsor = prospectType === "guest" && payload.value === true;
   } else if (field === "registrationRole") {
-    Object.assign(next, registrationRoleUpdate(payload.value, prospectType, existing));
+    const roleUpdate = registrationRoleUpdate(payload.value, prospectType, existing);
+    Object.assign(next, roleUpdate);
+    await updateRegistrantRoleForMatrixChange(env, next, roleUpdate.registrationRole, actor, now);
   } else if (field === "eventShowId") {
-    Object.assign(next, eventShowUpdate(payload.value, next));
+    const showUpdate = eventShowUpdate(payload.value, next);
+    Object.assign(next, showUpdate);
+    await updateRegistrantShowForMatrixChange(env, next, showUpdate.eventShowId, actor, now);
   } else if (field === "company" || field === "partnerCompany") {
     const company = cleanString(payload.value, 240);
     next.company = company;
     if (prospectType === "partner") next.partnerCompany = company;
   } else if (field === "preRegistrationNotes" || field === "eventNotes") {
     next.preRegistrationNotes = cleanString(payload.value, 4000);
+    await updateRegistrantEventNotesForMatrixChange(env, next, next.preRegistrationNotes, actor, now);
   } else {
     throw new Error("Unsupported tracked person field.");
   }
-  next.updatedAt = new Date().toISOString();
+  next.updatedAt = now;
   next.updatedBy = actor;
   await assertFeaturedGuestShowCapacity(env, { ...next, key }, { excludeKeys: [key] });
   await writeSetupJson(env, key, next);
@@ -5916,18 +5923,9 @@ async function deleteGuestMatrixProspect(env, payload = {}) {
 
 async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteValue = "", actor = "", now = new Date().toISOString()) {
   const note = cleanString(noteValue, 4000);
-  const inviteCode = cleanCode(record.code || record.inviteCode);
-  const registrationId = cleanString(record.registrationId);
-  const email = invitePersonEmail(record);
-  const typeCandidates = record.type === "partner" || record.partnerContactEmail
-    ? ["partner"]
-    : ["guest", "member"];
+  let updatedCount = 0;
 
-  for (const type of typeCandidates) {
-    const rows = await registrants(env, type);
-    const row = rows.find((entry) => registrationMatchesMatrixChange(entry, record, { registrationId, inviteCode, email }));
-    if (!row) continue;
-    const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
+  for (const { type, key, crmRow } of await matchingRegistrantRowsForMatrixChange(env, record)) {
     await writeSetupJson(env, key, {
       ...crmRow,
       key: undefined,
@@ -5937,10 +5935,24 @@ async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteV
       crmUpdatedAt: now,
       crmUpdatedBy: actor
     });
-    return true;
+    await upsertContactFromInviteRecord(env, { ...crmRow, eventNotes: note, registrationNotes: note }, `${type}-registration`, actor);
+    updatedCount += 1;
   }
 
-  return false;
+  for (const { type, key, raw } of await matchingInviteRowsForMatrixChange(env, record)) {
+    const next = {
+      ...raw,
+      eventNotes: note,
+      registrationNotes: note,
+      updatedAt: now,
+      updatedBy: actor
+    };
+    await writeSetupJson(env, key, next);
+    await upsertContactFromInviteRecord(env, normalizeInviteCode(key, { ...next, type }), `${type}-invite`, actor);
+    updatedCount += 1;
+  }
+
+  return updatedCount > 0;
 }
 
 function registrationRoleUpdate(roleValue = "", type = "guest", existing = {}) {
@@ -6009,27 +6021,113 @@ function matrixChangePersonMatchesRegistration(row = {}, record = {}, email = ""
 }
 
 function registrationMatchesMatrixChange(row = {}, record = {}, { registrationId = "", inviteCode = "", email = "" } = {}) {
-  if (registrationId && (row.key === registrationId || row.id === registrationId)) return true;
-  if (inviteCode && cleanCode(row.inviteCode) === inviteCode) {
+  if (registrationId && (row.key === registrationId || row.id === registrationId || row.registrationId === registrationId)) return true;
+  if (inviteCode && cleanCode(row.inviteCode || row.code) === inviteCode) {
     const rowEmail = cleanString(row.email).toLowerCase();
     return !email || !rowEmail || rowEmail === email;
   }
   return matrixChangeEventMatchesRegistration(row, record) && matrixChangePersonMatchesRegistration(row, record, email);
 }
 
-async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue = "", actor = "", now = new Date().toISOString()) {
-  const inviteCode = cleanCode(record.code || record.inviteCode);
-  const registrationId = cleanString(record.registrationId);
-  const email = invitePersonEmail(record);
-  const typeCandidates = record.type === "partner" || record.partnerContactEmail
-    ? ["partner"]
-    : ["guest", "member"];
+function matrixChangeTypeCandidates(record = {}) {
+  if (record.type === "partner" || record.partnerContactEmail || record.partnerRegistrationType) return ["partner"];
+  if (record.type === "member" || record.guestRegistrationType === "member") return ["member"];
+  return ["guest", "member"];
+}
 
-  for (const type of typeCandidates) {
-    const rows = await registrants(env, type);
-    const row = rows.find((entry) => registrationMatchesMatrixChange(entry, record, { registrationId, inviteCode, email }));
-    if (!row) continue;
-    const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
+async function matchingRegistrantRowsForMatrixChange(env, record = {}) {
+  const inviteCode = cleanCode(record.code || record.inviteCode);
+  const registrationId = cleanString(record.registrationId || record.id);
+  const email = invitePersonEmail(record);
+  const matches = [];
+  const seen = new Set();
+
+  for (const type of matrixChangeTypeCandidates(record)) {
+    const rows = await registrants(env, type, { includeManualPartners: type === "partner" });
+    for (const row of rows) {
+      if (!registrationMatchesMatrixChange(row, record, { registrationId, inviteCode, email })) continue;
+      const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      matches.push({ type, key, row, crmRow });
+    }
+  }
+
+  return matches;
+}
+
+async function matchingInviteRowsForMatrixChange(env, record = {}) {
+  const inviteCode = cleanCode(record.code || record.inviteCode);
+  const registrationId = cleanString(record.registrationId || record.id);
+  const email = invitePersonEmail(record);
+  const typeCandidates = matrixChangeTypeCandidates(record);
+  const rows = [];
+
+  if (typeCandidates.includes("partner")) {
+    rows.push(...(await partnerInviteCodes(env)).map((row) => ({ ...row, type: "partner" })));
+  } else {
+    rows.push(...(await registrationInviteCodes(env)).filter((row) => typeCandidates.includes(row.type || "guest")));
+  }
+
+  const matches = [];
+  const seen = new Set();
+  for (const row of rows) {
+    if (!registrationMatchesMatrixChange(row, record, { registrationId, inviteCode, email })) continue;
+    const key = cleanString(row.key, 500);
+    if (!key || seen.has(key)) continue;
+    const raw = await readSetupJson(env, key);
+    if (!raw) continue;
+    seen.add(key);
+    matches.push({ type: row.type || "guest", key, row, raw });
+  }
+
+  return matches;
+}
+
+async function updateRegistrantStatusForMatrixChange(env, record = {}, statusValue = "", actor = "", now = new Date().toISOString()) {
+  const status = cleanGuestRegistrationLifecycleStatus(statusValue, record.crmStatus || record.partnerStatus || record.guestStatus || "pending-engagement");
+  let updatedCount = 0;
+
+  for (const { type, key, crmRow } of await matchingRegistrantRowsForMatrixChange(env, record)) {
+    const nextRow = {
+      ...crmRow,
+      key: undefined,
+      crmType: registrantTypes[type].crmType,
+      crmStatus: status,
+      guestStatus: type === "partner" ? crmRow.guestStatus : status,
+      partnerStatus: type === "partner" ? status : crmRow.partnerStatus,
+      registrationStatus: status,
+      crmUpdatedAt: now,
+      crmUpdatedBy: actor
+    };
+    await writeSetupJson(env, key, nextRow);
+    await upsertContactFromInviteRecord(env, normalizeRecord(key, nextRow), `${type}-registration`, actor);
+    updatedCount += 1;
+  }
+
+  for (const { type, key, raw } of await matchingInviteRowsForMatrixChange(env, record)) {
+    const next = {
+      ...raw,
+      crmStatus: status,
+      guestStatus: type === "partner" ? raw.guestStatus : status,
+      partnerStatus: type === "partner" ? status : raw.partnerStatus,
+      registrationStatus: status,
+      status: status === "registered" ? "used" : raw.status,
+      updatedAt: now,
+      updatedBy: actor
+    };
+    await writeSetupJson(env, key, next);
+    await upsertContactFromInviteRecord(env, normalizeInviteCode(key, { ...next, type }), `${type}-invite`, actor);
+    updatedCount += 1;
+  }
+
+  return updatedCount > 0;
+}
+
+async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue = "", actor = "", now = new Date().toISOString()) {
+  let updatedCount = 0;
+
+  for (const { type, key, crmRow } of await matchingRegistrantRowsForMatrixChange(env, record)) {
     const roleUpdate = registrationRoleUpdate(roleValue, type, crmRow);
     await assertFeaturedGuestShowCapacity(env, { ...crmRow, ...roleUpdate, key }, { excludeKeys: [key, cleanString(record.key, 500)] });
     const nextRow = {
@@ -6047,25 +6145,31 @@ async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue =
         staleReason: "registration_role_changed"
       }).catch(() => null);
     }
-    return true;
+    await upsertContactFromInviteRecord(env, normalizeRecord(key, nextRow), `${type}-registration`, actor);
+    updatedCount += 1;
   }
 
-  return false;
+  for (const { type, key, raw } of await matchingInviteRowsForMatrixChange(env, record)) {
+    const roleUpdate = registrationRoleUpdate(roleValue, type, raw);
+    await assertFeaturedGuestShowCapacity(env, { ...raw, ...roleUpdate, key }, { excludeKeys: [key, cleanString(record.key, 500)] });
+    const next = {
+      ...raw,
+      ...roleUpdate,
+      updatedAt: now,
+      updatedBy: actor
+    };
+    await writeSetupJson(env, key, next);
+    await upsertContactFromInviteRecord(env, normalizeInviteCode(key, { ...next, type }), `${type}-invite`, actor);
+    updatedCount += 1;
+  }
+
+  return updatedCount > 0;
 }
 
 async function updateRegistrantShowForMatrixChange(env, record = {}, showValue = "", actor = "", now = new Date().toISOString()) {
-  const inviteCode = cleanCode(record.code || record.inviteCode);
-  const registrationId = cleanString(record.registrationId);
-  const email = invitePersonEmail(record);
-  const typeCandidates = record.type === "partner" || record.partnerContactEmail
-    ? ["partner"]
-    : ["guest", "member"];
+  let updatedCount = 0;
 
-  for (const type of typeCandidates) {
-    const rows = await registrants(env, type);
-    const row = rows.find((entry) => registrationMatchesMatrixChange(entry, record, { registrationId, inviteCode, email }));
-    if (!row) continue;
-    const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
+  for (const { type, key, crmRow } of await matchingRegistrantRowsForMatrixChange(env, record)) {
     const showUpdate = eventShowUpdate(showValue, { ...crmRow, ...record });
     await assertFeaturedGuestShowCapacity(env, { ...crmRow, ...showUpdate, key }, { excludeKeys: [key, cleanString(record.key, 500)] });
     const nextRow = {
@@ -6083,10 +6187,25 @@ async function updateRegistrantShowForMatrixChange(env, record = {}, showValue =
         staleReason: "event_show_changed"
       }).catch(() => null);
     }
-    return true;
+    await upsertContactFromInviteRecord(env, normalizeRecord(key, nextRow), `${type}-registration`, actor);
+    updatedCount += 1;
   }
 
-  return false;
+  for (const { type, key, raw } of await matchingInviteRowsForMatrixChange(env, record)) {
+    const showUpdate = eventShowUpdate(showValue, { ...raw, ...record });
+    await assertFeaturedGuestShowCapacity(env, { ...raw, ...showUpdate, key }, { excludeKeys: [key, cleanString(record.key, 500)] });
+    const next = {
+      ...raw,
+      ...showUpdate,
+      updatedAt: now,
+      updatedBy: actor
+    };
+    await writeSetupJson(env, key, next);
+    await upsertContactFromInviteRecord(env, normalizeInviteCode(key, { ...next, type }), `${type}-invite`, actor);
+    updatedCount += 1;
+  }
+
+  return updatedCount > 0;
 }
 
 async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
