@@ -4,7 +4,7 @@ const zoomEventsConfigKey = "crm:zoom-events-config";
 const zoomEventsApiBase = "https://api.zoom.us/v2";
 const zoomEventsTokenUrl = "https://zoom.us/oauth/token";
 const defaultRegistrationSource = "Mojo CRM";
-const syncVersion = "2026-09-03.1";
+const syncVersion = "2026-09-03.2";
 const featuredRoles = new Set(["featured-guest", "featured-author", "featured-partner"]);
 const staffRoles = new Set(["staff", "host", "co-host", "cohost", "alternative-host", "moderator", "producer"]);
 let cachedAccessToken = null;
@@ -331,7 +331,19 @@ function targetForRegistration(record = {}, type = "", config = {}) {
   };
 }
 
-export function zoomEventsRegistrationFingerprint(record = {}, type = "") {
+function zoomEventsTargetFingerprint(target = {}) {
+  return [
+    target.zoomEventId,
+    target.sessionId,
+    target.ticketTypeId,
+    target.showId,
+    target.kind,
+    target.role,
+    target.staffZoomRole
+  ].map((value) => cleanString(value, 240)).join(":");
+}
+
+export function zoomEventsRegistrationFingerprint(record = {}, type = "", target = {}) {
   const email = registrationEmail(record);
   const slug = eventSlug(record);
   const role = registrationRole(record, type);
@@ -343,7 +355,8 @@ export function zoomEventsRegistrationFingerprint(record = {}, type = "") {
     role,
     cleanString(record.name || record.contactName, 240),
     cleanString(record.company || record.partnerCompany, 240),
-    cleanString(record.title || record.jobTitle, 240)
+    cleanString(record.title || record.jobTitle, 240),
+    zoomEventsTargetFingerprint(target)
   ].join("|").toLowerCase();
 }
 
@@ -514,8 +527,7 @@ function ticketPayload(record = {}, target = {}, config = {}, externalId = "") {
     comments: cleanString(record.eventNotes || record.registrationNotes || record.crmNotes, 1000)
   };
   if (includeSessionIds && target.sessionId) ticket.session_ids = [target.sessionId];
-  if (!ticket.fast_join) delete ticket.fast_join;
-  if (!ticket.registration_needed) delete ticket.registration_needed;
+  // Keep no-registration access explicit so Zoom does not infer an invitation-to-register flow.
   if (!ticket.security_code_at_join) delete ticket.security_code_at_join;
   for (const key of Object.keys(ticket)) {
     if (ticket[key] === "" || ticket[key] === undefined || ticket[key] === null) delete ticket[key];
@@ -655,7 +667,7 @@ export async function syncZoomEventsRegistrationRecord(env, type = "guest", reco
   const force = options.force === true;
   const config = await readZoomEventsCrmConfig(env);
   const target = targetForRegistration(record, type, config);
-  const fingerprint = zoomEventsRegistrationFingerprint(record, type);
+  const fingerprint = zoomEventsRegistrationFingerprint(record, type, target);
   const previous = record.zoomEventsSync && typeof record.zoomEventsSync === "object" ? record.zoomEventsSync : {};
   const credentials = zoomEventsCredentials(env);
   const missing = assertTargetReady(target, credentials, config);
