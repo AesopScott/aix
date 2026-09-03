@@ -292,6 +292,8 @@ function cleanGuestRegistrationType(value) {
     "partner-candidate": "partner-candidate",
     "partner candidate": "partner-candidate",
     "featured-partner": "featured-partner",
+    "featured-sponsor": "featured-partner",
+    "featured sponsor": "featured-partner",
     "featured-guest": "featured-guest",
     "featured-member": "featured-member",
     "featured-author": "featured-author",
@@ -431,9 +433,10 @@ function registrationRoles(type, registration = {}) {
     if (cleanBoolean(registration.isRoundtableLeader) || guestRegistrationType === "roundtable-leader") roles.push("Round Table Leader");
     if (cleanBoolean(registration.isFeaturedGuest) || guestRegistrationType === "featured-guest") roles.push("Featured Guest");
     if (cleanBoolean(registration.isFeaturedAuthor) || guestRegistrationType === "featured-author") roles.push("Featured Author");
+    if (cleanBoolean(registration.isFeaturedSponsor) || guestRegistrationType === "featured-partner") roles.push("Featured Sponsor");
     if (!roles.length) roles.push("Guest");
   } else if (type === "partner") {
-    roles.push(guestRegistrationType === "featured-partner" ? "Featured Partner" : guestRegistrationType === "partner-candidate" ? "Partner Candidate" : registrationRoleLabel(type));
+    roles.push(guestRegistrationType === "featured-partner" ? "Featured Sponsor" : guestRegistrationType === "partner-candidate" ? "Partner Candidate" : registrationRoleLabel(type));
   } else {
     roles.push(registrationRoleLabel(type));
   }

@@ -1575,6 +1575,8 @@ function cleanGuestRegistrationType(value) {
     "partner-candidate": "partner-candidate",
     "partner candidate": "partner-candidate",
     "featured-partner": "featured-partner",
+    "featured-sponsor": "featured-partner",
+    "featured sponsor": "featured-partner",
     "featured-guest": "featured-guest",
     "featured-member": "featured-member",
     "featured-author": "featured-author",
@@ -1598,6 +1600,7 @@ function cleanContactEventRole(value) {
   const exact = cleanGuestRegistrationType(raw);
   if (exact !== "guest" || raw === "guest") return exact;
   if (raw.includes("partner candidate")) return "partner-candidate";
+  if (raw.includes("featured sponsor")) return "featured-partner";
   if (raw.includes("featured partner")) return "featured-partner";
   if (raw.includes("featured guest")) return "featured-guest";
   if (raw.includes("featured member")) return "featured-member";
@@ -1612,7 +1615,7 @@ function cleanContactEventRole(value) {
 function contactEventRoleLabel(value) {
   return {
     "partner-candidate": "Partner Candidate",
-    "featured-partner": "Featured Partner",
+    "featured-partner": "Featured Sponsor",
     "featured-guest": "Featured Guest",
     "featured-member": "Featured Member",
     "featured-author": "Featured Author",
@@ -2378,7 +2381,7 @@ async function syncZoomEventsRegistrations(env, payload = {}, actor = "") {
 function roleLabelForRow(row = {}, type = "") {
   const role = cleanGuestRegistrationType(row.partnerRegistrationType || row.guestRegistrationType || row.registrationRole);
   if (type === "partner") {
-    if (role === "featured-partner" || row.isFeaturedPartner) return "Featured Partner";
+    if (role === "featured-partner" || row.isFeaturedPartner) return "Featured Sponsor";
     if (role === "partner-candidate") return "Partner Candidate";
     return "Partner Guest";
   }
@@ -5308,7 +5311,7 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
   );
   const hasAssignedEvent = Boolean(cleanString(record?.eventSlug || record?.eventName || record?.eventId, 240));
   const rawShowId = hasAssignedEvent ? cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, "both") : "";
-  const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
+  const eventShowId = rawShowId;
   return {
     key,
     id: cleanString(record?.id, 200) || key,
@@ -6270,7 +6273,10 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
 
   const guestRegistrationType = matrixProspectRole(prospectType, payload);
   const rawShowId = hasAssignedEvent ? cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both") : "";
-  const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
+  if (requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both") {
+    throw new Error("Choose either the morning show or afternoon show for this featured registration.");
+  }
+  const eventShowId = rawShowId;
   const eventTime = eventShowId ? eventShowTime(eventShowId) : "";
   const createdAt = new Date().toISOString();
   const id = crypto.randomUUID?.() || `${Date.now()}-${randomInviteCode()}`;
@@ -6766,6 +6772,9 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     }
     if (Object.prototype.hasOwnProperty.call(change, "registrationRole")) {
       const roleUpdate = registrationRoleUpdate(change.registrationRole, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner" : "guest", existing);
+      if (requiresSingleShowRegistrationRole(roleUpdate.registrationRole) && cleanEventShowId(next.eventShowId || next.showId || next.eventShow, "") === "both") {
+        throw new Error("Choose either the morning show or afternoon show before changing this record to a featured role.");
+      }
       next.registrationRole = roleUpdate.registrationRole;
       next.guestRegistrationType = roleUpdate.guestRegistrationType;
       next.partnerRegistrationType = roleUpdate.partnerRegistrationType;
@@ -6905,8 +6914,12 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
   const eventSlug = cleanString(payload.eventSlug, 200);
   const eventName = cleanString(payload.eventName, 240);
   const guestRegistrationType = cleanGuestRegistrationType(payload.guestRegistrationType || payload.registrationRole || payload.type);
-  const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
-  const eventShowId = requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
+  const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "");
+  if (!rawShowId) throw new Error("Choose a show time before generating an invite code.");
+  if (requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both") {
+    throw new Error("Choose either the morning show or afternoon show for this featured invite.");
+  }
+  const eventShowId = rawShowId;
   const eventTime = eventShowTime(eventShowId);
   const rawGuestName = cleanString(
     payload.intendedGuestName || payload.invitedName || payload.guestName || payload.name,
@@ -7049,8 +7062,12 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   if (!code) throw new Error("Could not generate a unique partner invite code.");
 
   const partnerRegistrationType = cleanGuestRegistrationType(payload.partnerRegistrationType || payload.registrationRole || "partner-candidate");
-  const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both");
-  const eventShowId = requiresSingleShowRegistrationRole(partnerRegistrationType) && rawShowId === "both" ? "morning" : rawShowId;
+  const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "");
+  if (!rawShowId) throw new Error("Choose a show time before generating a partner invite code.");
+  if (requiresSingleShowRegistrationRole(partnerRegistrationType) && rawShowId === "both") {
+    throw new Error("Choose either the morning show or afternoon show for this featured sponsor invite.");
+  }
+  const eventShowId = rawShowId;
   const eventTime = eventShowTime(eventShowId);
   const createdAt = new Date().toISOString();
   const name = cleanString(payload.partnerContactName || payload.intendedGuestName || payload.invitedName || payload.name, 240);
@@ -9728,7 +9745,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = /featured guests/i.test(error.message || "") ? 400 : 500;
+      const status = /featured guests|featured invite|featured registration|featured sponsor|show time/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Registration invite code could not be created." }, { status });
     }
   }
@@ -9746,7 +9763,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = error?.code === "crm_duplicate_person" ? 409 : /select an event|name, email|name or email|LinkedIn profile|featured guests/i.test(error.message || "") ? 400 : 500;
+      const status = error?.code === "crm_duplicate_person" ? 409 : /select an event|name, email|name or email|LinkedIn profile|featured guests|featured registration|show time/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Tracked person could not be added.", duplicateMatches: error?.matches || [] }, { status });
     }
   }
@@ -9764,7 +9781,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = error?.code === "crm_duplicate_person" ? 409 : /select an event|name, email|name or email|LinkedIn profile|featured guests/i.test(error.message || "") ? 400 : 500;
+      const status = error?.code === "crm_duplicate_person" ? 409 : /select an event|name, email|name or email|LinkedIn profile|featured guests|featured registration|show time/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Tracked partner could not be added.", duplicateMatches: error?.matches || [] }, { status });
     }
   }
@@ -9783,7 +9800,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
-      const status = /featured guests/i.test(error.message || "") ? 400 : 500;
+      const status = /featured guests|featured invite|featured registration|featured sponsor|show time/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Matrix changes could not be saved." }, { status });
     }
   }
@@ -9857,7 +9874,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
-      const status = /already been used|valid show|featured invite|featured guests/i.test(error.message || "") ? 400 : 404;
+      const status = /already been used|valid show|featured invite|featured sponsor|featured guests|show time/i.test(error.message || "") ? 400 : 404;
       return json({ error: error.message || "Invite show time could not be updated." }, { status });
     }
   }
@@ -9883,7 +9900,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
-      const status = /source record|valid email|choose an event|choose an event show|featured registration|featured guests/i.test(error.message || "") ? 400 : 500;
+      const status = /source record|valid email|choose an event|choose an event show|featured registration|featured sponsor|featured guests|show time/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Manual registration could not be completed." }, { status });
     }
   }
@@ -10284,7 +10301,7 @@ export async function onRequestPost({ request, env, data }) {
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
-      const status = /featured guests|Event is required/i.test(error.message || "") ? 400 : 500;
+      const status = /featured guests|featured sponsor|show time|Event is required/i.test(error.message || "") ? 400 : 500;
       return json({ error: error.message || "Contact event role could not be updated." }, { status });
     }
   }

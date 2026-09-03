@@ -10,7 +10,7 @@ const jsonHeaders = {
 };
 
 const allowedTypes = new Set(["executive", "conversation", "partner", "partner-subscription", "dallas-invite", "featured-guest-slot"]);
-const allowedFeaturedSlotTypes = new Set(["featured-guest", "featured-partner", "featured-author"]);
+const allowedFeaturedSlotTypes = new Set(["featured-guest", "featured-partner", "featured-sponsor", "featured-author"]);
 const maxFieldLength = 2000;
 const notificationRecipients = [
   "angel@mojoaisummits.com",
@@ -77,6 +77,7 @@ function cleanBoolean(value) {
 }
 
 function cleanPayload(payload) {
+  const slotType = cleanString(payload?.slotType);
   const type = cleanString(payload?.type);
   const request = {
     type,
@@ -99,7 +100,7 @@ function cleanPayload(payload) {
     eventSlug: cleanString(payload?.eventSlug),
     eventTitle: cleanString(payload?.eventTitle),
     eventDate: cleanString(payload?.eventDate),
-    slotType: cleanString(payload?.slotType),
+    slotType: slotType === "featured-sponsor" ? "featured-partner" : slotType,
     slotLabel: cleanString(payload?.slotLabel),
     slotCode: cleanString(payload?.slotCode),
     campaignAttribution: cleanCampaignAttribution(payload),
@@ -154,7 +155,8 @@ function escapeHtml(value = "") {
 
 function featuredSlotRequestLabel(record = {}) {
   return {
-    "featured-partner": "Featured partner slot request",
+    "featured-partner": "Featured sponsor slot request",
+    "featured-sponsor": "Featured sponsor slot request",
     "featured-author": "Featured author slot request",
     "featured-guest": "Featured guest slot request"
   }[record.slotType] || "Featured guest slot request";

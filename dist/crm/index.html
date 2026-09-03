@@ -2235,6 +2235,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         <label>
           Show time
           <select id="guestMatrixAddShow" name="eventShowId">
+            <option value="">Select a show time</option>
             <option value="both">Both shows</option>
             <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
             <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
@@ -2372,7 +2373,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         </label>
         <label>
           Show time
-          <select id="registrationInviteShow" name="eventShowId">
+          <select id="registrationInviteShow" name="eventShowId" required>
+            <option value="">Select a show time</option>
             <option value="both">Both shows</option>
             <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
             <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
@@ -2421,7 +2423,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         </label>
         <label>
           Show time
-          <select id="partnerInviteShow" name="eventShowId">
+          <select id="partnerInviteShow" name="eventShowId" required>
+            <option value="">Select a show time</option>
             <option value="both">Both shows</option>
             <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
             <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
@@ -2432,7 +2435,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           <select id="partnerInviteType" name="partnerRegistrationType">
             <option value="partner-candidate">Partner Candidate</option>
             <option value="partner">Partner</option>
-            <option value="featured-partner">Featured Partner (on screen)</option>
+            <option value="featured-partner">Featured Sponsor (on screen)</option>
           </select>
         </label>
         <label>
@@ -3200,7 +3203,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function guestRegistrationTypeLabel(value) {
       const role = String(value || "").toLowerCase();
       if (role === "partner-candidate") return "Partner Candidate";
-      if (role === "featured-partner") return "Featured Partner";
+      if (role === "featured-partner") return "Featured Sponsor";
       if (role === "featured-guest") return "Featured Guest";
       if (role === "featured-author") return "Featured Author";
       if (role === "presenter") return "Presenter";
@@ -3213,8 +3216,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function normalizeRoleValue(value) {
       const raw = String(value || "").trim().toLowerCase();
-      if (["partner-candidate", "featured-partner", "featured-guest", "featured-member", "featured-author", "roundtable-leader", "presenter", "partner", "member", "guest"].includes(raw)) return raw;
+      if (["partner-candidate", "featured-partner", "featured-sponsor", "featured-guest", "featured-member", "featured-author", "roundtable-leader", "presenter", "partner", "member", "guest"].includes(raw)) return raw === "featured-sponsor" ? "featured-partner" : raw;
       if (raw.includes("partner candidate")) return "partner-candidate";
+      if (raw.includes("featured sponsor")) return "featured-partner";
       if (raw.includes("featured partner")) return "featured-partner";
       if (raw.includes("featured guest")) return "featured-guest";
       if (raw.includes("featured member")) return "featured-member";
@@ -3425,7 +3429,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (strategicRole === "partner") return "Partner";
       const registrationRole = String(event.registrationRole || event.partnerRegistrationType || event.guestRegistrationType || "").toLowerCase();
       if (registrationRole === "partner-candidate") return "Partner Candidate";
-      if (registrationRole === "featured-partner") return "Featured Partner";
+      if (registrationRole === "featured-partner") return "Featured Sponsor";
       if (registrationRole === "featured-guest") return "Featured Guest";
       if (registrationRole === "featured-author") return "Featured Author";
       if (registrationRole === "presenter") return "Presenter";
@@ -3434,7 +3438,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
       const role = String(event.role || "").toLowerCase();
       if (role.includes("partner candidate")) return "Partner Candidate";
-      if (role.includes("featured partner")) return "Featured Partner";
+      if (role.includes("featured partner") || role.includes("featured sponsor")) return "Featured Sponsor";
       if (role.includes("featured guest")) return "Featured Guest";
       if (role.includes("featured author")) return "Featured Author";
       if (role.includes("presenter")) return "Presenter";
@@ -3454,14 +3458,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ["featured-member", "Featured Member"],
       ["partner-candidate", "Partner Candidate"],
       ["partner", "Partner Guest"],
-      ["featured-partner", "Featured Partner"]
+      ["featured-partner", "Featured Sponsor"]
     ];
 
     function guestMatrixRoleOptions(row = {}) {
       return row.partnerRow
         ? [
             ["partner", "Partner Guest"],
-            ["featured-partner", "Featured Partner"]
+            ["featured-partner", "Featured Sponsor"]
           ]
         : contactEventRoleOptions.filter(([value]) => !["partner-candidate", "partner", "featured-partner"].includes(value));
     }
@@ -3684,7 +3688,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         "featured-guest": "Featured Guest",
         "featured-member": "Featured Member",
         "featured-author": "Featured Author",
-        "featured-partner": "Featured Partner",
+        "featured-partner": "Featured Sponsor",
         partner: "Partner Guest",
         member: "Member",
         guest: "Guest"
@@ -6036,15 +6040,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function updateRegistrationInviteSubmit() {
       const role = guestRegistrationTypeLabel(registrationInviteType.value || "guest");
-      const currentShow = registrationInviteShow?.value || "both";
+      const currentShow = registrationInviteShow?.value || "";
       const featuredGuest = isSingleShowRegistrationRole(registrationInviteType.value);
       registrationInviteShow.innerHTML = [
+        '<option value="">Select a show time</option>',
         featuredGuest ? "" : '<option value="both">Both shows</option>',
         '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
         '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
       ].join("");
-      registrationInviteShow.value = featuredGuest && currentShow === "both" ? "morning" : currentShow;
-      if (!registrationInviteShow.value) registrationInviteShow.value = "morning";
+      registrationInviteShow.value = featuredGuest && currentShow === "both" ? "" : currentShow;
       registrationInviteSubmit.textContent = `Generate ${role} Link`;
       registrationInviteSendEmail.textContent = `Generate ${role} Link + Send Email`;
     }
@@ -6052,15 +6056,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     function updatePartnerInviteSubmit() {
       if (!partnerInviteType || !partnerInviteShow) return;
       const role = guestRegistrationTypeLabel(partnerInviteType.value || "partner");
-      const currentShow = partnerInviteShow.value || "both";
+      const currentShow = partnerInviteShow.value || "";
       const featuredPartner = isSingleShowRegistrationRole(partnerInviteType.value);
       partnerInviteShow.innerHTML = [
+        '<option value="">Select a show time</option>',
         featuredPartner ? "" : '<option value="both">Both shows</option>',
         '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
         '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
       ].join("");
-      partnerInviteShow.value = featuredPartner && currentShow === "both" ? "morning" : currentShow;
-      if (!partnerInviteShow.value) partnerInviteShow.value = "morning";
+      partnerInviteShow.value = featuredPartner && currentShow === "both" ? "" : currentShow;
       partnerInviteSubmit.textContent = `Generate ${role} Link`;
       partnerInviteSendEmail.textContent = `Generate ${role} Link + Send Email`;
     }
@@ -6073,7 +6077,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       guestMatrixAddType.innerHTML = isPartnerMatrix()
         ? [
             '<option value="partner">Partner Guest</option>',
-            '<option value="featured-partner">Featured Partner</option>'
+            '<option value="featured-partner">Featured Sponsor</option>'
           ].join("")
         : [
             '<option value="guest">Guest</option>',
@@ -6089,8 +6093,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
         '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
       ].join("");
-      guestMatrixAddShow.value = featuredGuest && currentShow === "both" ? "morning" : currentShow;
-      if (!guestMatrixAddShow.value) guestMatrixAddShow.value = "morning";
+      guestMatrixAddShow.value = featuredGuest && currentShow === "both" ? "" : currentShow;
       if (guestMatrixAddName) guestMatrixAddName.placeholder = isPartnerMatrix() ? "Partner contact name" : "Guest name";
       if (guestMatrixAddEmail) guestMatrixAddEmail.placeholder = isPartnerMatrix() ? "partner@company.com" : "guest@example.com";
       if (guestMatrixAddLinkedIn) guestMatrixAddLinkedIn.placeholder = "https://www.linkedin.com/in/...";
@@ -9220,8 +9223,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const hasEvent = Boolean(eventSlug);
       const partnerMode = isPartnerMatrix();
       const guestRegistrationType = formData.get(partnerMode ? "partnerRegistrationType" : "guestRegistrationType") || (partnerMode ? "partner" : "guest");
-      const selectedShowId = hasEvent ? eventShowId(formData.get("eventShowId") || guestMatrixAddShow?.value || "both") : "";
-      const showId = hasEvent && isSingleShowRegistrationRole(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
+      const selectedShowId = hasEvent ? eventShowId(formData.get("eventShowId") || guestMatrixAddShow?.value || "", "") : "";
+      const showId = selectedShowId;
       const name = formData.get("intendedGuestName") || "";
       const email = formData.get("intendedGuestEmail") || "";
       const company = formData.get("company") || "";
@@ -9262,6 +9265,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const payload = buildGuestMatrixProspectPayload();
       if (!String(payload.intendedGuestName || "").trim() && !String(payload.intendedGuestEmail || "").trim() && !String(payload.linkedinProfileUrl || "").trim()) {
         setNotice(`Enter a name, email, or LinkedIn profile before adding a tracked ${matrixEntityLabel()}.`, "error");
+        return;
+      }
+      if (payload.eventSlug && !payload.eventShowId) {
+        setNotice("Choose a show time before adding this tracked record.", "error");
+        return;
+      }
+      if (isSingleShowRegistrationRole(payload.registrationRole) && payload.eventShowId === "both") {
+        setNotice("Featured guests, featured sponsors, and featured authors must be assigned to either the morning show or afternoon show.", "error");
         return;
       }
       setNotice(`Adding tracked ${matrixEntityLabel()}...`);
@@ -10358,8 +10369,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const formData = new FormData(partnerInviteForm);
       const selected = partnerInviteEvent.selectedOptions[0];
       const partnerRegistrationType = formData.get("partnerRegistrationType") || "partner";
-      const selectedShowId = eventShowId(formData.get("eventShowId") || partnerInviteShow?.value || "both");
-      const showId = isSingleShowRegistrationRole(partnerRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
+      const selectedShowId = eventShowId(formData.get("eventShowId") || partnerInviteShow?.value || "", "");
+      const showId = selectedShowId;
       const name = formData.get("partnerContactName") || "";
       const email = formData.get("partnerContactEmail") || "";
       const company = formData.get("partnerCompany") || "";
@@ -10382,6 +10393,14 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     async function submitPartnerInvite(payload, { busyButton, busyText, idleText } = {}) {
       if (!String(payload.eventSlug || "").trim()) {
         setNotice("Select an event before generating a partner invite.", "error");
+        return;
+      }
+      if (!payload.eventShowId) {
+        setNotice("Choose a show time before generating a partner invite.", "error");
+        return;
+      }
+      if (isSingleShowRegistrationRole(payload.partnerRegistrationType) && payload.eventShowId === "both") {
+        setNotice("Featured sponsors must be assigned to either the morning show or afternoon show.", "error");
         return;
       }
       if (payload.sendEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.partnerContactEmail || "")) {
@@ -10443,8 +10462,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const formData = new FormData(registrationInviteForm);
       const selected = registrationInviteEvent.selectedOptions[0];
       const guestRegistrationType = formData.get("type") || "guest";
-      const selectedShowId = eventShowId(formData.get("eventShowId") || registrationInviteShow?.value || "both");
-      const showId = isSingleShowRegistrationRole(guestRegistrationType) && selectedShowId === "both" ? "morning" : selectedShowId;
+      const selectedShowId = eventShowId(formData.get("eventShowId") || registrationInviteShow?.value || "", "");
+      const showId = selectedShowId;
       const name = formData.get("intendedGuestName") || "";
       const email = formData.get("intendedGuestEmail") || "";
       return {
@@ -10472,6 +10491,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     async function submitRegistrationInvite(payload, { busyButton, busyText, idleText } = {}) {
       if (!payload.eventSlug) {
         setNotice("Select an event before generating a registration code.", "error");
+        clearRegistrationInviteResult();
+        return;
+      }
+      if (!payload.eventShowId) {
+        setNotice("Choose a show time before generating a registration code.", "error");
+        clearRegistrationInviteResult();
+        return;
+      }
+      if (isSingleShowRegistrationRole(payload.guestRegistrationType) && payload.eventShowId === "both") {
+        setNotice("Featured guests, featured sponsors, and featured authors must be assigned to either the morning show or afternoon show.", "error");
         clearRegistrationInviteResult();
         return;
       }
