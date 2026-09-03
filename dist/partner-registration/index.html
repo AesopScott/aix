@@ -823,7 +823,8 @@
   }
 
   function normalizeInviteRole(role = currentInviteRole){
-    return String(role || '').trim().toLowerCase().replace(/\s+/g, '-');
+    const normalized = String(role || '').trim().toLowerCase().replace(/\s+/g, '-');
+    return normalized === 'featured-sponsor' ? 'featured-partner' : normalized;
   }
 
   function renderRankedTopics(){

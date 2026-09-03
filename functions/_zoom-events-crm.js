@@ -4,7 +4,7 @@ const zoomEventsConfigKey = "crm:zoom-events-config";
 const zoomEventsApiBase = "https://api.zoom.us/v2";
 const zoomEventsTokenUrl = "https://zoom.us/oauth/token";
 const defaultRegistrationSource = "Mojo CRM";
-const syncVersion = "2026-09-03.2";
+const syncVersion = "2026-09-03.3";
 const featuredRoles = new Set(["featured-guest", "featured-author", "featured-partner"]);
 const staffRoles = new Set(["staff", "host", "co-host", "cohost", "alternative-host", "moderator", "producer"]);
 let cachedAccessToken = null;
@@ -15,6 +15,12 @@ function cleanString(value, max = 2000) {
 
 function cleanBoolean(value) {
   return value === true || value === "true" || value === "on" || value === "1";
+}
+
+function optionalBoolean(value) {
+  if (value === true || value === "true" || value === "on" || value === "1") return true;
+  if (value === false || value === "false" || value === "off" || value === "0") return false;
+  return null;
 }
 
 function isEmail(value) {
@@ -37,6 +43,7 @@ function cleanEventShowId(value, fallback = "both") {
 function cleanRole(value) {
   const raw = cleanString(value, 120).toLowerCase().replace(/[\s_]+/g, "-");
   if (raw === "cohost") return "co-host";
+  if (raw.includes("featured-sponsor")) return "featured-partner";
   if (raw.includes("featured-partner")) return "featured-partner";
   if (raw.includes("featured-author")) return "featured-author";
   if (raw.includes("featured-guest")) return "featured-guest";
@@ -54,6 +61,7 @@ function cleanRole(value) {
 }
 
 function registrationRole(record = {}, type = "") {
+  if (cleanBoolean(record.isFeaturedSponsor)) return "featured-partner";
   if (cleanBoolean(record.isFeaturedPartner)) return "featured-partner";
   if (cleanBoolean(record.isFeaturedAuthor)) return "featured-author";
   if (cleanBoolean(record.isFeaturedGuest)) return "featured-guest";
@@ -286,6 +294,10 @@ function syncKindFor(role = "") {
   return "attendee";
 }
 
+function isSingleSessionShow(showId = "") {
+  return showId === "morning" || showId === "afternoon";
+}
+
 function targetForRegistration(record = {}, type = "", config = {}) {
   const email = registrationEmail(record);
   const slug = eventSlug(record);
@@ -349,6 +361,7 @@ export function zoomEventsRegistrationFingerprint(record = {}, type = "", target
   const role = registrationRole(record, type);
   const showId = cleanEventShowId(record.eventShowId || record.showId || record.eventShow, "both");
   return [
+    syncVersion,
     email,
     slug,
     showId,
@@ -484,6 +497,9 @@ function assertTargetReady(target = {}, credentials = {}, config = {}) {
   if (!target.slug) missing.push("registration.eventSlug");
   if (!target.eventConfig) missing.push(`MOJO_ZOOM_EVENTS_CONFIG_JSON.events.${target.slug}`);
   if (!target.zoomEventId) missing.push(`MOJO_ZOOM_EVENTS_CONFIG_JSON.events.${target.slug}.zoomEventId`);
+  if (target.kind !== "staff" && isSingleSessionShow(target.showId) && !target.sessionId) {
+    missing.push(`MOJO_ZOOM_EVENTS_CONFIG_JSON.events.${target.slug}.shows.${target.showId}.sessionId`);
+  }
   if (target.kind === "speaker-panelist" && !target.showId) missing.push("registration.eventShowId");
   if ((target.kind === "speaker-panelist" || target.kind === "staff") && !target.sessionId) missing.push(`MOJO_ZOOM_EVENTS_CONFIG_JSON.events.${target.slug}.shows.${target.showId}.sessionId`);
   if (target.kind === "staff" && !["alternative-host", "co-host", "cohost", "host"].includes(target.staffZoomRole)) {
@@ -498,15 +514,48 @@ async function findExistingTicket(env, target = {}, externalId = "") {
   return tickets.find((ticket) => cleanString(ticket.external_ticket_id) === externalId) ||
     tickets.find((ticket) =>
       cleanString(ticket.email).toLowerCase() === target.email &&
-      (!target.ticketTypeId || cleanString(ticket.ticket_type_id) === target.ticketTypeId)
+      (!target.ticketTypeId || cleanString(ticket.ticket_type_id) === target.ticketTypeId) &&
+      (!target.sessionId || ticketHasSession(ticket, target.sessionId))
     ) ||
     null;
+}
+
+function configuredSessionScope(target = {}, defaults = {}) {
+  const explicit = optionalBoolean(target.showConfig?.includeSessionIds ?? defaults.includeSessionIds);
+  if (explicit !== null) return explicit;
+  return isSingleSessionShow(target.showId);
+}
+
+function shouldIncludeSessionIds(target = {}, defaults = {}) {
+  return Boolean(target.sessionId && configuredSessionScope(target, defaults));
+}
+
+function ticketSessionIds(ticket = {}) {
+  const raw = ticket.session_ids || ticket.sessionIds || ticket.sessions || ticket.session_id || ticket.sessionId || [];
+  const values = Array.isArray(raw) ? raw : [raw];
+  return values
+    .map((entry) => cleanString(entry?.session_id || entry?.sessionId || entry?.id || entry, 240))
+    .filter(Boolean);
+}
+
+function ticketHasSession(ticket = {}, sessionId = "") {
+  const expected = cleanString(sessionId, 240);
+  return Boolean(expected && ticketSessionIds(ticket).includes(expected));
+}
+
+function existingTicketNeedsUpdate(ticket = {}, target = {}, config = {}) {
+  const defaults = config.defaults || {};
+  if (!cleanString(ticket.ticket_id || ticket.ticketId, 240)) return false;
+  if (target.ticketTypeId && cleanString(ticket.ticket_type_id || ticket.ticketTypeId, 240) !== target.ticketTypeId) return true;
+  if (!shouldIncludeSessionIds(target, defaults)) return false;
+  const sessions = ticketSessionIds(ticket);
+  return !sessions.length || !sessions.includes(target.sessionId);
 }
 
 function ticketPayload(record = {}, target = {}, config = {}, externalId = "") {
   const defaults = config.defaults || {};
   const names = splitName(personName(record, target.email));
-  const includeSessionIds = target.showConfig?.includeSessionIds === true || defaults.includeSessionIds === true;
+  const includeSessionIds = shouldIncludeSessionIds(target, defaults);
   const ticket = {
     email: target.email,
     ticket_type_id: target.ticketTypeId,
@@ -535,10 +584,33 @@ function ticketPayload(record = {}, target = {}, config = {}, externalId = "") {
   return ticket;
 }
 
+async function updateTicket(env, record = {}, target = {}, config = {}, ticket = {}, externalId = "") {
+  const ticketId = cleanString(ticket.ticket_id || ticket.ticketId, 240);
+  if (!ticketId) return {};
+  const body = await zoomEventsRequest(env, `/zoom_events/events/${encodeURIComponent(target.zoomEventId)}/tickets/${encodeURIComponent(ticketId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(ticketPayload(record, target, config, externalId))
+  });
+  const updated = body?.ticket && typeof body.ticket === "object" ? body.ticket : body;
+  return {
+    ticketId,
+    ticketRoleType: cleanString(updated.ticket_role_type || ticket.ticket_role_type, 120),
+    eventJoinLink: cleanString(updated.event_join_link || ticket.event_join_link, 1000),
+    eventRegistrationLink: cleanString(updated.event_registration_link || ticket.event_registration_link, 1000),
+    externalTicketId: cleanString(updated.external_ticket_id || ticket.external_ticket_id || externalId, 240),
+    created: false,
+    updated: true
+  };
+}
+
 async function ensureTicket(env, record = {}, target = {}, config = {}) {
   const externalId = externalTicketId(record, target);
   const existing = await findExistingTicket(env, target, externalId).catch(() => null);
   if (existing) {
+    if (existingTicketNeedsUpdate(existing, target, config)) {
+      const updated = await updateTicket(env, record, target, config, existing, externalId);
+      if (updated.ticketId) return updated;
+    }
     return {
       ticketId: cleanString(existing.ticket_id, 240),
       ticketRoleType: cleanString(existing.ticket_role_type, 120),
