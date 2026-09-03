@@ -9,6 +9,7 @@ import {
   deleteCrmD1Record
 } from "./_crm-d1.js";
 import { zoomKey } from "./_virtual-events.js";
+import { syncZoomEventsRegistrationRecord } from "./_zoom-events-crm.js";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -1735,7 +1736,7 @@ export async function handlePublicRegistration({ request, env }, type) {
       ...contactRefsForRegistration(type, accessRecord),
       ...(crmD1Available(env) ? await upsertRegistrationContact(env, type, accessRecord, config).catch(() => ({})) : {})
     };
-    const storedRecord = {
+    let storedRecord = {
       ...accessRecord,
       ...contactRefs
     };
@@ -1745,9 +1746,35 @@ export async function handlePublicRegistration({ request, env }, type) {
     const inviteUsageKey = await writeInviteUsage(env, type, registration.inviteCode, storedRecord);
     const kvRefs = await mirrorRegistrationToKv(env, type, storedRecord, config).catch(() => ({}));
     const registrationKeys = [d1RegistrationKey, r2RegistrationKey, kvRefs.kvRegistrationKey].filter(Boolean);
+    const zoomEvents = await syncZoomEventsRegistrationRecord(env, type, storedRecord).catch((error) => ({
+      record: {
+        ...storedRecord,
+        zoomEventsSync: {
+          status: "failed",
+          synced: false,
+          attemptedAt: new Date().toISOString(),
+          error: cleanString(error?.message || "Zoom Events sync failed.")
+        }
+      },
+      result: null
+    }));
+    storedRecord = zoomEvents.record || storedRecord;
+    if (d1RegistrationKey) {
+      await writeCrmD1Json(env, d1RegistrationKey, {
+        ...storedRecord,
+        storage: "d1",
+        d1StoredAt: new Date().toISOString()
+      }).catch(() => false);
+    }
+    if (r2RegistrationKey) {
+      await writeR2Registration(env, type, storedRecord, { key: r2RegistrationKey }).catch(() => null);
+    }
+    if (kvRefs.kvRegistrationKey) {
+      await writeSetupJson(env, kvRefs.kvRegistrationKey, storedRecord).catch(() => null);
+    }
     const confirmationEmail = await sendRegistrationConfirmation(env, type, storedRecord).catch((error) => ({
-          attempted: true,
-          sent: false,
+      attempted: true,
+      sent: false,
           error: cleanString(error?.message || "Registration confirmation email failed.")
         }));
     const staffNotificationEmail = await sendStaffRegistrationNotification(env, type, storedRecord).catch((error) => ({
@@ -1770,6 +1797,7 @@ export async function handlePublicRegistration({ request, env }, type) {
       id,
       createdAt,
       storage: d1RegistrationKey ? "d1" : "r2",
+      zoomEventsSync: storedRecord.zoomEventsSync || null,
       confirmationEmail,
       staffNotificationEmail
     }, { status: 201 });

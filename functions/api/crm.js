@@ -18,6 +18,10 @@ import {
   upsertRegistrationContact
 } from "../_registration-crm.js";
 import {
+  staleZoomEventsSync,
+  syncZoomEventsRegistrationRecord
+} from "../_zoom-events-crm.js";
+import {
   crmD1Available,
   crmD1Primary,
   deleteCrmD1Record,
@@ -1713,6 +1717,9 @@ function normalizeRecord(key, record) {
     eventAccessLink: cleanString(record?.eventAccessLink || record?.accessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
     accessLink: cleanString(record?.accessLink || record?.eventAccessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
     zoomJoinUrl: cleanString(record?.zoomJoinUrl || record?.eventAccessLink || record?.accessLink || record?.joinUrl || record?.zoomUrl, 1000),
+    zoomEventsJoinUrl: cleanString(record?.zoomEventsJoinUrl || record?.zoomEventsSync?.eventJoinLink, 1000),
+    zoomEventsRegistrationLink: cleanString(record?.zoomEventsRegistrationLink || record?.zoomEventsSync?.eventRegistrationLink, 1000),
+    zoomEventsSync: record?.zoomEventsSync && typeof record.zoomEventsSync === "object" ? record.zoomEventsSync : null,
     eventShowId: cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, ""),
     eventShowLabel: cleanString(record?.eventShowLabel) || (record?.eventShowId ? eventShowLabel(record.eventShowId) : ""),
     eventShowTime: cleanString(record?.eventShowTime) || cleanString(record?.eventTime),
@@ -2232,6 +2239,112 @@ function actualRegistrationRow(row = {}, type = "guest") {
   const config = registrantTypes[cleanType(type)];
   const key = cleanString(row.key, 500);
   return !key || key.startsWith(config.crmPrefix) || key.startsWith(config.legacyPrefix);
+}
+
+function zoomEventsAutoSyncEnabled(env = {}) {
+  return env.MOJO_ZOOM_EVENTS_AUTO_SYNC !== "false";
+}
+
+async function syncAndWriteZoomEventsRegistration(env, type = "guest", key = "", row = {}, actor = "", options = {}) {
+  const config = registrantTypes[cleanType(type)];
+  const crmKey = cleanString(key || row.key || row.id, 500);
+  if (!config || !crmKey) throw new Error("CRM registration was not found.");
+  const baseRow = options.markStale
+    ? staleZoomEventsSync(row, options.staleReason || "crm_changed")
+    : row;
+  const sync = await syncZoomEventsRegistrationRecord(env, type, baseRow, { force: options.force === true });
+  const now = new Date().toISOString();
+  const next = {
+    ...sync.record,
+    key: undefined,
+    crmType: config.crmType,
+    crmUpdatedAt: actor ? now : cleanString(sync.record.crmUpdatedAt || row.crmUpdatedAt),
+    crmUpdatedBy: actor || cleanString(sync.record.crmUpdatedBy || row.crmUpdatedBy)
+  };
+  await writeSetupJson(env, crmKey, next);
+  return {
+    key: crmKey,
+    row: next,
+    result: sync.result
+  };
+}
+
+async function syncZoomEventsRegistrationByPayload(env, payload = {}, actor = "") {
+  const type = cleanType(payload.type);
+  const key = cleanString(payload.key, 500);
+  const rows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type, { includeManualPartners: type === "partner" });
+  const row = rows.find((entry) => entry.key === key || entry.id === key);
+  if (!row || !actualRegistrationRow(row, type)) throw new Error(`${registrantTypes[type].label} registrant was not found.`);
+  const ensured = await ensureCrmRecord(env, row, type);
+  return syncAndWriteZoomEventsRegistration(env, type, ensured.key, ensured.row, actor, {
+    force: payload.force !== false,
+    markStale: false
+  });
+}
+
+async function syncZoomEventsRegistrations(env, payload = {}, actor = "") {
+  const type = cleanType(payload.type || "guest");
+  const rawKeys = Array.isArray(payload.keys) ? payload.keys.map(cleanString).filter(Boolean) : [];
+  const keySet = new Set(rawKeys);
+  const eventSlugFilter = cleanString(payload.eventSlug, 240);
+  const onlyFailed = cleanBoolean(payload.onlyFailed);
+  const onlyPending = cleanBoolean(payload.onlyPending);
+  const registeredOnly = payload.registeredOnly !== false;
+  const limit = Math.min(Math.max(Number(payload.limit) || 50, 1), 100);
+  const rows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type, { includeManualPartners: type === "partner" });
+  const candidates = rows.filter((row) => {
+    if (keySet.size && !keySet.has(row.key) && !keySet.has(row.id)) return false;
+    if (eventSlugFilter && rowEventSlug(row) !== eventSlugFilter) return false;
+    if (registeredOnly && !actualRegistrationRow(row, type)) return false;
+    if (!cleanString(row.email)) return false;
+    if (onlyFailed && row.zoomEventsSync?.status !== "failed") return false;
+    if (onlyPending && !["pending_configuration", "failed", "stale"].includes(cleanString(row.zoomEventsSync?.status))) return false;
+    return true;
+  }).slice(0, limit);
+
+  const results = [];
+  for (const row of candidates) {
+    try {
+      const ensured = await ensureCrmRecord(env, row, type);
+      const synced = await syncAndWriteZoomEventsRegistration(env, type, ensured.key, ensured.row, actor, {
+        force: payload.force !== false,
+        markStale: false
+      });
+      results.push({
+        ok: synced.result?.synced === true || synced.result?.status === "pending_configuration",
+        key: synced.key,
+        id: cleanString(ensured.row.id),
+        name: cleanString(ensured.row.name),
+        email: cleanString(ensured.row.email).toLowerCase(),
+        status: cleanString(synced.result?.status),
+        zoomEventId: cleanString(synced.result?.zoomEventId),
+        zoomSessionId: cleanString(synced.result?.zoomSessionId),
+        ticketId: cleanString(synced.result?.ticketId),
+        speakerId: cleanString(synced.result?.speakerId),
+        error: cleanString(synced.result?.error)
+      });
+    } catch (error) {
+      results.push({
+        ok: false,
+        key: row.key,
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        status: "failed",
+        error: error.message || "Zoom Events sync failed."
+      });
+    }
+  }
+
+  return {
+    ok: results.every((entry) => entry.ok),
+    type,
+    attempted: results.length,
+    synced: results.filter((entry) => entry.status === "synced" || entry.status === "current").length,
+    pending: results.filter((entry) => entry.status === "pending_configuration").length,
+    failed: results.filter((entry) => !entry.ok).length,
+    results
+  };
 }
 
 function roleLabelForRow(row = {}, type = "") {
@@ -5886,14 +5999,21 @@ async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue =
     const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
     const roleUpdate = registrationRoleUpdate(roleValue, type, crmRow);
     await assertFeaturedGuestShowCapacity(env, { ...crmRow, ...roleUpdate, key }, { excludeKeys: [key, cleanString(record.key, 500)] });
-    await writeSetupJson(env, key, {
+    const nextRow = {
       ...crmRow,
       ...roleUpdate,
       key: undefined,
       crmType: registrantTypes[type].crmType,
       crmUpdatedAt: now,
       crmUpdatedBy: actor
-    });
+    };
+    await writeSetupJson(env, key, nextRow);
+    if (zoomEventsAutoSyncEnabled(env)) {
+      await syncAndWriteZoomEventsRegistration(env, type, key, nextRow, actor, {
+        markStale: true,
+        staleReason: "registration_role_changed"
+      }).catch(() => null);
+    }
     return true;
   }
 
@@ -5918,14 +6038,21 @@ async function updateRegistrantShowForMatrixChange(env, record = {}, showValue =
     const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
     const showUpdate = eventShowUpdate(showValue, { ...crmRow, ...record });
     await assertFeaturedGuestShowCapacity(env, { ...crmRow, ...showUpdate, key }, { excludeKeys: [key, cleanString(record.key, 500)] });
-    await writeSetupJson(env, key, {
+    const nextRow = {
       ...crmRow,
       ...showUpdate,
       key: undefined,
       crmType: registrantTypes[type].crmType,
       crmUpdatedAt: now,
       crmUpdatedBy: actor
-    });
+    };
+    await writeSetupJson(env, key, nextRow);
+    if (zoomEventsAutoSyncEnabled(env)) {
+      await syncAndWriteZoomEventsRegistration(env, type, key, nextRow, actor, {
+        markStale: true,
+        staleReason: "event_show_changed"
+      }).catch(() => null);
+    }
     return true;
   }
 
@@ -6579,12 +6706,19 @@ async function manualRegisterForShow(env, payload = {}, actor = "") {
     source: `${type}-manual-registration`,
     updatedBy: actor
   }).catch(() => ({}));
-  const storedRecord = {
+  let storedRecord = {
     ...accessRecord,
     ...contactRefs,
     key: undefined
   };
   await writeSetupJson(env, registrationKey, storedRecord);
+  if (zoomEventsAutoSyncEnabled(env)) {
+    const synced = await syncAndWriteZoomEventsRegistration(env, type, registrationKey, storedRecord, actor, {
+      force: false,
+      markStale: false
+    }).catch(() => null);
+    if (synced?.row) storedRecord = synced.row;
+  }
   await markManualRegistrationSourceRegistered(env, sourceInfo, storedRecord, actor, now);
 
   const confirmationEmail = await sendRegistrationConfirmation(env, type, storedRecord).catch((error) => ({
@@ -8315,6 +8449,52 @@ export async function onRequestPost({ request, env, data }) {
         },
         { status: error.status || 500 }
       );
+    }
+  }
+
+  if (payload?.action === "sync-zoom-events-registration") {
+    try {
+      const type = cleanType(payload.type);
+      const synced = await syncZoomEventsRegistrationByPayload(env, payload, access.email);
+      const rows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type, { includeManualPartners: type === "partner" });
+      return json({
+        ok: synced.result?.synced === true || synced.result?.status === "pending_configuration",
+        type,
+        label: registrantTypes[type].label,
+        sync: synced.result,
+        row: normalizeRecord(synced.key, synced.row),
+        summary: summarize(rows),
+        rows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        partnerMatrixProspects: await partnerMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      }, { status: synced.result?.status === "failed" ? 207 : 200 });
+    } catch (error) {
+      const status = /not found/i.test(error.message || "") ? 404 : 500;
+      return json({ error: error.message || "Zoom Events registration sync could not run." }, { status });
+    }
+  }
+
+  if (payload?.action === "sync-zoom-events-registrations") {
+    try {
+      const type = cleanType(payload.type || "guest");
+      const sync = await syncZoomEventsRegistrations(env, payload, access.email);
+      const rows = type === "guest" ? await guestRegistrationRows(env) : await registrants(env, type, { includeManualPartners: type === "partner" });
+      return json({
+        ...sync,
+        label: registrantTypes[type].label,
+        summary: summarize(rows),
+        rows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        partnerMatrixProspects: await partnerMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
+      }, { status: sync.failed ? 207 : 200 });
+    } catch (error) {
+      return json({ error: error.message || "Zoom Events registration reconciliation could not run." }, { status: 500 });
     }
   }
 
