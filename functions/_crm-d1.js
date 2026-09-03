@@ -114,6 +114,69 @@ export async function listCrmD1Keys(env, prefix) {
   return (result?.results || []).map((row) => cleanString(row.key)).filter(Boolean);
 }
 
+function uniqueCleanStrings(values = [], max = 500, transform = (value) => value) {
+  const seen = new Set();
+  const output = [];
+  for (const value of values) {
+    const cleaned = transform(cleanString(value, max));
+    if (!cleaned || seen.has(cleaned)) continue;
+    seen.add(cleaned);
+    output.push(cleaned);
+  }
+  return output;
+}
+
+export async function searchCrmD1Json(env, { emails = [], names = [], linkedInUrls = [] } = {}) {
+  const db = crmDb(env);
+  if (!db?.prepare) return [];
+
+  const clauses = [];
+  const binds = [];
+  const addExact = (column, value) => {
+    clauses.push(`${column} = ?`);
+    binds.push(value);
+  };
+  const addLower = (column, value) => {
+    clauses.push(`lower(${column}) = ?`);
+    binds.push(value);
+  };
+
+  for (const email of uniqueCleanStrings(emails, 240, (value) => value.toLowerCase())) {
+    addExact("email", email);
+  }
+  for (const name of uniqueCleanStrings(names, 240, (value) => value.toLowerCase().replace(/\s+/g, " "))) {
+    addLower("name", name);
+  }
+  for (const linkedInUrl of uniqueCleanStrings(linkedInUrls, 500, (value) => value.toLowerCase().replace(/\/+$/, ""))) {
+    addLower("linkedin_profile_url", linkedInUrl);
+  }
+
+  if (!clauses.length) return [];
+
+  const result = await db.prepare(`
+    SELECT key, payload_json
+    FROM ${crmD1Table}
+    WHERE ${clauses.join(" OR ")}
+    ORDER BY
+      CASE WHEN record_type = 'contact' THEN 0 ELSE 1 END,
+      updated_at DESC,
+      created_at DESC
+    LIMIT 100
+  `).bind(...binds).all().catch(() => null);
+
+  return (result?.results || []).map((row) => {
+    if (!row?.payload_json) return null;
+    try {
+      return {
+        ...JSON.parse(row.payload_json),
+        sourceKey: cleanString(row.key, 600)
+      };
+    } catch {
+      return null;
+    }
+  }).filter(Boolean);
+}
+
 export async function writeCrmD1Json(env, key, record = {}) {
   const db = crmDb(env);
   const cleanKey = cleanString(key, 600);
