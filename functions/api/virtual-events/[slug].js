@@ -407,7 +407,23 @@ function isPublicFeaturedRegistrant(registrant = {}) {
     publicFeaturedRegistrationStatuses.has(status);
 }
 
+function publicFirstName(name = "") {
+  const cleaned = cleanString(name, 180).replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const parts = cleaned.split(" ").filter(Boolean);
+  const first = parts[0]?.replace(/[,]+$/g, "") || "";
+  if (/^(?:dr|mr|mrs|ms|miss|prof)\.?$/i.test(first) && parts[1]) return parts[1].replace(/[,]+$/g, "");
+  return first;
+}
+
+function publicDisplayNameFor(registrant = {}) {
+  const name = cleanString(registrant?.name, 180);
+  if (!name) return "Name pending";
+  return registrant?.publicationUseName === true ? name : publicFirstName(name) || "Name pending";
+}
+
 function publicFeaturedGuest(registrant, type) {
+  const canUseName = registrant?.publicationUseName === true;
   const canUseCompany = registrant?.publicationUseCompany === true;
   const name = cleanString(registrant?.name, 180);
   const title = cleanString(registrant?.title, 180);
@@ -433,6 +449,8 @@ function publicFeaturedGuest(registrant, type) {
   return {
     type,
     displayName: name || "Name pending",
+    publicDisplayName: publicDisplayNameFor(registrant),
+    nameAllowed: canUseName,
     company,
     companyAllowed: canUseCompany,
     title,
@@ -457,6 +475,7 @@ function publicFeaturedGuest(registrant, type) {
 }
 
 function publicRegisteredGuest(registrant, type) {
+  const canUseName = registrant?.publicationUseName === true;
   const canUseCompany = registrant?.publicationUseCompany === true;
   const name = cleanString(registrant?.name, 180);
   const title = cleanString(registrant?.title, 180);
@@ -466,6 +485,8 @@ function publicRegisteredGuest(registrant, type) {
   return {
     type,
     displayName: name,
+    publicDisplayName: canUseName ? name : publicFirstName(name),
+    nameAllowed: canUseName,
     company,
     companyAllowed: canUseCompany,
     title,
