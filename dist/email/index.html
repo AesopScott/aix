@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Email | MOJO AI Summits</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/assets/logo-badge.png">
+  <link rel="apple-touch-icon" href="/assets/logo-badge.png">
+  <link rel="stylesheet" href="/assets/mojo-brand-compliance.css">
+  <link rel="stylesheet" href="/assets/mojo-home-brand.css">
+  <style>
+    :root {
+      --deep-navy: #0A0F1E;
+      --slate: #1B2333;
+      --panel: rgba(18, 27, 45, 0.88);
+      --panel-2: rgba(27, 35, 51, 0.72);
+      --cyan: #00E6FF;
+      --blue: #1666FF;
+      --white: #FFFFFF;
+      --muted: rgba(255, 255, 255, 0.68);
+      --line: rgba(0, 230, 255, 0.22);
+      --danger: #ff637b;
+      --ok: #6AF0B6;
+      --warn: #FFE680;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--white);
+      background: linear-gradient(145deg, #050814 0%, var(--deep-navy) 55%, #07101f 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 5%;
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 15, 30, 0.82);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    a { color: var(--cyan); text-decoration: none; }
+
+    .top-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    main {
+      width: 90%;
+      margin: 0 auto;
+      padding: 1.25rem 0 3rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .page-title {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    h1, h2 {
+      margin: 0;
+      line-height: 1.05;
+    }
+
+    h1 {
+      font-family: Georgia, serif;
+      font-size: clamp(2rem, 4vw, 4rem);
+    }
+
+    h2 {
+      font-size: 1rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+
+    .metric {
+      display: grid;
+      gap: 0.15rem;
+      justify-items: end;
+      min-width: 10rem;
+    }
+
+    .metric strong {
+      color: var(--cyan);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 1;
+    }
+
+    .metric span, label, .eyebrow {
+      color: var(--cyan);
+      font-size: 0.76rem;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.85fr) minmax(360px, 1.15fr) minmax(280px, 0.8fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      display: grid;
+      gap: 1rem;
+      padding: 1rem;
+      min-width: 0;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .stack { display: grid; gap: 0.75rem; }
+    .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid rgba(0, 230, 255, 0.24);
+      border-radius: 6px;
+      background: rgba(6, 11, 24, 0.86);
+      color: var(--white);
+      font: inherit;
+      padding: 0.85rem 0.9rem;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 18rem;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0, 230, 255, 0.12);
+    }
+
+    .checklist {
+      display: grid;
+      gap: 0.5rem;
+      max-height: 28rem;
+      overflow: auto;
+      padding-right: 0.15rem;
+    }
+
+    .check-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 0.65rem;
+      align-items: start;
+      border: 1px solid rgba(0, 230, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(10, 15, 30, 0.58);
+      padding: 0.75rem;
+    }
+
+    .check-row input {
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--cyan);
+      margin: 0.15rem 0 0;
+    }
+
+    .check-row strong {
+      display: block;
+      color: var(--white);
+      font-size: 0.95rem;
+    }
+
+    .check-row span, .muted {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    button {
+      border: 1px solid var(--cyan);
+      border-radius: 6px;
+      background: rgba(22, 102, 255, 0.24);
+      color: var(--white);
+      cursor: pointer;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      min-height: 2.8rem;
+      padding: 0.7rem 1rem;
+      text-transform: uppercase;
+    }
+
+    button.secondary {
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(10, 15, 30, 0.65);
+    }
+
+    button.danger {
+      border-color: rgba(255, 99, 123, 0.74);
+      background: rgba(255, 99, 123, 0.14);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.52;
+    }
+
+    .notice {
+      min-height: 1.35rem;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .notice.ok { color: var(--ok); }
+    .notice.error { color: var(--danger); }
+    .notice.warn { color: var(--warn); }
+
+    .recipient-list {
+      display: grid;
+      gap: 0.5rem;
+      max-height: 33rem;
+      overflow: auto;
+    }
+
+    .recipient {
+      border: 1px solid rgba(0, 230, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(6, 11, 24, 0.72);
+      padding: 0.75rem;
+    }
+
+    .recipient strong {
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    .recipient.failed {
+      border-color: rgba(255, 99, 123, 0.62);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(0, 230, 255, 0.28);
+      border-radius: 999px;
+      color: var(--cyan);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      margin-top: 0.45rem;
+      padding: 0.2rem 0.55rem;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      .two { grid-template-columns: 1fr; }
+      .metric { justify-items: start; }
+      .page-title { align-items: start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="mojo-home-brand" href="/" aria-label="MOJO AI Summits home"><img class="mojo-home-brand-mark" src="/assets/logo-mark.png" alt=""><span class="mojo-home-brand-divider" aria-hidden="true"></span><span class="mojo-home-brand-name" aria-hidden="true"><span class="mojo-home-brand-primary">MOJO AI</span><span class="mojo-home-brand-secondary">Summits</span></span></a>
+    <nav class="top-nav" aria-label="Internal links">
+      <a href="/crm/">CRM</a>
+      <a href="/email/">Email</a>
+      <a href="/access/">Access</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-title">
+      <div>
+        <p class="eyebrow">Registered guest sender</p>
+        <h1>Email</h1>
+      </div>
+      <div class="metric">
+        <strong id="recipientCount">0</strong>
+        <span>selected recipients</span>
+      </div>
+    </section>
+
+    <section class="layout">
+      <aside class="panel">
+        <div class="panel-header">
+          <h2>Sessions</h2>
+          <button class="secondary" type="button" id="toggleSessions">All</button>
+        </div>
+        <div class="checklist" id="sessionList"></div>
+      </aside>
+
+      <form class="panel stack" id="emailForm">
+        <div class="panel-header">
+          <h2>Message</h2>
+          <span class="muted" id="registeredMetric">Loading...</span>
+        </div>
+
+        <div class="stack">
+          <label>Recipient Roles</label>
+          <div class="checklist" id="roleList"></div>
+        </div>
+
+        <label>Sender
+          <select id="senderPreset" name="senderPreset">
+            <option value="">MOJO AI Summits</option>
+          </select>
+        </label>
+
+        <div class="two">
+          <label>From Name
+            <input id="fromName" name="fromName" autocomplete="name" placeholder="MOJO AI Summits">
+          </label>
+          <label>From Email
+            <input id="fromEmail" name="fromEmail" type="email" autocomplete="email" placeholder="team@mojoaisummits.com">
+          </label>
+        </div>
+
+        <label>Reply To
+          <input id="replyTo" name="replyTo" type="text" placeholder="reply@mojoaisummits.com">
+        </label>
+
+        <div class="two">
+          <label>CC
+            <input id="cc" name="cc" type="text" placeholder="Optional">
+          </label>
+          <label>BCC
+            <input id="bcc" name="bcc" type="text" placeholder="Optional">
+          </label>
+        </div>
+
+        <label>Subject
+          <input id="subject" name="subject" required placeholder="Session update">
+        </label>
+
+        <label>Message
+          <textarea id="message" name="message" required placeholder="Write the email message here."></textarea>
+        </label>
+
+        <div class="actions">
+          <button type="submit">Preview Recipients</button>
+          <button class="danger" type="button" id="sendButton" disabled>Send Email</button>
+        </div>
+        <div class="notice" id="notice"></div>
+      </form>
+
+      <aside class="panel">
+        <div class="panel-header">
+          <h2>Recipients</h2>
+          <button class="secondary" type="button" id="clearRecipients">Clear</button>
+        </div>
+        <div class="recipient-list" id="recipientList"></div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const api = "/api/email";
+    const state = {
+      sessions: [],
+      roles: [],
+      senderOptions: [],
+      recipients: [],
+      defaults: {}
+    };
+
+    const sessionList = document.querySelector("#sessionList");
+    const roleList = document.querySelector("#roleList");
+    const recipientList = document.querySelector("#recipientList");
+    const recipientCount = document.querySelector("#recipientCount");
+    const registeredMetric = document.querySelector("#registeredMetric");
+    const emailForm = document.querySelector("#emailForm");
+    const sendButton = document.querySelector("#sendButton");
+    const notice = document.querySelector("#notice");
+    const toggleSessions = document.querySelector("#toggleSessions");
+    const clearRecipients = document.querySelector("#clearRecipients");
+    const senderPreset = document.querySelector("#senderPreset");
+    const fromName = document.querySelector("#fromName");
+    const fromEmail = document.querySelector("#fromEmail");
+    const replyTo = document.querySelector("#replyTo");
+    const cc = document.querySelector("#cc");
+    const bcc = document.querySelector("#bcc");
+    const subject = document.querySelector("#subject");
+    const message = document.querySelector("#message");
+
+    function escapeHtml(value = "") {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function readJson(response) {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Email request failed.");
+      return data;
+    }
+
+    function setNotice(messageText = "", type = "") {
+      notice.textContent = messageText;
+      notice.className = `notice ${type}`.trim();
+    }
+
+    function checkedValues(name) {
+      return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((input) => input.value);
+    }
+
+    function renderSessions() {
+      sessionList.innerHTML = state.sessions.length
+        ? state.sessions.map((session) => `
+          <label class="check-row">
+            <input type="checkbox" name="sessionIds" value="${escapeHtml(session.id)}">
+            <span>
+              <strong>${escapeHtml(session.label)}</strong>
+              <span>${escapeHtml(session.count || 0)} registered guests</span>
+            </span>
+          </label>
+        `).join("")
+        : `<div class="muted">No registered guest sessions found.</div>`;
+    }
+
+    function renderRoles() {
+      roleList.innerHTML = state.roles.map((role) => `
+        <label class="check-row">
+          <input type="checkbox" name="roles" value="${escapeHtml(role.value)}" checked>
+          <span><strong>${escapeHtml(role.label)}</strong></span>
+        </label>
+      `).join("");
+    }
+
+    function renderSenderOptions() {
+      senderPreset.innerHTML = [
+        `<option value="">MOJO AI Summits</option>`,
+        ...state.senderOptions.map((sender) => `
+          <option
+            value="${escapeHtml(sender.id || sender.email)}"
+            data-from-name="${escapeHtml(sender.fromName || sender.name || "")}"
+            data-from-email="${escapeHtml(sender.fromEmail || state.defaults.fromEmail || "")}"
+            data-reply-to="${escapeHtml(sender.replyTo || sender.email || "")}"
+          >${escapeHtml(sender.label || sender.name || sender.email)}</option>
+        `)
+      ].join("");
+    }
+
+    function renderRecipients(result = {}) {
+      const recipients = result.recipients || state.recipients || [];
+      state.recipients = recipients;
+      recipientCount.textContent = String(recipients.length);
+      sendButton.disabled = recipients.length === 0;
+      recipientList.innerHTML = recipients.length
+        ? recipients.map((recipient) => `
+          <article class="recipient">
+            <strong>${escapeHtml(recipient.name || recipient.email)}</strong>
+            <span class="muted">${escapeHtml(recipient.email)}</span>
+            <div class="pill">${escapeHtml(recipient.roleLabel || recipient.role || "Guest")}</div>
+          </article>
+        `).join("")
+        : `<div class="muted">Preview recipients before sending.</div>`;
+      if (result.sent || result.failed) {
+        recipientList.innerHTML = [
+          ...(result.sent || []).map((recipient) => `
+            <article class="recipient">
+              <strong>${escapeHtml(recipient.name || recipient.email)}</strong>
+              <span class="muted">${escapeHtml(recipient.email)}</span>
+              <div class="pill">Sent</div>
+            </article>
+          `),
+          ...(result.failed || []).map((recipient) => `
+            <article class="recipient failed">
+              <strong>${escapeHtml(recipient.name || recipient.email)}</strong>
+              <span class="muted">${escapeHtml(recipient.email)} | ${escapeHtml(recipient.error)}</span>
+              <div class="pill">Failed</div>
+            </article>
+          `)
+        ].join("");
+      }
+    }
+
+    function applyDefaults(defaults = {}) {
+      fromName.value = defaults.fromName || "MOJO AI Summits";
+      fromEmail.value = defaults.fromEmail || "";
+      replyTo.value = defaults.replyTo || defaults.fromEmail || "";
+      cc.value = defaults.cc || "";
+      bcc.value = defaults.bcc || "";
+    }
+
+    function payload(action = "preview") {
+      return {
+        action,
+        sessionIds: checkedValues("sessionIds"),
+        roles: checkedValues("roles"),
+        fromName: fromName.value,
+        fromEmail: fromEmail.value,
+        replyTo: replyTo.value,
+        cc: cc.value,
+        bcc: bcc.value,
+        subject: subject.value,
+        message: message.value
+      };
+    }
+
+    async function loadState() {
+      setNotice("Loading registered guest sessions...");
+      try {
+        const data = await fetch(api, { cache: "no-store" }).then(readJson);
+        state.sessions = data.sessions || [];
+        state.roles = data.roles || [];
+        state.senderOptions = data.senderOptions || [];
+        state.defaults = data.defaults || {};
+        registeredMetric.textContent = `${data.totalRegisteredGuests || 0} registered guests available`;
+        applyDefaults(state.defaults);
+        renderSessions();
+        renderRoles();
+        renderSenderOptions();
+        renderRecipients({ recipients: [] });
+        setNotice("Ready.", "ok");
+      } catch (error) {
+        setNotice(error.message || "Email tool failed to load.", "error");
+      }
+    }
+
+    async function previewRecipients() {
+      setNotice("Building recipient preview...");
+      sendButton.disabled = true;
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload("preview"))
+        }).then(readJson);
+        renderRecipients(data);
+        setNotice(`${data.recipientCount || 0} recipients matched.`, data.recipientCount ? "ok" : "warn");
+      } catch (error) {
+        setNotice(error.message || "Recipient preview failed.", "error");
+      }
+    }
+
+    async function sendEmail() {
+      if (!state.recipients.length) return;
+      const confirmed = window.confirm(`Send this email to ${state.recipients.length} registered guest recipient${state.recipients.length === 1 ? "" : "s"}?`);
+      if (!confirmed) return;
+      setNotice("Sending email through Resend...");
+      sendButton.disabled = true;
+      try {
+        const data = await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload("send"))
+        }).then(readJson);
+        renderRecipients(data);
+        setNotice(`${data.sentCount || 0} sent${data.failedCount ? `, ${data.failedCount} failed` : ""}.`, data.failedCount ? "warn" : "ok");
+      } catch (error) {
+        setNotice(error.message || "Email send failed.", "error");
+      } finally {
+        sendButton.disabled = state.recipients.length === 0;
+      }
+    }
+
+    emailForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      previewRecipients();
+    });
+
+    sendButton.addEventListener("click", sendEmail);
+
+    toggleSessions.addEventListener("click", () => {
+      const boxes = [...document.querySelectorAll('input[name="sessionIds"]')];
+      const shouldCheck = boxes.some((box) => !box.checked);
+      boxes.forEach((box) => { box.checked = shouldCheck; });
+      state.recipients = [];
+      renderRecipients({ recipients: [] });
+    });
+
+    clearRecipients.addEventListener("click", () => {
+      state.recipients = [];
+      renderRecipients({ recipients: [] });
+      setNotice("Recipient preview cleared.");
+    });
+
+    senderPreset.addEventListener("change", () => {
+      const option = senderPreset.selectedOptions[0];
+      if (!senderPreset.value || !option) {
+        applyDefaults(state.defaults);
+        return;
+      }
+      fromName.value = option.dataset.fromName || state.defaults.fromName || "MOJO AI Summits";
+      fromEmail.value = option.dataset.fromEmail || state.defaults.fromEmail || "";
+      replyTo.value = option.dataset.replyTo || option.dataset.fromEmail || state.defaults.replyTo || "";
+    });
+
+    document.addEventListener("change", (event) => {
+      if (event.target.matches('input[name="sessionIds"], input[name="roles"]')) {
+        state.recipients = [];
+        renderRecipients({ recipients: [] });
+      }
+    });
+
+    loadState();
+  </script>
+</body>
+</html>
