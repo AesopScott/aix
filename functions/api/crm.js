@@ -86,6 +86,7 @@ const PARTNER_PROSPECT_PERSON_PREFIX = "crm:partner-prospect-person:";
 const PARTNER_PROSPECT_AUDIT_PREFIX = "crm:partner-prospect-audit:";
 const PARTNER_PROSPECT_DEBUG_PREFIX = "crm:partner-prospect-debug:";
 const PARTNER_PROSPECT_SOURCE_PREFIX = "crm:partner-prospect-source:";
+const MATRIX_CHANGE_LOG_PREFIX = "crm:matrix-change-log:";
 const PARTNER_PROSPECT_SCORE_CONFIG_KEY = "crm:partner-prospect-score-config";
 const PARTNER_INFO_PREFIX = "crm:partner-info:";
 const DEFAULT_UPCOMING_EVENTS = [
@@ -244,6 +245,7 @@ const CRM_D1_KV_BACKFILL_PREFIXES = [
   PARTNER_PROSPECT_AUDIT_PREFIX,
   PARTNER_PROSPECT_DEBUG_PREFIX,
   PARTNER_PROSPECT_SOURCE_PREFIX,
+  MATRIX_CHANGE_LOG_PREFIX,
   EMAIL_LOG_PREFIX,
   REGISTRATION_DEBUG_PREFIX,
   PHONE_VERIFICATION_DEBUG_PREFIX,
@@ -3009,6 +3011,168 @@ async function writeProspectAudit(env, companyId, entry = {}) {
   });
 }
 
+const MATRIX_CHANGE_FIELDS = [
+  ["name", "Name"],
+  ["email", "Email"],
+  ["company", "Company"],
+  ["partnerCompany", "Partner company"],
+  ["title", "Title"],
+  ["eventSlug", "Event slug"],
+  ["eventName", "Event"],
+  ["eventDate", "Event date"],
+  ["eventShowId", "Show"],
+  ["eventShowLabel", "Show label"],
+  ["status", "Record status"],
+  ["crmStatus", "CRM status"],
+  ["guestStatus", "Guest status"],
+  ["partnerStatus", "Partner status"],
+  ["registrationStatus", "Registration status"],
+  ["registrationRole", "Role"],
+  ["guestRegistrationType", "Guest role"],
+  ["partnerRegistrationType", "Partner role"],
+  ["linkedinProfileUrl", "LinkedIn profile"],
+  ["linkedinConnectionStatus", "LinkedIn connection"],
+  ["registrationRequestStatus", "Registration request"],
+  ["matrixInterestRating", "Interest"],
+  ["potentialSponsor", "Potential sponsor"],
+  ["preRegistrationNotes", "Pre-registration notes"],
+  ["eventNotes", "Event notes"],
+  ["registrationNotes", "Registration notes"],
+  ["code", "Invite code"],
+  ["sourceMatrixProspectKey", "Source matrix record"],
+  ["registrationId", "Registration record"]
+];
+
+function matrixRecordKind(key = "", record = {}) {
+  if (key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) || record.type === "partner-matrix-prospect") return "partner-matrix-prospect";
+  if (key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) || record.type === "guest-matrix-prospect") return "guest-matrix-prospect";
+  if (key.startsWith(PARTNER_INVITE_PREFIX) || record.type === "partner") return "partner-invite";
+  if (key.startsWith(REGISTRATION_INVITE_PREFIXES.member) || record.type === "member") return "member-invite";
+  return "guest-invite";
+}
+
+function matrixTypeForRecord(key = "", record = {}) {
+  return matrixRecordKind(key, record).startsWith("partner") ? "partner" : "guest";
+}
+
+function matrixChangeValue(value) {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "";
+  if (Array.isArray(value)) return value.map((entry) => matrixChangeValue(entry)).filter(Boolean).join(", ");
+  if (typeof value === "object") return cleanString(JSON.stringify(value), 1200);
+  return cleanString(String(value), 1200);
+}
+
+function matrixChangeDiff(before = {}, after = {}) {
+  return MATRIX_CHANGE_FIELDS
+    .map(([field, label]) => {
+      const from = matrixChangeValue(before?.[field]);
+      const to = matrixChangeValue(after?.[field]);
+      return from === to ? null : { field, label, from, to };
+    })
+    .filter(Boolean);
+}
+
+function matrixChangePerson(record = {}) {
+  return cleanString(
+    invitePersonName(record) ||
+      record.partnerContactName ||
+      record.intendedGuestName ||
+      record.invitedName ||
+      record.guestName ||
+      invitePersonEmail(record) ||
+      record.key ||
+      record.id,
+    240
+  );
+}
+
+function matrixChangeLogEntry({ targetKey = "", before = {}, after = {}, action = "updated", actor = "", changes = null, now = "" } = {}) {
+  const createdAt = cleanString(now) || new Date().toISOString();
+  const target = after && Object.keys(after).length ? after : before;
+  const recordKey = cleanString(targetKey || target?.key, 500);
+  const diff = Array.isArray(changes) ? changes : matrixChangeDiff(before, after);
+  const matrixType = matrixTypeForRecord(recordKey, target);
+  const id = `${matrixType}:${createdAt.replace(/[:.]/g, "-")}:${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
+  return {
+    id,
+    targetKey: recordKey,
+    matrixType,
+    recordKind: matrixRecordKind(recordKey, target),
+    action: cleanString(action, 80) || "updated",
+    actor: cleanString(actor, 180) || "crm",
+    createdAt,
+    targetName: matrixChangePerson(target),
+    targetEmail: invitePersonEmail(target),
+    eventName: cleanString(target?.eventName || target?.usedFor, 240),
+    eventDate: cleanString(target?.eventDate || target?.usedForDate, 120),
+    eventShowId: cleanEventShowId(target?.eventShowId || target?.showId || target?.eventShow, ""),
+    inviteCode: cleanCode(target?.code || target?.inviteCode),
+    changes: diff.map((change) => ({
+      field: cleanString(change.field, 80),
+      label: cleanString(change.label || change.field, 120),
+      from: matrixChangeValue(change.from),
+      to: matrixChangeValue(change.to)
+    })).filter((change) => change.field)
+  };
+}
+
+function compactMatrixChangeLogEntry(entry = {}) {
+  return {
+    id: cleanString(entry.id, 240),
+    targetKey: cleanString(entry.targetKey, 500),
+    matrixType: cleanString(entry.matrixType, 40),
+    recordKind: cleanString(entry.recordKind, 80),
+    action: cleanString(entry.action, 80),
+    actor: cleanString(entry.actor, 180),
+    createdAt: cleanString(entry.createdAt, 80),
+    targetName: cleanString(entry.targetName, 240),
+    targetEmail: cleanString(entry.targetEmail, 240).toLowerCase(),
+    eventName: cleanString(entry.eventName, 240),
+    eventDate: cleanString(entry.eventDate, 120),
+    eventShowId: cleanEventShowId(entry.eventShowId, ""),
+    inviteCode: cleanCode(entry.inviteCode),
+    changes: Array.isArray(entry.changes)
+      ? entry.changes.map((change) => ({
+        field: cleanString(change.field, 80),
+        label: cleanString(change.label || change.field, 120),
+        from: matrixChangeValue(change.from),
+        to: matrixChangeValue(change.to)
+      })).filter((change) => change.field)
+      : []
+  };
+}
+
+function matrixChangeLogWithEntry(record = {}, entry = null) {
+  const existing = Array.isArray(record?.matrixChangeLog) ? record.matrixChangeLog : [];
+  return [
+    ...(entry ? [compactMatrixChangeLogEntry(entry)] : []),
+    ...existing.map(compactMatrixChangeLogEntry)
+  ].filter((item) => item.id).slice(0, 12);
+}
+
+async function writeMatrixChangeLog(env, entry = {}) {
+  const normalized = compactMatrixChangeLogEntry(entry);
+  if (!normalized.id || !normalized.targetKey) return null;
+  await writeSetupJson(env, `${MATRIX_CHANGE_LOG_PREFIX}${normalized.id}`, normalized);
+  return normalized;
+}
+
+async function matrixChangeLog(env, type = "guest") {
+  const wantedType = type === "partner" ? "partner" : "guest";
+  const keys = await listKeys(env, MATRIX_CHANGE_LOG_PREFIX);
+  const entries = await Promise.all(
+    keys.map(async (key) => {
+      const record = await readSetupJson(env, key);
+      return record ? compactMatrixChangeLogEntry({ ...record, id: record.id || key.replace(MATRIX_CHANGE_LOG_PREFIX, "") }) : null;
+    })
+  );
+  return entries
+    .filter((entry) => entry && entry.matrixType === wantedType)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
 async function writeProspectDebug(env, runId = "", entry = {}) {
   const now = new Date().toISOString();
   const id = cleanString(runId, 180) || `${now}:${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
@@ -4602,7 +4766,10 @@ function normalizeInviteCode(key, record) {
     registrationId: cleanString(record?.registrationId),
     eventNotes: cleanEventNotes(record),
     registrationNotes: cleanEventNotes(record),
-    preRegistrationNotes: cleanPreRegistrationNotes(record)
+    preRegistrationNotes: cleanPreRegistrationNotes(record),
+    matrixChangeLog: Array.isArray(record?.matrixChangeLog)
+      ? record.matrixChangeLog.map(compactMatrixChangeLogEntry).filter((entry) => entry.id)
+      : []
   };
 }
 
@@ -4865,7 +5032,10 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
     createdAt: cleanString(record?.createdAt),
     createdBy: cleanString(record?.createdBy),
     updatedAt: cleanString(record?.updatedAt),
-    updatedBy: cleanString(record?.updatedBy)
+    updatedBy: cleanString(record?.updatedBy),
+    matrixChangeLog: Array.isArray(record?.matrixChangeLog)
+      ? record.matrixChangeLog.map(compactMatrixChangeLogEntry).filter((entry) => entry.id)
+      : []
   };
 }
 
@@ -5853,8 +6023,18 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     updatedAt: createdAt,
     updatedBy: actor
   };
+  const logEntry = matrixChangeLogEntry({
+    targetKey: key,
+    before: previous || {},
+    after: nextRecord,
+    action: "created",
+    actor,
+    now: createdAt
+  });
+  nextRecord.matrixChangeLog = matrixChangeLogWithEntry(previous || {}, logEntry);
   await assertFeaturedGuestShowCapacity(env, { ...nextRecord, key }, { excludeKeys: [key] });
   await writeSetupJson(env, key, nextRecord);
+  await writeMatrixChangeLog(env, logEntry);
   const prospect = normalizeGuestMatrixProspect(key, nextRecord, prospectType);
   await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
   return prospect;
@@ -5904,19 +6084,37 @@ async function updateGuestMatrixProspect(env, payload = {}, actor = "") {
   }
   next.updatedAt = now;
   next.updatedBy = actor;
+  const logEntry = matrixChangeLogEntry({
+    targetKey: key,
+    before: existing,
+    after: next,
+    action: "updated",
+    actor,
+    now: next.updatedAt
+  });
+  if (logEntry.changes.length) next.matrixChangeLog = matrixChangeLogWithEntry(existing, logEntry);
   await assertFeaturedGuestShowCapacity(env, { ...next, key }, { excludeKeys: [key] });
   await writeSetupJson(env, key, next);
+  if (logEntry.changes.length) await writeMatrixChangeLog(env, logEntry);
   const prospect = normalizeGuestMatrixProspect(key, next, prospectType);
   await upsertContactFromInviteRecord(env, prospect, `${prospectType}-matrix-prospect`, actor);
   return prospect;
 }
 
-async function deleteGuestMatrixProspect(env, payload = {}) {
+async function deleteGuestMatrixProspect(env, payload = {}, actor = "") {
   const key = cleanString(payload.key, 500);
   const isPartnerProspect = key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX);
   if (!key || (!key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX) && !isPartnerProspect)) throw new Error("Tracked person was not found.");
   const existing = await readSetupJson(env, key);
   if (!existing) throw new Error("Tracked person was not found.");
+  await writeMatrixChangeLog(env, matrixChangeLogEntry({
+    targetKey: key,
+    before: existing,
+    after: {},
+    action: "deleted",
+    actor,
+    changes: [{ field: "record", label: "Record", from: "Active", to: "Deleted" }]
+  }));
   await deleteSetupRecord(env, key);
   return normalizeGuestMatrixProspect(key, existing, isPartnerProspect ? "partner" : "guest");
 }
@@ -6280,8 +6478,18 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     }
     next.updatedAt = now;
     next.updatedBy = actor;
+    const logEntry = matrixChangeLogEntry({
+      targetKey: key,
+      before: existing,
+      after: next,
+      action: "updated",
+      actor,
+      now
+    });
+    if (logEntry.changes.length) next.matrixChangeLog = matrixChangeLogWithEntry(existing, logEntry);
     await assertFeaturedGuestShowCapacity(env, { ...next, key }, { excludeKeys: [key] });
     await writeSetupJson(env, key, next);
+    if (logEntry.changes.length) await writeMatrixChangeLog(env, logEntry);
     const normalized = key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX)
       ? normalizeGuestMatrixProspect(key, next, "partner")
       : key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)
@@ -6468,9 +6676,31 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
   };
 
   const key = `${REGISTRATION_INVITE_PREFIXES[type]}${code}`;
+  const logEntry = matrixChangeLogEntry({
+    targetKey: key,
+    before: {},
+    after: record,
+    action: "invite-created",
+    actor,
+    now: createdAt
+  });
+  record.matrixChangeLog = matrixChangeLogWithEntry({}, logEntry);
   await assertFeaturedGuestShowCapacity(env, { ...record, key }, { excludeKeys: [key, sourceMatrixProspectKey] });
   await writeSetupJson(env, key, record);
+  await writeMatrixChangeLog(env, logEntry);
   if (sourceProspect) {
+    await writeMatrixChangeLog(env, matrixChangeLogEntry({
+      targetKey: sourceMatrixProspectKey,
+      before: sourceMatrixProspect,
+      after: { ...sourceMatrixProspect, status: "converted-to-invite", code, registrationRequestStatus: "sent" },
+      action: "converted-to-invite",
+      actor,
+      now: createdAt,
+      changes: [
+        { field: "status", label: "Record status", from: sourceProspect.status || "tracking", to: "converted-to-invite" },
+        { field: "code", label: "Invite code", from: "", to: code }
+      ]
+    }));
     await deleteSetupRecord(env, sourceMatrixProspectKey);
   }
   const invite = normalizeInviteCode(key, record);
@@ -6524,13 +6754,23 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   };
 
   const key = `${PARTNER_INVITE_PREFIX}${code}`;
+  const logEntry = matrixChangeLogEntry({
+    targetKey: key,
+    before: {},
+    after: record,
+    action: "invite-created",
+    actor,
+    now: createdAt
+  });
+  record.matrixChangeLog = matrixChangeLogWithEntry({}, logEntry);
   await writeSetupJson(env, key, record);
+  await writeMatrixChangeLog(env, logEntry);
   const invite = normalizeInviteCode(key, record);
   await upsertContactFromInviteRecord(env, invite, "partner-invite", actor);
   return invite;
 }
 
-async function deleteInviteCode(env, payload = {}) {
+async function deleteInviteCode(env, payload = {}, actor = "") {
   const type = cleanString(payload.type);
   const key = cleanString(payload.key, 300);
   const code = cleanCode(payload.code);
@@ -6548,8 +6788,16 @@ async function deleteInviteCode(env, payload = {}) {
   for (const candidate of candidates) {
     const record = await readSetupJson(env, candidate);
     if (record) {
+      await writeMatrixChangeLog(env, matrixChangeLogEntry({
+        targetKey: candidate,
+        before: record,
+        after: {},
+        action: "invite-deleted",
+        actor,
+        changes: [{ field: "record", label: "Record", from: "Active", to: "Deleted" }]
+      }));
       await deleteSetupRecord(env, candidate);
-      return { deleted: candidate };
+      return { deleted: candidate, matrixType: matrixTypeForRecord(candidate, record) };
     }
   }
 
@@ -6606,8 +6854,18 @@ async function updateRegistrationInviteShow(env, payload = {}, actor = "") {
     updatedAt: now,
     updatedBy: actor
   };
+  const logEntry = matrixChangeLogEntry({
+    targetKey: invite.key,
+    before: existing,
+    after: next,
+    action: "show-updated",
+    actor,
+    now
+  });
+  if (logEntry.changes.length) next.matrixChangeLog = matrixChangeLogWithEntry(existing, logEntry);
   await assertFeaturedGuestShowCapacity(env, { ...next, key: invite.key }, { excludeKeys: [invite.key] });
   await writeSetupJson(env, invite.key, next);
+  if (logEntry.changes.length) await writeMatrixChangeLog(env, logEntry);
   const updatedInvite = normalizeInviteCode(invite.key, next);
   await upsertContactFromInviteRecord(env, updatedInvite, `${updatedInvite.type || "guest"}-invite`, actor);
   return updatedInvite;
@@ -6742,7 +7000,17 @@ async function markManualRegistrationSourceRegistered(env, sourceInfo = {}, regi
     updatedAt: now,
     updatedBy: actor
   };
+  const logEntry = matrixChangeLogEntry({
+    targetKey: key,
+    before: existing,
+    after: next,
+    action: "manually-registered",
+    actor,
+    now
+  });
+  next.matrixChangeLog = matrixChangeLogWithEntry(existing, logEntry);
   await writeSetupJson(env, key, next);
+  await writeMatrixChangeLog(env, logEntry);
   const normalized = normalizeManualRegistrationSource(key, next, sourceInfo.type);
   await upsertContactFromInviteRecord(env, normalized, isInvite ? `${sourceInfo.type}-invite` : `${sourceInfo.type}-matrix-prospect`, actor);
   return normalized;
@@ -8264,6 +8532,7 @@ export async function onRequestGet({ request, env, data }) {
       registrationInviteCodes: registrationInviteRows,
       guestMatrixProspects: guestProspectRows,
       partnerMatrixProspects: [],
+      matrixChangeLog: await matrixChangeLog(env, "guest"),
       upcomingEvents: await upcomingEvents(env)
     });
   }
@@ -8287,6 +8556,7 @@ export async function onRequestGet({ request, env, data }) {
       guestMatrixProspects: [],
       partnerMatrixProspects: partnerProspectRows,
       partnerInfoSubmissions: partnerInfoRows,
+      matrixChangeLog: await matrixChangeLog(env, "partner"),
       upcomingEvents: await upcomingEvents(env)
     });
   }
@@ -8994,6 +9264,7 @@ export async function onRequestPost({ request, env, data }) {
         emailMessageId,
         partnerInviteCodes: [invite],
         partnerMatrixProspects: await partnerMatrixProspects(env),
+        matrixChangeLog: await matrixChangeLog(env, "partner"),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
@@ -9070,6 +9341,7 @@ export async function onRequestPost({ request, env, data }) {
         registrationInviteCodes: [invite],
         guestMatrixProspects: await guestMatrixProspects(env),
         partnerMatrixProspects: await partnerMatrixProspects(env),
+        matrixChangeLog: await matrixChangeLog(env, "guest"),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
@@ -9087,6 +9359,7 @@ export async function onRequestPost({ request, env, data }) {
         guestMatrixProspects: [prospect],
         partnerMatrixProspects: await partnerMatrixProspects(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        matrixChangeLog: await matrixChangeLog(env, "guest"),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
@@ -9104,6 +9377,7 @@ export async function onRequestPost({ request, env, data }) {
         partnerMatrixProspects: [prospect],
         partnerInviteCodes: await partnerInviteCodes(env),
         guestMatrixProspects: await guestMatrixProspects(env),
+        matrixChangeLog: await matrixChangeLog(env, "partner"),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
@@ -9122,6 +9396,7 @@ export async function onRequestPost({ request, env, data }) {
         partnerMatrixProspects: await partnerMatrixProspects(env),
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        matrixChangeLog: await matrixChangeLog(env, payload?.action === "save-partner-matrix-statuses" ? "partner" : "guest"),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -9138,7 +9413,8 @@ export async function onRequestPost({ request, env, data }) {
         ok: true,
         prospect,
         guestMatrixProspects: partnerProspect ? await guestMatrixProspects(env) : [prospect],
-        partnerMatrixProspects: partnerProspect ? [prospect] : await partnerMatrixProspects(env)
+        partnerMatrixProspects: partnerProspect ? [prospect] : await partnerMatrixProspects(env),
+        matrixChangeLog: await matrixChangeLog(env, partnerProspect ? "partner" : "guest")
       });
     } catch (error) {
       const status = /not found/i.test(error.message || "") ? 404 : 400;
@@ -9148,7 +9424,8 @@ export async function onRequestPost({ request, env, data }) {
 
   if (payload?.action === "delete-guest-matrix-prospect" || payload?.action === "delete-partner-matrix-prospect") {
     try {
-      const deleted = await deleteGuestMatrixProspect(env, payload);
+      const deleted = await deleteGuestMatrixProspect(env, payload, access.email);
+      const partnerDeleted = deleted.type === "partner-matrix-prospect";
       return json({
         ok: true,
         deleted,
@@ -9156,6 +9433,7 @@ export async function onRequestPost({ request, env, data }) {
         partnerMatrixProspects: await partnerMatrixProspects(env),
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
+        matrixChangeLog: await matrixChangeLog(env, partnerDeleted ? "partner" : "guest"),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -9165,13 +9443,16 @@ export async function onRequestPost({ request, env, data }) {
 
   if (payload?.action === "delete-registration-invite" || payload?.action === "delete-partner-invite") {
     try {
-      await deleteInviteCode(env, payload);
+      const deletedInvite = await deleteInviteCode(env, payload, access.email);
+      const deletedType = deletedInvite.matrixType || (cleanString(payload?.type) === "partner" || cleanString(payload?.key).startsWith(PARTNER_INVITE_PREFIX) ? "partner" : "guest");
       return json({
         ok: true,
+        deleted: deletedInvite.deleted,
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
         guestMatrixProspects: await guestMatrixProspects(env),
         partnerMatrixProspects: await partnerMatrixProspects(env),
+        matrixChangeLog: await matrixChangeLog(env, deletedType),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -9189,6 +9470,7 @@ export async function onRequestPost({ request, env, data }) {
         registrationInviteCodes: await registrationInviteCodes(env),
         guestMatrixProspects: await guestMatrixProspects(env),
         partnerMatrixProspects: await partnerMatrixProspects(env),
+        matrixChangeLog: await matrixChangeLog(env, invite.type === "partner" ? "partner" : "guest"),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -9214,6 +9496,7 @@ export async function onRequestPost({ request, env, data }) {
         registrationInviteCodes: await registrationInviteCodes(env),
         guestMatrixProspects: await guestMatrixProspects(env),
         partnerMatrixProspects: await partnerMatrixProspects(env),
+        matrixChangeLog: await matrixChangeLog(env, type === "partner" ? "partner" : "guest"),
         upcomingEvents: await upcomingEvents(env)
       }, { status: 201 });
     } catch (error) {
@@ -9294,13 +9577,24 @@ export async function onRequestPost({ request, env, data }) {
         const reminderSentAt = new Date().toISOString();
         const existingInvite = await readSetupJson(env, invite.key);
         if (existingInvite) {
-          await writeSetupJson(env, invite.key, {
+          const nextInvite = {
             ...existingInvite,
             registrationRequestStatus: "reminder-sent",
             reminderSentAt,
             updatedAt: reminderSentAt,
             updatedBy: access.email
+          };
+          const logEntry = matrixChangeLogEntry({
+            targetKey: invite.key,
+            before: existingInvite,
+            after: nextInvite,
+            action: "reminder-sent",
+            actor: access.email,
+            now: reminderSentAt
           });
+          nextInvite.matrixChangeLog = matrixChangeLogWithEntry(existingInvite, logEntry);
+          await writeSetupJson(env, invite.key, nextInvite);
+          if (logEntry.changes.length) await writeMatrixChangeLog(env, logEntry);
         }
       } catch (error) {
         await logGuestRegistrationEmail(env, {
@@ -9323,6 +9617,7 @@ export async function onRequestPost({ request, env, data }) {
         ...result,
         registrationInviteCodes: await registrationInviteCodes(env),
         guestMatrixProspects: await guestMatrixProspects(env),
+        matrixChangeLog: await matrixChangeLog(env, "guest"),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
@@ -9379,7 +9674,7 @@ export async function onRequestPost({ request, env, data }) {
     try {
       const key = cleanString(payload?.key, 500);
       const deleted = key.startsWith(GUEST_MATRIX_PROSPECT_PREFIX)
-        ? await deleteGuestMatrixProspect(env, payload)
+        ? await deleteGuestMatrixProspect(env, payload, access.email)
         : await deleteGuestRegistrant(env, payload, access.email);
       const rows = await guestRegistrationRows(env);
       return json({
@@ -9516,6 +9811,7 @@ export async function onRequestPost({ request, env, data }) {
         partnerInviteCodes: await partnerInviteCodes(env),
         registrationInviteCodes: await registrationInviteCodes(env),
         guestMatrixProspects: await guestMatrixProspects(env),
+        matrixChangeLog: await matrixChangeLog(env, "guest"),
         upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
