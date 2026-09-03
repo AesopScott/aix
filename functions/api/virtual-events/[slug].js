@@ -6,7 +6,8 @@ import {
 import {
   crmD1Primary,
   listCrmStorageKeys,
-  readCrmStorageJson
+  readCrmStorageJson,
+  searchCrmD1Json
 } from "../../_crm-d1.js";
 
 const jsonHeaders = {
@@ -722,17 +723,84 @@ async function contactEventRegistrants(env) {
   return grouped.flat();
 }
 
-async function contactProfileSupplements(env) {
+function normalizedPersonName(value = "") {
+  return cleanString(value, 240).toLowerCase().replace(/\s+/g, " ");
+}
+
+function contactProfileSearchTerms(registrants = []) {
+  const emails = [];
+  const names = [];
+  const linkedInUrls = [];
+
+  for (const registrant of registrants) {
+    const email = cleanString(
+      registrant.email ||
+        registrant.usedByEmail ||
+        registrant.intendedGuestEmail ||
+        registrant.invitedEmail ||
+        registrant.guestEmail,
+      240
+    ).toLowerCase();
+    const name = normalizedPersonName(
+      registrant.name ||
+        registrant.displayName ||
+        registrant.usedByName ||
+        registrant.intendedGuestName ||
+        registrant.invitedName ||
+        registrant.guestName
+    );
+    const linkedIn = cleanLinkedInProfileUrl(
+      registrant.linkedinProfileUrl ||
+        registrant.linkedInProfileUrl ||
+        registrant.linkedinUrl ||
+        registrant.linkedInUrl
+    );
+
+    if (email) emails.push(email);
+    if (name) names.push(name);
+    if (linkedIn) linkedInUrls.push(linkedIn);
+  }
+
+  return { emails, names, linkedInUrls };
+}
+
+function hasUsefulProfileSupplement(profile = {}) {
+  return Boolean(
+    publicPhotoFields(profile) ||
+      cleanString(profile.photoKey, 500) ||
+      cleanLinkedInProfileUrl(
+        profile.linkedinProfileUrl ||
+          profile.linkedInProfileUrl ||
+          profile.linkedinUrl ||
+          profile.linkedInUrl
+      ) ||
+      cleanString(profile.title, 180) ||
+      cleanString(profile.company || profile.partnerCompany, 180) ||
+      cleanString(profile.industry || profile.organizationType, 140)
+  );
+}
+
+function profileSupplementSort(a = {}, b = {}) {
+  return Number(Boolean(publicPhotoFields(b))) - Number(Boolean(publicPhotoFields(a)));
+}
+
+async function contactProfileSupplements(env, registrants = []) {
+  const d1Rows = await searchCrmD1Json(env, contactProfileSearchTerms(registrants)).catch(() => []);
+
+  if (crmD1Primary(env)) {
+    return d1Rows.filter(hasUsefulProfileSupplement).sort(profileSupplementSort);
+  }
+
   const keys = await listKeys(env, "crm:contact:");
-  const rows = await Promise.all(keys.map(async (key) => {
+  const prefixRows = await Promise.all(keys.map(async (key) => {
     const contact = await readSetupJson(env, key);
     return contact && typeof contact === "object" ? { ...contact, sourceKey: key } : null;
   }));
-  return rows.filter(Boolean);
-}
 
-function normalizedPersonName(value = "") {
-  return cleanString(value, 240).toLowerCase().replace(/\s+/g, " ");
+  return [...d1Rows, ...prefixRows]
+    .filter(Boolean)
+    .filter(hasUsefulProfileSupplement)
+    .sort(profileSupplementSort);
 }
 
 function profileMatchesRegistrant(profile = {}, registrant = {}) {
@@ -816,7 +884,6 @@ async function eventRegistrants(env, event) {
   const r2Rows = await r2Registrants(env);
   const kvRows = await kvRegistrants(env);
   const contactRows = await contactEventRegistrants(env);
-  const contactProfiles = await contactProfileSupplements(env);
   const registrants = [contactRows, r2Rows, kvRows];
   const map = new Map();
 
@@ -828,7 +895,9 @@ async function eventRegistrants(env, event) {
     map.set(key, mergeRegistrantRecords(previous, registrant, type));
   }
 
-  return [...map.values()].map((registrant) => mergeContactProfileSupplement(registrant, contactProfiles));
+  const mergedRegistrants = [...map.values()];
+  const contactProfiles = await contactProfileSupplements(env, mergedRegistrants);
+  return mergedRegistrants.map((registrant) => mergeContactProfileSupplement(registrant, contactProfiles));
 }
 
 function featuredGuestsFromRegistrants(registrants) {
