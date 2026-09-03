@@ -2758,6 +2758,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     let activeProspectingSourceFilter = "";
     const partnerCompaniesPerPage = 10;
     const guestMatrixPeoplePerEventPage = 10;
+    const crmRecordPageSize = 50;
+    let crmRecordPage = 1;
+    let crmFilterReloadTimer = 0;
     let guestMatrixEventPages = {};
     let guestMatrixDrafts = loadGuestMatrixDrafts();
     let guestMatrixPendingChanges = {};
@@ -2775,6 +2778,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       matrixChangeLog: [],
       partnerInfoSubmissions: [],
       partnerCompanyOptions: [],
+      filterOptions: { events: [], companies: [] },
+      pagination: null,
       upcomingEvents: []
     };
     let registrationDebug = null;
@@ -3913,6 +3918,35 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         url.searchParams.set("includeUpcomingEvents", "1");
         url.searchParams.set("includeManualPartners", "1");
       }
+      if (isRecordsView(view) || ["guest-matrix", "partner-matrix"].includes(view)) {
+        url.searchParams.set("page", String(crmRecordPage));
+        url.searchParams.set("pageSize", String(crmRecordPageSize));
+        const setIfActive = (name, value, inactive = "all") => {
+          const clean = String(value || "").trim();
+          if (clean && clean !== inactive) url.searchParams.set(name, clean);
+        };
+        setIfActive("status", statusFilter?.value || "all");
+        setIfActive("event", eventFilter?.value || "all");
+        setIfActive("role", roleFilter?.value || "all");
+        setIfActive("company", companyFilter?.value || "all");
+        setIfActive("phone", phoneFilter?.value || "all");
+        setIfActive("publicationOperator", publicationOperatorFilter?.value || "all");
+        setIfActive("publicationThreshold", publicationThresholdFilter?.value || "", "");
+        setIfActive("attendedOperator", attendedOperatorFilter?.value || "all");
+        setIfActive("attendedThreshold", attendedThresholdFilter?.value || "", "");
+        setIfActive("search", searchInput?.value || "", "");
+      }
+      if (["guest-matrix", "partner-matrix"].includes(view)) {
+        const setIfActive = (name, value, inactive = "all") => {
+          const clean = String(value || "").trim();
+          if (clean && clean !== inactive) url.searchParams.set(name, clean);
+        };
+        setIfActive("status", guestMatrixStatusFilter?.value || "all");
+        setIfActive("event", guestMatrixEventFilter?.value || "all");
+        setIfActive("show", guestMatrixShowFilter?.value || "all");
+        setIfActive("role", guestMatrixRoleFilter?.value || "all");
+        setIfActive("search", guestMatrixSearch?.value || "", "");
+      }
       return url.toString();
     }
 
@@ -4012,6 +4046,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         activeProspectingSourceFilter = "";
       }
       if (activeView === "partners-company" || activeView === "partner") partnerCompanyPage = 1;
+      crmRecordPage = 1;
       syncViewPanels();
       if (isRecordsView()) {
         const nextType = recordsTypeForView();
@@ -5402,6 +5437,15 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const roles = new Map();
       const intakeTypes = new Map();
       const invitationSources = new Map();
+      (Array.isArray(state.filterOptions?.events) ? state.filterOptions.events : []).forEach((event) => {
+        if (event.value && event.label) {
+          events.set(event.value, {
+            value: event.value,
+            label: event.label,
+            sortTime: event.sortTime ?? 0
+          });
+        }
+      });
       rows.forEach((row) => {
         const existingEvent = events.get(row.eventKey);
         const eventOption = {
@@ -5529,6 +5573,27 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <button class="guest-matrix-page-link" type="button" data-guest-matrix-page-event-key="${escapeHtml(eventKey || "")}" data-guest-matrix-page-number="${currentPage - 1}" ${currentPage <= 1 ? "disabled" : ""}>Previous</button>
             ${pageLinks}
             <button class="guest-matrix-page-link" type="button" data-guest-matrix-page-event-key="${escapeHtml(eventKey || "")}" data-guest-matrix-page-number="${currentPage + 1}" ${currentPage >= totalPages ? "disabled" : ""}>Next</button>
+          </div>
+        </nav>
+      `;
+    }
+
+    function renderGuestMatrixServerPagination(position = "top") {
+      const pagination = state.pagination || {};
+      const totalPages = Number(pagination.totalPages || 1);
+      if (totalPages <= 1) return "";
+      const page = Number(pagination.page || crmRecordPage || 1);
+      const pageSize = Number(pagination.pageSize || crmRecordPageSize);
+      const filteredTotal = Number(pagination.filteredTotal || 0);
+      const start = filteredTotal ? ((page - 1) * pageSize) + 1 : 0;
+      const end = Math.min(page * pageSize, filteredTotal);
+      return `
+        <nav class="guest-matrix-pagination ${position === "bottom" ? "bottom" : ""}" aria-label="${escapeHtml(matrixEntityLabelTitle())} Matrix record pages">
+          <span class="guest-matrix-page-summary">Page ${page} of ${totalPages} | showing ${start}-${end} of ${filteredTotal}</span>
+          <div class="guest-matrix-page-links">
+            <button class="guest-matrix-page-link" type="button" data-guest-matrix-server-page="${page - 1}" ${page <= 1 ? "disabled" : ""}>Previous</button>
+            <button class="guest-matrix-page-link current" type="button" disabled>${page}</button>
+            <button class="guest-matrix-page-link" type="button" data-guest-matrix-server-page="${page + 1}" ${page >= totalPages ? "disabled" : ""}>Next</button>
           </div>
         </nav>
       `;
@@ -5686,7 +5751,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (!groups.has(row.eventKey)) groups.set(row.eventKey, []);
         groups.get(row.eventKey).push(row);
       });
-      guestMatrixList.innerHTML = [...groups.values()].map((groupRows) => {
+      const serverTopPagination = renderGuestMatrixServerPagination("top");
+      const serverBottomPagination = renderGuestMatrixServerPagination("bottom");
+      guestMatrixList.innerHTML = `${serverTopPagination}${[...groups.values()].map((groupRows) => {
         const first = groupRows[0];
         const dataPrefix = matrixDataPrefix();
         const registered = groupRows.filter((row) => row.registered).length;
@@ -5819,7 +5886,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             ${bottomPagination}
           </article>
         `;
-      }).join("");
+      }).join("")}${serverBottomPagination}`;
       requestAnimationFrame(syncTableScrollProxy);
     }
 
@@ -5902,17 +5969,28 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       statusFilter.innerHTML = recordStatusFilterOptions(state.type, selectedStatus);
       if (selectedStatus !== "all" && statusFilter.value !== selectedStatus) statusFilter.value = "all";
 
-      for (const row of state.rows || []) {
-        const company = crmCompanyName(row);
-        if (company) companies.set(filterKey(company), company);
+      const serverEvents = Array.isArray(state.filterOptions?.events) ? state.filterOptions.events : [];
+      const serverCompanies = Array.isArray(state.filterOptions?.companies) ? state.filterOptions.companies : [];
+      if (serverEvents.length || serverCompanies.length) {
+        serverEvents.forEach((event) => {
+          if (event.value && event.label) events.set(event.value, { value: event.value, label: event.label, sortTime: event.sortTime ?? 0 });
+        });
+        serverCompanies.forEach((company) => {
+          if (company.value && company.label) companies.set(company.value, company.label);
+        });
+      } else {
+        for (const row of state.rows || []) {
+          const company = crmCompanyName(row);
+          if (company) companies.set(filterKey(company), company);
 
-        for (const event of rowEvents(row)) {
-          const key = actualEventKey(event);
-          const label = eventFilterDisplayLabel(event);
-          const sortTime = eventSortTimeFor(event);
-          const existingEvent = events.get(key);
-          if (key && label && (!existingEvent || sortTime < existingEvent.sortTime || label.length > existingEvent.label.length)) {
-            events.set(key, { value: key, label, sortTime });
+          for (const event of rowEvents(row)) {
+            const key = actualEventKey(event);
+            const label = eventFilterDisplayLabel(event);
+            const sortTime = eventSortTimeFor(event);
+            const existingEvent = events.get(key);
+            if (key && label && (!existingEvent || sortTime < existingEvent.sortTime || label.length > existingEvent.label.length)) {
+              events.set(key, { value: key, label, sortTime });
+            }
           }
         }
       }
@@ -7905,6 +7983,24 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }).join("");
     }
 
+    function renderCrmRecordPagination() {
+      const pagination = state.pagination || {};
+      const totalPages = Number(pagination.totalPages || 1);
+      if (!pagination || totalPages <= 1) {
+        partnerPagination.hidden = true;
+        return;
+      }
+      partnerPagination.hidden = false;
+      partnerPagePrevious.disabled = !pagination.hasPrevious;
+      partnerPageNext.disabled = !pagination.hasNext;
+      const page = Number(pagination.page || crmRecordPage || 1);
+      const pageSize = Number(pagination.pageSize || crmRecordPageSize);
+      const filteredTotal = Number(pagination.filteredTotal || 0);
+      const start = filteredTotal ? ((page - 1) * pageSize) + 1 : 0;
+      const end = Math.min(page * pageSize, filteredTotal);
+      partnerPageSummary.textContent = `Page ${page} of ${totalPages} | showing ${start}-${end} of ${filteredTotal}`;
+    }
+
     function renderRows() {
       const rows = filteredRows();
       const label = activeLabel();
@@ -7913,7 +8009,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         requestAnimationFrame(syncTableScrollProxy);
         return;
       }
-      partnerPagination.hidden = true;
+      renderCrmRecordPagination();
       registrantsTitle.textContent = state.type === "contacts" || state.type === "guest" || activeView === "partner" ? label : `${label} Registrants`;
       if (!rows.length) {
         rowsElement.innerHTML = `<tr><td colspan="8">No ${label.toLowerCase()} match the current filters.</td></tr>`;
@@ -8139,6 +8235,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.partnerMatrixProspects = state.partnerMatrixProspects || [];
         state.matrixChangeLog = state.matrixChangeLog || [];
         state.partnerInfoSubmissions = state.partnerInfoSubmissions || [];
+        state.filterOptions = state.filterOptions || { events: [], companies: [] };
+        state.pagination = state.pagination || null;
+        if (state.pagination?.page) crmRecordPage = Number(state.pagination.page) || crmRecordPage;
         if (requestedView === "partner-intake") await loadPartnerCompanyOptions();
         guestMatrixPendingChanges = {};
         updateGuestMatrixSaveButton();
@@ -8172,11 +8271,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
+    function partnerProspectingUrl(extraParams = {}) {
+      const url = new URL(api, window.location.origin);
+      url.searchParams.set("prospecting", "1");
+      url.searchParams.set("page", String(crmRecordPage));
+      url.searchParams.set("pageSize", "100");
+      if (searchInput?.value.trim()) url.searchParams.set("search", searchInput.value.trim());
+      Object.entries(extraParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, String(value));
+      });
+      return url.toString();
+    }
+
     async function loadPartnerProspecting() {
       setNotice("Loading partner prospecting...");
       render();
       try {
-        prospectingState = await fetch(`${api}?prospecting=1`).then(readJson);
+        prospectingState = await fetch(partnerProspectingUrl()).then(readJson);
         setNotice(`${prospectingState.dashboard?.companiesDiscovered || 0} partner prospect companies loaded.`, "ok");
         render();
       } catch (error) {
@@ -8198,7 +8309,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             title: options.resultTitle || "Discovery run complete",
             message: discoveryRunSummary(data)
           };
-          prospectingState = await fetch(`${api}?prospecting=1`).then(readJson);
+          prospectingState = await fetch(partnerProspectingUrl()).then(readJson);
         } else {
           prospectingState = data;
         }
@@ -8236,7 +8347,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const originalLabel = button?.textContent || "";
       const targetNewCompanies = 50;
       const perStepNewCap = 5;
-      prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
+      prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
       const sourceQueue = (prospectingState?.starterSources || [])
         .filter((source) => source.sourceId)
         .sort((a, b) => {
@@ -8285,7 +8396,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           totals.skippedExisting += Number(batch.skippedExisting || 0);
           totals.failed += Math.max(0, Number(batch.attempted || 0) - Number(batch.succeeded || 0));
           await new Promise((resolve) => setTimeout(resolve, 700));
-          prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
+          prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
           const currentCompanyCount = Number(prospectingState?.dashboard?.companiesDiscovered || prospectCompanies().length || 0);
           confirmedNewCompanies = Math.max(0, currentCompanyCount - startingCompanyCount);
           prospectingRunStatus = {
@@ -8295,7 +8406,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           render();
           if (!Number(batch.attempted || 0)) break;
         }
-        prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
+        prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
         const finalCompanyCount = Number(prospectingState?.dashboard?.companiesDiscovered || prospectCompanies().length || 0);
         confirmedNewCompanies = Math.max(0, finalCompanyCount - startingCompanyCount);
         const exhausted = confirmedNewCompanies < targetNewCompanies;
@@ -8324,7 +8435,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const originalLabel = button?.textContent || "";
       const targetCompanies = 50;
       const perStepNewCap = 5;
-      prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
+      prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
       const sourceQueue = (prospectingState?.emergingSources || [])
         .filter((source) => source.sourceId)
         .sort((a, b) => {
@@ -8374,7 +8485,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           totals.taggedExisting += Number(batch.taggedExisting || 0);
           totals.failed += Math.max(0, Number(batch.attempted || 0) - Number(batch.succeeded || 0));
           await new Promise((resolve) => setTimeout(resolve, 700));
-          prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
+          prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
           confirmedEmergingCompanies = Math.max(0, emergingCompanies().length - startingEmergingCount);
           prospectingRunStatus = {
             title: "Finding Emerging 10-100 companies",
@@ -8383,7 +8494,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           render();
           if (!Number(batch.attempted || 0)) break;
         }
-        prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
+        prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
         confirmedEmergingCompanies = Math.max(0, emergingCompanies().length - startingEmergingCount);
         const exhausted = confirmedEmergingCompanies < targetCompanies;
         prospectingRunStatus = {
@@ -8544,10 +8655,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload)
       }).then(readJson);
-      state = data;
+      if (data.rows) {
+        state = data;
+      } else if (data.record) {
+        state.rows = (state.rows || []).map((row) => row.key === key ? data.record : row);
+      }
       delete contactPendingChanges[key];
       updateContactSaveAllButton();
-      if (options.render !== false) render();
+      if (options.render !== false) {
+        if (data.refreshRequired) await loadCrm();
+        else render();
+      }
       return data;
     }
 
@@ -8566,7 +8684,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           });
           savedCount += 1;
         }
-        render();
+        await loadCrm();
         setNotice(`Saved ${savedCount} contact change${savedCount === 1 ? "" : "s"}.`, "ok");
       } catch (error) {
         showErrorNotice(error, "Contact changes could not be saved.");
@@ -8784,6 +8902,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function renderRowsFromFirstPartnerPage() {
       if (activeView === "partners-company") partnerCompanyPage = 1;
+      crmRecordPage = 1;
+      if (isRecordsView(activeView) && activeView !== "partners-company") {
+        window.clearTimeout(crmFilterReloadTimer);
+        crmFilterReloadTimer = window.setTimeout(loadCrm, 250);
+        return;
+      }
       renderRows();
     }
 
@@ -9305,7 +9429,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           }
         };
         setNotice(`Contact deleted: ${data.deleted?.email || label}`, "ok");
-        render();
+        await loadCrm();
       } catch (error) {
         showErrorNotice(error);
       }
@@ -9632,6 +9756,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       attendedThresholdFilter.value = "";
       phoneFilter.value = "all";
       searchInput.value = "";
+      crmRecordPage = 1;
+      if (isRecordsView(activeView) && activeView !== "partners-company") {
+        loadCrm();
+        setNotice(`${activeLabel()} filters cleared.`, "ok");
+        return;
+      }
       renderRows();
       setNotice(`${activeLabel()} filters cleared.`, "ok");
     });
@@ -9639,13 +9769,23 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     contactSaveAllButton?.addEventListener("click", saveAllContactChanges);
 
     partnerPagePrevious.addEventListener("click", () => {
-      partnerCompanyPage = Math.max(1, partnerCompanyPage - 1);
-      renderRows();
+      if (activeView === "partners-company") {
+        partnerCompanyPage = Math.max(1, partnerCompanyPage - 1);
+        renderRows();
+        return;
+      }
+      crmRecordPage = Math.max(1, crmRecordPage - 1);
+      loadCrm();
     });
 
     partnerPageNext.addEventListener("click", () => {
-      partnerCompanyPage += 1;
-      renderRows();
+      if (activeView === "partners-company") {
+        partnerCompanyPage += 1;
+        renderRows();
+        return;
+      }
+      crmRecordPage += 1;
+      loadCrm();
     });
 
     refreshButton.addEventListener("click", loadCrm);
@@ -9979,7 +10119,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function renderGuestMatrixFromFilterChange() {
       resetGuestMatrixPagination();
-      renderGuestMatrix();
+      crmRecordPage = 1;
+      window.clearTimeout(crmFilterReloadTimer);
+      crmFilterReloadTimer = window.setTimeout(loadCrm, 250);
     }
 
     [guestMatrixEventFilter, guestMatrixShowFilter, guestMatrixRoleFilter, guestMatrixStatusFilter, guestMatrixIntakeTypeFilter, guestMatrixInvitationSourceFilter, guestMatrixSearch].forEach((input) => {
@@ -9997,7 +10139,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (guestMatrixInvitationSourceFilter) guestMatrixInvitationSourceFilter.value = "all";
       guestMatrixSearch.value = "";
       resetGuestMatrixPagination();
-      renderGuestMatrix();
+      crmRecordPage = 1;
+      loadCrm();
       guestMatrixSearch.focus();
     });
 
@@ -10050,6 +10193,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const page = Number(pageButton.dataset.guestMatrixPageNumber || 1);
         guestMatrixEventPages[guestMatrixPageKey(eventKey)] = page;
         renderGuestMatrix();
+        return;
+      }
+      const serverPageButton = event.target.closest("[data-guest-matrix-server-page]");
+      if (serverPageButton) {
+        crmRecordPage = Math.max(1, Number(serverPageButton.dataset.guestMatrixServerPage || 1));
+        resetGuestMatrixPagination();
+        loadCrm();
         return;
       }
 
