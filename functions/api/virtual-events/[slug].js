@@ -731,11 +731,14 @@ function matrixOverlayFields(overlay = {}, registrant = {}) {
       overlay.role
   );
   const show = showFields(overlay);
+  const roleCanOverride = Boolean(role && (role.startsWith("featured-") || !isFeaturedRegistrant(registrant)));
   const next = {
     ...registrant,
     sourceKey: registrant.sourceKey,
     matrixSourceKey: overlay.sourceKey || overlay.key || registrant.matrixSourceKey,
-    lineupSourceRank: Math.max(publicLineupSourceRank(registrant), publicLineupSourceRank(overlay)),
+    lineupSourceRank: roleCanOverride
+      ? Math.max(publicLineupSourceRank(registrant), publicLineupSourceRank(overlay))
+      : publicLineupSourceRank(registrant),
     name: cleanString(overlay.name || overlay.intendedGuestName || overlay.guestName || overlay.partnerContactName, 180) || registrant.name,
     email: personEmail(overlay) || registrant.email,
     title: cleanString(overlay.title || overlay.jobTitle, 180) || registrant.title,
@@ -748,7 +751,7 @@ function matrixOverlayFields(overlay = {}, registrant = {}) {
     ) || registrant.linkedinProfileUrl
   };
 
-  if (role) {
+  if (roleCanOverride) {
     next.registrationRole = role;
     next.guestRegistrationType = role;
     next.contactEventRole = role;
@@ -766,7 +769,7 @@ function matrixOverlayFields(overlay = {}, registrant = {}) {
     }
   }
 
-  if (show) Object.assign(next, show);
+  if (show && (roleCanOverride || !showFields(registrant))) Object.assign(next, show);
   return next;
 }
 
