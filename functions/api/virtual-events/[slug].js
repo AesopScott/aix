@@ -560,6 +560,47 @@ function publicPhotoFields(record = {}) {
   };
 }
 
+function photoSourceText(photo = {}) {
+  return `${cleanString(photo.photoKey, 500)} ${cleanString(photo.photoUrl, 500)}`.toLowerCase();
+}
+
+function isContactPhoto(photo = {}) {
+  const source = photoSourceText(photo);
+  return source.includes("crm/contact-photos/") || source.includes("crm%2fcontact-photos%2f");
+}
+
+function photoRecordTimestamp(record = {}) {
+  const raw = cleanString(
+    record.photoUploadedAt ||
+      record.photoUpdatedAt ||
+      record.crmUpdatedAt ||
+      record.updatedAt ||
+      record.modifiedAt ||
+      record.createdAt ||
+      record.usedAt,
+    80
+  );
+  const timestamp = Date.parse(raw);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function preferredProfilePhotoFields(registrant = {}, profile = {}) {
+  const registrantPhoto = publicPhotoFields(registrant);
+  const profilePhoto = publicPhotoFields(profile);
+  if (!profilePhoto) return registrantPhoto;
+  if (!registrantPhoto) return profilePhoto;
+
+  if (isContactPhoto(profilePhoto) && !isContactPhoto(registrantPhoto)) {
+    const profileTimestamp = photoRecordTimestamp(profile);
+    const registrantTimestamp = photoRecordTimestamp(registrant);
+    if (profileTimestamp && (!registrantTimestamp || profileTimestamp >= registrantTimestamp)) {
+      return profilePhoto;
+    }
+  }
+
+  return registrantPhoto;
+}
+
 function featuredRoleFields(record = {}) {
   const role = cleanFeaturedRole(
     record.registrationRole ||
@@ -957,11 +998,11 @@ function mergeContactProfileSupplement(registrant = {}, profiles = []) {
   const profile = profiles.find((candidate) => profileMatchesRegistrant(candidate, registrant));
   if (!profile) return registrant;
 
-  const profilePhoto = publicPhotoFields(profile);
+  const preferredPhoto = preferredProfilePhotoFields(registrant, profile);
   return {
     ...registrant,
-    photoKey: cleanString(registrant.photoKey, 500) || cleanString(profile.photoKey, 500),
-    photoUrl: publicPhotoFields(registrant)?.photoUrl || profilePhoto?.photoUrl || cleanString(registrant.photoUrl, 500),
+    photoKey: preferredPhoto?.photoKey || cleanString(registrant.photoKey, 500) || cleanString(profile.photoKey, 500),
+    photoUrl: preferredPhoto?.photoUrl || cleanString(registrant.photoUrl, 500),
     linkedinProfileUrl: cleanLinkedInProfileUrl(
       registrant.linkedinProfileUrl ||
         registrant.linkedInProfileUrl ||
