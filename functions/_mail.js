@@ -115,10 +115,10 @@ function resendAddresses(value) {
 }
 
 export async function sendResendMail(env = {}, options = {}) {
-  const apiKey = cleanMailString(env.RESEND_API_KEY, 400);
+  const apiKey = cleanMailString(env.RESEND_API_KEY || env.MOJO_RESEND_API_KEY || env.RESEND_TOKEN, 400);
   if (!apiKey) throw new Error("Resend is not configured (missing RESEND_API_KEY).");
 
-  const sender = cleanMailString(env.MOJO_RESEND_FROM || options.sender || env.MOJO_INVITE_EMAIL_SENDER);
+  const sender = cleanMailString(options.sender || env.MOJO_RESEND_FROM || env.MOJO_INVITE_EMAIL_SENDER);
   const toRecipients = resendAddresses(options.to);
   const ccRecipients = resendAddresses(options.cc);
   const bccRecipients = resendAddresses(options.bcc);

@@ -120,6 +120,17 @@ export const DEFAULT_ACCESS_RULES = [
     domains: ["mojoaisummits.com/crm", "mojoaisummits.com/crm/*"]
   },
   {
+    id: "email",
+    kind: "page",
+    group: "Data",
+    label: "Email",
+    summary: "Internal bulk email sender for registered guest session communications.",
+    mode: "allowlist",
+    defaultGroupIds: ["mojo-team"],
+    matches: [{ exact: "/email" }, { prefix: "/email/" }],
+    domains: ["mojoaisummits.com/email", "mojoaisummits.com/email/*"]
+  },
+  {
     id: "walkthrough",
     kind: "page",
     group: "Operations",
@@ -481,6 +492,17 @@ export const DEFAULT_ACCESS_RULES = [
     defaultGroupIds: ["mojo-team"],
     matches: [{ exact: "/api/crm" }, { prefix: "/api/crm/" }],
     domains: ["mojoaisummits.com/api/crm", "mojoaisummits.com/api/crm/*"]
+  },
+  {
+    id: "api-email",
+    kind: "api",
+    group: "APIs",
+    label: "Email API",
+    summary: "Protected Resend sender for registered guest session emails.",
+    mode: "allowlist",
+    defaultGroupIds: ["mojo-team"],
+    matches: [{ exact: "/api/email" }, { prefix: "/api/email/" }],
+    domains: ["mojoaisummits.com/api/email", "mojoaisummits.com/api/email/*"]
   },
   {
     id: "api-partner-profile",
