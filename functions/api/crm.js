@@ -7864,11 +7864,14 @@ async function uploadContactPhoto(request, env, form, actor = "") {
   const photoKey = `${CONTACT_PHOTO_PREFIX}/${emailSegment}/${stamp}-${id}-${originalName}`;
   const photoUrl = `/api/crm?photo=${encodeURIComponent(photoKey)}`;
 
-  await env.MOJO_SUMMITS_STORAGE.put(photoKey, file.stream(), {
+  await env.MOJO_SUMMITS_STORAGE.put(photoKey, await file.arrayBuffer(), {
     httpMetadata: {
-      contentType: file.type || "application/octet-stream"
+      contentType: cleanString(file.type).toLowerCase() || "application/octet-stream",
+      contentDisposition: `inline; filename="${originalName}"`
     },
     customMetadata: {
+      area: "crm",
+      kind: "contact-photo",
       contactEmail: email,
       originalName: file.name,
       uploadedBy: actor || "crm",
@@ -7887,6 +7890,10 @@ async function uploadContactPhoto(request, env, form, actor = "") {
     createdAt: cleanString(existing?.createdAt) || now,
     photoUrl,
     photoKey,
+    photoOriginalName: cleanString(file.name),
+    photoContentType: cleanString(file.type).toLowerCase(),
+    photoSize: Number(file.size || 0),
+    photoUploadedAt: now,
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
   });
@@ -8848,7 +8855,7 @@ export async function onRequestPost({ request, env, data }) {
     if (!form) return json({ error: "Expected form data." }, { status: 400 });
     if (form.get("action") === "upload-contact-photo") {
       try {
-        return uploadContactPhoto(request, env, form, access.email);
+        return await uploadContactPhoto(request, env, form, access.email);
       } catch (error) {
         return json({ error: error.message || "Contact photo could not be uploaded." }, { status: 500 });
       }

@@ -8488,6 +8488,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       updateContactSaveAllButton();
     }
 
+    function updateContactPhotoUploadButton(input) {
+      const key = input?.dataset?.contactPhotoKey;
+      if (!key) return;
+      const button = rowsElement.querySelector(`[data-upload-contact-photo-key="${CSS.escape(key)}"]`);
+      if (!button) return;
+      button.textContent = input.files?.length ? "Upload Selected Photo" : "Upload Photo";
+      if (input.files?.length) {
+        setNotice("Photo selected. Click Upload Selected Photo to save it.", "ok");
+      }
+    }
+
     function contactSavePayload(key, changes = {}) {
       const existing = state.rows.find((row) => row.key === key);
       if (!existing) return null;
@@ -8652,7 +8663,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         setNotice("Contact photo uploaded.", "ok");
         render();
       } catch (error) {
-        showErrorNotice(error);
+        showErrorNotice(error, "Contact photo upload failed. The photo was not saved.");
       }
     }
 
@@ -9385,6 +9396,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     });
 
     rowsElement.addEventListener("change", (event) => {
+      if (event.target.dataset.contactPhotoKey) {
+        updateContactPhotoUploadButton(event.target);
+        return;
+      }
+
       if (state.type === "contacts" && event.target.dataset.contactKey && event.target.dataset.contactField) {
         queueContactChange(event.target);
         return;
