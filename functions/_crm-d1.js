@@ -16,6 +16,30 @@ function crmDb(env = {}) {
   return env.MOJO_SUMMITS_DB || env.mojo_ai_summits_crm || null;
 }
 
+const crmD1PerformanceIndexSql = [
+  `CREATE INDEX IF NOT EXISTS idx_crm_records_type_event_show_status_created
+    ON crm_records(record_type, event_slug, event_show_id, status, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_crm_records_type_status_updated
+    ON crm_records(record_type, status, updated_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_crm_records_type_company
+    ON crm_records(record_type, company)`,
+  `CREATE INDEX IF NOT EXISTS idx_crm_records_type_email
+    ON crm_records(record_type, email)`
+];
+
+let crmD1PerformanceIndexesPromise = null;
+
+async function ensureCrmD1PerformanceIndexes(env = {}) {
+  const db = crmDb(env);
+  if (!db?.prepare) return;
+  if (!crmD1PerformanceIndexesPromise) {
+    crmD1PerformanceIndexesPromise = Promise.all(
+      crmD1PerformanceIndexSql.map((statement) => db.prepare(statement).run().catch(() => null))
+    ).then(() => true, () => false);
+  }
+  await crmD1PerformanceIndexesPromise.catch(() => null);
+}
+
 export function crmD1Available(env = {}) {
   return Boolean(crmDb(env)?.prepare);
 }
@@ -211,6 +235,7 @@ function listWhereClause({
 export async function listCrmD1Json(env, options = {}) {
   const db = crmDb(env);
   if (!db?.prepare) return { rows: [], total: 0 };
+  await ensureCrmD1PerformanceIndexes(env);
   const limit = boundedInteger(options.limit, 100, 1, 500);
   const offset = boundedInteger(options.offset, 0, 0, 100000);
   const { where, binds } = listWhereClause(options);
@@ -245,6 +270,7 @@ export async function listCrmD1Json(env, options = {}) {
 export async function listAllCrmD1Json(env, options = {}) {
   const db = crmDb(env);
   if (!db?.prepare) return [];
+  await ensureCrmD1PerformanceIndexes(env);
   const { where, binds } = listWhereClause(options);
   const result = await db.prepare(`
     SELECT key, payload_json
