@@ -114,6 +114,158 @@ export async function listCrmD1Keys(env, prefix) {
   return (result?.results || []).map((row) => cleanString(row.key)).filter(Boolean);
 }
 
+function boundedInteger(value, fallback, min, max) {
+  const number = Number.parseInt(value, 10);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function orderByClause(sort = "updated_at", direction = "desc") {
+  const column = {
+    key: "key",
+    name: "name",
+    company: "company",
+    status: "status",
+    created_at: "created_at",
+    updated_at: "updated_at",
+    createdAt: "created_at",
+    updatedAt: "updated_at"
+  }[cleanString(sort, 40)] || "updated_at";
+  const dir = cleanString(direction, 8).toLowerCase() === "asc" ? "ASC" : "DESC";
+  return `${column} ${dir}, key ${dir}`;
+}
+
+function listWhereClause({
+  prefix = "",
+  recordTypes = [],
+  status = "",
+  eventSlug = "",
+  eventShowId = "",
+  company = "",
+  search = ""
+} = {}) {
+  const clauses = [];
+  const binds = [];
+  const cleanPrefix = cleanString(prefix, 600);
+  if (cleanPrefix) {
+    clauses.push("key >= ? AND key < ?");
+    binds.push(cleanPrefix, upperBoundForPrefix(cleanPrefix));
+  }
+
+  const types = Array.isArray(recordTypes)
+    ? recordTypes.map((value) => cleanString(value, 120)).filter(Boolean)
+    : [];
+  if (types.length) {
+    clauses.push(`record_type IN (${types.map(() => "?").join(", ")})`);
+    binds.push(...types);
+  }
+
+  const cleanStatus = cleanString(status, 120).toLowerCase();
+  if (cleanStatus && cleanStatus !== "all") {
+    clauses.push("lower(status) = ?");
+    binds.push(cleanStatus);
+  }
+
+  const cleanEventSlug = cleanString(eventSlug, 240).toLowerCase();
+  if (cleanEventSlug && cleanEventSlug !== "all") {
+    clauses.push("(lower(event_slug) = ? OR lower(event_id) = ?)");
+    binds.push(cleanEventSlug, cleanEventSlug);
+  }
+
+  const cleanShow = cleanString(eventShowId, 80).toLowerCase();
+  if (cleanShow && cleanShow !== "all") {
+    if (cleanShow === "morning" || cleanShow === "afternoon") {
+      clauses.push("(lower(event_show_id) = ? OR lower(event_show_id) = 'both')");
+      binds.push(cleanShow);
+    } else {
+      clauses.push("lower(event_show_id) = ?");
+      binds.push(cleanShow);
+    }
+  }
+
+  const cleanCompany = cleanString(company, 240).toLowerCase();
+  if (cleanCompany && cleanCompany !== "all") {
+    clauses.push("lower(company) = ?");
+    binds.push(cleanCompany);
+  }
+
+  const cleanSearch = cleanString(search, 240).toLowerCase();
+  if (cleanSearch) {
+    const pattern = `%${cleanSearch.replace(/[%_]/g, "\\$&")}%`;
+    clauses.push(`(
+      lower(name) LIKE ? ESCAPE '\\' OR
+      lower(email) LIKE ? ESCAPE '\\' OR
+      lower(company) LIKE ? ESCAPE '\\' OR
+      lower(code) LIKE ? ESCAPE '\\' OR
+      lower(linkedin_profile_url) LIKE ? ESCAPE '\\'
+    )`);
+    binds.push(pattern, pattern, pattern, pattern, pattern);
+  }
+
+  return {
+    where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
+    binds
+  };
+}
+
+export async function listCrmD1Json(env, options = {}) {
+  const db = crmDb(env);
+  if (!db?.prepare) return { rows: [], total: 0 };
+  const limit = boundedInteger(options.limit, 100, 1, 500);
+  const offset = boundedInteger(options.offset, 0, 0, 100000);
+  const { where, binds } = listWhereClause(options);
+  const totalRow = await db.prepare(`SELECT COUNT(*) AS total FROM ${crmD1Table} ${where}`)
+    .bind(...binds)
+    .first()
+    .catch(() => null);
+  const result = await db.prepare(`
+    SELECT key, payload_json
+    FROM ${crmD1Table}
+    ${where}
+    ORDER BY ${orderByClause(options.sort, options.direction)}
+    LIMIT ? OFFSET ?
+  `).bind(...binds, limit, offset).all().catch(() => null);
+
+  return {
+    total: Number(totalRow?.total || 0),
+    rows: (result?.results || []).map((row) => {
+      if (!row?.payload_json) return null;
+      try {
+        return {
+          key: cleanString(row.key, 600),
+          record: JSON.parse(row.payload_json)
+        };
+      } catch {
+        return null;
+      }
+    }).filter(Boolean)
+  };
+}
+
+export async function listAllCrmD1Json(env, options = {}) {
+  const db = crmDb(env);
+  if (!db?.prepare) return [];
+  const { where, binds } = listWhereClause(options);
+  const result = await db.prepare(`
+    SELECT key, payload_json
+    FROM ${crmD1Table}
+    ${where}
+    ORDER BY ${orderByClause(options.sort, options.direction)}
+  `).bind(...binds).all().catch(() => null);
+
+  return (result?.results || []).map((row) => {
+    if (!row?.payload_json) return null;
+    try {
+      return {
+        key: cleanString(row.key, 600),
+        record: JSON.parse(row.payload_json)
+      };
+    } catch {
+      return null;
+    }
+  }).filter(Boolean);
+}
+
 function uniqueCleanStrings(values = [], max = 500, transform = (value) => value) {
   const seen = new Set();
   const output = [];
