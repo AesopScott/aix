@@ -19,6 +19,10 @@ const kvRegistrantPrefixes = [
   ["guest", "crm:guest-registrant:"],
   ["partner", "crm:partner-registrant:"]
 ];
+const matrixProspectPrefixes = [
+  ["guest", "crm:guest-matrix-prospect:"],
+  ["partner", "crm:partner-matrix-prospect:"]
+];
 const r2RegistrantPrefixes = [
   ["member", "crm/registrations/member/"],
   ["guest", "crm/registrations/guest/"],
@@ -477,6 +481,53 @@ function registrantIdentity(type, record = {}, fallback = "") {
   return [type, email || id || fallback, eventKey].filter(Boolean).join("|");
 }
 
+function personEmail(record = {}) {
+  return cleanString(
+    record.email ||
+      record.usedByEmail ||
+      record.intendedGuestEmail ||
+      record.invitedEmail ||
+      record.guestEmail ||
+      record.partnerContactEmail,
+    240
+  ).toLowerCase();
+}
+
+function personName(record = {}) {
+  return normalizedPersonName(
+    record.name ||
+      record.displayName ||
+      record.usedByName ||
+      record.intendedGuestName ||
+      record.invitedName ||
+      record.guestName ||
+      record.partnerContactName
+  );
+}
+
+function personLinkedIn(record = {}) {
+  return cleanLinkedInProfileUrl(
+    record.linkedinProfileUrl ||
+      record.linkedInProfileUrl ||
+      record.linkedinUrl ||
+      record.linkedInUrl
+  ).toLowerCase().replace(/\/+$/, "");
+}
+
+function samePerson(left = {}, right = {}) {
+  const leftEmail = personEmail(left);
+  const rightEmail = personEmail(right);
+  if (leftEmail && rightEmail && leftEmail === rightEmail) return true;
+
+  const leftLinkedIn = personLinkedIn(left);
+  const rightLinkedIn = personLinkedIn(right);
+  if (leftLinkedIn && rightLinkedIn && leftLinkedIn === rightLinkedIn) return true;
+
+  const leftName = personName(left);
+  const rightName = personName(right);
+  return Boolean(leftName && rightName && leftName === rightName);
+}
+
 function submittedPhotoFields(record = {}) {
   const photoKey = cleanString(record.photoKey, 500);
   const photoUrl = cleanString(record.photoUrl || record.photoURL || record.photo, 500);
@@ -650,6 +701,78 @@ function mergeRegistrantRecords(previous = {}, registrant = {}, type = "guest") 
   }
 
   return next;
+}
+
+async function matrixProspectOverlays(env, event) {
+  const grouped = await Promise.all(matrixProspectPrefixes.map(async ([type, prefix]) => {
+    const keys = await listKeys(env, prefix);
+    const rows = await Promise.all(keys.map(async (key) => {
+      const record = await readSetupJson(env, key);
+      return record ? { ...record, type, sourceKey: key } : null;
+    }));
+    return rows.filter((row) => row && registrantMatchesEvent(row, event));
+  }));
+
+  return grouped.flat().sort((left, right) =>
+    cleanString(right.updatedAt || right.crmUpdatedAt || right.createdAt).localeCompare(
+      cleanString(left.updatedAt || left.crmUpdatedAt || left.createdAt)
+    )
+  );
+}
+
+function matrixOverlayFields(overlay = {}, registrant = {}) {
+  const role = cleanFeaturedRole(
+    overlay.registrationRole ||
+      overlay.guestRegistrationType ||
+      overlay.partnerRegistrationType ||
+      overlay.contactEventRole ||
+      overlay.featuredGuestLabel ||
+      overlay.strategicRole ||
+      overlay.role
+  );
+  const show = showFields(overlay);
+  const next = {
+    ...registrant,
+    sourceKey: registrant.sourceKey,
+    matrixSourceKey: overlay.sourceKey || overlay.key || registrant.matrixSourceKey,
+    lineupSourceRank: Math.max(publicLineupSourceRank(registrant), publicLineupSourceRank(overlay)),
+    name: cleanString(overlay.name || overlay.intendedGuestName || overlay.guestName || overlay.partnerContactName, 180) || registrant.name,
+    email: personEmail(overlay) || registrant.email,
+    title: cleanString(overlay.title || overlay.jobTitle, 180) || registrant.title,
+    company: cleanString(overlay.company || overlay.partnerCompany, 180) || registrant.company,
+    linkedinProfileUrl: cleanLinkedInProfileUrl(
+      overlay.linkedinProfileUrl ||
+        overlay.linkedInProfileUrl ||
+        overlay.linkedinUrl ||
+        overlay.linkedInUrl
+    ) || registrant.linkedinProfileUrl
+  };
+
+  if (role) {
+    next.registrationRole = role;
+    next.guestRegistrationType = role;
+    next.contactEventRole = role;
+    next.featuredGuestLabel = role;
+    next.role = role;
+    next.isFeaturedGuest = role === "featured-guest";
+    next.isFeaturedAuthor = role === "featured-author";
+    next.isFeaturedSponsor = role === "featured-partner" || role === "featured-sponsor";
+    next.isFeaturedPartner = role === "featured-partner" || role === "featured-sponsor";
+    if (role === "featured-partner" || role === "featured-sponsor") {
+      next.partnerRegistrationType = "featured-partner";
+      next.type = "partner";
+    } else if (registrant.type !== "partner") {
+      next.partnerRegistrationType = cleanString(registrant.partnerRegistrationType, 120);
+    }
+  }
+
+  if (show) Object.assign(next, show);
+  return next;
+}
+
+function mergeMatrixOverlay(registrant = {}, overlays = []) {
+  const overlay = overlays.find((candidate) => samePerson(candidate, registrant));
+  return overlay ? matrixOverlayFields(overlay, registrant) : registrant;
 }
 
 async function kvRegistrants(env) {
@@ -884,6 +1007,7 @@ async function eventRegistrants(env, event) {
   const r2Rows = await r2Registrants(env);
   const kvRows = await kvRegistrants(env);
   const contactRows = await contactEventRegistrants(env);
+  const matrixRows = await matrixProspectOverlays(env, event);
   const registrants = [contactRows, r2Rows, kvRows];
   const map = new Map();
 
@@ -895,7 +1019,7 @@ async function eventRegistrants(env, event) {
     map.set(key, mergeRegistrantRecords(previous, registrant, type));
   }
 
-  const mergedRegistrants = [...map.values()];
+  const mergedRegistrants = [...map.values()].map((registrant) => mergeMatrixOverlay(registrant, matrixRows));
   const contactProfiles = await contactProfileSupplements(env, mergedRegistrants);
   return mergedRegistrants.map((registrant) => mergeContactProfileSupplement(registrant, contactProfiles));
 }

@@ -5925,10 +5925,7 @@ async function updateRegistrantEventNotesForMatrixChange(env, record = {}, noteV
 
   for (const type of typeCandidates) {
     const rows = await registrants(env, type);
-    const row = rows.find((entry) =>
-      (registrationId && (entry.key === registrationId || entry.id === registrationId)) ||
-      (inviteCode && cleanCode(entry.inviteCode) === inviteCode && (!email || cleanString(entry.email).toLowerCase() === email))
-    );
+    const row = rows.find((entry) => registrationMatchesMatrixChange(entry, record, { registrationId, inviteCode, email }));
     if (!row) continue;
     const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
     await writeSetupJson(env, key, {
@@ -5981,6 +5978,45 @@ function eventShowUpdate(showValue = "", existing = {}) {
   };
 }
 
+function eventBaseKey(value = "") {
+  return cleanString(value, 240).toLowerCase().split(":")[0].split("|")[0].trim();
+}
+
+function matrixChangeEventMatchesRegistration(row = {}, record = {}) {
+  const rowSlug = eventBaseKey(row.eventSlug || row.eventId);
+  const recordSlug = eventBaseKey(record.eventSlug || record.eventId);
+  if (rowSlug && recordSlug && rowSlug === recordSlug) return true;
+
+  const rowName = cleanString(row.eventName, 240).toLowerCase();
+  const recordName = cleanString(record.eventName, 240).toLowerCase();
+  const rowDate = cleanString(row.eventDate, 120).toLowerCase();
+  const recordDate = cleanString(record.eventDate, 120).toLowerCase();
+  return Boolean(rowName && recordName && rowName === recordName && (!rowDate || !recordDate || rowDate === recordDate));
+}
+
+function matrixChangePersonMatchesRegistration(row = {}, record = {}, email = "") {
+  const targetEmail = cleanString(email || invitePersonEmail(record), 240).toLowerCase();
+  const rowEmail = cleanString(row.email || row.usedByEmail || row.intendedGuestEmail || row.invitedEmail || row.guestEmail || row.partnerContactEmail, 240).toLowerCase();
+  if (targetEmail && rowEmail && targetEmail === rowEmail) return true;
+
+  const targetLinkedIn = cleanLinkedInProfileUrl(record.linkedinProfileUrl || record.linkedInProfileUrl || record.linkedinUrl || record.linkedInUrl);
+  const rowLinkedIn = cleanLinkedInProfileUrl(row.linkedinProfileUrl || row.linkedInProfileUrl || row.linkedinUrl || row.linkedInUrl);
+  if (targetLinkedIn && rowLinkedIn && targetLinkedIn === rowLinkedIn) return true;
+
+  const targetName = guestMatrixMergeNameKey(invitePersonName(record) || record.name);
+  const rowName = guestMatrixMergeNameKey(invitePersonName(row) || row.name);
+  return Boolean(targetName.length >= 6 && rowName.length >= 6 && targetName === rowName);
+}
+
+function registrationMatchesMatrixChange(row = {}, record = {}, { registrationId = "", inviteCode = "", email = "" } = {}) {
+  if (registrationId && (row.key === registrationId || row.id === registrationId)) return true;
+  if (inviteCode && cleanCode(row.inviteCode) === inviteCode) {
+    const rowEmail = cleanString(row.email).toLowerCase();
+    return !email || !rowEmail || rowEmail === email;
+  }
+  return matrixChangeEventMatchesRegistration(row, record) && matrixChangePersonMatchesRegistration(row, record, email);
+}
+
 async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue = "", actor = "", now = new Date().toISOString()) {
   const inviteCode = cleanCode(record.code || record.inviteCode);
   const registrationId = cleanString(record.registrationId);
@@ -5991,10 +6027,7 @@ async function updateRegistrantRoleForMatrixChange(env, record = {}, roleValue =
 
   for (const type of typeCandidates) {
     const rows = await registrants(env, type);
-    const row = rows.find((entry) =>
-      (registrationId && (entry.key === registrationId || entry.id === registrationId)) ||
-      (inviteCode && cleanCode(entry.inviteCode) === inviteCode && (!email || cleanString(entry.email).toLowerCase() === email))
-    );
+    const row = rows.find((entry) => registrationMatchesMatrixChange(entry, record, { registrationId, inviteCode, email }));
     if (!row) continue;
     const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
     const roleUpdate = registrationRoleUpdate(roleValue, type, crmRow);
@@ -6030,10 +6063,7 @@ async function updateRegistrantShowForMatrixChange(env, record = {}, showValue =
 
   for (const type of typeCandidates) {
     const rows = await registrants(env, type);
-    const row = rows.find((entry) =>
-      (registrationId && (entry.key === registrationId || entry.id === registrationId)) ||
-      (inviteCode && cleanCode(entry.inviteCode) === inviteCode && (!email || cleanString(entry.email).toLowerCase() === email))
-    );
+    const row = rows.find((entry) => registrationMatchesMatrixChange(entry, record, { registrationId, inviteCode, email }));
     if (!row) continue;
     const { key, row: crmRow } = await ensureCrmRecord(env, row, type);
     const showUpdate = eventShowUpdate(showValue, { ...crmRow, ...record });
