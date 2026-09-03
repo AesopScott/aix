@@ -1284,6 +1284,59 @@
       margin-top: 0.45rem;
     }
 
+    .matrix-change-log {
+      border: 1px solid rgba(138, 181, 255, 0.22);
+      background: rgba(10, 15, 30, 0.44);
+      overflow: hidden;
+    }
+
+    .matrix-change-log-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.8rem 0.95rem;
+      border-bottom: 1px solid rgba(138, 181, 255, 0.18);
+    }
+
+    .matrix-change-log-header strong {
+      color: var(--white);
+      font-size: 0.92rem;
+    }
+
+    .matrix-change-log-header span {
+      color: var(--muted-blue);
+      font-size: 0.78rem;
+    }
+
+    .matrix-change-log-scroll {
+      max-height: 18rem;
+      overflow: auto;
+    }
+
+    .matrix-change-log table {
+      min-width: 980px;
+    }
+
+    .matrix-change-log th,
+    .matrix-change-log td {
+      padding: 0.62rem 0.75rem;
+      font-size: 0.8rem;
+      vertical-align: top;
+    }
+
+    .matrix-change-detail {
+      display: grid;
+      gap: 0.24rem;
+      min-width: 19rem;
+      max-width: 32rem;
+    }
+
+    .matrix-change-detail span {
+      color: var(--muted-blue);
+      line-height: 1.35;
+    }
+
     .partner-info-modal {
       position: fixed;
       inset: 0;
@@ -2285,6 +2338,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       </form>
       <div class="guest-matrix-summary" id="guestMatrixSummary"></div>
       <div class="invite-search-summary" id="guestMatrixSearchSummary"></div>
+      <div class="matrix-change-log" id="guestMatrixChangeLog"></div>
       <div class="guest-matrix-list" id="guestMatrixList"></div>
     </section>
 
@@ -2613,6 +2667,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     const guestMatrixRefresh = document.querySelector("#guestMatrixRefresh");
     const guestMatrixSummary = document.querySelector("#guestMatrixSummary");
     const guestMatrixSearchSummary = document.querySelector("#guestMatrixSearchSummary");
+    const guestMatrixChangeLog = document.querySelector("#guestMatrixChangeLog");
     const guestMatrixList = document.querySelector("#guestMatrixList");
     const partnerInfoModal = document.querySelector("#partnerInfoModal");
     const partnerInfoTitle = document.querySelector("#partnerInfoTitle");
@@ -2717,6 +2772,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       registrationInviteCodes: [],
       guestMatrixProspects: [],
       partnerMatrixProspects: [],
+      matrixChangeLog: [],
       partnerInfoSubmissions: [],
       partnerCompanyOptions: [],
       upcomingEvents: []
@@ -5500,6 +5556,93 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       `).join("");
     }
 
+    function matrixChangeActionLabel(action = "") {
+      const labels = {
+        created: "Created",
+        updated: "Updated",
+        "invite-created": "Invite created",
+        "converted-to-invite": "Converted to invite",
+        "invite-deleted": "Invite deleted",
+        "reminder-sent": "Reminder sent",
+        "show-updated": "Show updated",
+        deleted: "Deleted",
+        "manually-registered": "Manually registered"
+      };
+      return labels[action] || titleCaseLabel(action || "updated");
+    }
+
+    function matrixChangeValueLabel(value = "") {
+      const text = String(value || "").trim();
+      return text || "Blank";
+    }
+
+    function matrixChangeSummary(entry = {}) {
+      const changes = Array.isArray(entry.changes) ? entry.changes : [];
+      if (!changes.length) return "No field-level changes recorded";
+      const visible = changes.slice(0, 4).map((change) =>
+        `${change.label || change.field}: ${matrixChangeValueLabel(change.from)} -> ${matrixChangeValueLabel(change.to)}`
+      );
+      if (changes.length > visible.length) visible.push(`${changes.length - visible.length} more`);
+      return visible.join("; ");
+    }
+
+    function renderGuestMatrixChangeLog() {
+      if (!guestMatrixChangeLog) return;
+      const entries = (state.matrixChangeLog || [])
+        .filter((entry) => (entry.matrixType || matrixMode()) === matrixMode())
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      if (!entries.length) {
+        guestMatrixChangeLog.innerHTML = `
+          <div class="matrix-change-log-header">
+            <strong>${escapeHtml(matrixEntityLabelTitle())} Change Log</strong>
+            <span>No changes recorded yet</span>
+          </div>
+        `;
+        return;
+      }
+      guestMatrixChangeLog.innerHTML = `
+        <div class="matrix-change-log-header">
+          <strong>${escapeHtml(matrixEntityLabelTitle())} Change Log</strong>
+          <span>${entries.length} entr${entries.length === 1 ? "y" : "ies"}</span>
+        </div>
+        <div class="matrix-change-log-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Who</th>
+                <th>Action</th>
+                <th>Record</th>
+                <th>Changes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${entries.map((entry) => `
+                <tr>
+                  <td>${escapeHtml(formatDate(entry.createdAt) || entry.createdAt || "")}</td>
+                  <td>${escapeHtml(entry.actor || "crm")}</td>
+                  <td>${escapeHtml(matrixChangeActionLabel(entry.action))}</td>
+                  <td>
+                    <div class="matrix-change-detail">
+                      <strong>${escapeHtml(entry.targetName || entry.targetEmail || entry.inviteCode || entry.targetKey || "Matrix record")}</strong>
+                      ${entry.targetEmail ? `<span>${escapeHtml(entry.targetEmail)}</span>` : ""}
+                      ${entry.eventName ? `<span>${escapeHtml([entry.eventName, entry.eventDate].filter(Boolean).join(" | "))}</span>` : ""}
+                      ${entry.inviteCode ? `<code>${escapeHtml(entry.inviteCode)}</code>` : ""}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="matrix-change-detail">
+                      <span>${escapeHtml(matrixChangeSummary(entry))}</span>
+                    </div>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
     function renderGuestMatrix() {
       updateGuestMatrixAddShowOptions();
       if (guestMatrixPanel) {
@@ -5517,6 +5660,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       syncGuestMatrixEventFilter(rows);
       syncGuestMatrixStatusFilter();
       renderGuestMatrixSummary(rows);
+      renderGuestMatrixChangeLog();
       const filtered = filteredGuestMatrixRows(rows);
       if (guestMatrixSearchSummary) {
         guestMatrixSearchSummary.textContent = rows.length
@@ -5993,6 +6137,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           registrationInviteCodes: data.registrationInviteCodes || state.registrationInviteCodes || [],
           guestMatrixProspects: data.guestMatrixProspects || state.guestMatrixProspects || [],
           partnerMatrixProspects: data.partnerMatrixProspects || state.partnerMatrixProspects || [],
+          matrixChangeLog: data.matrixChangeLog || state.matrixChangeLog || [],
           partnerInfoSubmissions: data.partnerInfoSubmissions || state.partnerInfoSubmissions || [],
           upcomingEvents: data.upcomingEvents || state.upcomingEvents || []
         };
@@ -7964,6 +8109,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         registrationInviteCodes: guestMatrixDemoInvites,
         guestMatrixProspects: [],
         partnerMatrixProspects: [],
+        matrixChangeLog: [],
         partnerInfoSubmissions: [],
         upcomingEvents: fallbackMojoEvents
       };
@@ -7991,6 +8137,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.registrationInviteCodes = state.registrationInviteCodes || [];
         state.guestMatrixProspects = state.guestMatrixProspects || [];
         state.partnerMatrixProspects = state.partnerMatrixProspects || [];
+        state.matrixChangeLog = state.matrixChangeLog || [];
         state.partnerInfoSubmissions = state.partnerInfoSubmissions || [];
         if (requestedView === "partner-intake") await loadPartnerCompanyOptions();
         guestMatrixPendingChanges = {};
@@ -8687,6 +8834,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
         state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
+        state.partnerMatrixProspects = data.partnerMatrixProspects || state.partnerMatrixProspects || [];
+        state.matrixChangeLog = data.matrixChangeLog || state.matrixChangeLog || [];
         renderRegistrationInvites();
         renderGuestMatrix();
         renderPartnerInvites();
@@ -8725,6 +8874,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
         state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
         state.partnerMatrixProspects = data.partnerMatrixProspects || state.partnerMatrixProspects || [];
+        state.matrixChangeLog = data.matrixChangeLog || state.matrixChangeLog || [];
         renderRegistrationInvites();
         renderGuestMatrix();
         setNotice("Invite show time updated.", "ok");
@@ -8899,6 +9049,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
         state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
         state.partnerMatrixProspects = data.partnerMatrixProspects || state.partnerMatrixProspects || [];
+        state.matrixChangeLog = data.matrixChangeLog || state.matrixChangeLog || [];
         guestMatrixPendingChanges = {};
         renderGuestMatrix();
         updateGuestMatrixSaveButton();
@@ -8979,6 +9130,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
         }
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.matrixChangeLog = data.matrixChangeLog || state.matrixChangeLog || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         const keepEvent = guestMatrixAddEvent.value;
         guestMatrixAddForm.reset();
@@ -9014,6 +9166,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.partnerMatrixProspects = data.partnerMatrixProspects || state.partnerMatrixProspects || [];
         state.partnerInviteCodes = data.partnerInviteCodes || state.partnerInviteCodes || [];
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
+        state.matrixChangeLog = data.matrixChangeLog || state.matrixChangeLog || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         delete guestMatrixDrafts[key];
         saveGuestMatrixDrafts();
@@ -9102,6 +9255,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }).then(readJson);
         state.registrationInviteCodes = data.registrationInviteCodes || state.registrationInviteCodes || [];
         state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
+        state.matrixChangeLog = data.matrixChangeLog || state.matrixChangeLog || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         renderRegistrationInvites();
         renderGuestMatrix();
@@ -10062,6 +10216,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }).then(readJson);
         state.partnerInviteCodes = mergeInviteList(state.partnerInviteCodes, data.partnerInviteCodes || (data.invite ? [data.invite] : []));
         state.partnerMatrixProspects = data.partnerMatrixProspects || state.partnerMatrixProspects || [];
+        state.matrixChangeLog = data.matrixChangeLog || state.matrixChangeLog || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         renderPartnerInvites();
         renderGuestMatrix();
@@ -10153,6 +10308,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           body: JSON.stringify(payload)
         }).then(readJson);
         state.registrationInviteCodes = mergeInviteList(state.registrationInviteCodes, data.registrationInviteCodes || (data.invite ? [data.invite] : []));
+        state.guestMatrixProspects = data.guestMatrixProspects || state.guestMatrixProspects || [];
+        state.matrixChangeLog = data.matrixChangeLog || state.matrixChangeLog || [];
         state.upcomingEvents = data.upcomingEvents || state.upcomingEvents || [];
         renderEventOptions();
         renderRegistrationInvites();
