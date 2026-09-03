@@ -36,11 +36,19 @@ const registrationIndexCacheMaxStaleMs = 24 * 60 * 60 * 1000;
 const additionalNoticeKey = "sms:notifications:last-additional-event-notice";
 const additionalNoticeCooldownMs = 30 * 24 * 60 * 60 * 1000;
 const encoder = new TextEncoder();
-const replyTestRecipients = [
-  { name: "Scott", phone: "+17192446690", role: "SMS reply test" },
-  { name: "Angel", phone: "+12142328324", role: "SMS reply test" },
-  { name: "Miller", phone: "+19728049401", role: "SMS reply test" }
+const staffSmsRecipients = [
+  { name: "Scott", phone: "+17192446690" },
+  { name: "Angel", phone: "+12142328324" },
+  { name: "Miller", phone: "+19728049401" }
 ];
+const replyTestRecipients = staffSmsRecipients.map((recipient) => ({
+  ...recipient,
+  role: "SMS reply test"
+}));
+const eventReminderStaffRecipients = staffSmsRecipients.map((recipient) => ({
+  ...recipient,
+  role: "Staff event reminder copy"
+}));
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -553,6 +561,18 @@ function collectEventRecipientsFromRegistrations(registrations, eventKey) {
       eventName: registration.eventName,
       registeredAt: registration.registeredAt
     });
+  }
+  if (map.size) {
+    const selectedEvent = selectedRegistrations.find((registration) => registration.eventName || registration.eventKey) || {};
+    for (const recipient of eventReminderStaffRecipients) {
+      addRecipient(map, recipient.phone, {
+        source: "event-reminder-staff-copy",
+        name: recipient.name,
+        role: recipient.role,
+        eventKey: selectedEvent.eventKey || eventKey,
+        eventName: selectedEvent.eventName
+      });
+    }
   }
   return [...map.values()].sort((a, b) => String(a.name || a.email || a.maskedPhone).localeCompare(String(b.name || b.email || b.maskedPhone)));
 }
