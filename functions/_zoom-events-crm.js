@@ -4,7 +4,7 @@ const zoomEventsConfigKey = "crm:zoom-events-config";
 const zoomEventsApiBase = "https://api.zoom.us/v2";
 const zoomEventsTokenUrl = "https://zoom.us/oauth/token";
 const defaultRegistrationSource = "Mojo CRM";
-const syncVersion = "2026-09-03.3";
+const syncVersion = "2026-09-04.1";
 const featuredRoles = new Set(["featured-guest", "featured-author", "featured-partner"]);
 const staffRoles = new Set(["staff", "host", "co-host", "cohost", "alternative-host", "moderator", "producer"]);
 let cachedAccessToken = null;
@@ -61,19 +61,25 @@ function cleanRole(value) {
 }
 
 function registrationRole(record = {}, type = "") {
-  if (cleanBoolean(record.isFeaturedSponsor)) return "featured-partner";
-  if (cleanBoolean(record.isFeaturedPartner)) return "featured-partner";
-  if (cleanBoolean(record.isFeaturedAuthor)) return "featured-author";
-  if (cleanBoolean(record.isFeaturedGuest)) return "featured-guest";
-  const role = cleanRole(
+  const explicitRaw = cleanString(
     record.zoomEventsRole ||
       record.staffRole ||
       record.registrationRole ||
       record.partnerRegistrationType ||
       record.guestRegistrationType ||
-      record.role ||
-      type
+      record.role,
+    120
   );
+  if (explicitRaw) {
+    const role = cleanRole(explicitRaw);
+    if (type === "partner" && role === "guest") return "partner";
+    return role || "guest";
+  }
+  if (cleanBoolean(record.isFeaturedSponsor)) return "featured-partner";
+  if (cleanBoolean(record.isFeaturedPartner)) return "featured-partner";
+  if (cleanBoolean(record.isFeaturedAuthor)) return "featured-author";
+  if (cleanBoolean(record.isFeaturedGuest)) return "featured-guest";
+  const role = cleanRole(type);
   if (type === "partner" && role === "guest") return "partner";
   return role || "guest";
 }
@@ -375,7 +381,10 @@ export function zoomEventsRegistrationFingerprint(record = {}, type = "", target
 
 function externalTicketId(record = {}, target = {}) {
   const existing = cleanString(record.zoomEventsSync?.externalTicketId, 240);
-  if (existing) return existing;
+  const previousKind = cleanString(record.zoomEventsSync?.role, 120);
+  const previousShowId = cleanEventShowId(record.zoomEventsSync?.eventShowId, "");
+  const previousSlug = cleanString(record.zoomEventsSync?.eventSlug, 180);
+  if (existing && previousKind === target.kind && previousShowId === target.showId && previousSlug === target.slug) return existing;
   return alphanumericId(`mojo-${target.slug}-${target.showId}-${target.kind}-${target.email}-${record.id || record.registrationId || ""}`, "mojocrm");
 }
 
@@ -451,6 +460,7 @@ function failedState(record = {}, target = {}, error) {
 }
 
 function successState(record = {}, target = {}, details = {}) {
+  const isSpeakerPanelist = target.kind === "speaker-panelist";
   return syncState(record, {
     status: "synced",
     synced: true,
@@ -464,7 +474,7 @@ function successState(record = {}, target = {}, details = {}) {
     externalTicketId: details.externalTicketId || record.zoomEventsSync?.externalTicketId || "",
     ticketId: details.ticketId || record.zoomEventsSync?.ticketId || "",
     ticketRoleType: details.ticketRoleType || record.zoomEventsSync?.ticketRoleType || "",
-    speakerId: details.speakerId || record.zoomEventsSync?.speakerId || "",
+    speakerId: isSpeakerPanelist ? details.speakerId || record.zoomEventsSync?.speakerId || "" : "",
     eventJoinLink: details.eventJoinLink || record.zoomEventsSync?.eventJoinLink || "",
     eventRegistrationLink: details.eventRegistrationLink || record.zoomEventsSync?.eventRegistrationLink || "",
     syncedAt: new Date().toISOString(),
@@ -556,12 +566,13 @@ function ticketPayload(record = {}, target = {}, config = {}, externalId = "") {
   const defaults = config.defaults || {};
   const names = splitName(personName(record, target.email));
   const includeSessionIds = shouldIncludeSessionIds(target, defaults);
+  const fastJoin = target.showConfig?.fastJoin ?? defaults.fastJoin ?? !cleanBoolean(target.showConfig?.registrationNeeded ?? defaults.registrationNeeded);
   const ticket = {
     email: target.email,
     ticket_type_id: target.ticketTypeId,
     external_ticket_id: externalId,
     send_notification: cleanBoolean(target.showConfig?.sendNotification ?? defaults.sendNotification),
-    fast_join: cleanBoolean(target.showConfig?.fastJoin ?? defaults.fastJoin),
+    fast_join: cleanBoolean(fastJoin),
     registration_needed: cleanBoolean(target.showConfig?.registrationNeeded ?? defaults.registrationNeeded),
     authentication_method: cleanString(target.showConfig?.authenticationMethod || defaults.authenticationMethod || "zoom_account", 80),
     security_code_at_join: cleanBoolean(target.showConfig?.securityCodeAtJoin ?? defaults.securityCodeAtJoin),
@@ -653,6 +664,96 @@ async function ensureTicket(env, record = {}, target = {}, config = {}) {
 async function findSpeakerByEmail(env, target = {}) {
   const speakers = await listZoomEventsPages(env, `/zoom_events/events/${encodeURIComponent(target.zoomEventId)}/speakers`, "speakers");
   return speakers.find((speaker) => cleanString(speaker.email).toLowerCase() === target.email) || null;
+}
+
+function zoomEventsTicketId(ticket = {}) {
+  return cleanString(ticket.ticket_id || ticket.ticketId || ticket.id, 240);
+}
+
+function zoomEventsSpeakerId(speaker = {}) {
+  return cleanString(speaker.speaker_id || speaker.speakerId || speaker.id, 240);
+}
+
+function zoomEventsTicketRole(ticket = {}) {
+  return cleanString(ticket.ticket_role_type || ticket.ticketRoleType || ticket.role_type || ticket.role, 120).toLowerCase();
+}
+
+async function deleteZoomEventsTicket(env, target = {}, ticket = {}) {
+  const ticketId = zoomEventsTicketId(ticket);
+  if (!ticketId) return false;
+  await zoomEventsRequest(env, `/zoom_events/events/${encodeURIComponent(target.zoomEventId)}/tickets/${encodeURIComponent(ticketId)}`, {
+    method: "DELETE"
+  });
+  return true;
+}
+
+function removeEmailFromList(list = [], email = "") {
+  const targetEmail = cleanString(email).toLowerCase();
+  return (Array.isArray(list) ? list : [])
+    .map((entry) => cleanString(entry?.email || entry?.emailAddress || entry).toLowerCase())
+    .filter((entry) => entry && entry !== targetEmail);
+}
+
+async function removeSpeakerFromSessions(env, target = {}, speakerId = "") {
+  const cleanSpeakerId = cleanString(speakerId, 240);
+  if (!cleanSpeakerId && !target.email) return 0;
+  const sessions = await listZoomEventsPages(env, `/zoom_events/events/${encodeURIComponent(target.zoomEventId)}/sessions`, "sessions");
+  let updated = 0;
+  for (const row of sessions) {
+    const sessionId = cleanString(row.session_id || row.id, 240);
+    if (!sessionId) continue;
+    const session = await zoomEventsRequest(env, `/zoom_events/events/${encodeURIComponent(target.zoomEventId)}/sessions/${encodeURIComponent(sessionId)}`).catch(() => ({}));
+    const sessionSpeakers = Array.isArray(session.session_speakers) ? session.session_speakers : [];
+    const nextSessionSpeakers = sessionSpeakers.filter((entry) => cleanString(entry?.speaker_id, 240) !== cleanSpeakerId);
+    const nextPanelists = removeEmailFromList(session.panelist || session.panelists, target.email);
+    const nextAlternativeHosts = removeEmailFromList(session.alternative_host || session.alternative_hosts, target.email);
+    const changed = nextSessionSpeakers.length !== sessionSpeakers.length ||
+      nextPanelists.length !== removeEmailFromList(session.panelist || session.panelists).length ||
+      nextAlternativeHosts.length !== removeEmailFromList(session.alternative_host || session.alternative_hosts).length;
+    if (!changed) continue;
+    await zoomEventsRequest(env, `/zoom_events/events/${encodeURIComponent(target.zoomEventId)}/sessions/${encodeURIComponent(sessionId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        session_speakers: nextSessionSpeakers,
+        panelist: nextPanelists,
+        alternative_host: nextAlternativeHosts
+      })
+    });
+    updated += 1;
+  }
+  return updated;
+}
+
+async function deleteZoomEventsSpeaker(env, target = {}, speaker = {}) {
+  const speakerId = zoomEventsSpeakerId(speaker);
+  if (!speakerId) return false;
+  await zoomEventsRequest(env, `/zoom_events/events/${encodeURIComponent(target.zoomEventId)}/speakers/${encodeURIComponent(speakerId)}`, {
+    method: "DELETE"
+  });
+  return true;
+}
+
+async function cleanupSpeakerPanelistArtifacts(env, target = {}) {
+  if (target.kind !== "attendee") return {};
+  const tickets = await listZoomEventsPages(env, `/zoom_events/events/${encodeURIComponent(target.zoomEventId)}/tickets`, "tickets").catch(() => []);
+  const specialTickets = tickets.filter((ticket) =>
+    cleanString(ticket.email).toLowerCase() === target.email &&
+    ["speaker", "panelist", "alternative_host", "host", "moderator", "moderator_allhost"].includes(zoomEventsTicketRole(ticket))
+  );
+  for (const ticket of specialTickets) {
+    await deleteZoomEventsTicket(env, target, ticket);
+  }
+
+  const speaker = await findSpeakerByEmail(env, target).catch(() => null);
+  const speakerId = zoomEventsSpeakerId(speaker);
+  const updatedSessions = speakerId ? await removeSpeakerFromSessions(env, target, speakerId) : 0;
+  const deletedSpeaker = speakerId ? await deleteZoomEventsSpeaker(env, target, speaker) : false;
+
+  return {
+    deletedSpecialTickets: specialTickets.length,
+    updatedSessions,
+    deletedSpeaker
+  };
 }
 
 async function ensureSpeaker(env, record = {}, target = {}) {
@@ -761,6 +862,7 @@ export async function syncZoomEventsRegistrationRecord(env, type = "guest", reco
     if (target.kind === "staff") {
       await ensureSessionParticipant(env, target, "");
     } else {
+      await cleanupSpeakerPanelistArtifacts(env, target);
       details = await ensureTicket(env, record, target, config);
       if (target.kind === "speaker-panelist") {
         const speaker = await ensureSpeaker(env, record, target);
