@@ -1,4 +1,5 @@
 const sep4BackgroundBaseUrl = "/assets/images/backgrounds/sep-4-guests";
+const sep4BackgroundAssetVersion = "0.1.239";
 
 const sep4EventSlug = "ai-executive-readiness";
 
@@ -69,7 +70,7 @@ function directBackgroundUrl(record = {}) {
 }
 
 function backgroundUrl(fileName) {
-  return fileName ? `${sep4BackgroundBaseUrl}/${encodeURIComponent(fileName)}` : "";
+  return fileName ? `${sep4BackgroundBaseUrl}/${encodeURIComponent(fileName)}?v=${sep4BackgroundAssetVersion}` : "";
 }
 
 function slugify(value = "") {
