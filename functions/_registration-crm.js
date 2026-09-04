@@ -10,6 +10,7 @@ import {
 } from "./_crm-d1.js";
 import { zoomKey } from "./_virtual-events.js";
 import { syncZoomEventsRegistrationRecord } from "./_zoom-events-crm.js";
+import { backgroundForInviteRecord } from "./_sep4-backgrounds.js";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -766,6 +767,7 @@ async function writeRegistrationDebug(env, type, status, details = {}) {
 
 function inviteMeta(inviteRecord) {
   const record = inviteRecord?.record || {};
+  const background = backgroundForInviteRecord(inviteRecord);
   return {
     eventId: cleanString(record.eventId || record.eventSlug || record.eventName),
     eventSlug: cleanString(record.eventSlug),
@@ -791,6 +793,8 @@ function inviteMeta(inviteRecord) {
     isFeaturedGuest: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "featured-guest",
     isFeaturedAuthor: cleanGuestRegistrationType(record.guestRegistrationType || record.registrationRole) === "featured-author",
     isFeaturedPartner: cleanGuestRegistrationType(record.partnerRegistrationType || record.registrationRole) === "featured-partner",
+    backgroundUrl: background?.url || "",
+    backgroundFileName: background?.fileName || "",
     partnerCompany: cleanString(record.partnerCompany),
     partnerContactEmail: cleanString(record.partnerContactEmail).toLowerCase(),
     partnerTier: cleanString(record.partnerTier)
