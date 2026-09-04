@@ -9,6 +9,7 @@ import {
   readCrmStorageJson,
   searchCrmD1Json
 } from "../../_crm-d1.js";
+import { backgroundForRegistrant } from "../../_sep4-backgrounds.js";
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -445,6 +446,7 @@ function publicFeaturedGuest(registrant, type) {
       registrant?.linkedInUrl
   );
   const industry = cleanString(registrant?.industry || registrant?.organizationType, 140);
+  const background = backgroundForRegistrant(registrant);
 
   return {
     type,
@@ -460,6 +462,8 @@ function publicFeaturedGuest(registrant, type) {
     eventShowId: registrantShowId(registrant),
     eventShowLabel: eventShowLabel(registrantShowId(registrant)),
     eventShowTime: eventShowTime(registrantShowId(registrant)),
+    backgroundUrl: background?.url || "",
+    backgroundFileName: background?.fileName || "",
     lineupSourceRank: publicLineupSourceRank(registrant),
     roleLabel: cleanString(
       registrant?.featuredGuestLabel ||
@@ -481,6 +485,7 @@ function publicRegisteredGuest(registrant, type) {
   const title = cleanString(registrant?.title, 180);
   const company = canUseCompany ? cleanString(registrant?.company || registrant?.partnerCompany, 180) : "";
   const industry = cleanString(registrant?.industry || registrant?.organizationType, 140);
+  const background = backgroundForRegistrant(registrant);
 
   return {
     type,
@@ -491,6 +496,8 @@ function publicRegisteredGuest(registrant, type) {
     companyAllowed: canUseCompany,
     title,
     industry,
+    backgroundUrl: background?.url || "",
+    backgroundFileName: background?.fileName || "",
     restricted: !company
   };
 }
