@@ -123,6 +123,60 @@ function registrationRole(record = {}, type = "") {
   return cleanRole(record.registrationRole || record.guestRegistrationType || type);
 }
 
+function cleanEventShowId(value, fallback = "") {
+  const normalized = cleanString(value, 80).toLowerCase();
+  const compact = normalized.replace(/[^a-z0-9]/g, "");
+  if (normalized.includes("morning") || compact.includes("10am") || compact.includes("1000am") || compact === "10") return "morning";
+  if (normalized.includes("afternoon") || compact.includes("1pm") || compact.includes("100pm") || compact.includes("1300") || compact === "1" || compact === "13") return "afternoon";
+  if (["am", "10", "10am", "1000", "1000am"].includes(compact)) return "morning";
+  if (["pm", "1", "1pm", "100", "100pm", "1300"].includes(compact)) return "afternoon";
+  if (["both", "all", "bothshows", "allsessions"].includes(compact)) return "both";
+  return fallback;
+}
+
+function eventShowLabel(showId) {
+  return {
+    morning: "Morning show",
+    afternoon: "Afternoon show",
+    both: "Both shows"
+  }[cleanEventShowId(showId)] || "";
+}
+
+function eventShowTime(showId) {
+  return {
+    morning: "10:00 am - 11:30 am CT",
+    afternoon: "1:00 pm - 2:30 pm CT",
+    both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
+  }[cleanEventShowId(showId)] || "";
+}
+
+function eventShowFromTime(value = "") {
+  const time = cleanString(value, 160).toLowerCase();
+  if (/\b10(?::00)?\s*(a\.?m\.?|am)?\b/.test(time)) return "morning";
+  if (/\b1(?::00)?\s*(p\.?m\.?|pm)\b/.test(time) || /\b13:00\b/.test(time)) return "afternoon";
+  return "";
+}
+
+function registrationShowId(record = {}) {
+  const explicit = cleanEventShowId(record.eventShowId || record.showId || record.eventShow || record.show, "");
+  if (explicit) return explicit;
+  const eventIdShow = cleanEventShowId(cleanString(record.eventId, 240).split(":").pop(), "");
+  if (eventIdShow) return eventIdShow;
+  return eventShowFromTime(record.eventTime || record.eventShowTime || record.sessionTime);
+}
+
+function registrationSessionKeys(registration = {}) {
+  const showId = cleanEventShowId(registration.eventShowId, "");
+  if (showId === "both") return ["morning", "afternoon"];
+  return showId ? [showId] : [];
+}
+
+function registrationMatchesSession(registration = {}, sessionKey = "") {
+  const selected = cleanEventShowId(sessionKey, "");
+  if (!selected) return true;
+  return registrationSessionKeys(registration).includes(selected);
+}
+
 function isPlaceholderEventValue(value) {
   const normalized = cleanString(value, 240).toLowerCase();
   return !normalized || normalized === "unassigned event" || normalized === "unassigned-event";
@@ -336,6 +390,9 @@ function sameNotificationTarget(record = {}, criteria = {}) {
   if (notificationType(criteria.type) === "event-reminder" && cleanString(record.eventKey, 240) !== cleanString(criteria.eventKey, 240)) {
     return false;
   }
+  if (notificationType(criteria.type) === "event-reminder" && cleanEventShowId(record.sessionKey, "") !== cleanEventShowId(criteria.sessionKey, "")) {
+    return false;
+  }
   return cleanString(record.message, 1300) === cleanString(criteria.message, 1300);
 }
 
@@ -415,6 +472,8 @@ function addRecipient(map, phone, details = {}) {
     role: cleanString(previous.role || details.role, 120),
     eventKey: cleanString(previous.eventKey || details.eventKey, 240),
     eventName: cleanString(previous.eventName || details.eventName, 240),
+    eventShowId: cleanEventShowId(previous.eventShowId || details.eventShowId, ""),
+    eventShowLabel: cleanString(previous.eventShowLabel || details.eventShowLabel, 120),
     registeredAt: cleanString(previous.registeredAt || details.registeredAt, 120)
   });
 }
@@ -426,6 +485,7 @@ function normalizeRegistration(key, record = {}, source = "") {
       ? "member"
       : "guest";
   const eventKey = normalizeEventKey(record);
+  const eventShowId = registrationShowId(record);
   return {
     key,
     id: cleanString(record.id || key, 240),
@@ -443,6 +503,16 @@ function normalizeRegistration(key, record = {}, source = "") {
     eventKey,
     eventName: eventLabel(record),
     eventDate: cleanString(record.eventDate, 120),
+    eventShowId,
+    eventShowLabel: eventShowLabel(eventShowId),
+    eventShowTime: eventShowTime(eventShowId),
+    zoomSessionId: cleanString(
+      record.zoomEventsSessionId ||
+        record.zoomSessionId ||
+        record.zoomEventsSync?.zoomSessionId ||
+        record.zoomEventsSync?.sessionId,
+      240
+    ),
     role: registrationRole(record, type),
     registeredAt: cleanString(record.createdAt || record.registeredAt || record.updatedAt, 120)
   };
@@ -541,10 +611,13 @@ async function collectRegistrationsCached(env) {
   };
 }
 
-function registrationsForEvent(registrations, eventKey) {
+function registrationsForEvent(registrations, eventKey, sessionKey = "") {
   const selectedEventKey = cleanString(eventKey, 240);
   if (!selectedEventKey) return [];
-  return registrations.filter((registration) => registration.eventKey === selectedEventKey);
+  return registrations.filter((registration) =>
+    registration.eventKey === selectedEventKey &&
+    registrationMatchesSession(registration, sessionKey)
+  );
 }
 
 function eventSummaries(registrations) {
@@ -557,7 +630,8 @@ function eventSummaries(registrations) {
       eventDate: registration.eventDate,
       registeredCount: 0,
       verifiedPhoneCount: 0,
-      latestRegisteredAt: ""
+      latestRegisteredAt: "",
+      sessions: []
     };
     previous.registeredCount += 1;
     if (registration.phoneVerificationStatus === "verified" && isLikelyPhone(registration.phone)) {
@@ -565,6 +639,27 @@ function eventSummaries(registrations) {
     }
     if (registration.registeredAt > previous.latestRegisteredAt) previous.latestRegisteredAt = registration.registeredAt;
     if (!previous.eventDate && registration.eventDate) previous.eventDate = registration.eventDate;
+    for (const sessionKey of registrationSessionKeys(registration)) {
+      let session = previous.sessions.find((entry) => entry.sessionKey === sessionKey);
+      if (!session) {
+        session = {
+          sessionKey,
+          sessionName: eventShowLabel(sessionKey),
+          sessionTime: eventShowTime(sessionKey),
+          registeredCount: 0,
+          verifiedPhoneCount: 0
+        };
+        previous.sessions.push(session);
+      }
+      session.registeredCount += 1;
+      if (registration.phoneVerificationStatus === "verified" && isLikelyPhone(registration.phone)) {
+        session.verifiedPhoneCount += 1;
+      }
+    }
+    previous.sessions.sort((a, b) => {
+      const order = { morning: 1, afternoon: 2 };
+      return (order[a.sessionKey] || 99) - (order[b.sessionKey] || 99);
+    });
     map.set(registration.eventKey, previous);
   }
   return [...map.values()].sort((a, b) => {
@@ -663,8 +758,8 @@ async function collectVerifiedRecipients(env) {
   return [...map.values()].sort((a, b) => String(b.lastVerifiedAt).localeCompare(String(a.lastVerifiedAt)));
 }
 
-function collectEventRecipientsFromRegistrations(registrations, eventKey) {
-  const selectedRegistrations = registrationsForEvent(registrations, eventKey);
+function collectEventRecipientsFromRegistrations(registrations, eventKey, sessionKey = "") {
+  const selectedRegistrations = registrationsForEvent(registrations, eventKey, sessionKey);
   const map = new Map();
   for (const registration of selectedRegistrations) {
     if (registration.phoneVerificationStatus !== "verified") continue;
@@ -678,6 +773,8 @@ function collectEventRecipientsFromRegistrations(registrations, eventKey) {
       role: registration.role,
       eventKey: registration.eventKey,
       eventName: registration.eventName,
+      eventShowId: registration.eventShowId,
+      eventShowLabel: registration.eventShowLabel,
       registeredAt: registration.registeredAt
     });
   }
@@ -689,16 +786,18 @@ function collectEventRecipientsFromRegistrations(registrations, eventKey) {
         name: recipient.name,
         role: recipient.role,
         eventKey: selectedEvent.eventKey || eventKey,
-        eventName: selectedEvent.eventName
+        eventName: selectedEvent.eventName,
+        eventShowId: cleanEventShowId(sessionKey, ""),
+        eventShowLabel: eventShowLabel(sessionKey)
       });
     }
   }
   return [...map.values()].sort((a, b) => String(a.name || a.email || a.maskedPhone).localeCompare(String(b.name || b.email || b.maskedPhone)));
 }
 
-async function collectEventRecipients(env, eventKey) {
+async function collectEventRecipients(env, eventKey, sessionKey = "") {
   const { registrations } = await collectRegistrationsCached(env);
-  return collectEventRecipientsFromRegistrations(registrations, eventKey);
+  return collectEventRecipientsFromRegistrations(registrations, eventKey, sessionKey);
 }
 
 function collectReplyTestRecipients() {
@@ -733,6 +832,7 @@ async function sendNotification(env, payload, actor) {
   const type = notificationType(payload?.type);
   const retryFailedOnly = payload?.retryFailedOnly === true || cleanString(payload?.sendMode, 80) === "retry-failed-only";
   const eventKey = cleanString(payload?.eventKey, 240);
+  const sessionKey = cleanEventShowId(payload?.sessionKey, "");
   if (type === "event-reminder" && !eventKey) {
     throw new Error("Select an event before sending an upcoming event reminder.");
   }
@@ -750,12 +850,12 @@ async function sendNotification(env, payload, actor) {
   const recipients = type === "reply-test"
     ? collectReplyTestRecipients()
     : type === "event-reminder"
-      ? await collectEventRecipients(env, eventKey)
+      ? await collectEventRecipients(env, eventKey, sessionKey)
       : await collectVerifiedRecipients(env);
   if (!recipients.length) throw new Error("No verified phone numbers are available.");
 
   const retryFilter = retryFailedOnly
-    ? await filterPreviouslySentRecipients(env, recipients, { type, eventKey, message })
+    ? await filterPreviouslySentRecipients(env, recipients, { type, eventKey, sessionKey, message })
     : { recipients, skipped: [] };
   const recipientsToSend = retryFilter.recipients;
   const now = new Date().toISOString();
@@ -791,6 +891,8 @@ async function sendNotification(env, payload, actor) {
     actor: cleanString(actor, 200),
     message,
     eventKey: type === "event-reminder" ? eventKey : "",
+    sessionKey: type === "event-reminder" ? sessionKey : "",
+    sessionName: type === "event-reminder" ? eventShowLabel(sessionKey) : "",
     eventName: type === "event-reminder" ? cleanString(recipients[0]?.eventName, 240) : "",
     recipientCount: recipientsToSend.length,
     originalRecipientCount: recipients.length,
@@ -822,6 +924,7 @@ export async function onRequestGet({ request, env, data }) {
   const url = new URL(request.url);
   const type = notificationType(url.searchParams.get("type"));
   const eventKey = cleanString(url.searchParams.get("eventKey"), 240);
+  const sessionKey = cleanEventShowId(url.searchParams.get("sessionKey"), "");
   if (type === "reply-test") {
     const recipients = collectReplyTestRecipients();
     return json({
@@ -832,6 +935,7 @@ export async function onRequestGet({ request, env, data }) {
       summary: {
         total: recipients.length,
         selectedEventKey: "",
+        selectedSessionKey: "",
         selectedRegistrationCount: 0,
         lastAdditionalNoticeAt: ""
       }
@@ -842,11 +946,11 @@ export async function onRequestGet({ request, env, data }) {
     : { registrations: [], source: "", generatedAt: "", warning: "" };
   const registrations = registrationIndex.registrations;
   const selectedRegistrations = type === "event-reminder" && eventKey
-    ? registrationsForEvent(registrations, eventKey)
+    ? registrationsForEvent(registrations, eventKey, sessionKey)
     : [];
   const recipients = type === "event-reminder"
       ? eventKey
-        ? collectEventRecipientsFromRegistrations(registrations, eventKey)
+        ? collectEventRecipientsFromRegistrations(registrations, eventKey, sessionKey)
         : []
       : await collectVerifiedRecipients(env);
   const lastAdditionalNotice = await readCrmStorageJson(env, additionalNoticeKey);
@@ -858,6 +962,8 @@ export async function onRequestGet({ request, env, data }) {
     summary: {
       total: recipients.length,
       selectedEventKey: eventKey,
+      selectedSessionKey: sessionKey,
+      selectedSessionName: eventShowLabel(sessionKey),
       selectedRegistrationCount: selectedRegistrations.length,
       lastAdditionalNoticeAt: cleanString(lastAdditionalNotice?.sentAt),
       registrationIndexSource: cleanString(registrationIndex.source, 80),

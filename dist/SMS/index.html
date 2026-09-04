@@ -250,6 +250,12 @@
             <option value="">Loading events...</option>
           </select>
         </div>
+        <div class="field" id="sessionField">
+          <label for="sessionSelect">Audience session</label>
+          <select id="sessionSelect" name="sessionKey">
+            <option value="">All sessions for event</option>
+          </select>
+        </div>
         <div class="field">
           <label for="messageText">Message</label>
           <textarea id="messageText" name="message" maxlength="1200" placeholder="MOJO AI Summits: Reminder text goes here."></textarea>
@@ -305,6 +311,8 @@
     const messageType = document.querySelector("#messageType");
     const eventField = document.querySelector("#eventField");
     const eventSelect = document.querySelector("#eventSelect");
+    const sessionField = document.querySelector("#sessionField");
+    const sessionSelect = document.querySelector("#sessionSelect");
     const rosterEyebrow = document.querySelector("#rosterEyebrow");
     const eventRosterSummary = document.querySelector("#eventRosterSummary");
     const registrantList = document.querySelector("#registrantList");
@@ -342,9 +350,15 @@
     function renderRecipients(payload) {
       const recipients = payload.recipients || [];
       recipientCount.textContent = recipients.length;
-      recipientMetricLabel.textContent = messageType.value === "reply-test" ? "test numbers" : "verified numbers";
+      recipientMetricLabel.textContent = messageType.value === "reply-test"
+        ? "test numbers"
+        : messageType.value === "event-reminder" && sessionSelect.value
+          ? `${selectedSessionName(payload).toLowerCase()} numbers`
+          : "verified numbers";
       lastNotice.textContent = messageType.value === "reply-test"
         ? "Reply test sends only to Scott, Angel, and Miller."
+        : messageType.value === "event-reminder" && sessionSelect.value
+        ? `Event reminder audience is limited to ${selectedSessionName(payload).toLowerCase()}.`
         : payload.summary?.lastAdditionalNoticeAt
         ? `Last monthly event notice: ${new Date(payload.summary.lastAdditionalNoticeAt).toLocaleString()}`
         : "No monthly event notice has been recorded.";
@@ -354,6 +368,7 @@
               <strong>${escapeHtml(recipient.maskedPhone)}</strong>
               <span>${escapeHtml(recipient.name || recipient.email || (recipient.sources || []).join(", "))}</span>
               ${recipient.company ? `<span>${escapeHtml(recipient.company)}</span>` : ""}
+              ${recipient.eventShowLabel ? `<span>${escapeHtml(recipient.eventShowLabel)}</span>` : ""}
               <span>${messageType.value === "reply-test" ? "Internal reply test" : recipient.lastVerifiedAt ? `Verified ${escapeHtml(new Date(recipient.lastVerifiedAt).toLocaleString())}` : "Verified phone"}</span>
             </div>
           `).join("")
@@ -371,6 +386,36 @@
         })
       ].join("");
       if (events.some((event) => event.eventKey === selectedValue)) eventSelect.value = selectedValue;
+    }
+
+    function selectedEvent(payload = latestPayload) {
+      return (payload.events || []).find((event) => event.eventKey === eventSelect.value) || null;
+    }
+
+    function sessionLabel(session) {
+      return `${session.sessionName}${session.sessionTime ? ` | ${session.sessionTime}` : ""} (${session.verifiedPhoneCount}/${session.registeredCount} verified)`;
+    }
+
+    function renderSessions(payload) {
+      const event = selectedEvent(payload);
+      const sessions = event?.sessions || [];
+      const selectedValue = sessionSelect.value;
+      sessionSelect.innerHTML = [
+        `<option value="">All sessions for event${event ? ` (${event.verifiedPhoneCount}/${event.registeredCount} verified)` : ""}</option>`,
+        ...sessions.map((session) => `<option value="${escapeHtml(session.sessionKey)}">${escapeHtml(sessionLabel(session))}</option>`)
+      ].join("");
+      sessionSelect.disabled = !eventSelect.value || !sessions.length;
+      if (sessions.some((session) => session.sessionKey === selectedValue)) {
+        sessionSelect.value = selectedValue;
+      } else {
+        sessionSelect.value = "";
+      }
+    }
+
+    function selectedSessionName(payload = latestPayload) {
+      if (!sessionSelect.value) return "";
+      const session = (selectedEvent(payload)?.sessions || []).find((entry) => entry.sessionKey === sessionSelect.value);
+      return session?.sessionName || "";
     }
 
     function renderRegistrants(payload) {
@@ -406,8 +451,9 @@
       }
       const registrations = payload.registrations || [];
       const verifiedCount = registrations.filter((registration) => registration.phoneVerificationStatus === "verified").length;
+      const sessionName = selectedSessionName(payload);
       eventRosterSummary.textContent = eventSelect.value
-        ? `${registrations.length} registered, ${verifiedCount} with verified phone numbers.`
+        ? `${registrations.length} ${sessionName || "event"} registrant${registrations.length === 1 ? "" : "s"}, ${verifiedCount} with verified phone numbers.`
         : "Select an event to review registrants.";
       registrantList.innerHTML = registrations.length
         ? registrations.map((registration) => {
@@ -416,7 +462,7 @@
               <div class="row ${ready ? "" : "not-ready"}">
                 <strong>${escapeHtml(registration.name || registration.email || "Unnamed registrant")}</strong>
                 <span>${escapeHtml([registration.company, registration.title].filter(Boolean).join(" | "))}</span>
-                <span>${escapeHtml(registration.role || "Guest")} | ${ready ? "SMS ready" : "No verified phone"}</span>
+                <span>${escapeHtml([registration.role || "Guest", registration.eventShowLabel].filter(Boolean).join(" | "))} | ${ready ? "SMS ready" : "No verified phone"}</span>
               </div>
             `;
           }).join("")
@@ -426,13 +472,14 @@
     function syncModeUi() {
       const isEventReminder = messageType.value === "event-reminder";
       eventField.style.display = isEventReminder ? "grid" : "none";
+      sessionField.style.display = isEventReminder ? "grid" : "none";
       rosterEyebrow.textContent = messageType.value === "reply-test"
         ? "Reply test numbers"
-        : isEventReminder ? "Registered for event" : "Verified phone numbers";
+        : isEventReminder ? "Registered for session" : "Verified phone numbers";
       confirmCopy.textContent = messageType.value === "reply-test"
         ? "I understand this will send only to Scott, Angel, and Miller for reply testing."
         : isEventReminder
-          ? "I understand this will send to verified phone numbers for the selected event."
+          ? "I understand this will send to verified phone numbers for the selected event/session audience."
           : "I understand this will send to every verified phone number listed for MOJO AI Summits registrations.";
       if (messageType.value === "reply-test") {
         eventRosterSummary.textContent = "Reply testing uses the internal test numbers only.";
@@ -483,7 +530,12 @@
 
     function sendTargetLabel(result = {}) {
       if (result.type === "reply-test") return "Scott, Angel, and Miller";
-      if (result.type === "event-reminder") return result.eventName ? `the selected event, ${result.eventName}` : "the selected event";
+      if (result.type === "event-reminder") {
+        const eventName = result.eventName ? `, ${result.eventName}` : "";
+        return result.sessionName
+          ? `the selected ${result.sessionName.toLowerCase()} audience${eventName}`
+          : `all sessions for the selected event${eventName}`;
+      }
       return "all verified registration phone numbers";
     }
 
@@ -509,9 +561,11 @@
       try {
         const params = new URLSearchParams({ type: messageType.value });
         if (messageType.value === "event-reminder" && eventSelect.value) params.set("eventKey", eventSelect.value);
+        if (messageType.value === "event-reminder" && sessionSelect.value) params.set("sessionKey", sessionSelect.value);
         const payload = await fetch(`${api}?${params}`).then(readJson);
         latestPayload = payload;
         renderEvents(payload);
+        renderSessions(payload);
         renderRegistrants(payload);
         renderRecipients(payload);
         const warning = payload.summary?.registrationIndexWarning || "";
@@ -530,7 +584,11 @@
       syncModeUi();
       await loadRecipients();
     });
-    eventSelect.addEventListener("change", loadRecipients);
+    eventSelect.addEventListener("change", async () => {
+      sessionSelect.value = "";
+      await loadRecipients();
+    });
+    sessionSelect.addEventListener("change", loadRecipients);
 
     async function sendSmsNotifications(options = {}) {
       const retryFailedOnly = Boolean(options.retryFailedOnly);
@@ -559,6 +617,7 @@
           body: JSON.stringify({
             type: messageType.value,
             eventKey: eventSelect.value,
+            sessionKey: sessionSelect.value,
             message: messageText.value,
             retryFailedOnly
           })
