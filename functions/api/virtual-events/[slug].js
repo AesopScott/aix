@@ -800,7 +800,9 @@ function matrixOverlayFields(overlay = {}, registrant = {}) {
       overlay.role
   );
   const show = showFields(overlay);
-  const roleCanOverride = Boolean(role && (role.startsWith("featured-") || !isFeaturedRegistrant(registrant)));
+  // Matrix rows can enrich profile details, but public lineup authority must
+  // come from CRM registration/contact-event records, not prospect overlays.
+  const roleCanOverride = false;
   const next = {
     ...registrant,
     sourceKey: registrant.sourceKey,
@@ -1125,7 +1127,11 @@ function featuredGuestsByShowFromRegistrants(registrants) {
 
 function registeredGuestsFromRegistrants(registrants) {
   return registrants
-    .filter((registrant) => !isFeaturedRegistrant(registrant))
+    .filter((registrant) =>
+      !isFeaturedRegistrant(registrant) &&
+      registrant?.publicationUseName === true &&
+      registrant?.publicationUseCompany === true
+    )
     .map((registrant) => publicRegisteredGuest(registrant, registrant.type))
     .sort((left, right) => {
       const leftLabel = left.displayName || left.company || left.industry || left.title || "";
