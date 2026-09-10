@@ -153,7 +153,7 @@
       padding: clamp(42px, 6vw, 86px) 0 clamp(18px, 3vw, 30px);
     }
     .calendar-hero {
-      max-width: 100%;
+      max-width: calc(100% - clamp(330px, 31vw, 456px));
     }
     .eyebrow {
       display: inline-flex;
@@ -181,6 +181,35 @@
       color: rgba(27, 35, 51, .76);
       font-size: 17px;
       line-height: 1.62;
+    }
+    .calendar-founder-video {
+      position: absolute;
+      right: 0;
+      top: 146px;
+      width: clamp(333px, 27.3vw, 411px);
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border: 1px solid rgba(0, 230, 255, .34);
+      border-radius: 8px;
+      background: var(--navy);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 22px 46px rgba(10, 15, 30, .22), 0 0 34px rgba(0, 230, 255, .16);
+      z-index: 2;
+    }
+    .calendar-founder-video::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 7px;
+      background: linear-gradient(135deg, rgba(0, 230, 255, .22), transparent 34%, rgba(22, 102, 255, .16));
+      pointer-events: none;
+      z-index: 2;
+    }
+    .calendar-founder-video video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      border-radius: 7px;
     }
     .calendar-controls {
       display: grid;
@@ -559,8 +588,19 @@
     }
 
     @media (max-width: 1280px) {
+      .calendar-hero { max-width: calc(100% - 368px); }
       .event-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .event-card { grid-template-rows: auto auto auto; }
+    }
+    @media (max-width: 1080px) {
+      .calendar-hero { max-width: none; }
+      .calendar-founder-video {
+        position: relative;
+        right: auto;
+        top: auto !important;
+        width: min(546px, 100%);
+        margin: 0 0 24px;
+      }
     }
     @media (max-width: 860px) {
       .wrap {
@@ -644,6 +684,10 @@
         </div>
       </section>
 
+      <div class="calendar-founder-video">
+        <video src="/assets/video/robert-haldeman-mojo-ai-summits-calendar.mp4" poster="/assets/video/robert-haldeman-mojo-ai-summits-calendar-poster.jpg" controls playsinline preload="metadata" aria-label="Mojo AI Summits calendar video with Robert Haldeman"></video>
+      </div>
+
       <section class="calendar-controls" aria-label="Calendar filters">
         <div class="filter-group" role="group" aria-label="Event format">
           <span class="filter-label">Format</span>
@@ -681,9 +725,9 @@
           <h2>AI Executive Readiness</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>4 September 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-executive-readiness-online/" aria-label="View AI Executive Readiness details">Link</a></div>
           </div>
         </div>
@@ -704,9 +748,9 @@
           <h2>AI Data Readiness and Knowledge Strategy</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>18 September 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-data-readiness-and-knowledge-strategy-online/" aria-label="View AI Data Readiness and Knowledge Strategy details">Link</a></div>
           </div>
         </div>
@@ -727,9 +771,9 @@
           <h2>AI Use Cases That Survive Finance</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>25 September 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-use-cases-that-survive-finance-online/" aria-label="View AI Use Cases That Survive Finance details">Link</a></div>
           </div>
         </div>
@@ -750,9 +794,9 @@
           <h2>AI Agents, Automation, and Human Handoffs</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>9 October 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-agents-automation-and-human-handoffs-online/" aria-label="View AI Agents, Automation, and Human Handoffs details">Link</a></div>
           </div>
         </div>
@@ -773,9 +817,9 @@
           <h2>AI Integration and Workflow</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>16 October 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-integration-and-workflow-online/" aria-label="View AI Integration and Workflow details">Link</a></div>
           </div>
         </div>
@@ -796,9 +840,9 @@
           <h2>AI Vendor Strategy and Platform Decisions</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>30 October 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-vendor-strategy-and-platform-decisions-online/" aria-label="View AI Vendor Strategy and Platform Decisions details">Link</a></div>
           </div>
         </div>
@@ -819,9 +863,9 @@
           <h2>AI Security, Governance, and Trust</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>6 November 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-security-governance-and-trust-online/" aria-label="View AI Security, Governance, and Trust details">Link</a></div>
           </div>
         </div>
@@ -842,9 +886,9 @@
           <h2>AI Workforce, Talent, and Change Adoption</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>20 November 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-workforce-talent-and-change-adoption-online/" aria-label="View AI Workforce, Talent, and Change Adoption details">Link</a></div>
           </div>
         </div>
@@ -865,9 +909,9 @@
           <h2>AI Operating Model for 2027</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>27 November 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-operating-model-for-2027-online/" aria-label="View AI Operating Model for 2027 details">Link</a></div>
           </div>
         </div>
@@ -888,9 +932,9 @@
           <h2>AI Budgeting and Investment Priorities</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>4 December 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-budgeting-and-investment-priorities-online/" aria-label="View AI Budgeting and Investment Priorities details">Link</a></div>
           </div>
         </div>
@@ -911,9 +955,9 @@
           <h2>AI Workforce Readiness and Change Leadership</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>18 December 2026</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-workforce-readiness-and-change-leadership-online/" aria-label="View AI Workforce Readiness and Change Leadership details">Link</a></div>
           </div>
         </div>
@@ -934,9 +978,9 @@
           <h2>AI Executive Operating Agenda for 2027</h2>
           <div class="event-meta">
             <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4.5 9.5h15M5.5 5.5h13a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z"></path></svg>8 January 2027</span>
-            <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Morning featured-guest lineup</strong><span class="showing-time">10:00 am - 11:30 am CT</span></div></div>
+            
             <div class="showing-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><div class="showing-copy"><strong class="showing-label">Afternoon featured-guest lineup</strong><span class="showing-time">1:00 pm - 2:30 pm CT</span></div></div>
-            <p class="showing-note">Same topic, different featured guests. Choose the lineup you want to attend.</p>
+            <p class="showing-note">Join the active featured-guest lineup for this virtual event.</p>
             <div class="virtual-access"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"></rect><path d="M8 20h8M10 10h4M10 14h6"></path></svg><strong class="virtual-access-label">Virtual</strong><a class="meeting-link-button" href="../ai-executive-operating-agenda-for-2027-online/" aria-label="View AI Executive Operating Agenda for 2027 details">Link</a></div>
           </div>
         </div>
@@ -1047,6 +1091,46 @@
     const filterButtons = Array.from(document.querySelectorAll("[data-filter-kind]"));
     const eventCards = Array.from(document.querySelectorAll(".event-card[data-format][data-cohort]"));
     const filterStatus = document.getElementById("filterStatus");
+    const calendarTop = document.querySelector(".calendar-top");
+    const calendarVideo = document.querySelector(".calendar-founder-video");
+    const formatFilters = document.querySelector(".calendar-controls .filter-group");
+    const cohortOptions = document.querySelector('[data-filter-options="cohort"]');
+
+    function getFirstRowRightEdge(container) {
+      if (!container) return null;
+
+      const buttons = Array.from(container.querySelectorAll(".filter-button"))
+        .filter((button) => button.offsetParent !== null);
+
+      if (!buttons.length) return null;
+
+      const firstRowTop = buttons[0].getBoundingClientRect().top;
+      const firstRowButtons = buttons.filter((button) => Math.abs(button.getBoundingClientRect().top - firstRowTop) < 2);
+
+      return Math.max(...firstRowButtons.map((button) => button.getBoundingClientRect().right));
+    }
+
+    function alignCalendarVideo() {
+      if (!calendarTop || !calendarVideo || !formatFilters) return;
+
+      if (window.matchMedia("(max-width: 1080px)").matches) {
+        calendarVideo.style.top = "";
+        calendarVideo.style.right = "";
+        return;
+      }
+
+      const topRect = calendarTop.getBoundingClientRect();
+      const filterRect = formatFilters.getBoundingClientRect();
+      const videoHeight = calendarVideo.offsetHeight;
+      const alignedTop = filterRect.bottom - topRect.top - videoHeight;
+      const cohortRightEdge = getFirstRowRightEdge(cohortOptions);
+
+      calendarVideo.style.top = `${alignedTop}px`;
+      if (cohortRightEdge !== null) {
+        calendarVideo.style.right = `${Math.max(0, topRect.right - cohortRightEdge)}px`;
+      }
+    }
+
     function applyCalendarFilters() {
       let visibleCount = 0;
 
@@ -1076,6 +1160,9 @@
       });
     });
 
+    alignCalendarVideo();
+    window.addEventListener("load", alignCalendarVideo);
+    window.addEventListener("resize", alignCalendarVideo);
   </script>
   <link rel="stylesheet" href="/assets/mojo-brand-compliance.css" data-brand-compliance-final>
 </body>

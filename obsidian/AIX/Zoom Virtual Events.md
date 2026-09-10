@@ -25,7 +25,13 @@ Pretty routes without `.php` are also supported.
 
 The share page calls `/api/virtual-events/[slug]`. The API reads the stored Zoom join URL from `MOJO_SUMMITS_SETUP_STATE` and stops returning it 15 minutes before the event start time.
 
-Each 2026-2027 virtual event runs from 1:00 PM to 2:30 PM America/Chicago. The share-page lockout begins 15 minutes before start time, at 12:45 PM Central.
+Morning shows are canceled. Each active 2026-2027 virtual event runs from 1:00 PM to 2:30 PM America/Chicago. The share-page lockout begins 15 minutes before start time, at 12:45 PM Central.
+
+## Lobby Visuals
+
+The Zoom lobby should function as the broader visual showcase for the event. Show all guests in the lobby, include the images uploaded to the website for Mojo AI Summits branding and event context, and add the real staff-view images after they are collected from the staff team in the next meeting.
+
+Do not expose internal source labels, CRM provenance, or setup notes in attendee-facing lobby visuals.
 
 ## Zoom Creation
 

@@ -304,12 +304,19 @@ function isSingleSessionShow(showId = "") {
   return showId === "morning" || showId === "afternoon";
 }
 
+function activeZoomEventsShowId(showId = "") {
+  const cleanShow = cleanEventShowId(showId, "");
+  if (cleanShow === "morning") return "";
+  if (cleanShow === "both") return "afternoon";
+  return cleanShow;
+}
+
 function targetForRegistration(record = {}, type = "", config = {}) {
   const email = registrationEmail(record);
   const slug = eventSlug(record);
   const role = registrationRole(record, type);
   const kind = syncKindFor(role);
-  const showId = cleanEventShowId(record.eventShowId || record.showId || record.eventShow, kind === "speaker-panelist" ? "" : "both");
+  const showId = activeZoomEventsShowId(cleanEventShowId(record.eventShowId || record.showId || record.eventShow, kind === "speaker-panelist" ? "" : "both"));
   const eventConfig = eventConfigFor(config, slug);
   const showConfig = showConfigFor(eventConfig, showId);
   const zoomEventId = cleanString(eventConfig?.zoomEventId || eventConfig?.eventId || eventConfig?.id, 240);

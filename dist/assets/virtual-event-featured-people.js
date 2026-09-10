@@ -66,7 +66,6 @@
     "mike-madero"
   ]);
   const showDefinitions = [
-    { id: "morning", title: "10:00 AM featured lineup", time: "10:00 am - 11:30 am CT" },
     { id: "afternoon", title: "1:00 PM featured lineup", time: "1:00 pm - 2:30 pm CT" }
   ];
 
@@ -328,7 +327,7 @@
       const withPhotos = showRows.reduce((sum, row) => {
         return sum + [...row.groups.guests, ...row.groups.authors, ...row.groups.partners].filter((guest) => featuredPhotoUrl(guest)).length;
       }, 0);
-      if (count) count.textContent = `${totalFeatured} featured across both shows${withPhotos ? `, ${withPhotos} with photos` : ""}`;
+      if (count) count.textContent = `${totalFeatured} featured for the afternoon show${withPhotos ? `, ${withPhotos} with photos` : ""}`;
 
       grid.innerHTML = `<div class="featured-show-lineups">${showRows.map((row) => showSection(row.show, row.groups)).join("")}</div>`;
     } catch (error) {

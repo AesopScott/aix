@@ -25,9 +25,7 @@ import {
   crmD1Available,
   crmD1Primary,
   deleteCrmD1Record,
-  listAllCrmD1Json,
   listCrmD1Keys,
-  listCrmD1Json,
   readCrmD1Json,
   writeCrmD1Json
 } from "../_crm-d1.js";
@@ -1660,18 +1658,18 @@ function cleanGuestMatrixOption(value, allowed, fallback = "") {
 
 function eventShowLabel(showId) {
   return {
-    morning: "Morning show",
+    morning: "Canceled morning show",
     afternoon: "Afternoon show",
-    both: "Both shows"
-  }[cleanEventShowId(showId)] || "Both shows";
+    both: "Afternoon show"
+  }[cleanEventShowId(showId)] || "Afternoon show";
 }
 
 function eventShowTime(showId) {
   return {
-    morning: "10:00 am - 11:30 am CT",
+    morning: "Canceled",
     afternoon: "1:00 pm - 2:30 pm CT",
-    both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
-  }[cleanEventShowId(showId)] || "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT";
+    both: "1:00 pm - 2:30 pm CT"
+  }[cleanEventShowId(showId)] || "1:00 pm - 2:30 pm CT";
 }
 
 function eventShowKey(record = {}) {
@@ -1691,6 +1689,7 @@ function randomMemberPassword() {
 
 function normalizeRecord(key, record) {
   const createdAt = cleanString(record?.createdAt) || key.split(":").slice(-2, -1)[0] || "";
+  const event = canonicalMojoEventFields(record || {});
   return {
     key,
     id: cleanString(record?.id) || key,
@@ -1717,9 +1716,9 @@ function normalizeRecord(key, record) {
     invitedBy: cleanString(record?.invitedBy || record?.inviter || record?.invitedByName || record?.createdBy, 180),
     phoneVerificationStatus: cleanString(record?.phoneVerificationStatus) || "unverified",
     eventId: cleanString(record?.eventId),
-    eventSlug: cleanString(record?.eventSlug),
-    eventName: cleanString(record?.eventName),
-    eventDate: cleanString(record?.eventDate),
+    eventSlug: event.eventSlug,
+    eventName: event.eventName,
+    eventDate: event.eventDate,
     eventTime: cleanString(record?.eventTime),
     eventAccessLink: cleanString(record?.eventAccessLink || record?.accessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
     accessLink: cleanString(record?.accessLink || record?.eventAccessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
@@ -2090,24 +2089,6 @@ async function readContactRecords(env, keys) {
   return records.filter(Boolean);
 }
 
-async function readRecordsForPrefix(env, prefix, normalize = normalizeRecord, options = {}) {
-  if (crmD1Primary(env)) {
-    const entries = await listAllCrmD1Json(env, {
-      prefix,
-      sort: options.sort || "created_at",
-      direction: options.direction || "desc"
-    }).catch(() => []);
-    const rows = await Promise.all(entries.map(({ key, record }) => record ? normalize(key, record) : null));
-    return rows.filter(Boolean);
-  }
-  const keys = await listKeys(env, prefix);
-  const records = await Promise.all(keys.map(async (key) => {
-    const record = await readSetupJson(env, key);
-    return record ? normalize(key, record) : null;
-  }));
-  return records.filter(Boolean);
-}
-
 async function r2Registrants(env, type = "member") {
   if (crmD1Primary(env)) return [];
   if (!env.MOJO_SUMMITS_STORAGE?.list || !env.MOJO_SUMMITS_STORAGE?.get) return [];
@@ -2224,18 +2205,12 @@ async function deleteR2RegistrantsForEmail(env, email) {
 
 async function registrants(env, type = "member", options = {}) {
   const config = registrantTypes[cleanType(type)];
-  const crmRows = await readRecordsForPrefix(env, config.crmPrefix, normalizeRecord, {
-    sort: "created_at",
-    direction: "desc"
-  });
+  const crmKeys = await listKeys(env, config.crmPrefix);
+  const crmRows = await readRecords(env, crmKeys);
   const ids = new Set(crmRows.map((row) => row.id));
 
-  const legacyRows = config.legacyPrefix
-    ? (await readRecordsForPrefix(env, config.legacyPrefix, normalizeRecord, {
-      sort: "created_at",
-      direction: "desc"
-    })).filter((row) => !ids.has(row.id))
-    : [];
+  const legacyKeys = await listKeys(env, config.legacyPrefix);
+  const legacyRows = (await readRecords(env, legacyKeys)).filter((row) => !ids.has(row.id));
   for (const row of legacyRows) ids.add(row.id);
   const r2Rows = (await r2Registrants(env, type)).filter((row) => !ids.has(row.id));
   const rows = [...crmRows, ...legacyRows, ...r2Rows].filter((row) => {
@@ -2740,13 +2715,8 @@ function mergeContactRows(storedRows, derivedRows) {
 }
 
 async function contacts(env) {
-  const rows = mergeContactRows(
-    await readRecordsForPrefix(env, "crm:contact:", normalizeContactRecord, {
-      sort: "updated_at",
-      direction: "desc"
-    }),
-    await derivedContactRows(env)
-  );
+  const keys = await listKeys(env, "crm:contact:");
+  const rows = mergeContactRows(await readContactRecords(env, keys), await derivedContactRows(env));
   return rows.sort((a, b) => {
     const left = cleanString(b.updatedAt || b.latestRegisteredAt || b.createdAt);
     const right = cleanString(a.updatedAt || a.latestRegisteredAt || a.createdAt);
@@ -2983,10 +2953,11 @@ async function prospectPeople(env, companyId = "") {
   const prefix = companyId
     ? `${PARTNER_PROSPECT_PERSON_PREFIX}${companyId}:`
     : PARTNER_PROSPECT_PERSON_PREFIX;
-  const rows = await readRecordsForPrefix(env, prefix, normalizeProspectPerson, {
-    sort: "updated_at",
-    direction: "desc"
-  });
+  const keys = await listKeys(env, prefix);
+  const rows = await Promise.all(keys.map(async (key) => {
+    const record = await readRawRecord(env, key);
+    return record ? normalizeProspectPerson(key, record) : null;
+  }));
   return rows.filter(Boolean).sort((a, b) => (b.priorityScore - a.priorityScore) || String(a.fullName).localeCompare(String(b.fullName)));
 }
 
@@ -2998,14 +2969,13 @@ async function prospectCompanies(env) {
     if (!peopleByCompany.has(person.companyId)) peopleByCompany.set(person.companyId, []);
     peopleByCompany.get(person.companyId).push(person);
   }
-  const entries = await readRecordsForPrefix(env, PARTNER_PROSPECT_COMPANY_PREFIX, (key, record) => {
+  const keys = await listKeys(env, PARTNER_PROSPECT_COMPANY_PREFIX);
+  const rows = await Promise.all(keys.map(async (key) => {
+    const record = await readRawRecord(env, key);
     const companyId = cleanString(record?.companyId, 180) || key.replace(PARTNER_PROSPECT_COMPANY_PREFIX, "");
     return record ? normalizeProspectCompany(key, record, peopleByCompany.get(companyId) || [], config.weights) : null;
-  }, {
-    sort: "updated_at",
-    direction: "desc"
-  });
-  return entries.filter(Boolean).sort((a, b) => (b.partnerScore - a.partnerScore) || String(a.companyName).localeCompare(String(b.companyName)));
+  }));
+  return rows.filter(Boolean).sort((a, b) => (b.partnerScore - a.partnerScore) || String(a.companyName).localeCompare(String(b.companyName)));
 }
 
 async function findProspectCompanyDirect(env, payload = {}, config = null, options = {}) {
@@ -3223,19 +3193,9 @@ async function writeProspectDebug(env, runId = "", entry = {}) {
 }
 
 async function prospectDebugEntries(env, limit = 12) {
-  const entries = crmD1Primary(env)
-    ? (await listCrmD1Json(env, {
-      prefix: PARTNER_PROSPECT_DEBUG_PREFIX,
-      sort: "created_at",
-      direction: "desc",
-      limit: Math.max(limit, 50),
-      offset: 0
-    }).catch(() => ({ rows: [] }))).rows
-    : (await Promise.all((await listKeys(env, PARTNER_PROSPECT_DEBUG_PREFIX)).slice(-50).map(async (key) => ({
-      key,
-      record: await readRawRecord(env, key)
-    }))));
-  const rows = entries.map(({ key, record }) => {
+  const keys = await listKeys(env, PARTNER_PROSPECT_DEBUG_PREFIX);
+  const rows = await Promise.all(keys.slice(-50).map(async (key) => {
+    const record = await readRawRecord(env, key);
     if (!record) return null;
     return {
       key,
@@ -3256,7 +3216,7 @@ async function prospectDebugEntries(env, limit = 12) {
       rejected: Array.isArray(record.rejected) ? record.rejected.slice(0, 20) : [],
       skipped: Array.isArray(record.skipped) ? record.skipped.slice(0, 20) : []
     };
-  });
+  }));
   return rows.filter(Boolean)
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .slice(0, limit);
@@ -3289,10 +3249,11 @@ function normalizeProspectSource(key, record = {}) {
 }
 
 async function prospectSources(env) {
-  const rows = await readRecordsForPrefix(env, PARTNER_PROSPECT_SOURCE_PREFIX, normalizeProspectSource, {
-    sort: "updated_at",
-    direction: "desc"
-  });
+  const keys = await listKeys(env, PARTNER_PROSPECT_SOURCE_PREFIX);
+  const rows = await Promise.all(keys.map(async (key) => {
+    const record = await readRawRecord(env, key);
+    return record ? normalizeProspectSource(key, record) : null;
+  }));
   return rows.filter(Boolean).sort((a, b) => String(b.lastRunAt || b.updatedAt || b.createdAt).localeCompare(String(a.lastRunAt || a.updatedAt || a.createdAt)));
 }
 
@@ -4587,7 +4548,7 @@ function prospectQueueSummary(companies = [], sources = []) {
   };
 }
 
-async function partnerProspectingPayload(env, options = {}) {
+async function partnerProspectingPayload(env) {
   const scoreConfig = await partnerScoreConfig(env);
   const companies = await prospectCompanies(env);
   const people = await prospectPeople(env);
@@ -4600,35 +4561,6 @@ async function partnerProspectingPayload(env, options = {}) {
     !["Partner Candidate", "Research Partner", "Summit Partner", "Strategic Partner"].includes(company.partnerStatus) &&
     company.outreach.peopleAttempted < Math.max(1, company.peopleCount)
   ) || null;
-  const pageSize = Math.min(Math.max(Number.parseInt(options.pageSize, 10) || 100, 25), 250);
-  const page = Math.max(Number.parseInt(options.page, 10) || 1, 1);
-  const offset = (page - 1) * pageSize;
-  const search = crmFilterKey(options.search || "");
-  const filteredCompanies = search
-    ? companies.filter((company) => [
-      company.companyName,
-      company.canonicalDomain,
-      company.websiteUrl,
-      company.primaryCategory,
-      company.partnerStatus,
-      company.processingStatus
-    ].map((value) => cleanString(value).toLowerCase()).join(" ").includes(search))
-    : companies;
-  const filteredPeople = search
-    ? people.filter((person) => [
-      person.fullName,
-      person.title,
-      person.email,
-      person.linkedinUrl,
-      person.companyId,
-      person.outreachStatus
-    ].map((value) => cleanString(value).toLowerCase()).join(" ").includes(search))
-    : people;
-  const pageCompanies = filteredCompanies.slice(offset, offset + pageSize);
-  const visibleCompanyIds = new Set(pageCompanies.map((company) => company.companyId).filter(Boolean));
-  const pagePeople = filteredPeople
-    .filter((person) => !visibleCompanyIds.size || visibleCompanyIds.has(person.companyId))
-    .slice(0, pageSize * 2);
   return {
     ok: true,
     type: "partner-prospecting",
@@ -4638,19 +4570,10 @@ async function partnerProspectingPayload(env, options = {}) {
     queue: prospectQueueSummary(companies, sources),
     starterSources,
     emergingSources,
-    companies: pageCompanies,
-    people: pagePeople,
+    companies,
+    people,
     sources,
     debug,
-    pagination: {
-      page,
-      pageSize,
-      total: companies.length,
-      filteredTotal: filteredCompanies.length,
-      totalPages: Math.max(1, Math.ceil(filteredCompanies.length / pageSize)),
-      hasPrevious: page > 1,
-      hasNext: page * pageSize < filteredCompanies.length
-    },
     nextCompany,
     nextPeople: nextCompany ? people.filter((person) => person.companyId === nextCompany.companyId) : []
   };
@@ -4764,263 +4687,6 @@ function summarizeContacts(rows) {
   };
 }
 
-function crmListPagination(url = new URL("https://local.invalid")) {
-  const pageSize = Math.min(Math.max(Number.parseInt(url.searchParams.get("pageSize"), 10) || 50, 1), 100);
-  const page = Math.max(Number.parseInt(url.searchParams.get("page"), 10) || 1, 1);
-  return {
-    page,
-    pageSize,
-    offset: (page - 1) * pageSize
-  };
-}
-
-function crmFilterKey(value = "") {
-  return cleanString(value, 500).toLowerCase();
-}
-
-function crmEventBase(value = "") {
-  return crmFilterKey(value)
-    .replace(/:(morning|afternoon|both)$/i, "")
-    .replace(/\s*\|\s*(morning|afternoon|both).*$/i, "")
-    .trim();
-}
-
-function crmRowEvents(row = {}, type = "member") {
-  if (type === "contacts") return Array.isArray(row.events) ? row.events : [];
-  return [{
-    eventId: row.eventId,
-    eventSlug: row.eventSlug,
-    eventName: row.eventName,
-    eventDate: row.eventDate,
-    eventTime: row.eventTime,
-    eventShowId: row.eventShowId,
-    eventShowLabel: row.eventShowLabel,
-    eventShowTime: row.eventShowTime,
-    inviteCode: row.inviteCode,
-    registrationId: row.id,
-    registeredAt: row.createdAt,
-    registrationRole: row.registrationRole,
-    guestRegistrationType: row.guestRegistrationType,
-    partnerRegistrationType: row.partnerRegistrationType,
-    role: row.role
-  }];
-}
-
-function crmEventFilterKeys(event = {}) {
-  const slug = crmEventBase(event.eventSlug || event.slug);
-  const id = crmEventBase(event.eventId || event.id);
-  const name = crmEventBase(event.eventName || event.usedFor || event.title || event.name);
-  const date = crmFilterKey(event.eventDate || event.usedForDate || event.date || event.dateLabel);
-  return new Set([
-    slug,
-    id,
-    name,
-    date,
-    slug && date ? `${slug}|${date}` : "",
-    id && date ? `${id}|${date}` : "",
-    name && date ? `${name}|${date}` : ""
-  ].filter(Boolean));
-}
-
-function crmEventFilterLabel(event = {}) {
-  const title = cleanString(event.eventName || event.usedFor || event.title || event.eventSlug || event.eventId, 240);
-  const date = cleanString(event.eventDate || event.usedForDate || event.date || event.dateLabel, 120);
-  return [date, title].filter(Boolean).join(" | ") || title || date;
-}
-
-function crmEventFilterValue(event = {}) {
-  const keys = crmEventFilterKeys(event);
-  const slug = crmEventBase(event.eventSlug || event.slug);
-  const date = crmFilterKey(event.eventDate || event.usedForDate || event.date || event.dateLabel);
-  return (slug && date ? `${slug}|${date}` : "") || [...keys][0] || "";
-}
-
-function crmRowHasEvent(row = {}, type = "member", selected = "all") {
-  const value = crmFilterKey(selected);
-  if (!value || value === "all") return true;
-  return crmRowEvents(row, type).some((event) => crmEventFilterKeys(event).has(value));
-}
-
-function crmRowCompany(row = {}) {
-  return cleanString(row.partnerCompany || row.company || row.organization, 240);
-}
-
-function crmRowRoles(row = {}, type = "member") {
-  const roles = new Set();
-  const add = (value) => {
-    const role = cleanContactEventRole(value);
-    if (role) roles.add(role);
-  };
-  if (row.isPresenter) roles.add("presenter");
-  if (row.isRoundtableLeader) roles.add("roundtable-leader");
-  if (row.isFeaturedGuest) roles.add("featured-guest");
-  if (row.isFeaturedMember) roles.add("featured-member");
-  if (row.isFeaturedAuthor) roles.add("featured-author");
-  if (row.isFeaturedPartner) roles.add("featured-partner");
-  if (type === "contacts") {
-    for (const event of crmRowEvents(row, type)) {
-      add(event.contactEventRole || event.registrationRole || event.partnerRegistrationType || event.guestRegistrationType || event.role || event.registrationType);
-    }
-  } else {
-    add(row.contactEventRole || row.registrationRole || row.partnerRegistrationType || row.guestRegistrationType || row.role || row.type || row.registrationType);
-  }
-  if (!roles.size) roles.add("guest");
-  return [...roles];
-}
-
-function crmRowHasRole(row = {}, type = "member", selected = "all") {
-  const value = crmFilterKey(selected);
-  if (!value || value === "all") return true;
-  const roles = crmRowRoles(row, type);
-  if (value === "roundtable") return roles.includes("roundtable-leader");
-  if (value === "attendee") return !roles.some((role) => ["presenter", "roundtable-leader", "featured-guest", "featured-member", "featured-author", "featured-partner"].includes(role));
-  return roles.includes(value);
-}
-
-function crmRowPublicationCount(row = {}, type = "member") {
-  if (type === "contacts") return Number(row.publicationCount || 0);
-  return [row.publicationUseName, row.publicationUseCompany].filter(Boolean).length;
-}
-
-function crmNumberFilterPasses(value, operator = "all", thresholdValue = "") {
-  if (operator === "all" || thresholdValue === "") return true;
-  const number = Number(value || 0);
-  const threshold = Number(thresholdValue);
-  if (!Number.isFinite(threshold)) return true;
-  if (operator === "gte") return number >= threshold;
-  if (operator === "lte") return number <= threshold;
-  if (operator === "eq") return number === threshold;
-  return true;
-}
-
-function crmRowSearchText(row = {}, type = "member") {
-  return [
-    row.name,
-    row.firstName,
-    row.lastName,
-    row.company,
-    row.partnerCompany,
-    row.title,
-    row.industry,
-    row.email,
-    row.phone,
-    row.linkedinProfileUrl,
-    row.inviteCode,
-    row.crmStatus,
-    row.lifecycleStage,
-    row.crmNotes,
-    ...crmRowEvents(row, type).flatMap((event) => [
-      event.eventName,
-      event.eventSlug,
-      event.eventDate,
-      event.eventShowLabel,
-      event.eventShowTime,
-      event.role,
-      event.registrationRole
-    ])
-  ].map((value) => cleanString(value, 4000).toLowerCase()).filter(Boolean).join(" ");
-}
-
-function filterCrmRowsForRequest(rows = [], type = "member", url = new URL("https://local.invalid")) {
-  const status = crmFilterKey(url.searchParams.get("status") || "all");
-  const event = url.searchParams.get("event") || "all";
-  const show = crmFilterKey(url.searchParams.get("show") || "all");
-  const role = url.searchParams.get("role") || "all";
-  const company = crmFilterKey(url.searchParams.get("company") || "all");
-  const phone = crmFilterKey(url.searchParams.get("phone") || "all");
-  const searchTerms = crmFilterKey(url.searchParams.get("search") || "")
-    .split(/\s+/)
-    .filter(Boolean);
-  const publicationOperator = crmFilterKey(url.searchParams.get("publicationOperator") || "all");
-  const publicationThreshold = cleanString(url.searchParams.get("publicationThreshold") || "", 20);
-  const attendedOperator = crmFilterKey(url.searchParams.get("attendedOperator") || "all");
-  const attendedThreshold = cleanString(url.searchParams.get("attendedThreshold") || "", 20);
-
-  return rows.filter((row) => {
-    if (!crmRowHasEvent(row, type, event)) return false;
-    if (show !== "all") {
-      const shows = crmRowEvents(row, type)
-        .map((entry) => cleanEventShowId(entry.eventShowId || entry.showId || entry.eventShow || entry.eventShowLabel || entry.eventShowTime, ""))
-        .filter(Boolean);
-      if (show === "morning" || show === "afternoon") {
-        if (!shows.includes(show) && !shows.includes("both")) return false;
-      } else if (!shows.includes(show)) {
-        return false;
-      }
-    }
-    if (!crmRowHasRole(row, type, role)) return false;
-    if (company !== "all" && crmFilterKey(crmRowCompany(row)) !== company) return false;
-    if (!crmNumberFilterPasses(crmRowPublicationCount(row, type), publicationOperator, publicationThreshold)) return false;
-    if (!crmNumberFilterPasses(row.attendedCount || 0, attendedOperator, attendedThreshold)) return false;
-    if (type === "contacts") {
-      if (status !== "all" && crmFilterKey(row.lifecycleStage) !== status) return false;
-      if (phone === "verified" && !cleanString(row.phone)) return false;
-      if (phone === "pending" && cleanString(row.phone)) return false;
-    } else {
-      if (status !== "all" && crmFilterKey(row.crmStatus) !== status) return false;
-      if (phone === "verified" && row.phoneVerificationStatus !== "verified") return false;
-      if (phone === "pending" && row.phoneVerificationStatus === "verified") return false;
-    }
-    if (!searchTerms.length) return true;
-    const haystack = crmRowSearchText(row, type);
-    return searchTerms.every((term) => haystack.includes(term));
-  });
-}
-
-function crmListFilterOptions(rows = [], type = "member") {
-  const events = new Map();
-  const companies = new Map();
-  for (const row of rows) {
-    const company = crmRowCompany(row);
-    if (company) companies.set(crmFilterKey(company), company);
-    for (const event of crmRowEvents(row, type)) {
-      const value = crmEventFilterValue(event);
-      const label = crmEventFilterLabel(event);
-      if (!value || !label) continue;
-      const sortTime = eventTime(event.eventDate || event.usedForDate || event.date);
-      const existing = events.get(value);
-      if (!existing || sortTime < existing.sortTime || label.length > existing.label.length) {
-        events.set(value, { value, label, sortTime });
-      }
-    }
-  }
-  return {
-    events: [...events.values()]
-      .sort((left, right) => left.sortTime - right.sortTime || left.label.localeCompare(right.label))
-      .map(({ value, label, sortTime }) => ({ value, label, sortTime })),
-    companies: [...companies.entries()]
-      .sort((left, right) => left[1].localeCompare(right[1]))
-      .map(([value, label]) => ({ value, label }))
-  };
-}
-
-function pagedCrmListResponse({ rows = [], filteredRows = [], type = "member", config = {}, url, isContacts = false, sideLists = {} } = {}) {
-  const pagination = crmListPagination(url);
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pagination.pageSize));
-  const page = Math.min(pagination.page, totalPages);
-  const offset = (page - 1) * pagination.pageSize;
-  const pageRows = filteredRows.slice(offset, offset + pagination.pageSize);
-  return {
-    ok: true,
-    type,
-    label: config.label,
-    section: config.section,
-    summary: isContacts ? summarizeContacts(filteredRows) : summarize(filteredRows),
-    rows: pageRows,
-    filterOptions: crmListFilterOptions(rows, type),
-    pagination: {
-      page,
-      pageSize: pagination.pageSize,
-      total: rows.length,
-      filteredTotal: filteredRows.length,
-      totalPages,
-      hasPrevious: page > 1,
-      hasNext: page < totalPages
-    },
-    ...sideLists
-  };
-}
-
 function csvEscape(value) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }
@@ -5052,15 +4718,16 @@ function normalizeInviteCode(key, record) {
   const title = cleanString(record?.title || record?.jobTitle || record?.roleTitle || record?.contactTitle, 240);
   const inviteType = cleanString(record?.type) || "partner";
   const isPartnerInvite = inviteType === "partner" || Boolean(record?.partnerRegistrationType || record?.partnerCompany || record?.partnerContactName || record?.partnerContactEmail);
+  const event = canonicalMojoEventFields(record || {});
   return {
     key,
     code: cleanCode(record?.code) || key.split(":").pop(),
     type: inviteType,
     status: cleanString(record?.status) || "active",
     eventId: cleanString(record?.eventId),
-    eventSlug: cleanString(record?.eventSlug),
-    eventName: cleanString(record?.eventName),
-    eventDate: cleanString(record?.eventDate),
+    eventSlug: event.eventSlug,
+    eventName: event.eventName,
+    eventDate: event.eventDate,
     eventTime: cleanString(record?.eventTime),
     eventAccessLink: cleanString(record?.eventAccessLink || record?.accessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
     accessLink: cleanString(record?.accessLink || record?.eventAccessLink || record?.joinUrl || record?.zoomUrl || record?.zoomJoinUrl, 1000),
@@ -5099,8 +4766,8 @@ function normalizeInviteCode(key, record) {
     usedBy: cleanString(record?.usedBy),
     usedByName: cleanString(record?.usedByName),
     usedByEmail: cleanString(record?.usedByEmail || record?.usedBy).toLowerCase(),
-    usedFor: cleanString(record?.usedFor || record?.eventName),
-    usedForDate: cleanString(record?.usedForDate || record?.eventDate),
+    usedFor: cleanString(record?.usedFor || event.eventName || record?.eventName),
+    usedForDate: cleanString(record?.usedForDate || event.eventDate || record?.eventDate),
     registrationId: cleanString(record?.registrationId),
     eventNotes: cleanEventNotes(record),
     registrationNotes: cleanEventNotes(record),
@@ -5184,10 +4851,13 @@ async function enrichInviteUsage(env, invites, types = ["member", "guest", "part
 }
 
 async function partnerInviteCodes(env) {
-  const rows = await readRecordsForPrefix(env, PARTNER_INVITE_PREFIX, normalizeInviteCode, {
-    sort: "created_at",
-    direction: "desc"
-  });
+  const keys = await listKeys(env, PARTNER_INVITE_PREFIX);
+  const rows = await Promise.all(
+    keys.map(async (key) => {
+      const record = await readSetupJson(env, key);
+      return record ? normalizeInviteCode(key, record) : null;
+    })
+  );
   const invites = rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   return enrichInviteUsage(env, invites, ["partner"]);
 }
@@ -5254,12 +4924,13 @@ async function partnerRegistrationLinkRows(env) {
 async function registrationInviteCodes(env) {
   const entries = await Promise.all(
     Object.entries(REGISTRATION_INVITE_PREFIXES).map(async ([type, prefix]) => {
-      return readRecordsForPrefix(env, prefix, (key, record) => (
-        record ? normalizeInviteCode(key, { ...record, type: record.type || type }) : null
-      ), {
-        sort: "created_at",
-        direction: "desc"
-      });
+      const keys = await listKeys(env, prefix);
+      return Promise.all(
+        keys.map(async (key) => {
+          const record = await readSetupJson(env, key);
+          return record ? normalizeInviteCode(key, { ...record, type: record.type || type }) : null;
+        })
+      );
     })
   );
   const invites = entries.flat().filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -5311,17 +4982,18 @@ function normalizeGuestMatrixProspect(key, record = {}, type = "guest") {
   );
   const hasAssignedEvent = Boolean(cleanString(record?.eventSlug || record?.eventName || record?.eventId, 240));
   const rawShowId = hasAssignedEvent ? cleanEventShowId(record?.eventShowId || record?.showId || record?.eventShow, "both") : "";
-  const eventShowId = rawShowId;
+  const eventShowId = rawShowId === "both" ? "afternoon" : rawShowId;
+  const event = canonicalMojoEventFields(record || {});
   return {
     key,
     id: cleanString(record?.id, 200) || key,
     type: matrixProspectRecordType(prospectType),
     matrixOnly: true,
     status: cleanString(record?.status, 80) || "tracking",
-    eventId: cleanString(record?.eventId || (hasAssignedEvent ? `${record?.eventSlug || record?.eventName || "event"}:${eventShowId || "both"}` : ""), 200),
-    eventSlug: cleanString(record?.eventSlug, 200),
-    eventName: cleanString(record?.eventName, 240),
-    eventDate: cleanString(record?.eventDate, 120),
+    eventId: cleanString(record?.eventId || (hasAssignedEvent ? `${event.eventSlug || event.eventName || "event"}:${eventShowId || "both"}` : ""), 200),
+    eventSlug: event.eventSlug,
+    eventName: event.eventName,
+    eventDate: event.eventDate,
     eventTime: cleanString(record?.eventTime || (eventShowId ? eventShowTime(eventShowId) : ""), 120),
     eventShowId,
     eventShowLabel: cleanString(record?.eventShowLabel, 120) || (eventShowId ? eventShowLabel(eventShowId) : ""),
@@ -5469,12 +5141,13 @@ async function findGuestMatrixProspectForInvite(env, invite = {}) {
 }
 
 async function guestMatrixProspects(env) {
-  const rows = await readRecordsForPrefix(env, GUEST_MATRIX_PROSPECT_PREFIX, (key, record) => (
-    record ? hydrateMatrixProspectFromContact(env, normalizeGuestMatrixProspect(key, record, "guest")) : null
-  ), {
-    sort: "created_at",
-    direction: "desc"
-  });
+  const keys = await listKeys(env, GUEST_MATRIX_PROSPECT_PREFIX);
+  const rows = await Promise.all(
+    keys.map(async (key) => {
+      const record = await readSetupJson(env, key);
+      return record ? hydrateMatrixProspectFromContact(env, normalizeGuestMatrixProspect(key, record, "guest")) : null;
+    })
+  );
   return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
@@ -5578,7 +5251,8 @@ function featuredGuestAssignmentShowIds(row = {}) {
       row.eventTime,
     ""
   );
-  if (showId === "both") return ["morning", "afternoon"];
+  if (showId === "both") return ["afternoon"];
+  if (showId === "morning") return [];
   return showId ? [showId] : [];
 }
 
@@ -5697,12 +5371,13 @@ async function assertFeaturedGuestShowCapacity(env, candidate = {}, options = {}
 }
 
 async function partnerMatrixProspects(env) {
-  const rows = await readRecordsForPrefix(env, PARTNER_MATRIX_PROSPECT_PREFIX, (key, record) => (
-    record ? hydrateMatrixProspectFromContact(env, normalizeGuestMatrixProspect(key, record, "partner")) : null
-  ), {
-    sort: "created_at",
-    direction: "desc"
-  });
+  const keys = await listKeys(env, PARTNER_MATRIX_PROSPECT_PREFIX);
+  const rows = await Promise.all(
+    keys.map(async (key) => {
+      const record = await readSetupJson(env, key);
+      return record ? hydrateMatrixProspectFromContact(env, normalizeGuestMatrixProspect(key, record, "partner")) : null;
+    })
+  );
   return rows.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
@@ -6237,8 +5912,9 @@ async function enrichMatrixPersonFromLinkedIn(env, rawLinkedInProfileUrl = "") {
 
 async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "guest") {
   const prospectType = type === "partner" ? "partner" : "guest";
-  const eventSlug = cleanString(payload.eventSlug, 200);
-  const eventName = cleanString(payload.eventName, 240);
+  const event = canonicalMojoEventFields(payload || {});
+  const eventSlug = event.eventSlug;
+  const eventName = event.eventName;
   const hasAssignedEvent = Boolean(eventSlug || eventName || cleanString(payload.eventId, 200));
 
   const rawLinkedInProfileUrl = cleanString(payload.linkedinProfileUrl || payload.linkedInProfileUrl || payload.linkedinUrl || payload.linkedInUrl, 500);
@@ -6273,10 +5949,13 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
 
   const guestRegistrationType = matrixProspectRole(prospectType, payload);
   const rawShowId = hasAssignedEvent ? cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "both") : "";
-  if (requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both") {
-    throw new Error("Choose either the morning show or afternoon show for this featured registration.");
+  if (rawShowId === "morning") {
+    throw new Error("The morning show has been canceled. Choose the afternoon show.");
   }
-  const eventShowId = rawShowId;
+  if (requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both") {
+    throw new Error("Choose the afternoon show for this featured registration.");
+  }
+  const eventShowId = rawShowId === "both" ? "afternoon" : rawShowId;
   const eventTime = eventShowId ? eventShowTime(eventShowId) : "";
   const createdAt = new Date().toISOString();
   const id = crypto.randomUUID?.() || `${Date.now()}-${randomInviteCode()}`;
@@ -6288,7 +5967,7 @@ async function createGuestMatrixProspect(env, payload = {}, actor = "", type = "
     eventId: cleanString(payload.eventId || (hasAssignedEvent ? `${eventSlug || eventName}:${eventShowId || "both"}` : ""), 200),
     eventSlug,
     eventName,
-    eventDate: cleanString(payload.eventDate, 120),
+    eventDate: event.eventDate,
     eventTime,
     eventShowId,
     eventShowLabel: eventShowId ? eventShowLabel(eventShowId) : "",
@@ -6509,17 +6188,21 @@ function eventShowUpdate(showValue = "", existing = {}) {
   const role = cleanGuestRegistrationType(existing.partnerRegistrationType || existing.guestRegistrationType || existing.registrationRole || existing.type || "guest");
   const showId = cleanEventShowId(showValue || existing.eventShowId || existing.showId || existing.eventShow, "");
   if (!showId) throw new Error("Choose a valid show time.");
-  if (requiresSingleShowRegistrationRole(role) && showId === "both") {
-    throw new Error("Choose either the morning show or afternoon show for this featured invite.");
+  if (showId === "morning") {
+    throw new Error("The morning show has been canceled. Choose the afternoon show.");
   }
-  const showTime = eventShowTime(showId);
+  if (requiresSingleShowRegistrationRole(role) && showId === "both") {
+    throw new Error("Choose the afternoon show for this featured invite.");
+  }
+  const activeShowId = showId === "both" ? "afternoon" : showId;
+  const showTime = eventShowTime(activeShowId);
   const eventBase = cleanString(existing.eventSlug || existing.eventName, 200);
   return {
-    eventShowId: showId,
-    eventShowLabel: eventShowLabel(showId),
+    eventShowId: activeShowId,
+    eventShowLabel: eventShowLabel(activeShowId),
     eventShowTime: showTime,
     eventTime: showTime,
-    eventId: eventBase ? `${eventBase}:${showId}` : existing.eventId
+    eventId: eventBase ? `${eventBase}:${activeShowId}` : existing.eventId
   };
 }
 
@@ -6772,8 +6455,12 @@ async function saveGuestMatrixStatuses(env, payload = {}, actor = "") {
     }
     if (Object.prototype.hasOwnProperty.call(change, "registrationRole")) {
       const roleUpdate = registrationRoleUpdate(change.registrationRole, key.startsWith(PARTNER_INVITE_PREFIX) || key.startsWith(PARTNER_MATRIX_PROSPECT_PREFIX) ? "partner" : "guest", existing);
-      if (requiresSingleShowRegistrationRole(roleUpdate.registrationRole) && cleanEventShowId(next.eventShowId || next.showId || next.eventShow, "") === "both") {
-        throw new Error("Choose either the morning show or afternoon show before changing this record to a featured role.");
+      const currentShow = cleanEventShowId(next.eventShowId || next.showId || next.eventShow, "");
+      if (currentShow === "morning") {
+        throw new Error("The morning show has been canceled. Choose the afternoon show before changing this record to a featured role.");
+      }
+      if (requiresSingleShowRegistrationRole(roleUpdate.registrationRole) && currentShow === "both") {
+        throw new Error("Choose the afternoon show before changing this record to a featured role.");
       }
       next.registrationRole = roleUpdate.registrationRole;
       next.guestRegistrationType = roleUpdate.guestRegistrationType;
@@ -6850,6 +6537,82 @@ function eventTime(value) {
   return Number.isNaN(looseDate) ? Number.POSITIVE_INFINITY : looseDate;
 }
 
+function normalizedMojoEventIdentity(value = "") {
+  return cleanString(value, 500).toLowerCase().replace(/:(morning|afternoon|both)$/i, "");
+}
+
+function mojoEventIdentityForms(value = "") {
+  const raw = cleanString(value, 500).replace(/:(morning|afternoon|both)$/i, "");
+  if (!raw) return [];
+  const monthExpanded = raw
+    .replace(/\bjan\.?\b/gi, "january")
+    .replace(/\bfeb\.?\b/gi, "february")
+    .replace(/\bmar\.?\b/gi, "march")
+    .replace(/\bapr\.?\b/gi, "april")
+    .replace(/\bjun\.?\b/gi, "june")
+    .replace(/\bjul\.?\b/gi, "july")
+    .replace(/\baug\.?\b/gi, "august")
+    .replace(/\bsep\.?\b|\bsept\.?\b/gi, "september")
+    .replace(/\boct\.?\b/gi, "october")
+    .replace(/\bnov\.?\b/gi, "november")
+    .replace(/\bdec\.?\b/gi, "december");
+  const withoutBrand = monthExpanded.replace(/\bmojo ai summits\b/gi, " ");
+  const withoutDateNoise = withoutBrand
+    .replace(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s*/gi, " ")
+    .replace(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}\b/gi, " ")
+    .replace(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b/gi, " ")
+    .replace(/\b\d{4}-\d{1,2}-\d{1,2}\b/g, " ")
+    .replace(/\b20\d{2}[\s_-]?\d{1,2}[\s_-]?\d{1,2}\b/g, " ")
+    .replace(/\b\d{1,2}[\s/_-]\d{1,2}[\s/_-]\d{2,4}\b/g, " ")
+    .replace(/\b(morning|afternoon|both)\s+shows?\b/gi, " ")
+    .replace(/\blive\b/gi, " ");
+  const afterColon = withoutDateNoise.split(":").pop();
+  return [...new Set([raw, monthExpanded, withoutBrand, withoutDateNoise, afterColon]
+    .map((entry) => normalizedMojoEventIdentity(entry).replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim())
+    .filter(Boolean))];
+}
+
+function compactMojoEventIdentity(value = "") {
+  return normalizedMojoEventIdentity(value).replace(/[^a-z0-9]+/g, "");
+}
+
+function mojoEventIdentityMatches(left = "", right = "") {
+  const leftForms = mojoEventIdentityForms(left);
+  const rightForms = mojoEventIdentityForms(right);
+  if (!leftForms.length || !rightForms.length) return false;
+  return leftForms.some((leftForm) =>
+    rightForms.some((rightForm) => leftForm === rightForm || compactMojoEventIdentity(leftForm) === compactMojoEventIdentity(rightForm))
+  );
+}
+
+function canonicalMojoEventFor(record = {}) {
+  const identities = [
+    record.slug,
+    record.eventSlug,
+    record.title,
+    record.eventName,
+    record.usedFor,
+    record.eventId,
+    record.id
+  ].filter(Boolean);
+  if (!identities.length) return null;
+  return DEFAULT_UPCOMING_EVENTS.find((event) =>
+    identities.some((identity) =>
+      mojoEventIdentityMatches(identity, event.slug) ||
+      mojoEventIdentityMatches(identity, event.title)
+    )
+  ) || null;
+}
+
+function canonicalMojoEventFields(record = {}) {
+  const canonical = canonicalMojoEventFor(record);
+  return {
+    eventSlug: canonical?.slug || cleanString(record.eventSlug || record.slug, 200),
+    eventName: canonical?.title || cleanString(record.eventName || record.usedFor || record.title, 240),
+    eventDate: canonical?.date || cleanString(record.eventDate || record.usedForDate || record.date || record.dateLabel, 120)
+  };
+}
+
 async function upcomingEvents(env) {
   const stored = await readSetupJson(env, EVENT_INDEX_KEY).catch(() => []);
   const rows = Array.isArray(stored) ? stored : [];
@@ -6911,15 +6674,19 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
   let sourceProspect = sourceMatrixProspect
     ? normalizeGuestMatrixProspect(sourceMatrixProspectKey, sourceMatrixProspect, "guest")
     : null;
-  const eventSlug = cleanString(payload.eventSlug, 200);
-  const eventName = cleanString(payload.eventName, 240);
+  const event = canonicalMojoEventFields(payload || {});
+  const eventSlug = event.eventSlug;
+  const eventName = event.eventName;
   const guestRegistrationType = cleanGuestRegistrationType(payload.guestRegistrationType || payload.registrationRole || payload.type);
   const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "");
   if (!rawShowId) throw new Error("Choose a show time before generating an invite code.");
-  if (requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both") {
-    throw new Error("Choose either the morning show or afternoon show for this featured invite.");
+  if (rawShowId === "morning") {
+    throw new Error("The morning show has been canceled. Choose the afternoon show.");
   }
-  const eventShowId = rawShowId;
+  if (requiresSingleShowRegistrationRole(guestRegistrationType) && rawShowId === "both") {
+    throw new Error("Choose the afternoon show for this featured invite.");
+  }
+  const eventShowId = rawShowId === "both" ? "afternoon" : rawShowId;
   const eventTime = eventShowTime(eventShowId);
   const rawGuestName = cleanString(
     payload.intendedGuestName || payload.invitedName || payload.guestName || payload.name,
@@ -6975,7 +6742,7 @@ async function createRegistrationInviteCode(env, payload = {}, actor = "") {
     eventId: cleanString(payload.eventId || `${eventSlug || eventName}:${eventShowId}`, 200),
     eventSlug,
     eventName,
-    eventDate: cleanString(payload.eventDate, 120),
+    eventDate: event.eventDate,
     eventTime,
     eventShowId,
     eventShowLabel: eventShowLabel(eventShowId),
@@ -7064,11 +6831,15 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
   const partnerRegistrationType = cleanGuestRegistrationType(payload.partnerRegistrationType || payload.registrationRole || "partner-candidate");
   const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "");
   if (!rawShowId) throw new Error("Choose a show time before generating a partner invite code.");
-  if (requiresSingleShowRegistrationRole(partnerRegistrationType) && rawShowId === "both") {
-    throw new Error("Choose either the morning show or afternoon show for this featured sponsor invite.");
+  if (rawShowId === "morning") {
+    throw new Error("The morning show has been canceled. Choose the afternoon show.");
   }
-  const eventShowId = rawShowId;
+  if (requiresSingleShowRegistrationRole(partnerRegistrationType) && rawShowId === "both") {
+    throw new Error("Choose the afternoon show for this featured sponsor invite.");
+  }
+  const eventShowId = rawShowId === "both" ? "afternoon" : rawShowId;
   const eventTime = eventShowTime(eventShowId);
+  const event = canonicalMojoEventFields(payload || {});
   const createdAt = new Date().toISOString();
   const name = cleanString(payload.partnerContactName || payload.intendedGuestName || payload.invitedName || payload.name, 240);
   const email = cleanString(payload.partnerContactEmail || payload.intendedGuestEmail || payload.invitedEmail || payload.email, 240).toLowerCase();
@@ -7077,10 +6848,10 @@ async function createPartnerInviteCode(env, payload = {}, actor = "") {
     type: "partner",
     code,
     status: "active",
-    eventId: cleanString(payload.eventId || `${payload.eventSlug || payload.eventName}:${eventShowId}`, 200),
-    eventSlug: cleanString(payload.eventSlug, 200),
-    eventName: cleanString(payload.eventName, 240),
-    eventDate: cleanString(payload.eventDate, 120),
+    eventId: cleanString(payload.eventId || `${event.eventSlug || event.eventName}:${eventShowId}`, 200),
+    eventSlug: event.eventSlug,
+    eventName: event.eventName,
+    eventDate: event.eventDate,
     eventTime,
     eventShowId,
     eventShowLabel: eventShowLabel(eventShowId),
@@ -7183,19 +6954,23 @@ async function updateRegistrationInviteShow(env, payload = {}, actor = "") {
   const role = cleanGuestRegistrationType(existing.guestRegistrationType || existing.registrationRole || invite.guestRegistrationType || invite.registrationRole);
   const rawShowId = cleanEventShowId(payload.eventShowId || payload.showId || payload.eventShow, "");
   if (!rawShowId) throw new Error("Choose a valid show time.");
-  if (requiresSingleShowRegistrationRole(role) && rawShowId === "both") {
-    throw new Error("Choose either the morning show or afternoon show for this featured invite.");
+  if (rawShowId === "morning") {
+    throw new Error("The morning show has been canceled. Choose the afternoon show.");
   }
+  if (requiresSingleShowRegistrationRole(role) && rawShowId === "both") {
+    throw new Error("Choose the afternoon show for this featured invite.");
+  }
+  const eventShowId = rawShowId === "both" ? "afternoon" : rawShowId;
 
   const now = new Date().toISOString();
   const next = {
     ...existing,
-    eventShowId: rawShowId,
-    eventShowLabel: eventShowLabel(rawShowId),
-    eventShowTime: eventShowTime(rawShowId),
-    eventTime: eventShowTime(rawShowId),
+    eventShowId,
+    eventShowLabel: eventShowLabel(eventShowId),
+    eventShowTime: eventShowTime(eventShowId),
+    eventTime: eventShowTime(eventShowId),
     eventId: cleanString(existing.eventSlug || existing.eventName, 200)
-      ? `${cleanString(existing.eventSlug || existing.eventName, 200)}:${rawShowId}`
+      ? `${cleanString(existing.eventSlug || existing.eventName, 200)}:${eventShowId}`
       : existing.eventId,
     updatedAt: now,
     updatedBy: actor
@@ -7277,7 +7052,8 @@ async function findManualRegistrationSource(env, payload = {}) {
 }
 
 function manualRegistrationEventIdentity(row = {}) {
-  return cleanString(row.eventSlug || row.eventName || row.eventId || row.eventDate, 240).toLowerCase();
+  const event = canonicalMojoEventFields(row || {});
+  return cleanString(event.eventSlug || event.eventName || row.eventId || event.eventDate, 240).toLowerCase();
 }
 
 function manualRegistrationMatchesSource(source = {}, row = {}) {
@@ -7291,7 +7067,7 @@ function manualRegistrationMatchesSource(source = {}, row = {}) {
 
   const sourceEvent = manualRegistrationEventIdentity(source);
   const rowEvent = manualRegistrationEventIdentity(row);
-  if (sourceEvent && rowEvent && sourceEvent !== rowEvent) return false;
+  if (sourceEvent && rowEvent && sourceEvent !== rowEvent && !mojoEventIdentityMatches(sourceEvent, rowEvent)) return false;
 
   const sourceShow = cleanEventShowId(source.eventShowId || source.showId || source.eventShow, "");
   const rowShow = cleanEventShowId(row.eventShowId || row.showId || row.eventShow, "");
@@ -7378,20 +7154,31 @@ async function manualRegisterForShow(env, payload = {}, actor = "") {
   );
   const showId = cleanEventShowId(payload.eventShowId || source.eventShowId || source.showId || source.eventShow, "");
   if (!showId) throw new Error("Choose an event show before manually registering this person.");
-  if (requiresSingleShowRegistrationRole(role) && showId === "both") {
-    throw new Error("Choose either the morning show or afternoon show for this featured registration.");
+  if (showId === "morning") {
+    throw new Error("The morning show has been canceled. Choose the afternoon show.");
   }
+  if (requiresSingleShowRegistrationRole(role) && showId === "both") {
+    throw new Error("Choose the afternoon show for this featured registration.");
+  }
+  const activeShowId = showId === "both" ? "afternoon" : showId;
 
-  const eventSlug = cleanString(payload.eventSlug || source.eventSlug, 200);
-  const eventName = cleanString(payload.eventName || source.eventName || source.usedFor, 240);
-  const eventDate = cleanString(payload.eventDate || source.eventDate || source.usedForDate, 120);
+  const event = canonicalMojoEventFields({
+    ...source,
+    ...payload,
+    eventSlug: payload.eventSlug || source.eventSlug,
+    eventName: payload.eventName || source.eventName || source.usedFor,
+    eventDate: payload.eventDate || source.eventDate || source.usedForDate
+  });
+  const eventSlug = event.eventSlug;
+  const eventName = event.eventName;
+  const eventDate = event.eventDate;
   if (!eventSlug && !eventName) throw new Error("Choose an event before manually registering this person.");
 
   const email = invitePersonEmail(source);
   if (!isEmail(email)) throw new Error("A valid email address is required before manually registering someone.");
 
   const now = new Date().toISOString();
-  const existing = await findExistingRegistrationForManualSource(env, type, { ...source, eventShowId: showId, eventSlug, eventName, eventDate });
+  const existing = await findExistingRegistrationForManualSource(env, type, { ...source, eventShowId: activeShowId, eventSlug, eventName, eventDate });
   const ensured = existing ? await ensureCrmRecord(env, existing, type) : null;
   const baseRow = ensured?.row || {};
   const id = cleanString(baseRow.id || source.registrationId, 200) || crypto.randomUUID?.() || `${Date.now()}-${randomInviteCode()}`;
@@ -7400,7 +7187,7 @@ async function manualRegisterForShow(env, payload = {}, actor = "") {
   const roleUpdate = registrationRoleUpdate(role, type, source);
   const name = invitePersonName(baseRow) || invitePersonName(source) || baseRow.name || source.name || email;
   const company = cleanString(baseRow.partnerCompany || baseRow.company || source.partnerCompany || source.company || source.organization, 240);
-  const eventTime = eventShowTime(showId);
+  const eventTime = eventShowTime(activeShowId);
   const manualRecord = {
     ...source,
     ...baseRow,
@@ -7431,13 +7218,13 @@ async function manualRegisterForShow(env, payload = {}, actor = "") {
     companyLogoUploadedAt: cleanString(baseRow.companyLogoUploadedAt || baseRow.partnerCompanyLogoUploadedAt || source.companyLogoUploadedAt || source.partnerCompanyLogoUploadedAt),
     inviteCode: cleanCode(source.code || source.inviteCode),
     invitedBy: cleanString(source.invitedBy || source.inviter || source.invitedByName || source.createdBy || actor, 180),
-    eventId: cleanString(payload.eventId || `${eventSlug || eventName}:${showId}`, 200),
+    eventId: cleanString(payload.eventId || `${eventSlug || eventName}:${activeShowId}`, 200),
     eventSlug,
     eventName,
     eventDate,
     eventTime,
-    eventShowId: showId,
-    eventShowLabel: eventShowLabel(showId),
+    eventShowId: activeShowId,
+    eventShowLabel: eventShowLabel(activeShowId),
     eventShowTime: eventTime,
     eventAccessLink: cleanString(baseRow.eventAccessLink || baseRow.accessLink || baseRow.joinUrl || baseRow.zoomUrl || baseRow.zoomJoinUrl || source.eventAccessLink || source.accessLink || source.joinUrl || source.zoomUrl || source.zoomJoinUrl, 1000),
     accessLink: cleanString(baseRow.accessLink || baseRow.eventAccessLink || baseRow.joinUrl || baseRow.zoomUrl || baseRow.zoomJoinUrl || source.accessLink || source.eventAccessLink || source.joinUrl || source.zoomUrl || source.zoomJoinUrl, 1000),
@@ -8096,7 +7883,7 @@ async function updateContact(env, payload = {}, actor = "") {
     prefixes: [registrantTypes.contacts.crmPrefix]
   });
 
-  const next = {
+  await writeSetupJson(env, key, {
     ...(existing || {}),
     id: email,
     email,
@@ -8151,10 +7938,8 @@ async function updateContact(env, payload = {}, actor = "") {
     crmNotes: cleanString(payload.crmNotes),
     crmUpdatedAt: now,
     crmUpdatedBy: actor || "crm"
-  };
-  await writeSetupJson(env, key, next);
+  });
   if (currentKey !== key && currentEmail) await deleteSetupRecord(env, currentKey);
-  return normalizeContactRecord(key, next);
 }
 
 async function serveContactPhoto(request, env) {
@@ -8379,15 +8164,12 @@ async function createManualPartner(env, payload = {}, actor = "") {
 }
 
 function contactEventIdentity(event = {}) {
-  return cleanString(
-    event.registrationId ||
-      event.eventId ||
-      event.eventSlug ||
-      event.eventName ||
-      event.inviteCode ||
-      event.registeredAt ||
-      event.id
-  ).toLowerCase();
+  const canonical = canonicalMojoEventFields(event || {});
+  const eventKey = [
+    canonical.eventSlug || event.eventSlug || event.slug || canonical.eventName || event.eventName || event.usedFor,
+    canonical.eventDate || event.eventDate || event.usedForDate || event.date
+  ].filter(Boolean).join("|");
+  return cleanString(eventKey || event.eventId || event.registrationId || event.inviteCode || event.registeredAt || event.id).toLowerCase();
 }
 
 function contactEventMatches(event = {}, target = {}) {
@@ -8404,13 +8186,15 @@ function contactEventMatches(event = {}, target = {}) {
 
   const leftIdentity = contactEventIdentity(event);
   const rightIdentity = contactEventIdentity(target);
-  if (leftIdentity && rightIdentity && leftIdentity === rightIdentity && showCompatible) return true;
+  if (leftIdentity && rightIdentity && (leftIdentity === rightIdentity || mojoEventIdentityMatches(leftIdentity, rightIdentity)) && showCompatible) return true;
 
-  const leftName = cleanString(event.eventName).toLowerCase();
-  const rightName = cleanString(target.eventName).toLowerCase();
-  const leftDate = cleanString(event.eventDate).toLowerCase();
-  const rightDate = cleanString(target.eventDate).toLowerCase();
-  return Boolean(showCompatible && leftName && rightName && leftName === rightName && (!rightDate || leftDate === rightDate));
+  const leftEvent = canonicalMojoEventFields(event || {});
+  const rightEvent = canonicalMojoEventFields(target || {});
+  const leftName = cleanString(leftEvent.eventName || event.eventName).toLowerCase();
+  const rightName = cleanString(rightEvent.eventName || target.eventName).toLowerCase();
+  const leftDate = cleanString(leftEvent.eventDate || event.eventDate).toLowerCase();
+  const rightDate = cleanString(rightEvent.eventDate || target.eventDate).toLowerCase();
+  return Boolean(showCompatible && leftName && rightName && (leftName === rightName || mojoEventIdentityMatches(leftName, rightName)) && (!rightDate || leftDate === rightDate));
 }
 
 async function syncRegistrationAttendance(env, email, targetEvent, attended, actor = "", now = "") {
@@ -8865,11 +8649,7 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   if (url.searchParams.has("prospecting")) {
-    return json(await partnerProspectingPayload(env, {
-      page: url.searchParams.get("page"),
-      pageSize: url.searchParams.get("pageSize"),
-      search: url.searchParams.get("search")
-    }));
+    return json(await partnerProspectingPayload(env));
   }
 
   const type = cleanType(url.searchParams.get("type"));
@@ -8880,37 +8660,18 @@ export async function onRequestGet({ request, env, data }) {
   if (matrixMode === "guest") {
     const registrationInviteRows = await registrationInviteCodes(env);
     const guestProspectRows = await guestMatrixProspects(env);
-    const matrixRows = [...registrationInviteRows, ...guestProspectRows]
-      .filter((row) => row.type !== "partner" && !row.partnerContactEmail);
-    const filteredRows = filterCrmRowsForRequest(matrixRows, "guest", url);
-    const pagination = crmListPagination(url);
-    const usePagedMatrix = url.searchParams.has("page") || url.searchParams.has("pageSize");
-    const totalPages = usePagedMatrix ? Math.max(1, Math.ceil(filteredRows.length / pagination.pageSize)) : 1;
-    const page = usePagedMatrix ? Math.min(pagination.page, totalPages) : 1;
-    const offset = (page - 1) * pagination.pageSize;
-    const pageRows = usePagedMatrix ? filteredRows.slice(offset, offset + pagination.pageSize) : filteredRows;
     return json({
       ok: true,
       type,
       label: config.label,
       section: config.section,
-      summary: { total: filteredRows.length },
+      summary: { total: registrationInviteRows.length + guestProspectRows.length },
       rows: [],
       partnerInviteCodes: [],
-      registrationInviteCodes: pageRows.filter((row) => !row.matrixOnly && row.type !== "partner"),
-      guestMatrixProspects: pageRows.filter((row) => row.matrixOnly || row.type === "guest-matrix-prospect"),
+      registrationInviteCodes: registrationInviteRows,
+      guestMatrixProspects: guestProspectRows,
       partnerMatrixProspects: [],
       matrixChangeLog: await matrixChangeLog(env, "guest"),
-      filterOptions: crmListFilterOptions(matrixRows, "guest"),
-      pagination: {
-        page,
-        pageSize: pagination.pageSize,
-        total: matrixRows.length,
-        filteredTotal: filteredRows.length,
-        totalPages,
-        hasPrevious: page > 1,
-        hasNext: page < totalPages
-      },
       upcomingEvents: await upcomingEvents(env)
     });
   }
@@ -8922,38 +8683,19 @@ export async function onRequestGet({ request, env, data }) {
     const manualPartnerRows = includeSideList("includeManualPartners")
       ? (await registrants(env, "partner", { includeManualPartners: true })).filter((row) => row.manualPartner === true)
       : [];
-    const matrixRows = [...partnerInviteRows, ...partnerProspectRows, ...manualPartnerRows]
-      .filter((row) => row.type === "partner" || row.partnerContactEmail || row.partnerRegistrationType || row.manualPartner === true);
-    const filteredRows = filterCrmRowsForRequest(matrixRows, "partner", url);
-    const pagination = crmListPagination(url);
-    const usePagedMatrix = url.searchParams.has("page") || url.searchParams.has("pageSize");
-    const totalPages = usePagedMatrix ? Math.max(1, Math.ceil(filteredRows.length / pagination.pageSize)) : 1;
-    const page = usePagedMatrix ? Math.min(pagination.page, totalPages) : 1;
-    const offset = (page - 1) * pagination.pageSize;
-    const pageRows = usePagedMatrix ? filteredRows.slice(offset, offset + pagination.pageSize) : filteredRows;
     return json({
       ok: true,
       type,
       label: config.label,
       section: config.section,
-      summary: { total: intakeOnly ? partnerInfoRows.length : filteredRows.length },
-      rows: pageRows.filter((row) => row.manualPartner === true),
-      partnerInviteCodes: pageRows.filter((row) => !row.matrixOnly && row.manualPartner !== true),
+      summary: { total: intakeOnly ? partnerInfoRows.length : partnerInviteRows.length + partnerProspectRows.length },
+      rows: manualPartnerRows,
+      partnerInviteCodes: partnerInviteRows,
       registrationInviteCodes: [],
       guestMatrixProspects: [],
-      partnerMatrixProspects: pageRows.filter((row) => row.matrixOnly || row.type === "partner-matrix-prospect"),
+      partnerMatrixProspects: partnerProspectRows,
       partnerInfoSubmissions: partnerInfoRows,
       matrixChangeLog: await matrixChangeLog(env, "partner"),
-      filterOptions: crmListFilterOptions(matrixRows, "partner"),
-      pagination: {
-        page,
-        pageSize: pagination.pageSize,
-        total: matrixRows.length,
-        filteredTotal: filteredRows.length,
-        totalPages,
-        hasPrevious: page > 1,
-        hasNext: page < totalPages
-      },
       upcomingEvents: await upcomingEvents(env)
     });
   }
@@ -8966,7 +8708,6 @@ export async function onRequestGet({ request, env, data }) {
       : type === "guest"
         ? await guestRegistrationRows(env)
       : await registrants(env, type, { includeManualPartners });
-  const filteredRows = filterCrmRowsForRequest(rows, type, url);
 
   if (url.searchParams.get("download") === "csv") {
     const headings = isContacts
@@ -9038,7 +8779,7 @@ export async function onRequestGet({ request, env, data }) {
         "CRM Notes"
       ];
     const csvRows = isContacts
-      ? filteredRows.map((row) => [
+      ? rows.map((row) => [
         row.id,
         row.firstName,
         row.lastName,
@@ -9076,7 +8817,7 @@ export async function onRequestGet({ request, env, data }) {
         row.attendedCount,
         row.source
       ])
-      : filteredRows.map((row) => [
+      : rows.map((row) => [
         row.createdAt,
         row.crmStatus,
         config.label,
@@ -9118,21 +8859,19 @@ export async function onRequestGet({ request, env, data }) {
     });
   }
 
-  return json(pagedCrmListResponse({
-    rows,
-    filteredRows,
+  return json({
+    ok: true,
     type,
-    config,
-    url,
-    isContacts,
-    sideLists: {
+    label: config.label,
+    section: config.section,
+    summary: isContacts ? summarizeContacts(rows) : summarize(rows),
+    rows,
     partnerInviteCodes: includeSideList("includePartnerInvites") ? await partnerInviteCodes(env) : [],
     registrationInviteCodes: includeSideList("includeRegistrationInvites") ? await registrationInviteCodes(env) : [],
     guestMatrixProspects: includeSideList("includeGuestMatrixProspects") ? await guestMatrixProspects(env) : [],
     partnerMatrixProspects: includeSideList("includePartnerMatrixProspects") ? await partnerMatrixProspects(env) : [],
     upcomingEvents: includeSideList("includeUpcomingEvents") ? await upcomingEvents(env) : []
-    }
-  }));
+  });
 }
 
 async function createMemberPassword(env, payload = {}, actor = "") {
@@ -10052,12 +9791,18 @@ export async function onRequestPost({ request, env, data }) {
   if (payload?.action === "delete-contact") {
     try {
       const deleted = await deleteContact(env, payload, access.email);
+      const rows = await contacts(env);
       return json({
         ok: true,
         type: "contacts",
         label: registrantTypes.contacts.label,
+        summary: summarizeContacts(rows),
+        rows,
         deleted,
-        refreshRequired: true
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
       return json({ error: error.message || "Contact could not be deleted." }, { status: 500 });
@@ -10090,13 +9835,18 @@ export async function onRequestPost({ request, env, data }) {
 
   if (payload?.action === "save-contact") {
     try {
-      const record = await updateContact(env, payload, access.email);
+      await updateContact(env, payload, access.email);
+      const rows = await contacts(env);
       return json({
         ok: true,
         type: "contacts",
         label: registrantTypes.contacts.label,
-        record,
-        refreshRequired: true
+        summary: summarizeContacts(rows),
+        rows,
+        partnerInviteCodes: await partnerInviteCodes(env),
+        registrationInviteCodes: await registrationInviteCodes(env),
+        guestMatrixProspects: await guestMatrixProspects(env),
+        upcomingEvents: await upcomingEvents(env)
       });
     } catch (error) {
       const status = error?.code === "crm_duplicate_person" ? 409 : /required|already exists|valid email/i.test(error.message || "") ? 400 : 500;

@@ -136,17 +136,17 @@ function cleanEventShowId(value, fallback = "") {
 
 function eventShowLabel(showId) {
   return {
-    morning: "Morning show",
+    morning: "Canceled morning show",
     afternoon: "Afternoon show",
-    both: "Both shows"
+    both: "Afternoon show"
   }[cleanEventShowId(showId)] || "";
 }
 
 function eventShowTime(showId) {
   return {
-    morning: "10:00 am - 11:30 am CT",
+    morning: "Canceled",
     afternoon: "1:00 pm - 2:30 pm CT",
-    both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
+    both: "1:00 pm - 2:30 pm CT"
   }[cleanEventShowId(showId)] || "";
 }
 
@@ -167,7 +167,8 @@ function registrationShowId(record = {}) {
 
 function registrationSessionKeys(registration = {}) {
   const showId = cleanEventShowId(registration.eventShowId, "");
-  if (showId === "both") return ["morning", "afternoon"];
+  if (showId === "both") return ["afternoon"];
+  if (showId === "morning") return [];
   return showId ? [showId] : [];
 }
 

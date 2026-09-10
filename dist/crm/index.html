@@ -2018,7 +2018,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       <a href="/files/">Storage</a>
       <a href="/budget/">Budget</a>
       <a href="/setup/">Setup Checklist</a>
-      <a href="/email/">Email</a>
     </nav>
   </header>
 
@@ -2236,8 +2235,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Show time
           <select id="guestMatrixAddShow" name="eventShowId">
             <option value="">Select a show time</option>
-            <option value="both">Both shows</option>
-            <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
             <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
           </select>
         </label>
@@ -2290,8 +2287,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Show time
           <select id="guestMatrixShowFilter">
             <option value="all">All shows</option>
-            <option value="both">Both shows</option>
-            <option value="morning">Morning show</option>
             <option value="afternoon">Afternoon show</option>
           </select>
         </label>
@@ -2375,8 +2370,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Show time
           <select id="registrationInviteShow" name="eventShowId" required>
             <option value="">Select a show time</option>
-            <option value="both">Both shows</option>
-            <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
             <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
           </select>
         </label>
@@ -2425,8 +2418,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           Show time
           <select id="partnerInviteShow" name="eventShowId" required>
             <option value="">Select a show time</option>
-            <option value="both">Both shows</option>
-            <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
             <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
           </select>
         </label>
@@ -2762,9 +2753,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     let activeProspectingSourceFilter = "";
     const partnerCompaniesPerPage = 10;
     const guestMatrixPeoplePerEventPage = 10;
-    const crmRecordPageSize = 50;
-    let crmRecordPage = 1;
-    let crmFilterReloadTimer = 0;
     let guestMatrixEventPages = {};
     let guestMatrixDrafts = loadGuestMatrixDrafts();
     let guestMatrixPendingChanges = {};
@@ -2782,8 +2770,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       matrixChangeLog: [],
       partnerInfoSubmissions: [],
       partnerCompanyOptions: [],
-      filterOptions: { events: [], companies: [] },
-      pagination: null,
       upcomingEvents: []
     };
     let registrationDebug = null;
@@ -2813,8 +2799,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventSlug: "ai-executive-readiness",
         eventName: "AI Executive Readiness",
         eventDate: "Friday, September 4, 2026",
-        eventShowLabel: "Morning show",
-        eventShowTime: "10:00 am - 11:30 am CT",
+        eventShowLabel: "Afternoon show",
+        eventShowTime: "1:00 pm - 2:30 pm CT",
         intendedGuestName: "Maya Serrano",
         intendedGuestEmail: "maya.serrano@example.com",
         invitedBy: "Angel",
@@ -2850,8 +2836,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventSlug: "ai-data-readiness-and-knowledge-strategy",
         eventName: "AI Data Readiness and Knowledge Strategy",
         eventDate: "Friday, September 18, 2026",
-        eventShowLabel: "Morning show",
-        eventShowTime: "10:00 am - 11:30 am CT",
+        eventShowLabel: "Afternoon show",
+        eventShowTime: "1:00 pm - 2:30 pm CT",
         intendedGuestName: "Priya Natarajan",
         intendedGuestEmail: "priya.natarajan@example.com",
         invitedBy: "Angel",
@@ -2885,8 +2871,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         eventSlug: "ai-use-cases-that-survive-finance",
         eventName: "AI Use Cases That Survive Finance",
         eventDate: "Friday, September 25, 2026",
-        eventShowLabel: "Morning show",
-        eventShowTime: "10:00 am - 11:30 am CT",
+        eventShowLabel: "Afternoon show",
+        eventShowTime: "1:00 pm - 2:30 pm CT",
         intendedGuestName: "Victor Reed",
         intendedGuestEmail: "victor.reed@example.com",
         invitedBy: "Jodi",
@@ -3248,18 +3234,18 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function eventShowLabel(value) {
       return {
-        morning: "Morning show",
+        morning: "Canceled morning show",
         afternoon: "Afternoon show",
-        both: "Both shows"
-      }[eventShowId(value)] || "Both shows";
+        both: "Afternoon show"
+      }[eventShowId(value)] || "Afternoon show";
     }
 
     function eventShowTime(value) {
       return {
-        morning: "10:00 am - 11:30 am CT",
+        morning: "Canceled",
         afternoon: "1:00 pm - 2:30 pm CT",
-        both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
-      }[eventShowId(value)] || "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT";
+        both: "1:00 pm - 2:30 pm CT"
+      }[eventShowId(value)] || "1:00 pm - 2:30 pm CT";
     }
 
     function eventShowText(record = {}) {
@@ -3272,10 +3258,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function registrationInviteShowOptions(invite = {}) {
       const role = invite.guestRegistrationType || invite.registrationRole || invite.type || "guest";
-      const current = eventShowId(invite.eventShowId || invite.showId || invite.eventShow, isSingleShowRegistrationRole(role) ? "morning" : "both");
+      const current = eventShowId(invite.eventShowId || invite.showId || invite.eventShow, "afternoon");
       const options = [
-        ...(isSingleShowRegistrationRole(role) ? [] : [["both", "Both shows | 10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"]]),
-        ["morning", "Morning show | 10:00 am - 11:30 am CT"],
         ["afternoon", "Afternoon show | 1:00 pm - 2:30 pm CT"]
       ];
       return options.map(([value, label]) => `<option value="${value}" ${value === current ? "selected" : ""}>${escapeHtml(label)}</option>`).join("");
@@ -3283,30 +3267,71 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function matrixShowOptionList(row = {}) {
       const role = row.roleValue || row.registrationRole || row.invite?.registrationRole || row.invite?.guestRegistrationType || row.invite?.partnerRegistrationType || "guest";
-      const current = eventShowId(row.showKey || row.invite?.eventShowId || row.invite?.showId || row.invite?.eventShow, isSingleShowRegistrationRole(role) ? "morning" : "both");
+      const current = eventShowId(row.showKey || row.invite?.eventShowId || row.invite?.showId || row.invite?.eventShow, "afternoon");
       const options = [
-        ...(isSingleShowRegistrationRole(role) ? [] : [["both", "Both shows | 10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"]]),
-        ["morning", "Morning show | 10:00 am - 11:30 am CT"],
         ["afternoon", "Afternoon show | 1:00 pm - 2:30 pm CT"]
       ];
       return matrixOptionList(options, current);
     }
 
     function actualEventBase(event = {}) {
-      const eventId = String(event.eventId || "").trim();
-      return event.eventName || event.eventSlug || (/[a-z]/i.test(eventId) ? eventId : "");
+      const eventId = String(event.eventId || event.id || "").trim().replace(/:(morning|afternoon|both)$/i, "");
+      return event.eventSlug || event.slug || (/[a-z]/i.test(eventId) ? eventId : "") || event.eventName || event.usedFor || event.title || "";
     }
 
     function normalizedEventIdentity(value = "") {
       return filterKey(String(value || "").replace(/:(morning|afternoon|both)$/i, ""));
     }
 
+    function eventIdentityForms(value = "") {
+      const raw = String(value || "").trim().replace(/:(morning|afternoon|both)$/i, "");
+      if (!raw) return [];
+      const monthExpanded = raw
+        .replace(/\bjan\.?\b/gi, "january")
+        .replace(/\bfeb\.?\b/gi, "february")
+        .replace(/\bmar\.?\b/gi, "march")
+        .replace(/\bapr\.?\b/gi, "april")
+        .replace(/\bjun\.?\b/gi, "june")
+        .replace(/\bjul\.?\b/gi, "july")
+        .replace(/\baug\.?\b/gi, "august")
+        .replace(/\bsep\.?\b|\bsept\.?\b/gi, "september")
+        .replace(/\boct\.?\b/gi, "october")
+        .replace(/\bnov\.?\b/gi, "november")
+        .replace(/\bdec\.?\b/gi, "december");
+      const withoutBrand = monthExpanded.replace(/\bmojo ai summits\b/gi, " ");
+      const withoutDateNoise = withoutBrand
+        .replace(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s*/gi, " ")
+        .replace(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}\b/gi, " ")
+        .replace(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b/gi, " ")
+        .replace(/\b\d{4}-\d{1,2}-\d{1,2}\b/g, " ")
+        .replace(/\b20\d{2}[\s_-]?\d{1,2}[\s_-]?\d{1,2}\b/g, " ")
+        .replace(/\b\d{1,2}[\s/_-]\d{1,2}[\s/_-]\d{2,4}\b/g, " ")
+        .replace(/\b(morning|afternoon|both)\s+shows?\b/gi, " ")
+        .replace(/\blive\b/gi, " ");
+      const afterColon = withoutDateNoise.split(":").pop();
+      return [...new Set([raw, monthExpanded, withoutBrand, withoutDateNoise, afterColon]
+        .map((entry) => normalizedEventIdentity(String(entry || "").replace(/[^a-z0-9]+/gi, " ").replace(/\s+/g, " ").trim()))
+        .filter(Boolean))];
+    }
+
+    function compactEventIdentity(value = "") {
+      return normalizedEventIdentity(value).replace(/[^a-z0-9]+/g, "");
+    }
+
+    function eventIdentityMatches(left = "", right = "") {
+      const leftForms = eventIdentityForms(left);
+      const rightForms = eventIdentityForms(right);
+      if (!leftForms.length || !rightForms.length) return false;
+      return leftForms.some((leftForm) =>
+        rightForms.some((rightForm) => leftForm === rightForm || compactEventIdentity(leftForm) === compactEventIdentity(rightForm))
+      );
+    }
+
     function fallbackEventForIdentity(value = "") {
-      const key = normalizedEventIdentity(value);
-      if (!key) return null;
+      if (!normalizedEventIdentity(value)) return null;
       return fallbackMojoEvents.find((event) =>
-        normalizedEventIdentity(event.slug) === key ||
-        normalizedEventIdentity(event.title) === key
+        eventIdentityMatches(value, event.slug) ||
+        eventIdentityMatches(value, event.title)
       ) || null;
     }
 
@@ -3371,11 +3396,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         event.usedFor,
         event.eventId,
         event.id
-      ].map(normalizedEventIdentity).filter(Boolean);
+      ].filter(Boolean);
       if (!identities.length) return null;
       return canonicalEventCatalog().find((candidate) =>
-        identities.includes(normalizedEventIdentity(candidate.slug)) ||
-        identities.includes(normalizedEventIdentity(candidate.title))
+        identities.some((identity) =>
+          eventIdentityMatches(identity, candidate.slug) ||
+          eventIdentityMatches(identity, candidate.title)
+        )
       ) || null;
     }
 
@@ -3923,35 +3950,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         url.searchParams.set("includeUpcomingEvents", "1");
         url.searchParams.set("includeManualPartners", "1");
       }
-      if (isRecordsView(view) || ["guest-matrix", "partner-matrix"].includes(view)) {
-        url.searchParams.set("page", String(crmRecordPage));
-        url.searchParams.set("pageSize", String(crmRecordPageSize));
-        const setIfActive = (name, value, inactive = "all") => {
-          const clean = String(value || "").trim();
-          if (clean && clean !== inactive) url.searchParams.set(name, clean);
-        };
-        setIfActive("status", statusFilter?.value || "all");
-        setIfActive("event", eventFilter?.value || "all");
-        setIfActive("role", roleFilter?.value || "all");
-        setIfActive("company", companyFilter?.value || "all");
-        setIfActive("phone", phoneFilter?.value || "all");
-        setIfActive("publicationOperator", publicationOperatorFilter?.value || "all");
-        setIfActive("publicationThreshold", publicationThresholdFilter?.value || "", "");
-        setIfActive("attendedOperator", attendedOperatorFilter?.value || "all");
-        setIfActive("attendedThreshold", attendedThresholdFilter?.value || "", "");
-        setIfActive("search", searchInput?.value || "", "");
-      }
-      if (["guest-matrix", "partner-matrix"].includes(view)) {
-        const setIfActive = (name, value, inactive = "all") => {
-          const clean = String(value || "").trim();
-          if (clean && clean !== inactive) url.searchParams.set(name, clean);
-        };
-        setIfActive("status", guestMatrixStatusFilter?.value || "all");
-        setIfActive("event", guestMatrixEventFilter?.value || "all");
-        setIfActive("show", guestMatrixShowFilter?.value || "all");
-        setIfActive("role", guestMatrixRoleFilter?.value || "all");
-        setIfActive("search", guestMatrixSearch?.value || "", "");
-      }
       return url.toString();
     }
 
@@ -4051,7 +4049,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         activeProspectingSourceFilter = "";
       }
       if (activeView === "partners-company" || activeView === "partner") partnerCompanyPage = 1;
-      crmRecordPage = 1;
       syncViewPanels();
       if (isRecordsView()) {
         const nextType = recordsTypeForView();
@@ -4261,8 +4258,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function guestMatrixActualEventKey(invite = {}) {
       const canonical = canonicalEventFor(invite);
+      if (canonical?.slug) return filterKey(canonical.slug);
       const eventId = firstCleanValue(invite.eventId).replace(/:(morning|afternoon|both)$/i, "");
-      return filterKey(firstCleanValue(canonical?.slug, invite.eventSlug, invite.usedFor, invite.eventName, eventId, "No event assigned"));
+      const fallback = fallbackEventForIdentity(firstCleanValue(invite.eventSlug, invite.slug, invite.usedFor, invite.eventName, eventId));
+      return filterKey(firstCleanValue(fallback?.slug, invite.eventSlug, invite.slug, invite.usedFor, invite.eventName, eventId, "No event assigned"));
     }
 
     function optionValueExists(options, value) {
@@ -4376,6 +4375,12 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function guestMatrixEventKey(invite = {}) {
       const canonical = canonicalEventFor(invite);
+      if (canonical?.slug) {
+        return [
+          filterKey(canonical.slug),
+          normalizedMatrixValue(canonical.date)
+        ].join("|");
+      }
       const actualKey = guestMatrixActualEventKey(invite);
       if (actualKey === "no event assigned") return "no-event-assigned|";
       return [
@@ -5006,14 +5011,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       return time >= today.getTime();
     }
 
-    function guestMatrixEventEntry({ status = "Invited", eventName = "", eventDate = "", eventShow = "" } = {}) {
-      const canonical = canonicalEventFor({ eventName, eventDate });
+    function guestMatrixEventEntry({ status = "Invited", eventSlug = "", eventId = "", eventName = "", eventDate = "", eventShow = "" } = {}) {
+      const canonical = canonicalEventFor({ eventSlug, eventId, eventName, eventDate });
       const name = firstCleanValue(canonical?.title, eventName, "Event not named");
       if (!name || name === "No event assigned") return null;
       const date = firstCleanValue(canonical?.date, eventDate);
       if (!isGuestMatrixFutureEvent(date)) return null;
       return {
         status,
+        eventSlug: firstCleanValue(canonical?.slug, eventSlug),
+        eventId,
         eventName: name,
         eventDate: date,
         eventShow: firstCleanValue(eventShow)
@@ -5021,9 +5028,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     }
 
     function guestMatrixFutureEventKey(event = {}) {
+      const canonical = canonicalEventFor(event);
       return [
-        normalizedMatrixValue(event.eventName),
-        normalizedMatrixValue(event.eventDate)
+        normalizedMatrixValue(firstCleanValue(canonical?.slug, event.eventSlug, event.eventId, event.eventName)),
+        normalizedMatrixValue(firstCleanValue(canonical?.date, event.eventDate))
       ].join("|");
     }
 
@@ -5099,6 +5107,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (candidateKey !== personKey) return;
         addEntry(guestMatrixEventEntry({
           status: isRegistrationInviteRegistered(candidate) ? "Registered" : "Invited",
+          eventSlug: candidate.eventSlug,
+          eventId: candidate.eventId,
           eventName: firstCleanValue(candidate.usedFor, candidate.eventName, candidate.eventSlug),
           eventDate: firstCleanValue(candidate.usedForDate, candidate.eventDate),
           eventShow: firstCleanValue(candidate.usedForShow, candidate.eventShowLabel, eventShowText(candidate))
@@ -5110,6 +5120,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (candidateKey !== personKey) return;
         addEntry(guestMatrixEventEntry({
           status: "Tracking",
+          eventSlug: candidate.eventSlug,
+          eventId: candidate.eventId,
           eventName: firstCleanValue(candidate.eventName, candidate.eventSlug),
           eventDate: candidate.eventDate,
           eventShow: firstCleanValue(candidate.eventShowLabel, eventShowText(candidate))
@@ -5127,6 +5139,8 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           const eventStatus = guestRegistrationLifecycleStatus(event.registrationStatus || event.status || event.crmStatus || "registered");
           addEntry(guestMatrixEventEntry({
             status: eventStatus === "registered" || eventStatus === "attended" ? "Registered" : guestRegistrationLifecycleLabel(eventStatus),
+            eventSlug: event.eventSlug,
+            eventId: event.eventId,
             eventName: firstCleanValue(event.eventName, event.eventSlug, event.eventId),
             eventDate: event.eventDate,
             eventShow: firstCleanValue(event.eventShowLabel, event.eventShowTime, event.eventTime)
@@ -5459,15 +5473,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (!isPartnerMatrix()) {
         invitationSources.set(filterKey("Zapier Blinq intake"), "Zapier Blinq intake");
       }
-      (Array.isArray(state.filterOptions?.events) ? state.filterOptions.events : []).forEach((event) => {
-        if (event.value && event.label) {
-          events.set(event.value, {
-            value: event.value,
-            label: event.label,
-            sortTime: event.sortTime ?? 0
-          });
-        }
-      });
       rows.forEach((row) => {
         const existingEvent = events.get(row.eventKey);
         const eventOption = {
@@ -5490,7 +5495,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       ].join("");
       if (current !== "all" && !events.has(current)) guestMatrixEventFilter.value = "all";
       if (guestMatrixShowFilter) {
-        guestMatrixShowFilter.value = ["all", "both", "morning", "afternoon"].includes(currentShow) ? currentShow : "all";
+        guestMatrixShowFilter.value = ["all", "afternoon"].includes(currentShow) ? currentShow : "all";
       }
       if (guestMatrixRoleFilter) {
         guestMatrixRoleFilter.innerHTML = [
@@ -5595,27 +5600,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             <button class="guest-matrix-page-link" type="button" data-guest-matrix-page-event-key="${escapeHtml(eventKey || "")}" data-guest-matrix-page-number="${currentPage - 1}" ${currentPage <= 1 ? "disabled" : ""}>Previous</button>
             ${pageLinks}
             <button class="guest-matrix-page-link" type="button" data-guest-matrix-page-event-key="${escapeHtml(eventKey || "")}" data-guest-matrix-page-number="${currentPage + 1}" ${currentPage >= totalPages ? "disabled" : ""}>Next</button>
-          </div>
-        </nav>
-      `;
-    }
-
-    function renderGuestMatrixServerPagination(position = "top") {
-      const pagination = state.pagination || {};
-      const totalPages = Number(pagination.totalPages || 1);
-      if (totalPages <= 1) return "";
-      const page = Number(pagination.page || crmRecordPage || 1);
-      const pageSize = Number(pagination.pageSize || crmRecordPageSize);
-      const filteredTotal = Number(pagination.filteredTotal || 0);
-      const start = filteredTotal ? ((page - 1) * pageSize) + 1 : 0;
-      const end = Math.min(page * pageSize, filteredTotal);
-      return `
-        <nav class="guest-matrix-pagination ${position === "bottom" ? "bottom" : ""}" aria-label="${escapeHtml(matrixEntityLabelTitle())} Matrix record pages">
-          <span class="guest-matrix-page-summary">Page ${page} of ${totalPages} | showing ${start}-${end} of ${filteredTotal}</span>
-          <div class="guest-matrix-page-links">
-            <button class="guest-matrix-page-link" type="button" data-guest-matrix-server-page="${page - 1}" ${page <= 1 ? "disabled" : ""}>Previous</button>
-            <button class="guest-matrix-page-link current" type="button" disabled>${page}</button>
-            <button class="guest-matrix-page-link" type="button" data-guest-matrix-server-page="${page + 1}" ${page >= totalPages ? "disabled" : ""}>Next</button>
           </div>
         </nav>
       `;
@@ -5773,9 +5757,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         if (!groups.has(row.eventKey)) groups.set(row.eventKey, []);
         groups.get(row.eventKey).push(row);
       });
-      const serverTopPagination = renderGuestMatrixServerPagination("top");
-      const serverBottomPagination = renderGuestMatrixServerPagination("bottom");
-      guestMatrixList.innerHTML = `${serverTopPagination}${[...groups.values()].map((groupRows) => {
+      guestMatrixList.innerHTML = [...groups.values()].map((groupRows) => {
         const first = groupRows[0];
         const dataPrefix = matrixDataPrefix();
         const registered = groupRows.filter((row) => row.registered).length;
@@ -5908,7 +5890,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             ${bottomPagination}
           </article>
         `;
-      }).join("")}${serverBottomPagination}`;
+      }).join("");
       requestAnimationFrame(syncTableScrollProxy);
     }
 
@@ -5991,28 +5973,17 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       statusFilter.innerHTML = recordStatusFilterOptions(state.type, selectedStatus);
       if (selectedStatus !== "all" && statusFilter.value !== selectedStatus) statusFilter.value = "all";
 
-      const serverEvents = Array.isArray(state.filterOptions?.events) ? state.filterOptions.events : [];
-      const serverCompanies = Array.isArray(state.filterOptions?.companies) ? state.filterOptions.companies : [];
-      if (serverEvents.length || serverCompanies.length) {
-        serverEvents.forEach((event) => {
-          if (event.value && event.label) events.set(event.value, { value: event.value, label: event.label, sortTime: event.sortTime ?? 0 });
-        });
-        serverCompanies.forEach((company) => {
-          if (company.value && company.label) companies.set(company.value, company.label);
-        });
-      } else {
-        for (const row of state.rows || []) {
-          const company = crmCompanyName(row);
-          if (company) companies.set(filterKey(company), company);
+      for (const row of state.rows || []) {
+        const company = crmCompanyName(row);
+        if (company) companies.set(filterKey(company), company);
 
-          for (const event of rowEvents(row)) {
-            const key = actualEventKey(event);
-            const label = eventFilterDisplayLabel(event);
-            const sortTime = eventSortTimeFor(event);
-            const existingEvent = events.get(key);
-            if (key && label && (!existingEvent || sortTime < existingEvent.sortTime || label.length > existingEvent.label.length)) {
-              events.set(key, { value: key, label, sortTime });
-            }
+        for (const event of rowEvents(row)) {
+          const key = actualEventKey(event);
+          const label = eventFilterDisplayLabel(event);
+          const sortTime = eventSortTimeFor(event);
+          const existingEvent = events.get(key);
+          if (key && label && (!existingEvent || sortTime < existingEvent.sortTime || label.length > existingEvent.label.length)) {
+            events.set(key, { value: key, label, sortTime });
           }
         }
       }
@@ -6044,11 +6015,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const featuredGuest = isSingleShowRegistrationRole(registrationInviteType.value);
       registrationInviteShow.innerHTML = [
         '<option value="">Select a show time</option>',
-        featuredGuest ? "" : '<option value="both">Both shows</option>',
-        '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
         '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
       ].join("");
-      registrationInviteShow.value = featuredGuest && currentShow === "both" ? "" : currentShow;
+      registrationInviteShow.value = currentShow === "afternoon" ? "afternoon" : "afternoon";
       registrationInviteSubmit.textContent = `Generate ${role} Link`;
       registrationInviteSendEmail.textContent = `Generate ${role} Link + Send Email`;
     }
@@ -6060,18 +6029,16 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const featuredPartner = isSingleShowRegistrationRole(partnerInviteType.value);
       partnerInviteShow.innerHTML = [
         '<option value="">Select a show time</option>',
-        featuredPartner ? "" : '<option value="both">Both shows</option>',
-        '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
         '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
       ].join("");
-      partnerInviteShow.value = featuredPartner && currentShow === "both" ? "" : currentShow;
+      partnerInviteShow.value = currentShow === "afternoon" ? "afternoon" : "afternoon";
       partnerInviteSubmit.textContent = `Generate ${role} Link`;
       partnerInviteSendEmail.textContent = `Generate ${role} Link + Send Email`;
     }
 
     function updateGuestMatrixAddShowOptions() {
       if (!guestMatrixAddShow || !guestMatrixAddType) return;
-      const currentShow = guestMatrixAddShow.value || "both";
+      const currentShow = guestMatrixAddShow.value || "afternoon";
       const currentRole = guestMatrixAddType.value;
       guestMatrixAddType.name = isPartnerMatrix() ? "partnerRegistrationType" : "guestRegistrationType";
       guestMatrixAddType.innerHTML = isPartnerMatrix()
@@ -6089,11 +6056,9 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
       const featuredGuest = isSingleShowRegistrationRole(guestMatrixAddType.value);
       guestMatrixAddShow.innerHTML = [
-        featuredGuest ? "" : '<option value="both">Both shows</option>',
-        '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
         '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
       ].join("");
-      guestMatrixAddShow.value = featuredGuest && currentShow === "both" ? "" : currentShow;
+      guestMatrixAddShow.value = currentShow === "afternoon" ? "afternoon" : "afternoon";
       if (guestMatrixAddName) guestMatrixAddName.placeholder = isPartnerMatrix() ? "Partner contact name" : "Guest name";
       if (guestMatrixAddEmail) guestMatrixAddEmail.placeholder = isPartnerMatrix() ? "partner@company.com" : "guest@example.com";
       if (guestMatrixAddLinkedIn) guestMatrixAddLinkedIn.placeholder = "https://www.linkedin.com/in/...";
@@ -8004,24 +7969,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         }).join("");
     }
 
-    function renderCrmRecordPagination() {
-      const pagination = state.pagination || {};
-      const totalPages = Number(pagination.totalPages || 1);
-      if (!pagination || totalPages <= 1) {
-        partnerPagination.hidden = true;
-        return;
-      }
-      partnerPagination.hidden = false;
-      partnerPagePrevious.disabled = !pagination.hasPrevious;
-      partnerPageNext.disabled = !pagination.hasNext;
-      const page = Number(pagination.page || crmRecordPage || 1);
-      const pageSize = Number(pagination.pageSize || crmRecordPageSize);
-      const filteredTotal = Number(pagination.filteredTotal || 0);
-      const start = filteredTotal ? ((page - 1) * pageSize) + 1 : 0;
-      const end = Math.min(page * pageSize, filteredTotal);
-      partnerPageSummary.textContent = `Page ${page} of ${totalPages} | showing ${start}-${end} of ${filteredTotal}`;
-    }
-
     function renderRows() {
       const rows = filteredRows();
       const label = activeLabel();
@@ -8030,7 +7977,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         requestAnimationFrame(syncTableScrollProxy);
         return;
       }
-      renderCrmRecordPagination();
+      partnerPagination.hidden = true;
       registrantsTitle.textContent = state.type === "contacts" || state.type === "guest" || activeView === "partner" ? label : `${label} Registrants`;
       if (!rows.length) {
         rowsElement.innerHTML = `<tr><td colspan="8">No ${label.toLowerCase()} match the current filters.</td></tr>`;
@@ -8256,9 +8203,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         state.partnerMatrixProspects = state.partnerMatrixProspects || [];
         state.matrixChangeLog = state.matrixChangeLog || [];
         state.partnerInfoSubmissions = state.partnerInfoSubmissions || [];
-        state.filterOptions = state.filterOptions || { events: [], companies: [] };
-        state.pagination = state.pagination || null;
-        if (state.pagination?.page) crmRecordPage = Number(state.pagination.page) || crmRecordPage;
         if (requestedView === "partner-intake") await loadPartnerCompanyOptions();
         guestMatrixPendingChanges = {};
         updateGuestMatrixSaveButton();
@@ -8292,23 +8236,11 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       }
     }
 
-    function partnerProspectingUrl(extraParams = {}) {
-      const url = new URL(api, window.location.origin);
-      url.searchParams.set("prospecting", "1");
-      url.searchParams.set("page", String(crmRecordPage));
-      url.searchParams.set("pageSize", "100");
-      if (searchInput?.value.trim()) url.searchParams.set("search", searchInput.value.trim());
-      Object.entries(extraParams).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, String(value));
-      });
-      return url.toString();
-    }
-
     async function loadPartnerProspecting() {
       setNotice("Loading partner prospecting...");
       render();
       try {
-        prospectingState = await fetch(partnerProspectingUrl()).then(readJson);
+        prospectingState = await fetch(`${api}?prospecting=1`).then(readJson);
         setNotice(`${prospectingState.dashboard?.companiesDiscovered || 0} partner prospect companies loaded.`, "ok");
         render();
       } catch (error) {
@@ -8330,7 +8262,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
             title: options.resultTitle || "Discovery run complete",
             message: discoveryRunSummary(data)
           };
-          prospectingState = await fetch(partnerProspectingUrl()).then(readJson);
+          prospectingState = await fetch(`${api}?prospecting=1`).then(readJson);
         } else {
           prospectingState = data;
         }
@@ -8368,7 +8300,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const originalLabel = button?.textContent || "";
       const targetNewCompanies = 50;
       const perStepNewCap = 5;
-      prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
+      prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
       const sourceQueue = (prospectingState?.starterSources || [])
         .filter((source) => source.sourceId)
         .sort((a, b) => {
@@ -8417,7 +8349,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           totals.skippedExisting += Number(batch.skippedExisting || 0);
           totals.failed += Math.max(0, Number(batch.attempted || 0) - Number(batch.succeeded || 0));
           await new Promise((resolve) => setTimeout(resolve, 700));
-          prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
+          prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
           const currentCompanyCount = Number(prospectingState?.dashboard?.companiesDiscovered || prospectCompanies().length || 0);
           confirmedNewCompanies = Math.max(0, currentCompanyCount - startingCompanyCount);
           prospectingRunStatus = {
@@ -8427,7 +8359,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           render();
           if (!Number(batch.attempted || 0)) break;
         }
-        prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
+        prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
         const finalCompanyCount = Number(prospectingState?.dashboard?.companiesDiscovered || prospectCompanies().length || 0);
         confirmedNewCompanies = Math.max(0, finalCompanyCount - startingCompanyCount);
         const exhausted = confirmedNewCompanies < targetNewCompanies;
@@ -8456,7 +8388,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       const originalLabel = button?.textContent || "";
       const targetCompanies = 50;
       const perStepNewCap = 5;
-      prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
+      prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
       const sourceQueue = (prospectingState?.emergingSources || [])
         .filter((source) => source.sourceId)
         .sort((a, b) => {
@@ -8506,7 +8438,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           totals.taggedExisting += Number(batch.taggedExisting || 0);
           totals.failed += Math.max(0, Number(batch.attempted || 0) - Number(batch.succeeded || 0));
           await new Promise((resolve) => setTimeout(resolve, 700));
-          prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
+          prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
           confirmedEmergingCompanies = Math.max(0, emergingCompanies().length - startingEmergingCount);
           prospectingRunStatus = {
             title: "Finding Emerging 10-100 companies",
@@ -8515,7 +8447,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           render();
           if (!Number(batch.attempted || 0)) break;
         }
-        prospectingState = await fetch(partnerProspectingUrl({ discoveryRefresh: Date.now() })).then(readJson);
+        prospectingState = await fetch(`${api}?prospecting=1&discoveryRefresh=${Date.now()}`).then(readJson);
         confirmedEmergingCompanies = Math.max(0, emergingCompanies().length - startingEmergingCount);
         const exhausted = confirmedEmergingCompanies < targetCompanies;
         prospectingRunStatus = {
@@ -8676,17 +8608,10 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload)
       }).then(readJson);
-      if (data.rows) {
-        state = data;
-      } else if (data.record) {
-        state.rows = (state.rows || []).map((row) => row.key === key ? data.record : row);
-      }
+      state = data;
       delete contactPendingChanges[key];
       updateContactSaveAllButton();
-      if (options.render !== false) {
-        if (data.refreshRequired) await loadCrm();
-        else render();
-      }
+      if (options.render !== false) render();
       return data;
     }
 
@@ -8705,7 +8630,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           });
           savedCount += 1;
         }
-        await loadCrm();
+        render();
         setNotice(`Saved ${savedCount} contact change${savedCount === 1 ? "" : "s"}.`, "ok");
       } catch (error) {
         showErrorNotice(error, "Contact changes could not be saved.");
@@ -8923,12 +8848,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function renderRowsFromFirstPartnerPage() {
       if (activeView === "partners-company") partnerCompanyPage = 1;
-      crmRecordPage = 1;
-      if (isRecordsView(activeView) && activeView !== "partners-company") {
-        window.clearTimeout(crmFilterReloadTimer);
-        crmFilterReloadTimer = window.setTimeout(loadCrm, 250);
-        return;
-      }
       renderRows();
     }
 
@@ -9272,7 +9191,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       if (isSingleShowRegistrationRole(payload.registrationRole) && payload.eventShowId === "both") {
-        setNotice("Featured guests, featured sponsors, and featured authors must be assigned to either the morning show or afternoon show.", "error");
+        setNotice("Featured guests, featured sponsors, and featured authors must be assigned to the afternoon show.", "error");
         return;
       }
       setNotice(`Adding tracked ${matrixEntityLabel()}...`);
@@ -9458,7 +9377,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
           }
         };
         setNotice(`Contact deleted: ${data.deleted?.email || label}`, "ok");
-        await loadCrm();
+        render();
       } catch (error) {
         showErrorNotice(error);
       }
@@ -9785,12 +9704,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       attendedThresholdFilter.value = "";
       phoneFilter.value = "all";
       searchInput.value = "";
-      crmRecordPage = 1;
-      if (isRecordsView(activeView) && activeView !== "partners-company") {
-        loadCrm();
-        setNotice(`${activeLabel()} filters cleared.`, "ok");
-        return;
-      }
       renderRows();
       setNotice(`${activeLabel()} filters cleared.`, "ok");
     });
@@ -9798,23 +9711,13 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
     contactSaveAllButton?.addEventListener("click", saveAllContactChanges);
 
     partnerPagePrevious.addEventListener("click", () => {
-      if (activeView === "partners-company") {
-        partnerCompanyPage = Math.max(1, partnerCompanyPage - 1);
-        renderRows();
-        return;
-      }
-      crmRecordPage = Math.max(1, crmRecordPage - 1);
-      loadCrm();
+      partnerCompanyPage = Math.max(1, partnerCompanyPage - 1);
+      renderRows();
     });
 
     partnerPageNext.addEventListener("click", () => {
-      if (activeView === "partners-company") {
-        partnerCompanyPage += 1;
-        renderRows();
-        return;
-      }
-      crmRecordPage += 1;
-      loadCrm();
+      partnerCompanyPage += 1;
+      renderRows();
     });
 
     refreshButton.addEventListener("click", loadCrm);
@@ -10148,9 +10051,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
 
     function renderGuestMatrixFromFilterChange() {
       resetGuestMatrixPagination();
-      crmRecordPage = 1;
-      window.clearTimeout(crmFilterReloadTimer);
-      crmFilterReloadTimer = window.setTimeout(loadCrm, 250);
+      renderGuestMatrix();
     }
 
     [guestMatrixEventFilter, guestMatrixShowFilter, guestMatrixRoleFilter, guestMatrixStatusFilter, guestMatrixIntakeTypeFilter, guestMatrixInvitationSourceFilter, guestMatrixSearch].forEach((input) => {
@@ -10168,8 +10069,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
       if (guestMatrixInvitationSourceFilter) guestMatrixInvitationSourceFilter.value = "all";
       guestMatrixSearch.value = "";
       resetGuestMatrixPagination();
-      crmRecordPage = 1;
-      loadCrm();
+      renderGuestMatrix();
       guestMatrixSearch.focus();
     });
 
@@ -10222,13 +10122,6 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         const page = Number(pageButton.dataset.guestMatrixPageNumber || 1);
         guestMatrixEventPages[guestMatrixPageKey(eventKey)] = page;
         renderGuestMatrix();
-        return;
-      }
-      const serverPageButton = event.target.closest("[data-guest-matrix-server-page]");
-      if (serverPageButton) {
-        crmRecordPage = Math.max(1, Number(serverPageButton.dataset.guestMatrixServerPage || 1));
-        resetGuestMatrixPagination();
-        loadCrm();
         return;
       }
 
@@ -10400,7 +10293,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       if (isSingleShowRegistrationRole(payload.partnerRegistrationType) && payload.eventShowId === "both") {
-        setNotice("Featured sponsors must be assigned to either the morning show or afternoon show.", "error");
+        setNotice("Featured sponsors must be assigned to the afternoon show.", "error");
         return;
       }
       if (payload.sendEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.partnerContactEmail || "")) {
@@ -10500,7 +10393,7 @@ header .top-nav a[href]:not([href^="#"]):not(.brand-lockup)::after {
         return;
       }
       if (isSingleShowRegistrationRole(payload.guestRegistrationType) && payload.eventShowId === "both") {
-        setNotice("Featured guests, featured sponsors, and featured authors must be assigned to either the morning show or afternoon show.", "error");
+        setNotice("Featured guests, featured sponsors, and featured authors must be assigned to the afternoon show.", "error");
         clearRegistrationInviteResult();
         return;
       }

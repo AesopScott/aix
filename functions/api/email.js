@@ -79,7 +79,7 @@ function eventTime(value) {
   return Number.isNaN(looseDate) ? Number.POSITIVE_INFINITY : looseDate;
 }
 
-function cleanShowId(value, fallback = "both") {
+function cleanShowId(value, fallback = "afternoon") {
   const raw = cleanString(value, 80).toLowerCase();
   const normalized = raw.replace(/[\s_]+/g, "-");
   const compact = raw.replace(/[^a-z0-9]/g, "");
@@ -94,17 +94,17 @@ function cleanShowId(value, fallback = "both") {
 
 function showLabel(showId) {
   return {
-    morning: "Morning show",
+    morning: "Canceled morning show",
     afternoon: "Afternoon show",
-    both: "Both shows"
-  }[cleanShowId(showId)] || "Both shows";
+    both: "Afternoon show"
+  }[cleanShowId(showId)] || "Afternoon show";
 }
 
 function showTime(showId) {
   return {
-    morning: "10:00 am - 11:30 am CT",
+    morning: "Canceled",
     afternoon: "1:00 pm - 2:30 pm CT",
-    both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
+    both: "1:00 pm - 2:30 pm CT"
   }[cleanShowId(showId)] || "";
 }
 
