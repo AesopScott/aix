@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mojo AI Summits Zoom Layout Mockup</title>
+  <style>
+    :root {
+      --deep-navy: #0A0F1E;
+      --electric-blue: #1666FF;
+      --cyan: #00E6FF;
+      --slate: #1B2333;
+      --white: #FFFFFF;
+      --muted: rgba(255, 255, 255, 0.68);
+      --line: rgba(0, 230, 255, 0.26);
+      --panel: rgba(10, 15, 30, 0.72);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #050814;
+      color: var(--white);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .stage {
+      position: relative;
+      width: min(1920px, 100vw - 48px);
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background:
+        linear-gradient(90deg, rgba(5, 8, 20, 0.9), rgba(10, 15, 30, 0.58) 49%, rgba(5, 8, 20, 0.4)),
+        url("../../assets/images/mojo-ai-summits-executive-ai-intelligence-network-zoom-background-1920x1080.png") center / cover no-repeat;
+      box-shadow: 0 30px 120px rgba(0, 0, 0, 0.55);
+      isolation: isolate;
+    }
+
+    .stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(10, 15, 30, 0.34), transparent 55%),
+        radial-gradient(circle at 82% 43%, rgba(0, 230, 255, 0.24), transparent 26%),
+        radial-gradient(circle at 18% 18%, rgba(22, 102, 255, 0.22), transparent 32%);
+      z-index: -1;
+    }
+
+    .zoom-chrome {
+      position: absolute;
+      inset: 22px 28px auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      height: 42px;
+      padding: 0 16px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(4, 7, 15, 0.68);
+      backdrop-filter: blur(14px);
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .zoom-controls,
+    .zoom-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #49F29A;
+      box-shadow: 0 0 18px rgba(73, 242, 154, 0.86);
+    }
+
+    .control {
+      width: 18px;
+      height: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.36);
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .brand {
+      position: absolute;
+      left: 72px;
+      bottom: 56px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand img {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 18px rgba(0, 230, 255, 0.28));
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 20px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .featured-grid {
+      position: absolute;
+      left: 72px;
+      top: 108px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      width: 1040px;
+      max-width: calc(100% - 720px);
+    }
+
+    .tile {
+      position: relative;
+      height: 245px;
+      min-height: 202px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 230, 255, 0.28);
+      border-radius: 8px;
+      background: rgba(10, 15, 30, 0.72);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .tile img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center 18%;
+      filter: saturate(1.05) contrast(1.02);
+    }
+
+    .tile.placeholder {
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(135deg, rgba(22, 102, 255, 0.18), rgba(0, 230, 255, 0.08)),
+        rgba(10, 15, 30, 0.78);
+    }
+
+    .tile.placeholder::before {
+      content: attr(data-slot);
+      width: 108px;
+      height: 108px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(0, 230, 255, 0.5);
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(0, 230, 255, 0.2), transparent 44%),
+        rgba(5, 8, 20, 0.72);
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 26px;
+      font-weight: 900;
+      box-shadow: 0 0 42px rgba(0, 230, 255, 0.18);
+    }
+
+    .tile.photo .slot-number {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(0, 230, 255, 0.54);
+      border-radius: 999px;
+      background: rgba(4, 7, 15, 0.7);
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 13px;
+      font-weight: 900;
+      backdrop-filter: blur(10px);
+    }
+
+    .tile::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 45%;
+      background: linear-gradient(180deg, transparent, rgba(5, 8, 20, 0.92));
+    }
+
+    .name-tag {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 7px;
+      background: rgba(4, 7, 15, 0.68);
+      color: rgba(255, 255, 255, 0.94);
+      font-size: 16px;
+      font-weight: 800;
+      backdrop-filter: blur(12px);
+    }
+
+    .name-tag small {
+      display: block;
+      margin-top: 2px;
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+
+    .mic {
+      flex: 0 0 auto;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: rgba(0, 230, 255, 0.16);
+      border: 1px solid rgba(0, 230, 255, 0.34);
+    }
+
+    .moderator {
+      position: absolute;
+      right: 110px;
+      top: 182px;
+      width: 510px;
+      min-height: 650px;
+    }
+
+    .moderator::before {
+      content: "";
+      position: absolute;
+      inset: 70px -40px 58px -22px;
+      border: 1px solid rgba(0, 230, 255, 0.34);
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 50% 28%, rgba(0, 230, 255, 0.16), transparent 50%),
+        rgba(10, 15, 30, 0.28);
+      box-shadow:
+        0 0 80px rgba(0, 230, 255, 0.24),
+        inset 0 0 60px rgba(22, 102, 255, 0.18);
+      backdrop-filter: blur(4px);
+    }
+
+    .portrait-orbit {
+      position: relative;
+      width: 420px;
+      height: 420px;
+      margin: 32px auto 0;
+      border: 2px solid rgba(0, 230, 255, 0.5);
+      border-radius: 999px;
+      background:
+        linear-gradient(145deg, rgba(22, 102, 255, 0.28), rgba(0, 230, 255, 0.08)),
+        rgba(5, 8, 20, 0.72);
+      box-shadow:
+        0 28px 90px rgba(0, 0, 0, 0.42),
+        0 0 80px rgba(0, 230, 255, 0.28);
+      overflow: hidden;
+    }
+
+    .portrait-orbit img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 8%;
+      transform: scale(1.08);
+    }
+
+    .live-camera-placeholder {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 54px;
+      color: rgba(255, 255, 255, 0.88);
+      text-align: center;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(0, 230, 255, 0.22), transparent 34%),
+        linear-gradient(145deg, rgba(22, 102, 255, 0.18), rgba(5, 8, 20, 0.78));
+    }
+
+    .live-camera-placeholder strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 38px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .live-camera-placeholder span {
+      display: block;
+      color: rgba(255, 255, 255, 0.64);
+      font-size: 19px;
+      line-height: 1.35;
+    }
+
+    .moderator-card {
+      position: relative;
+      width: 470px;
+      margin: -26px auto 0;
+      padding: 24px 28px 26px;
+      border: 1px solid rgba(0, 230, 255, 0.38);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(22, 102, 255, 0.84), rgba(0, 230, 255, 0.46)),
+        rgba(10, 15, 30, 0.86);
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(16px);
+    }
+
+    .moderator-card span {
+      display: block;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .moderator-card strong {
+      display: block;
+      margin-top: 8px;
+      color: white;
+      font-size: 44px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .moderator-card p {
+      margin: 12px 0 0;
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    .layout-note {
+      position: absolute;
+      right: 80px;
+      bottom: 64px;
+      width: 540px;
+      padding: 18px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(4, 7, 15, 0.7);
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 17px;
+      line-height: 1.45;
+      backdrop-filter: blur(14px);
+    }
+
+    @media (max-width: 1100px) {
+      body { padding: 0; }
+
+      .stage {
+        width: 100vw;
+        min-height: 100vh;
+        aspect-ratio: auto;
+        border: 0;
+      }
+
+      .zoom-chrome {
+        left: 16px;
+        right: 16px;
+        top: 16px;
+      }
+
+      .featured-grid {
+        left: 20px;
+        right: 20px;
+        top: 82px;
+        width: auto;
+        max-width: none;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .tile,
+      .tile img {
+        min-height: 118px;
+      }
+
+      .name-tag {
+        font-size: 11px;
+        min-height: 26px;
+      }
+
+      .moderator {
+        left: 50%;
+        right: auto;
+        top: 510px;
+        width: 340px;
+        min-height: 390px;
+        transform: translateX(-50%);
+      }
+
+      .portrait-orbit {
+        width: 270px;
+        height: 270px;
+      }
+
+      .moderator-card {
+        width: 320px;
+        padding: 16px 18px;
+      }
+
+      .moderator-card strong {
+        font-size: 30px;
+      }
+
+      .moderator-card p,
+      .layout-note,
+      .brand span {
+        font-size: 13px;
+      }
+
+      .brand {
+        left: 20px;
+        bottom: 22px;
+      }
+
+      .layout-note {
+        right: 20px;
+        bottom: 104px;
+        width: calc(100% - 40px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage" aria-label="Zoom session layout mockup with featured people on the left and moderator floating on the right">
+    <div class="zoom-chrome">
+      <div class="zoom-status"><span class="dot"></span><span id="show-title">Mojo AI Summits | Executive Research Session</span></div>
+      <div class="zoom-controls" aria-hidden="true">
+        <span class="control"></span>
+        <span class="control"></span>
+        <span class="control"></span>
+      </div>
+    </div>
+
+    <section class="featured-grid" id="featured-grid" aria-label="Featured people"></section>
+
+    <section class="moderator" aria-label="Floating moderator portrait">
+      <div class="portrait-orbit">
+        <img src="../../assets/images/scott-pro3-6.png" alt="Scott Schindler">
+      </div>
+      <div class="moderator-card">
+        <span>Moderator</span>
+        <strong>Scott Schindler</strong>
+        <p>VCISO/VCAIO. Nonprofit healthcare. Chief Technology Officer for Mojo AI Summits.</p>
+      </div>
+    </section>
+
+    <div class="brand">
+      <img src="../../assets/images/logo.png" alt="Mojo AI Summits">
+      <div>
+        <strong>Mojo AI Summits</strong>
+        <span id="brand-caption">Zoom Events composition mockup | 1920 x 1080</span>
+      </div>
+    </div>
+
+    <aside class="layout-note">
+      AI Executive Readiness establishes the leadership baseline for adoption, value, operating ownership, and risk.
+    </aside>
+  </main>
+  <script>
+    const photoBase = "https://mojoaisummits.com";
+    const lineups = {
+      afternoon: {
+        label: "AI Executive Readiness | 1:00 PM featured lineup",
+        caption: "AI Executive Readiness | September 4, 2026 | 1:00 PM CT",
+        people: [
+          { name: "Doug Sullinger", role: "Featured Guest", photo: "/api/crm?photo=crm%2Fcontact-photos%2Fdoug.sullinger-at-vendita.ai%2F2026-08-25T17-24-54-665Z-0e8d9265-Doug-Sullinger-LI-Photo.png" },
+          { name: "Tejas Shroff", role: "Featured Guest", photo: "/api/crm?photo=crm%2Fcontact-photos%2Ftejas_shroff-at-yahoo.com%2F2026-08-25T17-40-00-081Z-091a0dad-Tejas-Shroff-LI-Photo.png" },
+          { name: "Cynthia Dixon", role: "Featured Guest", photo: "/api/crm?photo=crm%2Fcontact-photos%2Fcynthiadixon13-at-gmail.com%2F2026-08-25T17-26-28-096Z-5da5f8e4-Cynthia-Dixon-LI-Photo.jpg" },
+          { name: "Jon-Rav Shende", role: "Featured Guest", photo: "/api/crm?photo=crm%2Fregistration-photos%2Fguest%2Fjon-rav.shende%2F2026-08-31T16-27-31-480Z-53a4ce9a-e1ec-4104-8695-38ab35bd3fdb-jon-rav-shende-headshot1.jpg" },
+          { name: "Lokesh Mathur", role: "Featured Guest", photo: "/api/crm?photo=crm%2Fcontact-photos%2Fmathurlokesh-at-gmail.com%2F2026-08-25T17-28-19-590Z-10dd10a5-Lokesh-Mathur-LI-Photo.jpg" },
+          { name: "Sunny Singh", role: "Featured Guest", photo: "/api/crm?photo=crm%2Fregistration-photos%2Fguest%2Fsunny-singh%2F2026-08-25T19-19-58-735Z-0fd734ca-5611-4079-9871-aaac31b15975-sunny_singh.png" },
+          { name: "Jeanne McClure, PhD", role: "Featured Author", photo: "/api/crm?photo=crm%2Fcontact-photos%2Fjmcclure-at-arsinnovate.com%2F2026-08-25T17-30-54-427Z-4c378cce-Jeanne-Mcclure-LI-Photo.png" },
+          { name: "Dr. Dustin sACHS", role: "Featured Partner", photo: "/api/crm?photo=crm%2Fcontact-photos%2Fdustin.sachs-at-psybercog.com%2F2026-09-03T04-35-08-841Z-b81e8889-dustin.jpeg" },
+          { name: "Mickey Disabato", role: "Featured Partner", photo: "/api/crm?photo=crm%2Fregistration-photos%2Fpartner%2Fmickey%2F2026-09-02T14-03-16-669Z-1d58d4a5-51be-4860-a037-24b906d6bbde-04dc190c-2fa9-4899-9dd8-c03d5430916f.jpeg" }
+        ]
+      }
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const requestedShow = "afternoon";
+    const lineup = lineups[requestedShow];
+    document.getElementById("show-title").textContent = lineup.label;
+    document.getElementById("brand-caption").textContent = lineup.caption;
+
+    const grid = document.getElementById("featured-grid");
+    lineup.people.forEach((person, index) => {
+      const tile = document.createElement("article");
+      tile.className = person.photo ? "tile photo" : "tile placeholder";
+      tile.dataset.slot = String(index + 1).padStart(2, "0");
+
+      if (person.photo) {
+        const img = document.createElement("img");
+        img.src = `${photoBase}${person.photo}`;
+        img.alt = person.name;
+        tile.append(img);
+
+        const number = document.createElement("span");
+        number.className = "slot-number";
+        number.textContent = String(index + 1).padStart(2, "0");
+        tile.append(number);
+      }
+
+      const tag = document.createElement("div");
+      tag.className = "name-tag";
+      const label = document.createElement("span");
+      label.innerHTML = `${person.name}<small>${person.role}</small>`;
+      const mic = document.createElement("span");
+      mic.className = "mic";
+      tag.append(label, mic);
+      tile.append(tag);
+      grid.append(tile);
+    });
+  </script>
+</body>
+</html>

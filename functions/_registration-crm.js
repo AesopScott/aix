@@ -332,25 +332,25 @@ function cleanEventShowId(value, fallback = "") {
 
 function eventShowLabel(showId) {
   return {
-    morning: "Morning show",
+    morning: "Canceled morning show",
     afternoon: "Afternoon show",
-    both: "Both shows"
+    both: "Afternoon show"
   }[cleanEventShowId(showId)] || "";
 }
 
 function eventShowTime(showId) {
   return {
-    morning: "10:00 am - 11:30 am CT",
+    morning: "Canceled",
     afternoon: "1:00 pm - 2:30 pm CT",
-    both: "10:00 am - 11:30 am CT and 1:00 pm - 2:30 pm CT"
+    both: "1:00 pm - 2:30 pm CT"
   }[cleanEventShowId(showId)] || "";
 }
 
 function eventShowSchedule(showId) {
   return {
-    morning: { startHour: 10, startMinute: 0, endHour: 11, endMinute: 30 },
+    morning: null,
     afternoon: { startHour: 13, startMinute: 0, endHour: 14, endMinute: 30 },
-    both: { startHour: 10, startMinute: 0, endHour: 14, endMinute: 30 }
+    both: { startHour: 13, startMinute: 0, endHour: 14, endMinute: 30 }
   }[cleanEventShowId(showId)] || null;
 }
 
@@ -380,10 +380,10 @@ function eventShowMetadata(showId) {
 function resolveRegistrationShow(registration = {}, invite = {}) {
   const inviteShow = eventShowKey(invite);
   const selectedShow = eventShowKey(registration);
-  if (inviteShow === "morning" || inviteShow === "afternoon") return eventShowMetadata(inviteShow);
-  if (selectedShow === "morning" || selectedShow === "afternoon") return eventShowMetadata(selectedShow);
-  if (inviteShow === "both") return eventShowMetadata("both");
-  return eventShowMetadata(selectedShow || inviteShow || "both");
+  if (inviteShow === "afternoon") return eventShowMetadata("afternoon");
+  if (selectedShow === "afternoon") return eventShowMetadata("afternoon");
+  if (inviteShow === "both" || selectedShow === "both") return eventShowMetadata("afternoon");
+  return eventShowMetadata(selectedShow || inviteShow || "afternoon");
 }
 
 function registrationShowError(type, registration = {}, invite = {}) {
@@ -399,8 +399,11 @@ function registrationShowError(type, registration = {}, invite = {}) {
   const inviteShow = eventShowKey(invite);
   const selectedShow = cleanEventShowId(registration.eventShowId || registration.showId || registration.eventShow, "");
   const show = inviteShow === "morning" || inviteShow === "afternoon" ? inviteShow : selectedShow;
-  if (requiresSingleShowRegistrationRole(role) && show !== "morning" && show !== "afternoon") {
-    return `Choose either the morning show or afternoon show for ${role.replace(/-/g, " ")} registration.`;
+  if (show === "morning") {
+    return "The morning show has been canceled. Ask the MOJO AI Summits team for an afternoon-show invite.";
+  }
+  if (requiresSingleShowRegistrationRole(role) && show !== "afternoon") {
+    return `Choose the afternoon show for ${role.replace(/-/g, " ")} registration.`;
   }
   if (show && !["morning", "afternoon", "both"].includes(show)) {
     return "Choose a valid show time.";

@@ -13,6 +13,8 @@ This file defines the canonical taxonomy for Mojo AI Summits event planning, CRM
 
 These event slugs are the canonical identifiers for the Fall 2026 virtual event series. CRM invite records should use the same event slug, event name, and event date when staff generate guest, member, or partner invite links.
 
+All morning shows are canceled. Active virtual event registration, CRM assignment, SMS reminders, Zoom sync, and public event pages should use the afternoon show only: 1:00 PM to 2:30 PM Central.
+
 | Event Slug | Topic Track | Label | Date | Format |
 | --- | --- | --- | --- | --- |
 | `ai-executive-readiness` | `executive-readiness` | AI Executive Readiness | Friday, September 4, 2026 | Virtual |
@@ -24,6 +26,9 @@ These event slugs are the canonical identifiers for the Fall 2026 virtual event 
 | `ai-security-governance-and-trust` | `security-governance` | AI Security, Governance, and Trust | Friday, November 6, 2026 | Virtual |
 | `ai-workforce-talent-and-change-adoption` | `workforce-adoption` | AI Workforce, Talent, and Change Adoption | Friday, November 20, 2026 | Virtual |
 | `ai-operating-model-for-2027` | `operating-model` | AI Operating Model for 2027 | Friday, November 27, 2026 | Virtual |
+| `ai-budgeting-and-investment-priorities` | `operating-model` | AI Budgeting and Investment Priorities | Friday, December 4, 2026 | Virtual |
+| `ai-workforce-readiness-and-change-leadership` | `workforce-adoption` | AI Workforce Readiness and Change Leadership | Friday, December 18, 2026 | Virtual |
+| `ai-executive-operating-agenda-for-2027` | `operating-model` | AI Executive Operating Agenda for 2027 | Friday, January 8, 2027 | Virtual |
 
 ## CRM Topic Tracks
 

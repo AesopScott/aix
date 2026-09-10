@@ -21,7 +21,7 @@ MOJO AI Summits is adding a 2026-2027 virtual AI event series before the 2027 in
 - Friday, December 18, 2026
 - Friday, January 8, 2027
 
-All sessions run from 1:00 PM to 2:30 PM Central.
+All morning shows are canceled. Active sessions run from 1:00 PM to 2:30 PM Central.
 
 ## Working Topic Arc
 

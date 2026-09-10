@@ -193,6 +193,44 @@
     letter-spacing:.18em;
     text-transform:uppercase;
   }
+  .background-card{
+    display:grid;
+    gap:14px;
+    margin:0 0 24px;
+    padding:18px;
+    border:1px solid rgba(0,230,255,.24);
+    background:linear-gradient(135deg, rgba(22,102,255,.1), rgba(0,230,255,.05));
+    border-radius:8px;
+  }
+  .background-copy{
+    display:grid;
+    gap:5px;
+  }
+  .background-copy span{
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+  }
+  .background-copy strong{
+    color:var(--white);
+    font-family:'Fraunces', serif;
+    font-size:22px;
+    font-weight:600;
+  }
+  .background-card img{
+    width:100%;
+    aspect-ratio:16 / 9;
+    object-fit:cover;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:6px;
+    background:rgba(10,15,30,.62);
+  }
+  .background-download{
+    justify-self:start;
+  }
   form{
     display:grid;
     gap:20px;
@@ -500,6 +538,15 @@
           <span class="invite-badge" id="inviteBadge">Invite required</span>
         </div>
 
+        <div class="background-card hide" id="backgroundCard" aria-live="polite">
+          <div class="background-copy">
+            <span>Zoom background</span>
+            <strong id="backgroundTitle">Your September 4 background is ready.</strong>
+          </div>
+          <img id="backgroundPreview" alt="September 4 Zoom background preview">
+          <a class="btn-ghost background-download" id="backgroundDownload" href="#" download>Download background</a>
+        </div>
+
         <form id="guestRegistrationForm">
           <div class="form-grid">
             <input type="hidden" id="inviteCode" name="inviteCode" value="">
@@ -577,9 +624,7 @@
             <div class="field full">
               <label for="eventShowId">Show time</label>
               <select id="eventShowId" name="eventShowId" required>
-                <option value="both">Both shows</option>
-                <option value="morning">Morning show | 10:00 am - 11:30 am CT</option>
-                <option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>
+                <option value="afternoon" selected>Afternoon show | 1:00 pm - 2:30 pm CT</option>
               </select>
             </div>
             <section class="ranked-survey" aria-labelledby="rankedSurveyTitle">
@@ -638,6 +683,9 @@
 <script>
   const inviteInput = document.getElementById('inviteCode');
   const inviteBadge = document.getElementById('inviteBadge');
+  const backgroundCard = document.getElementById('backgroundCard');
+  const backgroundPreview = document.getElementById('backgroundPreview');
+  const backgroundDownload = document.getElementById('backgroundDownload');
   const fullNameInput = document.getElementById('fullName');
   const cityInput = document.getElementById('city');
   const stateCountryInput = document.getElementById('stateCountry');
@@ -845,13 +893,11 @@
     const featured = requiresSingleShowForRole();
     const assignedShow = normalizeEventShow(invite.eventShowId || invite.showId || invite.eventShow, '');
     eventShowSelect.innerHTML = [
-      featured ? '<option value="">Select a show time</option>' : '<option value="both">Both shows</option>',
-      '<option value="morning">Morning show | 10:00 am - 11:30 am CT</option>',
       '<option value="afternoon">Afternoon show | 1:00 pm - 2:30 pm CT</option>'
     ].join('');
-    eventShowSelect.value = assignedShow === 'morning' || assignedShow === 'afternoon'
+    eventShowSelect.value = assignedShow === 'afternoon'
       ? assignedShow
-      : featured ? '' : 'both';
+      : 'afternoon';
     configureBriefPhotoRequirement();
   }
 
@@ -878,9 +924,26 @@
     return data;
   }
 
+  function setInviteBackground(invite = {}){
+    const backgroundUrl = String(invite.backgroundUrl || '').trim();
+    if (!backgroundCard || !backgroundPreview || !backgroundDownload) return;
+    if (!backgroundUrl) {
+      backgroundCard.classList.add('hide');
+      backgroundPreview.removeAttribute('src');
+      backgroundDownload.href = '#';
+      return;
+    }
+    const fileName = String(invite.backgroundFileName || '').trim() || 'mojo-sep-4-zoom-background.png';
+    backgroundPreview.src = backgroundUrl;
+    backgroundDownload.href = backgroundUrl;
+    backgroundDownload.setAttribute('download', fileName);
+    backgroundCard.classList.remove('hide');
+  }
+
   function applyInviteDetails(data = {}){
     const invite = data.invite || {};
     configureShowOptions(invite);
+    setInviteBackground(invite);
     const invitedName = invite.intendedGuestName || invite.invitedName || invite.guestName || '';
     const invitedEmail = invite.intendedGuestEmail || invite.invitedEmail || invite.guestEmail || '';
     if (isValidEmail(invitedEmail) && !emailInput.value.trim()) emailInput.value = invitedEmail;
@@ -1062,12 +1125,12 @@
       return;
     }
     const selectedShow = normalizeEventShow(payload.eventShowId, '');
-    if (requiresSingleShowForRole() && !['morning', 'afternoon'].includes(selectedShow)) {
-      setMessage(formError, 'Choose either the morning show or afternoon show.', 'error');
+    if (requiresSingleShowForRole() && selectedShow !== 'afternoon') {
+      setMessage(formError, 'Choose the afternoon show.', 'error');
       eventShowSelect.focus();
       return;
     }
-    if (!['morning', 'afternoon', 'both'].includes(selectedShow)) {
+    if (selectedShow !== 'afternoon') {
       setMessage(formError, 'Choose a valid show time.', 'error');
       eventShowSelect.focus();
       return;
